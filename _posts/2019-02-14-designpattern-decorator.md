@@ -1,9 +1,11 @@
 --- 
-layout: post
+<!--layout: post-->
 title: "디자인 패턴(Design Pattern) 데코레이터 패턴(Decorator Pattern)"
 subtitle: '데코레이터 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
+categories :
+  - Design Pattern
 tags:
     - 디자인 패턴
     - Design Pattern

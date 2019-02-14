@@ -1,9 +1,11 @@
 ---
-layout: post
+<!--layout: post-->
 title: "디자인 패턴(Design Pattern) 개요"
 subtitle: '디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
 author: "window_for_sun"
 header-style: text
+categories :
+  - Design Pattern
 tags:
   - 디자인 패턴
   - Design Pattern
