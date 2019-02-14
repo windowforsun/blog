@@ -1,5 +1,6 @@
 --- 
-<!--layout: post-->
+layout: single
+classes: wide
 title: "디자인 패턴(Design Pattern) 커맨드 패턴(Command Pattern)"
 subtitle: '커맨드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"

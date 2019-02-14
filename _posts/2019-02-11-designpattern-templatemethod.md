@@ -1,5 +1,6 @@
 --- 
-<!--layout: post-->
+layout: single
+classes: wide
 title: "디자인 패턴(Design Pattern) 템플릿 메서드 패턴(Template Method Pattern)"
 subtitle: '템플릿 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
