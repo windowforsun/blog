@@ -8,7 +8,7 @@ main:
     url : /categories/
   - title : "Tag"
     url : /tags/
-   - title: "Posts"
+  - title: "Posts"
      url: /year-archive/
   # - title: "Sample Collections"
   #   url: /collection-archive/
