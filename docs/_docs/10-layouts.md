@@ -164,7 +164,7 @@ Below are sample archive pages you can easily drop into your project, taking car
 * [Portfolio Collection -- Grid View][portfolio-collection]
 
 [posts-categories]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/category-archive.md
-[posts-tags]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/tag-archive.html
+[posts-tags]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/tag-archive.md
 [posts-year]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/year-archive.md
 [posts-collection]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/collection-archive.html
 [portfolio-collection]: https://github.com/{{ site.repository }}/blob/master/docs/_pages/portfolio-archive.md
