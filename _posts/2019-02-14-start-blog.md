@@ -4,7 +4,7 @@ title : "블로그 시작"
 categories:
   - Blog
 
-tag
+tags
   - Blog
 ---
 
