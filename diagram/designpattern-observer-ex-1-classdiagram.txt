@@ -1,0 +1,30 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Observer {
+    + update() : void
+}
+
+class ConcreteObserver {
+    + update() : void
+}
+
+class Subject {
+    - observer : Observer
+    + attach(observer : Observer) : void
+    + detach(observer : Observer) : void
+    + notifyObservers() : void
+}
+
+class ConcreteSubject {
+    - subjectState : SubjectState
+
+    + setState(subjectState : SubjectState) : void
+    + getState() : SubjectSate
+}
+
+Observer <|.. ConcreteObserver
+Subject <|-- ConcreteSubject
+Subject o-- Observer
+ConcreteObserver o-- ConcreteSubject
+@enduml

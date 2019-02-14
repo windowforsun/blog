@@ -1,0 +1,35 @@
+@startuml
+skinparam classAttributeIconSize 0
+class Motor {
+    - door : Door
+    - motorStatus : MotorStatus
+    + Motor(door : Door)
+    + getMotorStatus() : MotorStatus
+    - setMotorStatus(motorStatus : MotorStaatus) : void
+    + move(direction : Direction) : void
+    # moveMotor(direction : Direction) : void
+}
+class HyundaiMotor {
+    + HyundaiMotor(door : Door)
+    # moveMotor(direction : Direction) : void
+}
+
+class LGMotor {
+    + HyundaiMotor(door : Door)
+    # moveMotor(direction : Direction) : void
+}
+
+class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    + open() : void
+    + close() : void
+}
+Motor <|-- HyundaiMotor
+Motor <|-- LGMotor
+Motor o-- Door
+@enduml
+
+
+

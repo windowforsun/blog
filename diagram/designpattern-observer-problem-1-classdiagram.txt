@@ -1,0 +1,37 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ScoreRecord {
+    - scores : List<Integer>
+    - dataSheetView : DataSheetView
+    - minMaxView : MinMaxView
+    + setDataSheetView(dataSheetView : DataSheetView) : void
+    + setMinMaxView(minMaxView : MinMaxView) : void
+    + addScore(score : int) : void
+    + getScoreRecord() : List<Integer>
+}
+
+note top of ScoreRecord : notifing of change in class
+
+class DataSheetView {
+    - scoreRecord : ScoreRecord
+    + DataSheetView(scoreRecord : ScoreRecord)
+    + update() : void
+    - displayScores(record : List<Integer>) : void
+}
+
+note bottom of DataSheetView : be notified of change in class
+
+class MinMaxView {
+    - scoreRecord : ScoreRecord
+    + MinMaxView(scoreRecord : ScoreRecord)
+    + update() : void
+    - displayScores(record : List<Integer>) : void
+}
+
+note bottom of MinMaxView : be notified of change in class
+
+ScoreRecord -- DataSheetView
+ScoreRecord -- MinMaxView
+
+@enduml

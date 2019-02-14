@@ -1,0 +1,49 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Observer {
+    + update() : void
+}
+
+abstract class Subject {
+    - observers : List<Observer>
+    + attach(observer : Observer) : void
+    + detach(observer : Observer) : void
+    + notifyObservers() : void
+}
+
+class ScoreRecord {
+    - socres : List<Integer>
+    + addScore(score : int) : void
+    + getScoreRecord() : void
+}
+
+note bottom of ScoreRecord : notifing of change in class
+
+class DataSheetView {
+    - scoreRecord : ScoreRecord
+    + DataSheetView(scoreRecord : ScoreRecord)
+    + update() : void
+    - displayScores(record : List<Integer>) : void
+}
+
+note bottom of DataSheetView : be notifed of change in class
+
+class MinMaxView {
+    - scoreRecord : ScoreRecord
+    + MinMaxView(scoreRecord : ScoreRecord)
+    + update() : void
+    - displayScores(record : List<Integer>) : void
+}
+
+note bottom of MinMaxView : be notified of change in class
+
+Observer <|.. DataSheetView
+Observer <|.. MinMaxView
+Subject <|-- ScoreRecord
+Subject o-- Observer
+DataSheetView o-- ScoreRecord
+MinMaxView o-- ScoreRecord
+
+
+@enduml

@@ -1,0 +1,15 @@
+@startuml
+skinparam classAttributeIconSize 0
+abstract class AbstractClass {
+    + templateMethod()
+    # primitiveOperation1()
+    # primitiveOperation2()
+}
+
+class ConcreteClass {
+    # primitiveOperation1()
+    # primitiveOperation2()
+}
+
+AbstractClass <|-- ConcreteClass
+@enduml

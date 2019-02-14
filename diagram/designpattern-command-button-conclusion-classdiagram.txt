@@ -1,0 +1,52 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Command {
+    + execute() : void
+}
+
+note bottom of Command : Command
+
+class Button {
+    - command : Command
+    + Button(command : Command)
+    + setCommand(command : Command) : void
+    + pressed() : void
+}
+
+note top of Button : Invoker
+
+class Lamp {
+    + turnOn() : void
+}
+
+note top of Lamp : Receiver
+
+class LampOnCommand {
+    - lamp : Lamp
+    + LampOnCommand(lamp : Lamp)
+    + execute() : void
+}
+
+note top of LampOnCommand : ConcreteCommand
+
+class Alarm {
+    + start() : void
+}
+
+note top of Alarm : Receiver
+
+class AlarmStartCommand {
+    - alarm : Alarm
+    + AlarmStartCommand(alarm : Alarm)
+    + execute() : void
+}
+
+note top of AlarmStartCommand : ConcreteCommand
+
+Button o-- Command
+Command <|.. LampOnCommand
+Command <|.. AlarmStartCommand
+Lamp o-- LampOnCommand
+Alarm o-- AlarmStartCommand
+@enduml

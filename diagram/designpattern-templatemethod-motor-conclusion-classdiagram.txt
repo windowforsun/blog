@@ -1,0 +1,43 @@
+@startuml
+skinparam classAttributeIconSize 0
+class Motor {
+    - door : Door
+    - motorStatus : MotorStatus
+    + Motor(door : Door)
+    + getMotorStatus() : MotorStatus
+    - setMotorStatus(motorStatus : MotorStaatus) : void
+    -- Template Method --
+    + move(direction : Direction) : void
+    -- Primitive Operation --
+    # moveMotor(direction : Direction) : void
+}
+note top of Motor : Abstract Class
+
+class HyundaiMotor {
+    + HyundaiMotor(door : Door)
+    -- Primitive Operation --
+    # moveMotor(direction : Direction) : void
+}
+note bottom of HyundaiMotor : Concrete Class
+
+class LGMotor {
+    + HyundaiMotor(door : Door)
+    -- Primitive Operation --
+    # moveMotor(direction : Direction) : void
+}
+note bottom of LGMotor : Concrete Class
+
+class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    + open() : void
+    + close() : void
+}
+Motor <|-- HyundaiMotor
+Motor <|-- LGMotor
+Motor o-- Door
+@enduml
+
+
+

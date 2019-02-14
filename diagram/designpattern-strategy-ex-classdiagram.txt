@@ -1,0 +1,32 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Context {
+    + ContextMethod()
+    + setterMethod(strategy : Strategy)
+}
+
+class Class1 {
+}
+
+class Class2 {
+}
+
+interface Strategy {
+    + strategyMethod()
+}
+
+class ConcreteStrategy1 {
+    + strategyMethod()
+}
+
+class ConcreteStrategy2 {
+    + strategyMethod()
+}
+
+Context <|-- Class1
+Context <|-- Class2
+Context o-- Strategy
+Strategy <|.. ConcreteStrategy1
+Strategy <|.. ConcreteStrategy2
+@enduml

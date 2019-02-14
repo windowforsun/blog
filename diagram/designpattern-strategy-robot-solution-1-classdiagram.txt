@@ -1,0 +1,62 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Robot {
+    - name : String
+    - attackStrategy : AttackStrategy
+    - movingStrategy : MovingStrategy
+    + Robot(name : String)
+    + getName() : String
+    + attack() : void
+    + move() : void
+    + setAttackStrategy(AttackStrategy attackStrategy) : void
+    + setMovingStrategy(MovingStrategy MovingStrategy) : void
+}
+
+class TaekwonV {
+    + TaekwonV(name : String)
+}
+
+class Atom {
+    + Atom(name : String)
+}
+
+class Sungard {
+    + Sungard(name : String)
+}
+
+interface MovingStrategy {
+    + move() : void
+}
+
+class WalkingStrategy {
+    + move() : void
+}
+
+class FlyingStrategy {
+    + move() : void
+}
+
+interface AttackStrategy {
+    + atack() : void
+}
+
+class PunchStrategy {
+    + attack() : void
+}
+
+class MissileStrategy {
+    + attack() : void
+}
+
+
+Robot <|-- TaekwonV
+Robot <|-- Atom
+Robot <|-- Sungard
+Robot o-- MovingStrategy
+Robot o-- AttackStrategy
+MovingStrategy <|.. WalkingStrategy
+MovingStrategy <|.. FlyingStrategy
+AttackStrategy <|.. PunchStrategy
+AttackStrategy <|.. MissileStrategy
+@enduml

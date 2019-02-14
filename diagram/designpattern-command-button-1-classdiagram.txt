@@ -1,0 +1,15 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Button {
+    - lamp : Lamp
+    + Button(lamp : Lamp)
+    + press() : void
+}
+
+class Lamp {
+    + turnOn() : void
+}
+
+Button o-- Lamp
+@enduml

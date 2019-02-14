@@ -1,0 +1,36 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Robot {
+    - name : String
+    + Robot(name : String)
+    + getName() : String
+    + {abstract} attack() : void
+    + {abstract} move() : void
+}
+
+class TaekwonV {
+    + TaekwonV(name : String)
+    -- Duplicated --
+    + attack() : void
+    + move() : void
+}
+
+class Atom {
+    + Atom(name : String)
+    -- Duplicated --
+    + attack() : void
+    + move() : void
+}
+
+class Sungard {
+    + Sungard(name : String)
+    -- Duplicated --
+    + attack() : void
+    + move() : void
+}
+
+Robot <|-- TaekwonV
+Robot <|-- Atom
+Robot <|-- Sungard
+@enduml
