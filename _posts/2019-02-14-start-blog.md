@@ -6,8 +6,6 @@ categories:
 
 tag
   - Blog
-
-toc: true
 ---
 
 github.io를 사용하여 블로그 시작!
