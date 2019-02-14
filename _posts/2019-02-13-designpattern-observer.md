@@ -242,12 +242,12 @@ public class Client {
     - 통보 대상인 객체를 참조하는 것을 관리(추가/제거) -> Subject 클래스로 일반화
     - addScore 메서드 : 각 통보 대상인 객체의 update 메서드를 호출 -> Observer 인터페이스로 일반화
 - ![옵저버 패턴 점수 해결 1](/../img/designpattern-observer-solution-1-classdiagram.png)
-1. ScoreRecord 클래스의 addScore(상태 변경) 메서드 호출
-    1. 자산의 성적 값 저장
-    1. 상태가 변경 될 때마다 Subject 클래스의 notifyObservers 메서드 호출
-1. Subject 클래스의 notifyObservers 메서드 호출
-    1. Observer 인터페이스를 통해 성적 변경을 통보
-    1. DataSheetView, MinMaxView 클래스의 update 메서드 호출
+  1. ScoreRecord 클래스의 addScore(상태 변경) 메서드 호출
+      1. 자신의 성적 값 저장
+      1. 상태가 변경 될 때마다 Subject 클래스의 notifyObservers 메서드 호출
+  1. Subject 클래스의 notifyObservers 메서드 호출
+      1. Observer 인터페이스를 통해 성적 변경을 통보
+      1. DataSheetView, MinMaxView 클래스의 update 메서드 호출
 
 - Observer 인터페이스
 
