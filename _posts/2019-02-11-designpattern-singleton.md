@@ -1,5 +1,5 @@
 --- 
-<!--layout: post-->
+layout: single
 title: "디자인 패턴(Design Pattern) 싱글턴 패턴(Singleton Pattern)"
 subtitle: '싱글턴 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
