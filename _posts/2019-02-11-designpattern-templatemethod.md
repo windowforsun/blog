@@ -2,6 +2,8 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 템플릿 메서드 패턴(Template Method Pattern)"
+header:
+  overlay_image: /img/designpattern-bg.jpg
 subtitle: '템플릿 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
@@ -12,6 +14,8 @@ tags:
     - Design Pattern
     - Template Method Pattern
 ---  
+
+'템플릿 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 ### 템플릿 메서드 패턴이란
 - 어떤 작업을 처리하는 일부분을 서브 클래스로 캡슐화해 전체 일을 수행하는 구조는 바꾸지 않으면서 특정 단계에서 수행하는 내역을 바꾸는 패턴

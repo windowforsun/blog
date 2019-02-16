@@ -2,6 +2,8 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 데코레이터 패턴(Decorator Pattern)"
+header:
+  overlay_image: /img/designpattern-bg.jpg
 subtitle: '데코레이터 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
@@ -12,6 +14,8 @@ tags:
     - Design Pattern
     - Decorator Pattern
 ---  
+
+'데코레이터 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 ### 데코레이터 패턴이란
 - 객체의 결합을 통해 기능을 동적으로 유연하게 확장 할 수 있게 해주는 패턴

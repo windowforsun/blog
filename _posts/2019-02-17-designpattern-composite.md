@@ -2,6 +2,8 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 컴퍼지트 패턴(Composite Pattern)"
+header:
+  overlay_image: /img/designpattern-bg.jpg
 subtitle: '컴퍼지트 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
@@ -12,6 +14,8 @@ tags:
     - Design Pattern
     - Composite Pattern
 ---  
+
+'컴퍼지트 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 ### 컴퍼지트 패턴이란
   - 여러 개의 객체들로 구성된 복합 객체와 단일 객체를 클라이언트에서 구별 없이 다루게 해주는 해턴

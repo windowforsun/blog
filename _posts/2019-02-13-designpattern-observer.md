@@ -2,6 +2,8 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 옵저버 패턴(Observer Pattern)"
+header:
+  overlay_image: /img/designpattern-bg.jpg
 subtitle: '옵저버 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
@@ -12,6 +14,8 @@ tags:
     - Design Pattern
     - Observer Pattern
 ---  
+
+'옵저버 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 ### 옵저버 패턴이란
 - 한 객체의 상태 변화에 따라 다른 객체의 상태도 연동되도록 일대다 객체 의존 관계를 구성 하는 패턴
