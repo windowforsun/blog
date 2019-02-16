@@ -1,0 +1,23 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Component {
+    + {abstract} operation();
+}
+
+class Leaf {
+    + operation();
+}
+
+class Composite {
+    - component : Component
+    + addComponent(component : Component)
+    + removeComponent(component : Component)
+    + operation()
+}
+
+Component <|-- Leaf
+Component <|-- Composite
+Composite o-- Component
+
+@enduml
