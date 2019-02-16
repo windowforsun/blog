@@ -244,6 +244,7 @@ public class Client {
 
 #### 추가 예시
 - 기본 도로 표시 + 차선 표시 + 교통량 표시
+
 ```java
 public class Client {
   public static void main(String[] args){
@@ -260,6 +261,7 @@ public class Client {
 
 - 교차로를 표시하는 추가 기능을 지원하면서 기존의 다른 추가기능(차선, 교통량)과의 조합을 지원
   - CorssingDecorator 클래스
+  
   ```java
   // 교차로 표시를 추가하는 클래스
   public class CrossingDecorator extends DisplayDecorator {
