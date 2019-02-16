@@ -40,7 +40,8 @@ class Monitor {
     + getPower() : int
 }
 
-Computer o-- Keyboard
-Computer o-- Body
-Computer o-- Monitor
+Computer *-- Keyboard
+Computer *-- Body
+Computer *-- Monitor
 @enduml
+

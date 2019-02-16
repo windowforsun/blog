@@ -37,12 +37,14 @@ tags:
       
 ### 예시
 #### 컴퓨터에 추가 장치 지원하기
-- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
-- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
-- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
-- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
-- ![업저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
-- sdfsdfdsfs
+- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
+  - 컴퓨터(Computer 클래스) 모델링
+    - 키보드(Keyboard 클래스) : 데이터를 입력받는다.
+    - 본체(Body 클래스) : 데이터를 처리한다.
+    - 모니터(Monotir 클래스) : 처리 결과를 출력한다.
+    - Computer - 합성관계 - 구성장치들
+
+```java
+
+``` 
+    
