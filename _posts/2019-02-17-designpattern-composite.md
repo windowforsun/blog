@@ -39,12 +39,12 @@ tags:
       
 ### 예시
 #### 컴퓨터에 추가 장치 지원하기
-- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
-- ![옵저버 패턴 예시1](/img/designpattern-observer-ex-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
-- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
-- ![옵저버 패턴 예시1](/img/designpattern-observer-ex-1-classdiagram.png)
-- ![옵저버 패턴 예시1](/img/designpattern-observer-ex-1-classdiagram.png)
-- ![업저버 패턴 예시1](/img/designpattern-observer-ex-1-classdiagram.png)
+- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
+- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
+- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
+- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
+- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
+- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
+- ![옵저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
+- ![업저버 패턴 예시1]({{site.baseurl}}/img/designpattern-observer-ex-1-classdiagram.png)
 - sdfsdfdsfs
