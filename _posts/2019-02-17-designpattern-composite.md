@@ -24,6 +24,7 @@ tags:
     - [구조 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
   - ![컴퍼지트 패턴 예시1](/img/designpattern-composite-ex-1-classdiagram.png)
   - <img src="{{site.baseurl}}/img/designpattern-composite-ex-1-classdiagram.png">
+  - ![컴퍼지트 패턴 예시1]({{site.baseurl}}/img/designpattern-composite-ex-1-classdiagram.png)
   - 역할이 수행하는 작업
     - Component
       - 구체적인 부분
