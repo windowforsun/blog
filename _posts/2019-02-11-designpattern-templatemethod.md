@@ -198,7 +198,7 @@ public class LGMotor {
 #### 해결방법
 ##### 방법 1
 2 개 이상의 클래스가 유사한 기능을 제공하면서 중복된 코드가 있는 경우에는 상속을 이용해서 코드 중복 문제를 피할 수 있다.
-- ![템플릿 메서드 패턴 방법 1](/../img/designpattern-templatemethod-motor-solution-1-classdiagram.png) 
+- ![템플릿 메서드 패턴 방법 1](/img/designpattern-templatemethod-motor-solution-1-classdiagram.png) 
 
 ```java
 // HyundaiMotor 와 LGMotor 의 공통적인 기능을 구현하는 클래스
@@ -266,7 +266,7 @@ public class LGMotor extends Motor {
 위의 move 메서드와 같이 부분적으로 중복되는 경우에도 상속을 활용해 코드 중복을 피할 수 있다.
 - move 메서드에서 moveHyundaiMotor 메서드와 moveLGMotor 메서드를 호출하는 부문만 다르다.
 - moveHyundaiMotor, moveLGMotor 메서드는 기능(모터 구동을 실제로 구현)면에서는 동일하다.
-- ![템플릿 메서드 방법 2](/../img/designpattern-templatemethod-motor-solution-2-classdiagram.png)
+- ![템플릿 메서드 방법 2](/img/designpattern-templatemethod-motor-solution-2-classdiagram.png)
     1. move 메서드를 상위 Motor 클래스로 이동시킨다.
     1. moveHyundaiMotor 메서드와 moveLGMotor 메서드의 호출 부분을 하위 클래스에서 오버라이드한다.
     
@@ -330,7 +330,7 @@ public class LGMotor extends Motor {
 
 
 ### 정리
-![템플릿 메서드 정리](/../img/designpattern-templatemethod-motor-conclusion-classdiagram.png)
+![템플릿 메서드 정리](/img/designpattern-templatemethod-motor-conclusion-classdiagram.png)
 - AbstractClass : Motor 클래스
 - ConcreteClass : HyundaiMotor, LGMotor 클래스
 - TemplateMethod : Motor 클래스의 move 메서드

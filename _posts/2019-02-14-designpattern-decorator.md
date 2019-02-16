@@ -23,7 +23,7 @@ tags:
     - ex) 기본 도로 표시 기능에 차선 표시, 교통량 표시, 교차로 표시, 단속 카메라 표시의 4가지 추가 기능이 있을 때 추가 기능의 모든 조합은 15가지가 된다.
     - 데코레이터 패턴을 이용하여 필요 추가 기능의 조합을 동적으로 생성 할 수 있다.
     - [구조 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
-- ![데코레이터 패턴 예시1](/../img/designpattern-decorator-ex-1-classdiagram.png)
+- ![데코레이터 패턴 예시1](/img/designpattern-decorator-ex-1-classdiagram.png)
 - 역할이 수행하는 작업
     - Component
         - 기본 기능을 뜻하는 ConcreteComponent와 추기 기능을 뜻하는 Decorator의 공통 기능을 정의
@@ -44,7 +44,7 @@ tags:
     
 ### 예시
 #### 도로 표시 방법 조합하기
-- ![데코레이터 패턴 도로 1](/../img/designpattern-decorator-road-1-classdiagram.png)
+- ![데코레이터 패턴 도로 1](/img/designpattern-decorator-road-1-classdiagram.png)
 - 내비게이션 SW에서 도로를 표시하는 기능
   - 도로를 간단한 선으로 펴시하는 기능(기본 기능)
   - 내비게이션 SW에 따라 도로의 차선을표시하는 기능(추가 기능)
@@ -93,7 +93,7 @@ tags:
 #### 문제점
 1. 또 다른 도로 표시 기능을 추가로 구현하는 경우
   - 기본 도로 표시에 교통량을 표시하고 싶다면?
-  - ![데코레이터 패턴 도로 문제 1](/../img/designpattern-decorator-problem-1-classdiagram.png)
+  - ![데코레이터 패턴 도로 문제 1](/img/designpattern-decorator-problem-1-classdiagram.png)
   
   ```java
   // 기본 도로 표시 + 교통량 표시 클래스
@@ -124,13 +124,13 @@ tags:
       | 7 | O | | O | O | RoadDisplayWithTrafficCrossing 
       | 8 | O | O | O | O | RoadDisplayWithLaneTrafficCrossing 
       
-    - ![데코레이터 패턴 도로 문제 2](/../img/designpattern-decorator-problem-2-classdiagram.png)
+    - ![데코레이터 패턴 도로 문제 2](/img/designpattern-decorator-problem-2-classdiagram.png)
     - 위와 같이 상속을 통해 조합의 가가 경우를 설계한다면 각 조합별로 하위 클래스(7개)를 구현해야 한다.
     - 다양한 기능의 조합을 고려해야 하는 경우 상속을 통한 기능 확장은 각 기능별 클래스를 추가해야 한다는 단점이 있다.
     
 #### 해결 방법
 문제를 해결하기 위해서는 각 추가 기능별로 개별적인 클래스를 설계하고 기능을 조합할 때 각 클래스의 객체 조합을 이용하면 된다.
-- ![데코레이터 패턴 도로 해결 1](/../img/designpattern-decorator-solution-1-classdiagram.png)
+- ![데코레이터 패턴 도로 해결 1](/img/designpattern-decorator-solution-1-classdiagram.png)
   - 도로를 표시하는 기본 기능만 필요한 경우 RoadDisplay 객체를 이용한다.
   - 차선을 표시하는 추가 기능도 필요한 경우 RoadDisplay 객체와 LaneDecorator객체를 이용한다.
     1. LaneDecorator에서는 차선 표시 기능마나 지기접 제공: drawLane()
@@ -243,7 +243,7 @@ public class Client {
 - 어떤 기능을 추가하냐느에 관계없이 Client클래스는 동일한 Display클래스만을 통해 일관성있는 방식으로 도로 정보를 표시할 수 있다.
 - 이렇게 Decorator 패턴을 이용하면 추가 기능 조합별로 별도의 클래스를 구현하는 대신 각 추가 기능에 해당하는 클래스의 객체를 조합해 추가 기능의 조합을 구현할 수 있개 된다.
   - 이 설계는 추가 기능의 수가 많을수록 효과가 크다.
-- ![데코레이터 패턴 정리 1](/../img/designpattern-decorator-conclusion-1-classdiagram.png)
+- ![데코레이터 패턴 정리 1](/img/designpattern-decorator-conclusion-1-classdiagram.png)
 
 #### 추가 예시
 - 기본 도로 표시 + 차선 표시 + 교통량 표시

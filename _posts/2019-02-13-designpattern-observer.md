@@ -23,7 +23,7 @@ tags:
         - 새로운 파일이 추가되거나 기존 파일이 삭제되었을 때 탐색기는 다른 탐색기에게 즉시 변경을 통보해야 한다.
         - 차량 연료량 클래스는 연료량이 부족한 경우 연료량에 관심을 가지는 구체적인 클래스(연료량 부족 경고 클래스, 주행 가능 거리 출력 클래스)에 직접 의존하지 않는 방식으로 연료량 변화를 통보해야 한다.
         - [행위 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
-    - ![옵저버 패턴 예시1](/../img/designpattern-observer-ex-1-classdiagram.png)
+    - ![옵저버 패턴 예시1](/img/designpattern-observer-ex-1-classdiagram.png)
         - Observer
             - 데이터의 변경을 통보 받는 인터페이스
             - Subject에서는 Observer 인터페이스의 update 메서드를 호출 함으로써 ConcreteSubject의 데이터 변경을 ConcreteObserver에게 통보한다.
@@ -41,7 +41,7 @@ tags:
             
 ### 예시
 #### 여러 가지 방식으로 성적 출력하기
-- ![옵저버 패턴 성적1](/../img/designpattern-observer-score-1-classdiagram.png)
+- ![옵저버 패턴 성적1](/img/designpattern-observer-score-1-classdiagram.png)
 - 입력된 성적값을 출력하는 프로그램
 
 ```java
@@ -235,7 +235,7 @@ public class Client {
     
     - 이 경우에도 점수 변경에 대한 통보 대상 클래스가 다른 대상 클래스(DataSheetView -> MinMaxView)로 바뀌면 기존 코드(ScoreRecord 클래스)의 내용을 수정해야 하므로 OCP에 위배된다.
     - 성적 변경을 새로운 클래스에 통보할 때마다 ScoreRecord 클래스의 코드를 수정해야 하므로 재사용이 어렵다.
-- ![옵저버 패턴 문제1](/../img/designpattern-observer-problem-1-classdiagram.png)
+- ![옵저버 패턴 문제1](/img/designpattern-observer-problem-1-classdiagram.png)
 
 #### 해결 방법
 문제를 해결하기 위해서는 공통 기능을 상위 클래스 및 인터페이스로 일반화 하고 이를 활용하여 통보하는 클래스(ScoreRecord 클래스)를 구현해야 한다.
@@ -244,7 +244,7 @@ public class Client {
 - ScoreRecord 클래스에서 하는 작업
     - 통보 대상인 객체를 참조하는 것을 관리(추가/제거) -> Subject 클래스로 일반화
     - addScore 메서드 : 각 통보 대상인 객체의 update 메서드를 호출 -> Observer 인터페이스로 일반화
-- ![옵저버 패턴 점수 해결1](/../img/designpattern-observer-solution-1-classdiagram.png)
+- ![옵저버 패턴 점수 해결1](/img/designpattern-observer-solution-1-classdiagram.png)
   1. ScoreRecord 클래스의 addScore(상태 변경) 메서드 호출
       1. 자신의 성적 값 저장
       1. 상태가 변경 될 때마다 Subject 클래스의 notifyObservers 메서드 호출

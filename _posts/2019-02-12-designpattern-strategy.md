@@ -40,7 +40,7 @@ tags:
     
 ### 예시
 #### 로봇 만들기
-- ![스트래티지 패턴 로봇 1](/../img/designpattern-strategy-robot-1-classdiagram.png)
+- ![스트래티지 패턴 로봇 1](/img/designpattern-strategy-robot-1-classdiagram.png)
 
 ```java
 public abstract class Robot {
@@ -158,7 +158,7 @@ public class Client {
     ```  
     
     - TaekwonV와 Sungard클래스의 attack() 메서드의 내용이 중복된다.
-    - ![스트래티지 패턴 예시 문제 1](/../img/designpattern-strategy-robot-problem-1-classdiagram.png)
+    - ![스트래티지 패턴 예시 문제 1](/img/designpattern-strategy-robot-problem-1-classdiagram.png)
     - 현재 시스템의 캡슐화의 단위가 Robot 자체이므로 로봇을 추가하기는 매우 쉽다.
     - 그러나 새로운 로봇인 Sungard에 기존의 공격 또는 이동 방법을 추가하거나 변경하려고 하면 문제가 발생한다.
     
@@ -168,7 +168,7 @@ public class Client {
 - 로봇 예제에서 변화되면서 문제를 발생시키는 요인은 로봇의 이동 방식과 공격 방식의 변화이다.
 - 이를 캡슐화하려면 외부에서 구체적인 이동 방식과 공격방식을 담은 구체적인 크래스들을 은닉해야 한다.
     - 공격과 이동을 위한 인터페이스를 각각 만들고 이들을 실제 실현한 클래스를 만들어야 한다.
-- ![스트래티지 패턴 로봇 해결 1](/../img/designpattern-strategy-robot-solution-1-classdiagram.png)
+- ![스트래티지 패턴 로봇 해결 1](/img/designpattern-strategy-robot-solution-1-classdiagram.png)
     - Robot클래스가 이동 기능과 공격 기능을 이용하는 클라이언트 역할을 수행
         - 구체적인 이동, 공격 방식이 MovingStrategy, AttackStrategy 인터페이스에 의해 캡슐화 됨
         - 인터페이스들이 일종의 방화벽 역할을 수행해 Robot 클래스의 변경을 차단해 준다.

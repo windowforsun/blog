@@ -21,7 +21,7 @@ tags:
 - 실행될 기능을 캡슐화함으로써 주어진 여러 기능을 실행할 수 있는 재사용성이 높은 클래스를 설계하는 패턴
     - 이벤트가 발생했을 때 실행될 기능이 다양하면서도 변경이 필요한 경우에 이벤트를 발생시키는 클새르를 변경하지 않고 재사용하고자 할 때 유용하다.
     - [행위 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
-    - ![커맨드 패턴 예시1](/../img/designpattern-command-ex-classdiagram.png)
+    - ![커맨드 패턴 예시1](/img/designpattern-command-ex-classdiagram.png)
     - 실행될 기능을 캡슐화함으로써 기능이 실행 요구하는 호출자(Invoker) 클래스와 실제 기능을 실행하는 수신자(Receiver) 클래스 사이의 의존성을 제거한다.
     - 역할이 수행하는작업
         - Command
@@ -38,7 +38,7 @@ tags:
             
 ### 예시
 #### 만능 버튼 만들기
-- ![커맨드 패턴 버튼 예시 1](/../img/designpattern-command-button-1-classdiagram.png)
+- ![커맨드 패턴 버튼 예시 1](/img/designpattern-command-button-1-classdiagram.png)
 - 버튼이 눌리면 램프의 불이 켜지는 프로그램  
 
 ```java
@@ -154,7 +154,7 @@ public class Client {
 문제를 해결하기 위해서는 구체적인 기능을 직접 구현하는 대신 실행될 기능을 캡슐화해야 한다.
 - Button 클래스의 pressed 메서드에서 구체적인 기능(램프 켜기, 알람 동작 등)을 직접 구현하는 대신 버튼을 놀렀을 때 실행될 기능을 Button 클래스 외부에서 제공받아 캡슐화해 pressed메서드에서 호출한다.
 - 이를 통해 Button클래스 코드를 수정하지 않고도 그대로 사용할 수 있다.
-- ![커맨트 패턴 해결 1](/../img/designpattern-command-button-solution-1-classdiagram.png)
+- ![커맨트 패턴 해결 1](/img/designpattern-command-button-solution-1-classdiagram.png)
     - Button클래스는 미리 약속된 Command 인터페이스의 execute 메서드를 호출한다.
         - 램프를 켜는 경우에는 lamp.turnOn() 메서드를 호출하고
         - 알람이 동작하는 경우에는 alarm.start() 메서드를 호출하도록 pressed 메서드를 수정한다.
@@ -272,7 +272,7 @@ public class Client {
 - 이렇게 Command 패턴을 이용하면 Button 클래스의 코드를 변경하지 않으면서 다양한 동작을 구현할 수 있게 된다.
 
 ### 정리
-![커맨드 패턴 버튼 정리](/../img/designpattern-command-button-conclusion-classdiagram.png)
+![커맨드 패턴 버튼 정리](/img/designpattern-command-button-conclusion-classdiagram.png)
 
 
 ---
