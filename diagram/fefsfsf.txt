@@ -1,0 +1,46 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Computer {
+    - keyboard : Keyboard
+    - body : Body
+    - monitor : Monitor
+
+    + addKeyboard(keyboard : Keyboard) : void
+    + addBody(body : Body) : void
+    + addMonitor(monitor : Monitor) : void
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Keyboard {
+    - price : int
+    - power : int
+
+    + Keyboard(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Body {
+    - price : int
+    - power : int
+
+    + Body(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Monitor {
+    - price : int
+    - power : int
+
+    + Monitor(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+Computer o-- Keyboard
+Computer o-- Body
+Computer o-- Monitor
+@enduml
