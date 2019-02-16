@@ -41,7 +41,7 @@ tags:
             
 ### 예시
 #### 여러 가지 방식으로 성적 출력하기
-- ![옵저버 패턴 성적 1](/../img/designpattern-observer-score-1-classdiagram.png)
+- ![옵저버 패턴 성적1](/../img/designpattern-observer-score-1-classdiagram.png)
 - 입력된 성적값을 출력하는 프로그램
 
 ```java
@@ -235,7 +235,7 @@ public class Client {
     
     - 이 경우에도 점수 변경에 대한 통보 대상 클래스가 다른 대상 클래스(DataSheetView -> MinMaxView)로 바뀌면 기존 코드(ScoreRecord 클래스)의 내용을 수정해야 하므로 OCP에 위배된다.
     - 성적 변경을 새로운 클래스에 통보할 때마다 ScoreRecord 클래스의 코드를 수정해야 하므로 재사용이 어렵다.
-- ![옵저버 패턴 문제 1](/../img/designpattern-observer-problem-1-classdiagram.png)
+- ![옵저버 패턴 문제1](/../img/designpattern-observer-problem-1-classdiagram.png)
 
 #### 해결 방법
 문제를 해결하기 위해서는 공통 기능을 상위 클래스 및 인터페이스로 일반화 하고 이를 활용하여 통보하는 클래스(ScoreRecord 클래스)를 구현해야 한다.
@@ -244,7 +244,7 @@ public class Client {
 - ScoreRecord 클래스에서 하는 작업
     - 통보 대상인 객체를 참조하는 것을 관리(추가/제거) -> Subject 클래스로 일반화
     - addScore 메서드 : 각 통보 대상인 객체의 update 메서드를 호출 -> Observer 인터페이스로 일반화
-- ![옵저버 패턴 점수 해결 1](/../img/designpattern-observer-solution-1-classdiagram.png)
+- ![옵저버 패턴 점수 해결1](/../img/designpattern-observer-solution-1-classdiagram.png)
   1. ScoreRecord 클래스의 addScore(상태 변경) 메서드 호출
       1. 자신의 성적 값 저장
       1. 상태가 변경 될 때마다 Subject 클래스의 notifyObservers 메서드 호출
