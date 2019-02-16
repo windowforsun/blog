@@ -37,7 +37,7 @@ tags:
       
 ### 예시
 #### 컴퓨터에 추가 장치 지원하기
-- ![컴퍼지트 패턴 컴퓨터1](/img/designpattern-composite-computer-1-classdiagram.png)
+- ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
   - 컴퓨터(Computer 클래스) 모델링
     - 키보드(Keyboard 클래스) : 데이터를 입력받는다.
     - 본체(Body 클래스) : 데이터를 처리한다.
@@ -45,6 +45,199 @@ tags:
     - Computer - 합성관계 - 구성장치들
 
 ```java
+public class Keyboard {
+	private int price;
+	private int power;
+	
+	public Keyboard(int power, int price) {
+		this.power = power;
+		this.price = price;
+	}
+	
+	public int getPrice() {
+		return this.price;
+	}
+	
+	public int getPower() {
+		return this.power;
+	}
+}
 
-``` 
+
+public class Body {
+	private int price;
+	private int power;
+	
+	public Body(int power, int price) {
+		this.power = power;
+		this.price = price;
+	}
+	
+	public int getPrice() {
+		return this.price;
+	}
+	
+	public int getPower() {
+		return this.power;
+	}
+}
+
+public class Monitor {
+	private int price;
+	private int power;
+	
+	public Monitor(int power, int price) {
+		this.power = power;
+		this.price = price;
+	}
+	
+	public int getPrice() {
+		return this.price;
+	}
+	
+	public int getPower() {
+		return this.power;
+	}
+}
+```  
+
+```java
+public class Computer {
+	private Keyboard keyboard;
+	private Body body;
+	private Monitor monitor;
+	
+	public void addKeyboard(Keyboard keyboard) {
+		this.keyboard = keyboard;
+	}
+	
+	public void addBody(Body body) {
+		this.body = body;
+	}
+	
+	public void addMonitor(Monitor monitor) {
+		this.monitor = monitor;
+	}
+	
+	public int getPrice() {
+		int keyboardPrice = this.keyboard.getPrice();
+		int bodyPrice = this.body.getPrice();
+		int monitorPrice = this.monitor.getPrice();
+		
+		return keyboardPrice + bodyPrice + monitorPrice;
+	}
+	
+	public int getPower() {
+		int keyboardPower = this.keyboard.getPower();
+		int bodyPower = this.body.getPower();
+		int monitorPower = this.monitor.getPower();
+		
+		return keyboardPower + bodyPower + monitorPower;
+	}
+}
+```  
+
+```java
+public class Client {
+	public static void main(String[] args){
+		// 컴퓨터의 부품으로 Keyboard, Body, Monitor 객체를 생성
+		Keyboard keyboard = new Keyboard(5, 2);
+		Body body = new Body(100, 70);
+		Monitor monitor = new Monitor(20, 30);
+		
+		// Computer 객체를 생성하고 부품 객체들을 설정
+		Computer computer = new Computer();
+		computer.addKeyboard(keyboard);
+		computer.addBody(body);
+		computer.addMonitor(monitor);
+		
+		// 컴퓨터의 가격과 전력 소비량을 구함
+		int computerPrice = computer.getPrice();
+		int computerPower = computer.getPower();
+		
+		System.out.println("price : " + computerPrice);
+		System.out.println("power : " + computerPower);
+	}
+}
+```  
+
+#### 문제점
+- 다른 부품이 추가되는 경우
+	- Computer 클래스의 부품으로 Speaker 클래스 또는 Mouse 클래스를 추가하려면 ?
+	- ![컴포지트 패턴 컴퓨터 문제1]({{site.baseurl}}/img/designpattern-composite-computer-probolem-1-claadiagram.png)
+	
+```java
+public class Speaker {
+	private int price;
+	private int power;
+	
+	public Speaker(int power, int price) {
+		this.power = power;
+		this.price = price;
+	}
+	
+	public int getPrice() {
+		return this.price;
+	}
+	
+	public int getPower() {
+		return this.power;
+	}
+}
+
+public class Mouse {
+	private int price;
+	private int power;
+	
+	public Mouse(int power, int price) {
+		this.power = power;
+		this.price = price;
+	}
+	
+	public int getPrice() {
+		return this.price;
+	}
+	
+	public int getPower() {
+		return this.power;
+	}
+}
+```  
+
+```java
+public class Computer {
+	// ...
+	// 추가
+	private Speaker speaker;
+	private Mouse mouse;
+	
+	// ...
+	// 추가
+	public void addSpeaker(Speaker speaker) {
+		this.speaker = speaker;
+	}	
+	public void addMouse(Mousue mouse){
+		this.mouse = mouse;
+	}
+	
+	public int getPrice() {
+		// ...
+		// 추가
+		int speakerPrice = this.speaker.getPrice();
+		int mousePrice = this.mouse.getPrice();
+		
+		return keyboardPrice + bodyPrice + monitorPrice + speakerPrice + mousePrice;
+	}
+	
+	public int getPower() {
+		// ...
+		// 추가
+		int speakerPower = this.speaker.getPower();
+		int mousePower = this.mouses.getPower();
+		
+		return keyboardPower + bodyPower + monitorPower + speakerPower + mousePower;
+	}
+}
+```
+	
     
