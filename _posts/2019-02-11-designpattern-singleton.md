@@ -12,13 +12,12 @@ tags:
     - Design Pattern
     - Singleton
 ---  
-[참고](https://lee-changsun.github.io/2019/02/08/designpattern-intro/)  
 
 ### 싱글턴 패턴이란
 - 전역 변수를 사용하지 않고 객체를 하나만 생성 하도록 하며, 생성된 객체를 어디에서든지 참조할 수 있도록 하는 패턴
 - ![싱글턴 클래스 다이어그램 예시](/img/designpattern-singleton-ex-classdiagram.png)
 - 하나의 인스턴스만을 생성하는 책임이 있으며 getInstance() 메서드를 통해 모든 클라이언트에게 동일한 인스턴스를 반환하는 작업을 수행한다.
-
+- [생성 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
 ### 예시
 #### 프린터 관리자 만들기
 - 동일한 하나의 프린트를 10명이 공유해서 사용한다고 가정하자.

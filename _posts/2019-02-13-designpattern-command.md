@@ -12,12 +12,11 @@ tags:
     - Design Pattern
     - Command Pattern
 ---  
-[참고](https://lee-changsun.github.io/2019/02/08/designpattern-intro/)  
 
 ### 커맨드 패턴이란
 - 실행될 기능을 캡슐화함으로써 주어진 여러 기능을 실행할 수 있는 재사용성이 높은 클래스를 설계하는 패턴
     - 이벤트가 발생했을 때 실행될 기능이 다양하면서도 변경이 필요한 경우에 이벤트를 발생시키는 클새르를 변경하지 않고 재사용하고자 할 때 유용하다.
-    - 행위 패턴의 하나
+    - [행위 패턴 중 하나](({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
     - ![커맨드 패턴 예시1](/../img/designpattern-command-ex-classdiagram.png)
     - 실행될 기능을 캡슐화함으로써 기능이 실행 요구하는 호출자(Invoker) 클래스와 실제 기능을 실행하는 수신자(Receiver) 클래스 사이의 의존성을 제거한다.
     - 역할이 수행하는작업

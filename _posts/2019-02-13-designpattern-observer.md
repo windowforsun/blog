@@ -12,14 +12,13 @@ tags:
     - Design Pattern
     - Observer Pattern
 ---  
-[참고](https://lee-changsun.github.io/2019/02/08/designpattern-intro/)  
 
 ### 옵저버 패턴이란
 - 한 객체의 상태 변화에 따라 다른 객체의 상태도 연동되도록 일대다 객체 의존 관계를 구성 하는 패턴
     - 데이터의 변경이 발생했을 경우 상대 클래스나 객체에 의존하지 않으면서 데이터 변경을 통보 하고자 할 때 유용하다.
         - 새로운 파일이 추가되거나 기존 파일이 삭제되었을 때 탐색기는 다른 탐색기에게 즉시 변경을 통보해야 한다.
         - 차량 연료량 클래스는 연료량이 부족한 경우 연료량에 관심을 가지는 구체적인 클래스(연료량 부족 경고 클래스, 주행 가능 거리 출력 클래스)에 직접 의존하지 않는 방식으로 연료량 변화를 통보해야 한다.
-        - 행위 패턴 중 하나
+        - [행위 패턴 중 하나](({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
     - ![옵저버 패턴 예시1](/../img/designpattern-observer-ex-1-classdiagram.png)
         - Observer
             - 데이터의 변경을 통보 받는 인터페이스
