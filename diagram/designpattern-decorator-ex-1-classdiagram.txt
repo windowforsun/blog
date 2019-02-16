@@ -1,0 +1,32 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Component {
+    + operation()
+}
+
+class ConcreteComponent {
+    + operation()
+}
+
+class Decorator {
+    + operation()
+}
+
+class ConcreteDecoratorA {
+    + operation()
+    - addBehavoior()
+}
+
+class ConcreteDecoratorB {
+    + operation()
+    - addBehavior()
+}
+
+Component <|-- ConcreteComponent
+Component <|-- Decorator
+Decorator *-- Component
+Decorator <|-- ConcreteDecoratorA
+Decorator <|-- ConcreteDecoratorB
+
+@enduml

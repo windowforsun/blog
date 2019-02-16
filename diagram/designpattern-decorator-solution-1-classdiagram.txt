@@ -1,0 +1,40 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Display {
+    {abstract} + draw() : void
+}
+
+class RoadDisplay {
+    + draw() : void
+}
+
+note top of RoadDisplay : Base Function
+
+abstract class DisplayDecorator {
+    - decoratorDisplay : Display
+    + DisplayDecorator(decoratorDisplay : Display)
+    + draw() : void
+}
+
+note bottom of DisplayDecorator : Addtional Function
+
+class LaneDecorator {
+    + LaneDecorator(decoratorDisplay : Display)
+    + draw() : void
+    - drawLane() : void
+}
+
+class TrafficDecorator {
+    + TrafficDecorator(decoratorDisplay : Display)
+    + draw() : void
+    - drawTraffic() : void
+}
+
+Display <|-- RoadDisplay
+Display <|-- DisplayDecorator
+DisplayDecorator *-- Display
+DisplayDecorator <|-- LaneDecorator
+DisplayDecorator <|-- TrafficDecorator
+
+@enduml

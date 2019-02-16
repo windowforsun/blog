@@ -1,0 +1,55 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class RoadDisplay {
+    + draw() : void
+}
+
+class RoadDisplayWithLane {
+    + draw() : void
+    - drawLane() : void
+}
+
+class RoadDisplayWithTraffic {
+    + draw() : void
+    - drawTraffic() : void
+}
+
+class RoadDisplayWithCrossing {
+    + draw() : void
+    - drawCrossing() : void
+}
+
+class RoadDisplayWithLaneTraffic {
+    + draw() : void
+    - drawLaneTraffic() : void
+}
+
+class RoadDisplayWithLaneCrossing {
+    + draw() : void
+    - drawLaneCrossing() : void
+}
+
+class RoadDisplayWithTrafficCrossing {
+    + draw() : void
+    - drawTrafficCrossing() : void
+}
+
+class RoadDisplayWithLaneTrafficCrossing {
+    + draw() : void
+    - drawLaneTrafficCrossing() : void
+}
+
+
+
+
+
+
+RoadDisplay <|-- RoadDisplayWithLane
+RoadDisplay <|-- RoadDisplayWithTraffic
+RoadDisplay <|-- RoadDisplayWithCrossing
+RoadDisplay <|-- RoadDisplayWithLaneTraffic
+RoadDisplay <|-- RoadDisplayWithLaneCrossing
+RoadDisplay <|-- RoadDisplayWithTrafficCrossing
+RoadDisplay <|-- RoadDisplayWithLaneTrafficCrossing
+@enduml
