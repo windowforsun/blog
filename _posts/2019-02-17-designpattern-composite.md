@@ -22,8 +22,6 @@ tags:
     - 전체 부분의 관계(ex. Dictionary-File)를 갖는 객체들 사이의 관계를 정의할 때 유용하다.
     - 또한 클라이언트는 전체와 부분을 구분하지 않고 동일한 인터페이스를 사용할 수 있다.
     - [구조 패턴 중 하나]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})
-  - ![컴퍼지트 패턴 예시1](/img/designpattern-composite-ex-1-classdiagram.png)
-  - <img src="{{site.baseurl}}/img/designpattern-composite-ex-1-classdiagram.png">
   - ![컴퍼지트 패턴 예시1]({{site.baseurl}}/img/designpattern-composite-ex-1-classdiagram.png)
   - 역할이 수행하는 작업
     - Component
