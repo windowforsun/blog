@@ -305,6 +305,15 @@ public class Client {
     1. 두 번째 추가 기능인 TrafficDecorator 클래스의 drawTraffic 메서드 실행
     1. 세 번째 추가 기능인 CrossingDecorator 클래스의 drawCrossing 메서드 실행
 
+```java
+public class Main {
+  
+}
+```
+
+- sdfdsfsd
+- sdfsdfsdfs
+
 
 ---
  
