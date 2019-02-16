@@ -44,5 +44,6 @@ tags:
 - ![컴퍼지트 패턴 컴퓨터 1](/../img/designpattern-composite-computer-1-classdiagram.png)
 - ![옵저버 패턴 예시1](/../img/designpattern-observer-ex-1-classdiagram.png)
 - ![옵저버 패턴 예시1](/../img/designpattern-observer-ex-1-classdiagram.png)
+- ![업저버 패턴 예시1](/../img/designpattern-observer-ex-1-classdiagram.png)
 - sdfsdfsdfdds
 - dsfsfdsd
