@@ -238,15 +238,15 @@ public class Computer {
 		return keyboardPower + bodyPower + monitorPower + speakerPower + mousePower;
 	}
 }
-``` 
+```  
 
-	- 위와 같은 방식의 설계는 확장성이 좋지 않다.
-	- 새로운 부품을추가 할때마다 Computer 클래스를 아래와 같이 수정해야 한다.
-		1. 새로운 부품에 대한 참조를 필드로 추가한다.
-		1. 새로운 부품 객체를 설정하는 setter 메서드를 추가한다.
-		1. getPrice(), getPower() 등과 같이 컴퓨터의 부품을 이용하는 모든 메서드에서는 새롭게 추가된 부품 객체를 이용할 수 있도록 수정한다.
-	- 이는 OCP를 만족하지 않는다.
-	- 문제점의 핵심은 COmputer 클래스에 속한 부품의 구체적인 객체를 가리키면 OCP를 위반하게 된다는 것이다.
+- 위와 같은 방식의 설계는 확장성이 좋지 않다.
+- 새로운 부품을추가 할때마다 Computer 클래스를 아래와 같이 수정해야 한다.
+	1. 새로운 부품에 대한 참조를 필드로 추가한다.
+	1. 새로운 부품 객체를 설정하는 setter 메서드를 추가한다.
+	1. getPrice(), getPower() 등과 같이 컴퓨터의 부품을 이용하는 모든 메서드에서는 새롭게 추가된 부품 객체를 이용할 수 있도록 수정한다.
+- 이는 OCP를 만족하지 않는다.
+- 문제점의 핵심은 COmputer 클래스에 속한 부품의 구체적인 객체를 가리키면 OCP를 위반하게 된다는 것이다.
 	
 #### 해결책
 구체적인 부품들을 일반화한 클래스를 정의하고 이를 Computer 클래스가 가리키도록 설계한다.
@@ -265,7 +265,9 @@ public abstract class ComputerDevice {
 	public abstract int getPrice();
 	public abstract int getPower();
 }
+```  
 
+```java
 public class Keyboard extends ComputerDevice {
 	private int price;
 	private int power;
@@ -286,7 +288,6 @@ public class Keyboard extends ComputerDevice {
 	}
 }
 
-
 public class Body extends ComputerDevice {
 	// Keyboard 클래스와 동일
 }
@@ -302,7 +303,9 @@ public class Speaker extends ComputerDevice {
 public class Mouse extends ComputerDevice {
 	// Keyboard 클래스와 동일
 }
+```  
 
+```java
 public class Computer extends ComputerDevice {
 	// 복수 개의 ComputerDevice 객체를 가리킴
 	private List<ComputerDevice> components = new ArrayList<>();
@@ -341,7 +344,9 @@ public class Computer extends ComputerDevice {
 		return power;
 	}
 }
+```  
 
+```java
 public class Client {
 	public static void main(String[] args){
 		// 컴퓨터의 부품으로 Keyboard, Body, Monitor ..객체를 생성
