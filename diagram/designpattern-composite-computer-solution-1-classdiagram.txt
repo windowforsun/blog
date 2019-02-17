@@ -1,0 +1,71 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Computer {
+    -components : List<ComputerDevice>
+    + addComponent(component : ComputerDevice) : void
+    + removeComponent(component : ComputerDevice) : void
+    + getPrice() : int
+    + getPower() : int
+}
+
+abstract class ComputerDevice {
+    + {abstract} getPrice() : int
+    + {abstract} getPower() : int
+}
+
+class Keyboard {
+    - price : int
+    - power : int
+
+    + Keyboard(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Body {
+    - price : int
+    - power : int
+
+    + Body(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Monitor {
+    - price : int
+    - power : int
+
+    + Monitor(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Speaker {
+    - price : int
+    - power : int
+
+    + Speaker(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+class Mouse {
+    - price : int
+    - power : int
+
+    + Mouse(power : int, price : int)
+    + getPrice() : int
+    + getPower() : int
+}
+
+ComputerDevice <|-- Keyboard
+ComputerDevice <|-- Body
+ComputerDevice <|-- Monitor
+ComputerDevice <|-- Speaker
+ComputerDevice <|-- Mouse
+ComputerDevice <|-- Computer
+Computer *-- ComputerDevice
+
+@enduml
+
