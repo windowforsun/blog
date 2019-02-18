@@ -12,7 +12,7 @@ categories :
 tags:
     - 디자인 패턴
     - Design Pattern
-    - Composite Pattern
+    - Factory Method
 ---  
 
 '팩토리 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
