@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "디자인 패턴(Design Pattern) 추상 팰토리 패턴(Abstract Factory Pattern)"
+title: "디자인 패턴(Design Pattern) 추상 팩토리 패턴(Abstract Factory Pattern)"
 header:
   overlay_image: /img/designpattern-bg.jpg
 subtitle: '추상 팩토리 패턴이 무엇이고, 어떠한 특징을 가지는지'
