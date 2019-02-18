@@ -1,0 +1,37 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ElevatorManager {
+    - controllers : List<ElavatorController>
+    + ElevagorManager(controllerCount : int)
+    + requestElevator(destinator : int, direction : Direction)
+}
+
+class ElevatorController {
+    - id : int
+    - curFloor : int
+    + ElevatorController(id : int)
+    + gotoFloor(destination : int)
+}
+
+interface ElevatorScheduler {
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction)
+}
+
+note top of ElevatorScheduler : Strategy
+
+class ThroughputScheduler {
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction)
+}
+
+class ResponseTimeScheduler {
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction)
+}
+
+ElevatorManager *-- ElevatorController
+ElevatorManager ..> ElevatorScheduler
+ElevatorScheduler <|.. ThroughputScheduler
+ElevatorScheduler <|.. ResponseTimeScheduler
+
+@enduml
+

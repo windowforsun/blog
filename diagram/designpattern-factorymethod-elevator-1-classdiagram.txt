@@ -1,0 +1,26 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ElevatorManager {
+    - controllers : List<ElavatorController>
+    - scheduler : ThroughputScheduler
+    + ElevagorManager(controllerCount : int)
+    + requestElevator(destinator : int, direction : Direction)
+}
+
+class ElevatorController {
+    - id : int
+    - curFloor : int
+    + ElevatorController(id : int)
+    + gotoFloor(destination : int)
+}
+
+class ThroughputScheduler {
+    + selectElevagor(manager : ElevatorManager, destination : int, direction : Direction)
+}
+
+ElevatorManager *-- ElevatorController
+ElevatorManager *-- ThroughputScheduler
+
+@enduml
+

@@ -1,0 +1,25 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Product {
+}
+
+class ConcreteProduct {
+}
+
+abstract class Creator {
+    + anOperation();
+    + {abstract} factoryOperation() : Product
+}
+
+class ConcreteCreator {
+    + factoryOperation() : Product
+}
+
+Product <|.. ConcreteProduct
+Creator <|-- ConcreteCreator
+Product <.. Creator
+ConcreteProduct <.. ConcreteCreator
+
+@enduml
+

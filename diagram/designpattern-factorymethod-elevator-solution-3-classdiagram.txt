@@ -1,0 +1,58 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ElevatorManager {
+    - controllers : List<ElavatorController>
+    - strategyId : SchedulerStrategyId
+    + ElevagorManager(controllerCount : int)
+    + setStrategyId(straregyId : SchedulerStrategyId) : void
+    + requestElevator(destinator : int, direction : Direction) : void
+}
+
+class ElevatorController {
+    - id : int
+    - curFloor : int
+    + ElevatorController(id : int)
+    + gotoFloor(destination : int) : void
+}
+
+enum SchedulerStrategyId {
+    RESPONSE_TIME, THROUGHPUT, DYNAMIC
+}
+
+class SchedulerFactory {
+    + {static} getScheduler(strategyId : SchedulerStrategyId) : ElevatorScheduler
+}
+
+interface ElevatorScheduler {
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+note top of ElevatorScheduler : Strategy
+
+class ThroughputScheduler {
+    - scheduler : ElevatorScheduler
+    - ThroughputScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+note top of ThroughputScheduler : Singleton
+
+class ResponseTimeScheduler {
+    - scheduler : ElevatorShceduler
+    - ResponseTimeScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+note top of ResponseTimeScheduler : Singleton
+
+ElevatorManager *-- ElevatorController
+ElevatorManager ..> SchedulerFactory
+SchedulerFactory ..> ElevatorScheduler
+ElevatorScheduler <|.. ThroughputScheduler
+ElevatorScheduler <|.. ResponseTimeScheduler
+
+@enduml
+
