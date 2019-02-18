@@ -485,13 +485,13 @@ public class ElevatorManagerWithDynamicScheduling extends ElevatorManager {
 	- 공통 기능(스케쥴링 전략 객체 생성, 엘레베이터 선택, 엘레베이터 이동)의 일반 로직 제공
 	- 하위 클래스에서 구체적으로 정의할 필요가 있는 '스케쥴링 전략 객체 생성' 부분은 하위 클래스에서 오버라이드
 	- 템플릿 메서드 패턴을 이용하면 전체적으로는 동일하면서 부분적으로는 다른 구문으로 구성된 메서드의 코드 중복을 최소화시킬 수 있다.
-- 팩토리메서드를 호출하는 상위클래스의 메서드는 템플릿 메서드가 된다.
+- 팩토리메서드를 호출하는 상위클래스의 메서드는 템플릿 메서드가 된다.  
 
 ![팩토리 메서드 패턴 엘레베이터 정리1]({{site.baseurl}}/img/designpattern-factorymethod-elevator-conclusion-1-classdiagram.png)
-	- Product : ElevatorScheduler 인터페이스
-	- ConcreteProduct : ThroughputScheduler 클래스, ResponseTimeScheduler 클래스
-	- Creator : ElevatorManager 클래스
-	- ConcreteCreator : ElevatorManagerWithThroughScheduling 클래스, ElevatorManagerWithResponseTimeScheduling 클래스, ElevatorManagerWithDynamicScheduling 클래스
+- Product : ElevatorScheduler 인터페이스
+- ConcreteProduct : ThroughputScheduler 클래스, ResponseTimeScheduler 클래스
+- Creator : ElevatorManager 클래스
+- ConcreteCreator : ElevatorManagerWithThroughScheduling 클래스, ElevatorManagerWithResponseTimeScheduling 클래스, ElevatorManagerWithDynamicScheduling 클래스
 	
 ---
  
