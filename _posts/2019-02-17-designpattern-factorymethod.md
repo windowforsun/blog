@@ -299,12 +299,12 @@ public class Client {
 
 ### 과정2
 동적 스케쥴링 방식(DynamicScheduler)이라고 하면 여러 번 스케쥴링 객체를 생성하지 않고 한 번 생성한 것을 계속해서 사용하는 것이 바람직할 수 있다.
-	- 싱글턴 패턴을 활용한 엘레베이터 스케쥴링 전략 설계
-		- ![팩토리 메서드 패턴 엘레베이터 해결3]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-3-classdiagram.png)
-		- 스케쥴링 기능을 제공하는 ResponseTimeScheduler 클래스와 ThroughputShceudler 클래스는 오직 하나의 객체만 생성해서 사용하도록 한다.
-		- 생성자를 통해 직접 객체를 생성하는 것이 허용되지 않아야 한다.
-			- 이를 위해 각 생성자를 private으로 정의한다.
-			- 대신 getInstance() 라는 정적 메서드로 객체 생성을 구현한다.
+- 싱글턴 패턴을 활용한 엘레베이터 스케쥴링 전략 설계
+	- ![팩토리 메서드 패턴 엘레베이터 해결3]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-3-classdiagram.png)
+	- 스케쥴링 기능을 제공하는 ResponseTimeScheduler 클래스와 ThroughputShceudler 클래스는 오직 하나의 객체만 생성해서 사용하도록 한다.
+	- 생성자를 통해 직접 객체를 생성하는 것이 허용되지 않아야 한다.
+		- 이를 위해 각 생성자를 private으로 정의한다.
+		- 대신 getInstance() 라는 정적 메서드로 객체 생성을 구현한다.
 		
 ```java
 public class SchedulerFactory {
@@ -384,8 +384,8 @@ public class ResponseTimeScheduler extends ElevatorScheduler {
 
 ## 해결 방법 (상속을 이용)
 하위 클래스에서 적합한 클래스의 객체를 생성하여 객체의 생성 코드를 분리한다.
-	- 이 방법은 스트래티지 패턴, 싱글턴 패턴, 템플릿 메서드 패턴을 이용하여 팩토리 메서드 패턴을 적용한다.
-	- ![팩토리 메서드 패턴 엘레베이터 해결4]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-4-classdiagram.png)
+- 이 방법은 스트래티지 패턴, 싱글턴 패턴, 템플릿 메서드 패턴을 이용하여 팩토리 메서드 패턴을 적용한다.
+- ![팩토리 메서드 패턴 엘레베이터 해결4]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-4-classdiagram.png)
 
 ```java
 // 템플릿 메서드를 정의하는 클래스 : 하위 클래스에서 구현될 기능을 primitive 메서드로 정의
