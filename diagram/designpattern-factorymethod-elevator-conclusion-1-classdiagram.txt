@@ -1,0 +1,69 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class ElevatorManager <<Template Method>> {
+    - controllers : List<ElavatorController>
+    + ElevagorManager(controllerCount : int)
+    -- Template Method --
+    # {abstract} getScheduler() :  ElevatorScheduler
+    -- Factory Method --
+    + requestElevator(destinator : int, direction : Direction) : void
+}
+note top of ElevatorManager : Creator
+
+class EmWithThroughputScheduling {
+    + EmWithThroughputScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+note top of EmWithThroughputScheduling : ConcreteCreator
+
+class EmWithResponseTimeScheduling {
+    + EmResponseTimeScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+note top of EmWithResponseTimeScheduling : ConcreteCreator
+
+class EmWithDynamicScheduling {
+    + EmWithDynamicScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+note top of EmWithDynamicScheduling : ConcreteCreator
+
+class ElevatorController {
+    - id : int
+    - curFloor : int
+    + ElevatorController(id : int)
+    + gotoFloor(destination : int) : void
+}
+
+interface ElevatorScheduler <<Strategy>>{
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+note top of ElevatorScheduler : Product
+
+class ThroughputScheduler <<Singleton>> {
+    - scheduler : ElevatorScheduler
+    - ThroughputScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+note top of ThroughputScheduler : ConcreteProduct
+
+class ResponseTimeScheduler <<Singleton>> {
+    - scheduler : ElevatorShceduler
+    - ResponseTimeScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+note top of ResponseTimeScheduler : ConcreteProduct
+
+ElevatorManager *-up- ElevatorController
+ElevatorManager <|-- EmWithThroughputScheduling
+ElevatorManager <|-- EmWithResponseTimeScheduling
+ElevatorManager <|-- EmWithDynamicScheduling
+ElevatorManager ..> ElevatorScheduler
+ElevatorScheduler <|.. ThroughputScheduler
+ElevatorScheduler <|.. ResponseTimeScheduler
+
+@enduml
+

@@ -1,0 +1,60 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class ElevatorManager <<Template Method>> {
+    - controllers : List<ElavatorController>
+    + ElevagorManager(controllerCount : int)
+    # {abstract} getScheduler() :  ElevatorScheduler
+    + requestElevator(destinator : int, direction : Direction) : void
+}
+
+class EmWithThroughputScheduling {
+    + EmWithThroughputScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+
+class EmWithResponseTimeScheduling {
+    + ElevatorManagerWithResponseTimeScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+
+class EmWithDynamicScheduling {
+    + ElevatorManagerWithDynamicScheduling(controllerCount : int)
+    # getScheduler() : ElevatorScheduler
+}
+
+class ElevatorController {
+    - id : int
+    - curFloor : int
+    + ElevatorController(id : int)
+    + gotoFloor(destination : int) : void
+}
+
+interface ElevatorScheduler <<Strategy>>{
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+class ThroughputScheduler <<Singleton>> {
+    - scheduler : ElevatorScheduler
+    - ThroughputScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+class ResponseTimeScheduler <<Singleton>> {
+    - scheduler : ElevatorShceduler
+    - ResponseTimeScheduler()
+    + {static} getInstance() : ElevatorScheduler
+    + selectElevator(manager : ElevatorManager, destination : int, direction : Direction) : int
+}
+
+ElevatorManager *-up- ElevatorController
+ElevatorManager <|-- EmWithThroughputScheduling
+ElevatorManager <|-- EmWithResponseTimeScheduling
+ElevatorManager <|-- EmWithDynamicScheduling
+ElevatorManager ..> ElevatorScheduler
+ElevatorScheduler <|.. ThroughputScheduler
+ElevatorScheduler <|.. ResponseTimeScheduler
+
+@enduml
+

@@ -198,7 +198,7 @@ public class ResponseTimeScheduler {
 		- 동적 스케쥴링 방식이 변경되는 경우
 			- 오전 : 대기시간 최소화 전략, 오후 : 처리량 최대화 전략 -> 두 전략의 시간이 변경되는 경우
 			
-## 해결책
+## 해결 방법 (Factory 클래스 이용)
 ### 과정1
 주어진 기능을 실제로 제공하는 적절한 클래스 생성 작업을 별도의 클래스/메서드로 분리 시켜야 한다.
 - ![팩토리 메서드 엘레베이터 패턴 해결2]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-2-classdiagram.png)
@@ -382,8 +382,118 @@ public class ResponseTimeScheduler extends ElevatorScheduler {
 - 객체 생성을 전담하는 별도의 Factory 클래스를 분리하여 객체 생성의 변화에 대비할 수 있다.
 - 이 방법은 스트래티지 패턴과 싱글턴 패턴을 이용하여 팩토리 메서드 패턴을 적용하였다.
 
-# 다른 방법으로 팩토리 메서드 패턴 적용하기
-## 상속을 이용
+## 해결 방법 (상속을 이용)
 하위 클래스에서 적합한 클래스의 객체를 생성하여 객체의 생성 코드를 분리한다.
 	- 이 방법은 스트래티지 패턴, 싱글턴 패턴, 템플릿 메서드 패턴을 이용하여 팩토리 메서드 패턴을 적용한다.
-	- 
+	- ![팩토리 메서드 패턴 엘레베이터 해결4]({{site.baseurl}}/img/designpattern-factorymethod-elevator-solution-4-classdiagram.png)
+
+```java
+// 템플릿 메서드를 정의하는 클래스 : 하위 클래스에서 구현될 기능을 primitive 메서드로 정의
+public abstract class ElevatorManager {
+	private List<ElevatorController> controllers;
+	
+	// 주어진 수만큼 ElevatorController 생성
+	public ElevatorManager(int controllerCount) {
+		// 엘레베이터 이동을 책임지는 ElevatorController 객체 생성
+		this.controllers = new ArrayList<>();
+		
+		for(int i = 0; i < controllerCount; i++) {
+			ElevatorController controller = new ElevatorController(i);
+			this.controllers.add(controller);
+		}
+	}
+	
+	// 팩토리 메서드 : 스케쥴링 전략 객체를 생성하는 기능 제공
+	protected abstract ElevatorScheduler getScheduler();
+	
+	// 템플릿 메서드 : 요청에 따라 엘레베이터를 선택하고 이동
+	public void requestElevator(int destination, Direction direction) {
+		// 하위 클래스에서 오버라이드 된 getScheduler() 메서드를 호출함
+		// primitive, hook 메서드
+		ElevatorScheduler scheduler = this.getScheduler();
+		
+		// 주어진 전략에 따라 엘레베이터를 선택함
+		int selectedElevator = scheduler.selectElevator(this, destination, direction);
+		// 선택된 엘레베이터 이동
+		this.controllers.get(selectedElevator).gotoFloor(destination);
+	}
+}
+```  
+
+```java
+// 처리량 최대화 전략 하위 클래스
+public class ElevatorManagerWithThroughputScheduling extends ElevatorManager {
+	public ElevatorManagerWithThroughputScheduling(int controllerCount) {
+		// 상위 클래스 생성자 호출
+		super(controllerCount);
+	}
+	
+	// primitive, hook 메서드
+	@Override
+	protected ElevatorScheduler getScheduler() {
+		ElevatorScheduler scheduler = ThroughputScheduler.getInstance();
+		return scheduler;
+	}
+}
+
+// 대기 시간 최소화 전략 하위 클래스
+public class ElevatorManagerWithResponseTimeScheduling extends ElevatorManager {
+	public ElevatorManagerWithResponseTimeScheduling(int controllerCount) {
+		// 상위 클래스 생성자 호출
+		super(controllerCount);
+	}
+	
+	// primitive, hook 메서드
+	@Override
+	protected ElevatorScheduler getScheduler() {
+		ElevatorScheduler scheduler = ResponseTimeScheduler.getInstance();
+		return scheduler;
+	}
+}
+
+// 동적 스케쥴링 전략 하위 클래스
+public class ElevatorManagerWithDynamicScheduling extends ElevatorManager {
+	public ElevatorManagerWithDynamicScheduling(int controllerCount) {
+		// 상위 클래스 생성자 호출
+		super(controllerCount);
+	}
+	
+	// primitive, hook 메서드
+	@Override
+	protected ElevatorScheduler getShceduler() {
+		ElevatorScheduler scheduler = null;
+		
+		int hour = Calendar.getInstance().gete(Calendar.HOUR_OF_DAY);
+		
+		if(hour < 12){
+			scheduler = ResponseTimeScheduler.getInstance();
+		} else {
+			scheduler = ThroughputScheduler.getInstance();
+		}
+		
+		return scheduler;
+	}
+}
+```  
+
+- 팩토리 메서드
+	- ElevatorManager 클래스의 getScheduler() 메서드
+	- 스케쥴링 전략 객체를 생성하는 기능 제공(객체 생성을 분리)
+	- 템플릿 메서드 패턴의 개념에 따르면, 하위 클래스에서 오버라이드될 필요가 있는 메서드는 primitive, hook 메서드라고 부름
+- 템플릿 메서드
+	- ElevatorManager 클래스의 requestElevator() 메서드
+	- 공통 기능(스케쥴링 전략 객체 생성, 엘레베이터 선택, 엘레베이터 이동)의 일반 로직 제공
+	- 하위 클래스에서 구체적으로 정의할 필요가 있는 '스케쥴링 전략 객체 생성' 부분은 하위 클래스에서 오버라이드
+	- 템플릿 메서드 패턴을 이용하면 전체적으로는 동일하면서 부분적으로는 다른 구문으로 구성된 메서드의 코드 중복을 최소화시킬 수 있다.
+- 팩토리메서드를 호출하는 상위클래스의 메서드는 템플릿 메서드가 된다.
+
+![팩토리 메서드 패턴 엘레베이터 정리1]({{site.baseurl}}/img/designpattern-factorymethod-elevator-conclusion-1-classdiagram.png)
+	- Product : ElevatorScheduler 인터페이스
+	- ConcreteProduct : ThroughputScheduler 클래스, ResponseTimeScheduler 클래스
+	- Creator : ElevatorManager 클래스
+	- ConcreteCreator : ElevatorManagerWithThroughScheduling 클래스, ElevatorManagerWithResponseTimeScheduling 클래스, ElevatorManagerWithDynamicScheduling 클래스
+	
+---
+ 
+## Reference
+[[Design Pattern] 팩토리 메서드 패턴이란](https://gmlwjd9405.github.io/2018/08/07/factory-method-pattern.html)
