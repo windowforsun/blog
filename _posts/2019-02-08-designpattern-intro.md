@@ -12,6 +12,7 @@ categories :
 tags:
   - 디자인 패턴
   - Design Pattern
+  - Intro
 ---
 
 '디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
