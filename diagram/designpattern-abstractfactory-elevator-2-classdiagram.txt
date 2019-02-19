@@ -1,0 +1,37 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+enum VendorId {
+    LG, HYUNDAI
+}
+
+abstract class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    # {abstract} doClose() : void
+    + close() : void
+    # {abstract} doOpen() : void
+    + open() : void
+}
+
+class DoorFactory {
+    + {static} createDoor(vendorId : VendorId) : Door
+}
+
+class LGDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+
+class HyundaiDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+
+DoorFactory ..> Door
+Door <|-- HyundaiDoor
+Door <|-- LGDoor
+
+@enduml
+

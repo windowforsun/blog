@@ -1,0 +1,73 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+
+abstract class ElevatorFactory {
+    + {abstract} createMotor() : Motor
+    + {abstract} createDoor() : Door
+}
+
+class LGElevatorFactory {
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+class HyundaiElevatorFactory {
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+abstract class Motor {
+    - motorStatus : MotorStatus
+    - door : Door
+    + Motor()
+    + getMotorStatus() : MotorStatus
+    - setMotorStatus(motorStatus : MotorStatus) : void
+    + move(direction : Direction() : void
+    # {abstract} moveMotor(direction : Direction) : void
+    + setDoor(door : Door) : void
+}
+
+class HyundaiMotor {
+    # moveMotor(direction : Direction) : void
+}
+
+class LGMotor {
+    # moveMotor(direction : Direction) : void
+}
+
+abstract class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    # {abstract} doClose() : void
+    + close() : void
+    # {abstract} doOpen() : void
+    + open() : void
+}
+
+
+class LGDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+
+class HyundaiDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+
+ElevatorFactory <|-- LGElevatorFactory
+ElevatorFactory <|-- HyundaiElevatorFactory
+LGElevatorFactory ..> LGMotor
+LGElevatorFactory ..> LGDoor
+HyundaiElevatorFactory ..> HyundaiMotor
+HyundaiElevatorFactory ..> HyundaiDoor
+Motor <|-up- LGMotor
+Motor <|-up- HyundaiMotor
+Door <|-up- LGDoor
+Door <|-up- HyundaiDoor
+Motor -left-> Door
+
+@enduml
+
