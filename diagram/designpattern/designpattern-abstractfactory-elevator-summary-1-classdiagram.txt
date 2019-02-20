@@ -1,0 +1,93 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ElevatorFactoryFactory <<FactoryMethod>> {
+    + {static} getFactory(vendorId : VendorId) : ElevatorFactory
+}
+
+abstract class ElevatorFactory <<AbstractFactory>> {
+    + {abstract} createMotor() : Motor
+    + {abstract} createDoor() : Door
+}
+
+class LGElevatorFactory <<Singleton>> {
+    - {static} factory : ElevatorFactory
+    - LGElevatorFactory()
+    + {static} getInstance() : ElevatorFactory
+    + createMotor : Motor
+    + createDoor : Door
+}
+note top of LGElevatorFactory : ConcreteFactory1
+
+class HyundaiElevatorFactory <<Singleton>> {
+    - {static} factory: ElevatorFactory
+    - HyundaiElevatorFactory()
+    + {static} getInstance() : ElevatorFactory
+    + createMotor : Motor
+    + createDoor : Door
+}
+note top of HyundaiElevatorFactory : ConcreteFactory2
+
+class HyundaiMotor {
+    # moveMotor(direction : Direction) : void
+}
+note bottom of HyundaiMotor : ConcreteProductA2
+
+class LGMotor {
+    # moveMotor(direction : Direction) : void
+}
+note left of LGMotor : ConcreteProductA1
+
+class LGDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+note bottom of LGDoor : ConcreteProductB1
+
+class HyundaiDoor {
+    # doClose() : void
+    # doOpen() : void
+}
+note right of HyundaiDoor : ConcreteProductB2
+
+abstract class Motor {
+    - motorStatus : MotorStatus
+    - door : Door
+    + Motor()
+    + getMotorStatus() : MotorStatus
+    - setMotorStatus(motorStatus : MotorStatus) : void
+    + move(direction : Direction() : void
+    # {abstract} moveMotor(direction : Direction) : void
+    + setDoor(door : Door) : void
+}
+note bottom of Motor : AbstractProductA
+
+abstract class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    # {abstract} doClose() : void
+    + close() : void
+    # {abstract} doOpen() : void
+    + open() : void
+}
+note bottom of Door : AbstractProductB
+
+
+
+ElevatorFactory <|-- LGElevatorFactory
+ElevatorFactory <|-- HyundaiElevatorFactory
+ElevatorFactoryFactory ..> ElevatorFactory
+LGElevatorFactory ..> LGMotor
+LGElevatorFactory ..> LGDoor
+HyundaiElevatorFactory ..> HyundaiMotor
+HyundaiElevatorFactory ..> HyundaiDoor
+Motor <|-up- LGMotor
+Motor <|-up- HyundaiMotor
+Door <|-up- LGDoor
+Door <|-up- HyundaiDoor
+Motor -left-> Door
+
+
+@enduml
+

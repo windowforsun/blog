@@ -1,0 +1,47 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class ElevatorFactoryFactory {
+    + {static} getFactory(vendorId : VendorId) : ElevatorFactory
+}
+
+abstract class ElevatorFactory {
+    + {abstract} createMotor() : Motor
+    + {abstract} createDoor() : Door
+}
+
+
+class LGElevatorFactory <<Singleton>> {
+    - {static} factory : ElevatorFactory
+    - LGElevatorFactory()
+    + {static} getInstance() : ElevatorFactory
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+class HyundaiElevatorFactory <<Singleton>> {
+    - {static} factory: ElevatorFactory
+    - HyundaiElevatorFactory()
+    + {static} getInstance() : ElevatorFactory
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+class SamsungElevatorFactory <<Singleton>> {
+    - {static} factory : ElevatorFactory
+    - SamsungElevatorFactory()
+    + {static} getInstance() : ElevatorFactory
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+
+
+ElevatorFactory <|-- SamsungElevatorFactory
+ElevatorFactory <|-- LGElevatorFactory
+ElevatorFactory <|-- HyundaiElevatorFactory
+ElevatorFactoryFactory ..> ElevatorFactory
+
+
+@enduml
+

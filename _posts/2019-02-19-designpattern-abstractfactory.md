@@ -277,4 +277,232 @@ public class Client {
 ## 해결 방법
 여러 종류의 객체를 생성할 때 객체들 사이의 관련성이 있는 경우 라면 각 종류별로 별도의 Factory 클래스를 사용하는 대신 관련 객체들을 일관성 있게 생성하는 Factory 클래스를 사용하는 것이 편리할 수 있다.
 - ![추상 팩토리 패턴 엘레베이터 해결1]({{site.baseurl}}/img/designpattern-abstractfactory-elevator-solution-1-classdiagram.png)
+- MotorFactory, DoorFactory 클래스와 같이 부품별로 Factory 클래스를 만드는 대신 LGElevatorFactory나 HyundaiElevatorFactory클래스와 같이 제조 업체별로 Factory 클래스를 만들 수도 있다.
+- LGElevatorFactory : LGMotor, LGDoor 객체를 생성하는 팩토리 클래스
+- HyundaiElevatorFactory : HyundaiMotor, HyundaiDoor 객체를 생성하는 팩토리 클래스
+
+```java
+// 추상 부품을 생성하는 추상 팩토리 클래스
+public abstract class ElevatorFactory {
+	public abstract Motor createMotor();
+	public abstract Door createDoor();
+}
+```  
+
+```java
+// LG부품을 생성하는 팩토리 클래스
+public class LGElevatorFactory extends ElevatorFactory {
+	@Override
+	public Motor createMotor() {
+		return new LGMotor();
+	}
+	
+	@Override
+	public Door createDoor() {
+		return new LGDoor();
+	}
+}
+
+// Hyundai 부품을 생성하는 팩토리 클래스
+public class HyundaiElevatorFactory extends ElevatorFactory {
+	@Override
+	public Motor createMotor() {
+		return new HyundaiMotor();
+	}
+	
+	@Override
+	public Door createDoor() {
+		return new HyundaiDoor();
+	}
+}
+```  
+
+```java
+// 주어진 업체의 이름에 다라 부품을 생성하는 Client 클래스
+public class Client {
+	public static void main(String[] args) {
+		ElevatorFactory factory = null;
+		VendorId vendorId = VendorId.LG;
 		
+		if(vendorId == VendorId.LG) {
+			factory = new LGElevatorFactory();
+		} else {
+			factory = new HyundaiElevatorFactory();
+		}
+		
+		Door door = factory.createDoor();
+		Motor motor = factory.createMotor();
+		motor.setDoor(door);
+		
+		door.open();
+		motor.move(Direction.UP);
+	}
+}
+```  
+
+- VendorId에 맞춰 적절한 부품 객체를 생성한다.
+	- 문제점 1과 같이 다른 제조 업체의 부품으로 변경하는 경우에도 Client코드를 변경할 필요가 없다.
+- 제조 업체별로 Factory 클래스를 정의했으므로 제조 업체별 부품 객체를 간단히 생성할 수 있다.
+	- 문제점 2와 같이 새로운 제조 업체의 부품을 지원하는 경우에도 해당 제조 업체의 부품을 생성하는 Factory 클래스만 새롭게 만들면 된다.
+- ![추상 팩토리 패턴 엘레베이터 해결2]({{site.baseurl}}/img/designpattern-abstractfactory-elevator-solution-2-classdiagram.png)
+
+```java
+// Samsung 부품을 생성하는 팩토리 클래스
+public class SaumsungElevatorFactory extends ElevatorFactory {
+	@Override
+	public Motor createMotor() {
+		return new SaumsungMotor();
+	}
+	
+	@Override
+	public Door createDoor() {
+		return new SamsungDoor();
+	}
+}
+
+// Samsung Door 클래스
+public class SamsungDoor extends Door {
+	@Override
+	protected void doClose() {
+		System.out.println("close Samsung Door");
+	}
+	
+	@Override
+	protected void doOpen() {
+		System.out.println("open Samsung Door");
+	}
+}
+
+// Samsung Motor 클래스
+public class SamsungMotor extends Motor {
+	@Override
+	protected void moveMotor() {
+		// ....
+	}
+}
+```  
+
+```java
+// 주어진 업체의 이름에 다라 부품을 생성하는 Client 클래스
+public class Client {
+	public static void main(String[] args) {
+		ElevatorFactory factory = null;
+		VendorId vendorId = VendorId.LG;
+		
+		if(vendorId == VendorId.LG) {
+			factory = new LGElevatorFactory();
+		} else if(vendorId == Vendor.HYUNDAI) {
+			factory = new HyundaiElevatorFactory();
+		} else {
+			// Samsung 추가
+			factory = new SamsungElevatorFactory();
+		}
+		
+		Door door = factory.createDoor();
+		Motor motor = factory.createMotor();
+		motor.setDoor(door);
+		
+		door.open();
+		motor.move(Direction.UP);
+	}
+}
+```  
+
+### 추가 보완 해결책(정확한 추상 팩토리 패턴 적용)
+![추상 팩토리 패턴 엘레베이터 해결3]({{site.baseurl}}/img/designpattern-abstractfactory-elevator-solution-3-classdiagram.png)
+1. 과정 1
+팩토리 메서드 패턴 : 제조 업체별 Factory 객체를 생성하는 방식을 캡슐화 한다.
+- ElevatorFactoryFactory 클래스 : vendorId에 따라 해당 제조 업체의 Factory 객체를 생성
+- ElevatorFactoryFactory 클래스의 getFactory() 메서드 : 팩토리 메서드
+
+```java
+// 팩토리 클래스에 팩토리 메서드 패턴을 적용
+public class ElevatorFactoryFactory {
+	public static ElevatorFactory getFactory(VendorId vendorId) {
+		ElevatorFactory factory = null;
+		
+		switch(vendorId) {
+			case LG:
+				factory = LGElevatorFactory.getInstance();
+				break;
+			case HYUNDAI:
+				factory = HyundaiElevatorFactory.getInstance();
+				break;
+			case SAMSUNG:
+				factory = SamsungElevatorFactory.getInstance();
+				break;
+		}
+		
+		return factory;
+	}
+}
+```  
+
+1. 과정 2
+싱글턴 패턴 : 제조 업체별 Factory 객체는 각각 1개만 있으면 된다.
+- 3개의 제조 업체별 Factory 클래스를 싱글턴으로 설계
+
+```java
+// 싱글턴 패턴을 적용한 LG 팩토리
+public class LGElevatorFactory extends ElevatorFactory {
+	private static ElevatorFactory factory = null;
+	
+	private LGElevatorFactory() { }
+	
+	public static void getInstance() {
+		if(factory == null) {
+			factory = new LGElevatorFactory();
+		}
+		
+		return factory;
+	}
+	
+	@Override
+	public Motor createMotor() {
+		return new LGMotor();
+	}
+	
+	@Override
+	public Door createDoor() {
+		return new LGDoor();
+	}
+}
+
+// HyndaiElevatorFactory, SamsungElevatorFactory 모두 동일한 방식으로 싱글턴 적용
+```  
+
+- 추상 팩토리 패턴을 이용한 방법을 사용하는 Client
+
+```java
+// 주어진 업체의 이름에 다라 부품을 생성하는 Client 클래스
+public class Client {
+	public static void main(String[] args) {
+		ElevatorFactory factory = null;
+		VendorId vendorId = VendorId.LG;
+		
+		factory = ElevatorFactoryFactory.getFacotry(vendorId);
+		
+		Door door = factory.createDoor();
+		Motor motor = factory.createMotor();
+		motor.setDoor(door);
+		
+		door.open();
+		motor.move(Direction.UP);
+	}
+}
+```  
+
+# Summary
+![추상 팩토리 패턴 엘레베이터 요약1]({{site.baseurl}}/img/designpattern-abstractfactory-elevator-summary-1-classdiagram.png)
+- AbstractFactory : ElevatorFactory 클래스
+- ConcreteFactory : LGElevatorFactory, HyundaiElevatorFactory 클래스
+- AbstractProductA : Motor 클래스
+- ConcreteProductA : LGMotor, HyundaiMotor 클래스
+- AbstractProductB : Door 클래스
+- ConcreteProductB : LGDoor, HyundaiDoor 클래스
+
+
+---
+ 
+## Reference
+[[Design Pattern] 추상 팩토리 패턴이란](https://gmlwjd9405.github.io/2018/08/08/abstract-factory-pattern.html)

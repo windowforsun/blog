@@ -1,0 +1,53 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+
+abstract class ElevatorFactory {
+    + {abstract} createMotor() : Motor
+    + {abstract} createDoor() : Door
+}
+
+class SamsungElevatorFactory {
+    + createMotor : Motor
+    + createDoor : Door
+}
+
+class SamsungMotor {
+    # moveMotor(direction : Direction) : void
+}
+
+class SamsungDoor {
+    # doOpen() : void
+    # doClose() : void
+}
+
+abstract class Motor {
+    - motorStatus : MotorStatus
+    - door : Door
+    + Motor()
+    + getMotorStatus() : MotorStatus
+    - setMotorStatus(motorStatus : MotorStatus) : void
+    + move(direction : Direction() : void
+    # {abstract} moveMotor(direction : Direction) : void
+    + setDoor(door : Door) : void
+}
+
+abstract class Door {
+    - doorStatus : DoorStatus
+    + Door()
+    + getDoorStatus() : DoorStatus
+    # {abstract} doClose() : void
+    + close() : void
+    # {abstract} doOpen() : void
+    + open() : void
+}
+
+ElevatorFactory <|-- SamsungElevatorFactory
+SamsungElevatorFactory ..> SamsungMotor
+SamsungElevatorFactory ..> SamsungDoor
+Motor <|-up- SamsungMotor
+Door <|-up- SamsungDoor
+Motor -left-> Door
+
+@enduml
+
