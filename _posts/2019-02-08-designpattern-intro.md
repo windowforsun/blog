@@ -75,7 +75,7 @@ tags:
         1. 생성(Creational)패턴)
             - [추상 팩토리(Abstract Factory)]({{site.baseurl}}{% link _posts/2019-02-19-designpattern-abstractfactory.md %})
                 - 구체적인 클래스에 의존하지 않고 서로 연관되거나 의존적인 객체들의 조합을 만드는 인터페이스를 제공하는 패턴
-            - 팩토리 메서드(Factory Method)
+            - [팩토리 메서드(Factory Method)]({{site.baseurl}}{% link _posts/2019-02-17-designpattern-factorymethod.md %})
                 - 객체 생성 처리를 서브 클래스로 분리해 처리를하도록 캡슐화하는 패턴
             - [싱글턴(Singleton)]({{site.baseurl}}{% link _posts/2019-02-11-designpattern-singleton.md %})
                 - 전역 변수를 사용하지 않고 객체를 하나만 생성하도록 하며, 생성된 객체를 어디에서 든지 참조할 수 있도록 하는 패턴
