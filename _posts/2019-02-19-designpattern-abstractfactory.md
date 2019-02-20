@@ -223,7 +223,7 @@ public class Client {
 - 그러므로 move() 메서드는 문을 먼저 닫고 이동을 시작한다.
 - 이때 LGDoor와 LGMotor 객체가 모두 사용된다.
 
-## 문제점
+# 문제점
 1. 다른 제조 업체의 부품을 사용해야 하는 경우
 	- LG 부품 대신 Hyundai 부품을 사용해야 한다면 ?
 	
@@ -274,7 +274,7 @@ public class Client {
 	- 위 코드와 마찬가지로 특정 업체별 부품을 생성하는 코드에서 삼성 부품을 생성하도록 모두 변경해야 한다.
 - 결과적으로 기존의 팩토리 메서드 패턴을 이용한 객체 생성은 관련 있는 여러 개의 객체를 일관성 있는 방식으로 생성하는 경우에 많은 코드 변경이 발생 하게 된다는 것이다.
 
-## 해결 방법
+# 해결 방법
 여러 종류의 객체를 생성할 때 객체들 사이의 관련성이 있는 경우 라면 각 종류별로 별도의 Factory 클래스를 사용하는 대신 관련 객체들을 일관성 있게 생성하는 Factory 클래스를 사용하는 것이 편리할 수 있다.
 - ![추상 팩토리 패턴 엘레베이터 해결1]({{site.baseurl}}/img/designpattern-abstractfactory-elevator-solution-1-classdiagram.png)
 - MotorFactory, DoorFactory 클래스와 같이 부품별로 Factory 클래스를 만드는 대신 LGElevatorFactory나 HyundaiElevatorFactory클래스와 같이 제조 업체별로 Factory 클래스를 만들 수도 있다.

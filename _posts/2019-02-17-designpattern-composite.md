@@ -17,7 +17,7 @@ tags:
 
 '컴퍼지트 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
-### 컴퍼지트 패턴이란
+# 컴퍼지트 패턴이란
   - 여러 개의 객체들로 구성된 복합 객체와 단일 객체를 클라이언트에서 구별 없이 다루게 해주는 해턴
     - 전체 부분의 관계(ex. Dictionary-File)를 갖는 객체들 사이의 관계를 정의할 때 유용하다.
     - 또한 클라이언트는 전체와 부분을 구분하지 않고 동일한 인터페이스를 사용할 수 있다.
@@ -35,8 +35,8 @@ tags:
       - 복수 개의 Component를 갖도록 정의
       - 복수 개의 Leaf, 심지어 복수 개의 Composite 객체를 부분으로 가질 수 있음
       
-### 예시
-#### 컴퓨터에 추가 장치 지원하기
+# 예시
+## 컴퓨터에 추가 장치 지원하기
 - ![컴퍼지트 패턴 컴퓨터1]({{site.baseurl}}/img/designpattern-composite-computer-1-classdiagram.png)
   - 컴퓨터(Computer 클래스) 모델링
     - 키보드(Keyboard 클래스) : 데이터를 입력받는다.
@@ -161,7 +161,7 @@ public class Client {
 }
 ```  
 
-#### 문제점
+# 문제점
 - 다른 부품이 추가되는 경우
 	- Computer 클래스의 부품으로 Speaker 클래스 또는 Mouse 클래스를 추가하려면 ?
 	- ![컴포지트 패턴 컴퓨터 문제1]({{site.baseurl}}/img/designpattern-composite-computer-probolem-1-claadiagram.png)
@@ -248,7 +248,7 @@ public class Computer {
 - 이는 OCP를 만족하지 않는다.
 - 문제점의 핵심은 COmputer 클래스에 속한 부품의 구체적인 객체를 가리키면 OCP를 위반하게 된다는 것이다.
 	
-#### 해결책
+# 해결책
 구체적인 부품들을 일반화한 클래스를 정의하고 이를 Computer 클래스가 가리키도록 설계한다.
 ![컴포지트 패턴 컴퓨터 해결1]({{site.baseurl}}/img/designpattern-composite-computer-solution-1-classdiagram.png)
 1. 구체적인 부품들을 일반화한 ComputerDevice 클래스 정의

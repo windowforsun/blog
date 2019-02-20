@@ -117,7 +117,8 @@ public class ThroughputScheduler {
 - requestElevator() 메서드
 	1. 요청(목적지 층, 방향)을 받았을 때 우선 ThroughputScheduler 클래스의 selectedElevator() 메서드를 호출해 적정한 엘레베이터를 선택한다.
 	1. 선택된 엘레베이터에 해당하는 ElevatorController 객체의 gotoFloor() 메서드를 호출해 엘레베이터를 이동시킨다.
-	
+
+# 문제점	
 ## 문제점 1
 1. 다른 스케쥴링 전략을 사용하는 경우
 	- 엘레베이터 작업 처리량을 최대화(ThroughputScheduler 클래스)시키는 전략이 아닌 사용자의 대기 시간을 최소화하는 엘레베이터 선택 전략을 사용해야 한다면 ?

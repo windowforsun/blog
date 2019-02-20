@@ -17,7 +17,7 @@ tags:
 
 '디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
 
-### 디자인 패턴 이란
+# 디자인 패턴 이란
 - 소프트웨어를 설계할 때 특정 맥락에서 자주 발생하는 고질적인 문제들이 또 발생 했을 때 재사용 할 수있는 훌륭한 해결책
 - "바퀴를 다시 발명하지 마라(Don't reinvent the wheel)"
 - 이미 만들어져서 잘 되는 것을 처음부터 다시 만들 필요가 없다는 의미이다.
@@ -27,7 +27,7 @@ tags:
 
 ---
     
-### 디자인 패턴 구조
+# 디자인 패턴 구조
 - 콘텍스트(Context)
     - 문제가 발생하는 여러 상황을 기술한다. 즉, 패턴이 적용될 수 있는 상활을 나타낸다.
     - 경우에 따라서 패턴이 유용하지 못한 상황을 타나태기도 한다.
@@ -40,7 +40,7 @@ tags:
     
 ---
 
-### 디자인 패턴의 종류
+# 디자인 패턴의 종류
 - GoF 디자인 패턴 
     - GoF(Gang Of Fout)라 불리는 사람들
         - 에리히 감마(Erich Gamma), 리차드 헬름(Richard Helm), 랄프 존슨(Ralph Johnson), 존 블리시디스(John Vissides)
@@ -73,27 +73,27 @@ tags:
            
     - GoF 디자인 패턴의 종류
         1. 생성(Creational)패턴)
-            - 추상 팩토리(Abstract Factory)
+            - [추상 팩토리(Abstract Factory)]({{site.baseurl}}{% link _posts/2019-02-19-designpattern-abstractfactory.md %})
                 - 구체적인 클래스에 의존하지 않고 서로 연관되거나 의존적인 객체들의 조합을 만드는 인터페이스를 제공하는 패턴
             - 팩토리 메서드(Factory Method)
                 - 객체 생성 처리를 서브 클래스로 분리해 처리를하도록 캡슐화하는 패턴
-            - [싱글턴(Singleton)](https://lee-changsun.github.io/2019/02/11/designpattern-singleton/)
+            - [싱글턴(Singleton)]({{site.baseurl}}{% link _posts/2019-02-11-designpattern-singleton.md %})
                 - 전역 변수를 사용하지 않고 객체를 하나만 생성하도록 하며, 생성된 객체를 어디에서 든지 참조할 수 있도록 하는 패턴
         1. 구조(Structural)패턴
-            - 컴퍼지트(Composite)
+            - [컴퍼지트(Composite)]({{site.baseurl}}{% link _posts/2019-02-17-designpattern-composite.md %})
                 - 여러 개의 객체들로 구성된 복합 객체와 단일 객체를 클라이언트에서 구별 없이 다루게 해주는 패턴
-            - 데커레이터(Decorator)
+            - [데커레이터(Decorator)]({{site.baseurl}}{% link _posts/2019-02-14-designpattern-decorator.md %})
                 - 객체의 결합을 통해 기능을 동적으로 유연하게 확장할 수 있게 해주는 패턴
         1. 행위(Behavioral)패턴
-            - 옵저버(Observer)
+            - [옵저버(Observer)]({{site.baseurl}}{% link _posts/2019-02-13-designpattern-observer.md %})
                 - 한 객체의 상태 변화에 따라 다른 객체의 상태도 연동되도록 객체 의존 관계를 구성하는 패턴
             - 스테이트(State)
                 - 객체의 상태에 따라 객체의 행위 내용을 변경해주는 패턴
-            - 스트래티지(Strategy)
+            - [스트래티지(Strategy)]({{site.baseurl}}{% link _posts/2019-02-12-designpattern-strategy.md %})
                 - 햏위를 클래스로 캡슐화해 동적으로 행위를 자유롭게 바꿀 수 있게 해주는 패턴
-            - [템플릿 메서드(Template Method)](https://lee-changsun.github.io/2019/02/11/designpattern-templatemethod/)
+            - [템플릿 메서드(Template Method)]({{site.baseurl}}{% link _posts/2019-02-11-designpattern-templatemethod.md %})
                 - 어떤 작업을 처리하는 일부분을 서브 클래스로 캡슐화해 전체 일을 수행하는 구조는 바꾸지 않으면서 특정 단계에서 수행하는 내역을 바꾸는 패턴
-            - 커멘드(Command)
+            - [커멘드(Command)]({{site.baseurl}}{% link _posts/2019-02-13-designpattern-command.md %})
                 - 실행될 기능을 캡슐화함으로써 주어진 여러 기능을 실행할 수 있는 재사용성이 높은 클래스를 설계하는 패턴
         
         

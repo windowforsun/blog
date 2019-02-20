@@ -17,7 +17,7 @@ tags:
 
 '템플릿 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
-### 템플릿 메서드 패턴이란
+# 템플릿 메서드 패턴이란
 - 어떤 작업을 처리하는 일부분을 서브 클래스로 캡슐화해 전체 일을 수행하는 구조는 바꾸지 않으면서 특정 단계에서 수행하는 내역을 바꾸는 패턴
     - 전체적으로는 동일하면서 부분적으로는 다른 구문으로 구성된 메서드의 코드 중복을 최소화 할 때 유용하다.
     - 다른 관점에서 보면 동일한 기능을 상위 클래스에서 정의하면서 확장/변화가 필요한 부분만 서브 클래스에서 구현할 수 있도록 한다.
@@ -32,8 +32,8 @@ tags:
         - 물려받은 primitive 메서드 또는 hook 메서드를 구현하는 클래스
         - 상위 클래스에 구현된 템플릿 메서드의 일반적인 알고리즘에서 하위 클레스에 적합하게 primitive 메서드나 hook 메서드를 오버라이드하는 클래스
         
-### 예시
-#### 여러 회사의 모터 지원하기
+# 예시
+## 여러 회사의 모터 지원하기
 - ![모터 클래스 다이어그램](/img/designpattern-templatemethod-motor-1-classdiagram.png)
 - 엘리베이터 제어 시스템에서 모터를 구동시키는 기능
     - 예를 들어 현대 모터를 이용하는 제어 시스템이라면 HyundaiMotor 클래스에 move 메서드를 정의할 수 있다.
@@ -120,6 +120,7 @@ public class HyundaiMotor {
     }
 }
 ```  
+
 ```java
 public class Client {
     public static void main(String[] args){
@@ -139,7 +140,7 @@ public class Client {
     1. 그리고 moveHyundaiMotor 메서드를 호출해 모터를 구동시킨다.
     1. setMotorStatus를 호출해 모터의 상태를 MOVING으로 기록한다.
 
-#### 문제점
+# 문제점
 - 다른 회사의 모터를 제어해야 하는 경우
     - HyundaiMotor 클래스는 현대 모터를 구동시킨다. 만약 LG 모터를 구동시키려면 ?
     
@@ -195,8 +196,8 @@ public class LGMotor {
     - getMotorStatus, setMotorStatus 메서드
 - 중복 코드는 유지보수성을 악화 시키므로 바람직하지 않다.
 
-#### 해결방법
-##### 방법 1
+# 해결방법
+## 방법 1
 2 개 이상의 클래스가 유사한 기능을 제공하면서 중복된 코드가 있는 경우에는 상속을 이용해서 코드 중복 문제를 피할 수 있다.
 - ![템플릿 메서드 패턴 방법 1](/img/designpattern-templatemethod-motor-solution-1-classdiagram.png) 
 
@@ -262,7 +263,7 @@ public class LGMotor extends Motor {
 - 그러나 HyundaiMotor, LGMotor 의 move 메서드는 대부분이 비슷하다.
     - 아직 코드 중복 문제가 있다.
     
-##### 방법 2
+## 방법 2
 위의 move 메서드와 같이 부분적으로 중복되는 경우에도 상속을 활용해 코드 중복을 피할 수 있다.
 - move 메서드에서 moveHyundaiMotor 메서드와 moveLGMotor 메서드를 호출하는 부문만 다르다.
 - moveHyundaiMotor, moveLGMotor 메서드는 기능(모터 구동을 실제로 구현)면에서는 동일하다.
@@ -329,7 +330,7 @@ public class LGMotor extends Motor {
 - 이렇게 Template Method 패턴을 이용하면 전체적으로는 동일하면서 부분적으로는 다른 구문으로 구성된 메서드의 코드 중복을 최소화할 수 있다.
 
 
-### 정리
+# Summary
 ![템플릿 메서드 정리](/img/designpattern-templatemethod-motor-conclusion-classdiagram.png)
 - AbstractClass : Motor 클래스
 - ConcreteClass : HyundaiMotor, LGMotor 클래스
