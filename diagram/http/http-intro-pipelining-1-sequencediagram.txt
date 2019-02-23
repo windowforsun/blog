@@ -1,0 +1,16 @@
+@startuml
+group Persistent
+WebBrowser -> WebServer : Request
+WebServer -> WebBrowser : Response
+WebBrowser -> WebServer : Request
+WebServer -> WebBrowser : Response
+end
+
+group Pipelining
+WebBrowser -> WebServer : Request
+WebBrowser -> WebServer : Request
+WebServer -> WebBrowser : Response
+WebServer -> WebBrowser : Response
+end
+@enduml
+

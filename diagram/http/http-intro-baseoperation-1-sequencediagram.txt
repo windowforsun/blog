@@ -1,0 +1,9 @@
+@startuml
+
+WebBrowser -> WebServer : Request
+activate WebServer
+WebServer -> WebBrowser : Response
+deactivate WebServer
+
+@enduml
+
