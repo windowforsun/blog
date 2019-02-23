@@ -76,13 +76,15 @@ tags:
 - 발생하는 패킷의 숫자를 감소, 네트워크 트래픽 감소
 
 # HTTP Request 구조
-- 사용자(웹 애플리케이션)가 서버에 요청을 보낼 때 HTTP Request 구조
-| | Division | Example |
+- 사용자(웹 애플리케이션)가 서버에 요청을 보낼 때 HTTP Request 구조  
+
+|  | Division | Example |
 |---|---|---|
-|Header|Request Line|GET /index.html HTTP/1.1
-|Header|Request Header|Host:www.example.com:80 User-Agent:Mozilla/5.0 ...
-|	|An Empty Line|<carriage return>
-|Message|Optional Message Body| POST Data
+| Header | Request Line | GET /index.html HTTP/1.1
+| Header | Request Header | Host:www.example.com:80 User-Agent:Mozilla/5.0 ...
+|	| An Empty Line | <carriage return>
+| Message | Optional Message Body | POST Data
+
 - Request Line(Header) : 사용자가 서버에 요청하는 메소드, HTTP 버전 확인 가능
 - Request Header(Header) : 서버에 전달되는 사용자 정보(웹 애플리케이션 정보: 문자 코드, 언어, 파이 종류)
 - Optional Message Body(Message) : HTTP Request 요청 메시지를 담고 있는 부분, GET 메소드의 경우 요청정보가 주소에 담겨져 있어 본문은 빈상태
@@ -90,23 +92,25 @@ tags:
 # Request Method
 |Request Method|Description|
 |---|---|
-|GET|지정된 URL의 정보를 가져온다.
-|POST|지정된 URL로 Body에 포함된 정보를 제출한다.
-|PUT|지정된 URL에 저장될 정보를 전달한다.
-|DELETE|지정된 Resource(정보)를 삭제한다.
-|HEAD|GET과 유사하나 헤더 정보외에는 어떤 데이터도 보내지 않는다.
-|OPTIONS|해당 메소드를 통해 시스템에서 지원되는 메소드 종류를 확인한다.
-|TRACE|원격지 서버에 Loopback(루프백)메시지를 호출하기 위해 사용된다.
-|CONNET|웹 서버에 프록시 기능을 요청할 때 사용된다.
+| GET | 지정된 URL의 정보를 가져온다.
+| POST | 지정된 URL로 Body에 포함된 정보를 제출한다.
+| PUT | 지정된 URL에 저장될 정보를 전달한다.
+| DELETE | 지정된 Resource(정보)를 삭제한다.
+| HEAD | GET과 유사하나 헤더 정보외에는 어떤 데이터도 보내지 않는다.
+| OPTIONS | 해당 메소드를 통해 시스템에서 지원되는 메소드 종류를 확인한다.
+| TRACE | 원격지 서버에 Loopback(루프백)메시지를 호출하기 위해 사용된다.
+| CONNET | 웹 서버에 프록시 기능을 요청할 때 사용된다.
 
 # HTTP Response 구조
 - 서버가 사용자(웹 애플리케이션) 요청에 응답을 할때 HTTP Response 구조
+
 | | Devision | Example |
 |---|---|---|
-|Header|Response line|HTTP/1.1 200OK
-|Header|Response Header|Host:www.example.com:80 ...
-| |An Empty Line|<CR><LF>, carriage return
-|Message|Message Body|HTML Contents
+| Header | Response line | HTTP/1.1 200OK
+| Header | Response Header | Host:www.example.com:80 ...
+| | An Empty Line | <CR><LF>, carriage return
+| Message | Message Body | HTML Contents
+
 - Response line(Header) : 사용자의 요청에 대한 서버 처리결과를 나타냄(200, 404, 500...)
 - Response Header(Header) : 사용자에게 전달한 데이터 정보를 나타냄
 - Message Body(Message) : 사용자에게 전달한 데이터 내용을 담고 있음(요청에 대한 응답 데이터)
@@ -114,17 +118,17 @@ tags:
 # Response Status Code
 | Range | Status Code | Description |
 |---|---|---|
-|1xx(Information)| | |
-|2xx(Success|200|OK|
-|3xx(Redirection)|301|Moved Permanently
-| |302|Found
-| |304|Not Modified
-|4xx(Client Error)|400|Bad Request
-| |401|Unauthorized
-| |403|Forbidden
-| |404|Not Found
-|5xx(Server Error)|500|Internal Server Error
-| |503|Service Unavailable
+| 1xx(Information) | | 
+| 2xx(Success | 200 | OK 
+| 3xx(Redirection) | 301 | Moved Permanently
+| | 302 | Found
+| | 304 | Not Modified
+| 4xx(Client Error) | 400 | Bad Request
+| | 401 | Unauthorized
+| | 403 | Forbidden
+| | 404 | Not Found
+| 5xx(Server Error) | 500 | Internal Server Error
+| | 503 | Service Unavailable
 
 
 	
