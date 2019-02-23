@@ -32,8 +32,6 @@ tags:
 ## REST 안티 패턴
  
  
-# RESTful 이란
-
 ---
 ## Reference
 [REST API의 이해와 설계-#1 개념 소개](https://bcho.tistory.com/953)  

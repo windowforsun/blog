@@ -13,6 +13,7 @@ tags:
     - Web
     - REST
     - RESTful
+    - ROA
     - Intro
 ---  
 
@@ -86,18 +87,6 @@ tags:
 	- REST 서버는 비지니스 로직을 수행하는 API 서버 외에, 다중 계층으로 구성될 수 있으며 보안, 로드 밸련싱, 암호화 계층을 추가해 구조상의 유연성을 둘 수 있다.
 	- 마이크로 서비스 아키텍쳐의 API Gateway, Reverse Proxy 등의 네트워크 기반의 중간 매체를 통해 구성할 수 있다.
 
-# REST API 란
-
-## REST API의 특징
-
-## RMM
-
-## REST API 설계
-
-## REST 안티 패턴
-
-
- 
  
 # RESTful 이란
 
