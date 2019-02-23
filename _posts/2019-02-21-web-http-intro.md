@@ -139,14 +139,11 @@ tags:
 | | 404 | Not Found
 | 5xx(Server Error) | 500 | Internal Server Error
 | | 503 | Service Unavailable
-
-
-	
-	
 	 
 
 ---
 # After
+- HTTP 2.0
 - cookie
 - session
 - url rewriting
