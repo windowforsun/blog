@@ -11,7 +11,6 @@ categories :
   - Web
 tags:
     - Web
-    - REST
     - ROA
     - Intro
 ---  
@@ -19,7 +18,7 @@ tags:
 'ROA 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # ROA 란
-Resource Oriented Architecture의 약자로, 웹의 모든 리소스를 URI로 표현하고 구조적이고 유기적으로 연결하여 비 상태 자향적인 방법으로 정해진 Mehtod만을 사용하여 리소스를 사용하는 아키텍쳐. 4가지의 고유한 속성(Addressability, Connectedness, Statelessness, Homogeneous Interface)과 연관되어 진다.(REST는 이 속성들을 지향한다.)
+Resource Oriented Architecture의 약자로, 웹의 모든 리소스를 URI로 표현하고 구조적이고 유기적으로 연결하여 비 상태 자향적인 방법으로 정해진 Mehtod만을 사용하여 리소스를 사용하는 아키텍쳐. 4가지의 고유한 속성(Addressability, Connectedness, Statelessness, Homogeneous Interface)과 연관되어 진다.([REST]({{site.baseurl}}{% link _posts/2019-02-21-web-rest-intro.md %})는 이 속성들을 지향한다.)
 - Addressability (주소로 표현 가능함)
 	- 제공하는 모든 정보를 URI로 표시할 수 있어야 한다.
 	- 직접 URI로 접근할 수 없고 HyperLink를 따라서만 해당 리소스에 접근할 수 있다면 이는 RESTful하지 않은 웹서비스이다.
