@@ -17,6 +17,7 @@ tags:
 
 'HTTP란 무엇이고, 어떠한 특징을 가지고 있는지'
 
+---
 # HTTP 란
 - HTTP(Hyper Text Transport Protocol)은 웹서버와 클라이언트간의 문서를 교환하기 귀한 통신 규약
 - WWW(World Wide Web)의 문산되어 있는 서버와 클라이언트 간에 Hypertext를 이용한 정보 교환이 가능하도록 하는 통신 규약
@@ -28,11 +29,13 @@ tags:
 - 연결을 열고, 요청을 보낸 뒤 응답을 받을 때까지 대기하는 클라이언트를 이용하는 고전적인 클라이언트-서버 모델이다.
 - 무상태 프로토콜로 두 개의 요청 사이에 어떤 데이터(상태)도 서버가 유지하지 않는다.
 
+---
 # HTTP 동작 방식
 ![http 개요 기본 동작 방식1]({{site.baseurl}}/img/http-intro-baseoperation-1-sequencediagram.png)
 - 클라이언트 : 웹 애플리케이션의 경우, 크롬, 파폭, IE 등 브라우저를 통해서 서버에 요청(프로토콜 + 도메인 + URI)
 - 서버 : 클라이언트로 부터 받은 요청을 내부적으로 처리하여 그에 대한 결과를 응답
 
+---
 # HTTP 특징 및 기능
 1. Connectionless
 	- 요청-응답 후 연결을 끊음
@@ -51,6 +54,7 @@ tags:
 	- TCP/IP 프로토콜의 Application 계층에 위치
 	- TCP Protocol을 이용(Default Port 80)
 	
+---
 # HTTP 1.1
 - HTTP 1.0의 성능 개선에 중점을 둠
 
@@ -75,6 +79,7 @@ tags:
 - 연결과 종료횟수를 줄임으로서 네트워크 자원의 절약
 - 발생하는 패킷의 숫자를 감소, 네트워크 트래픽 감소
 
+---
 # HTTP Request 구조
 - 사용자(웹 애플리케이션)가 서버에 요청을 보낼 때 HTTP Request 구조  
 
@@ -89,6 +94,7 @@ tags:
 - Request Header(Header) : 서버에 전달되는 사용자 정보(웹 애플리케이션 정보: 문자 코드, 언어, 파이 종류)
 - Optional Message Body(Message) : HTTP Request 요청 메시지를 담고 있는 부분, GET 메소드의 경우 요청정보가 주소에 담겨져 있어 본문은 빈상태
 
+---
 # Request Method
 
 |Request Method|Description|
@@ -102,6 +108,7 @@ tags:
 | TRACE | 원격지 서버에 Loopback(루프백)메시지를 호출하기 위해 사용된다.
 | CONNET | 웹 서버에 프록시 기능을 요청할 때 사용된다.
 
+---
 # HTTP Response 구조
 - 서버가 사용자(웹 애플리케이션) 요청에 응답을 할때 HTTP Response 구조
 
@@ -116,6 +123,7 @@ tags:
 - Response Header(Header) : 사용자에게 전달한 데이터 정보를 나타냄
 - Message Body(Message) : 사용자에게 전달한 데이터 내용을 담고 있음(요청에 대한 응답 데이터)
 
+---
 # Response Status Code
 
 | Range | Status Code | Description |
@@ -137,18 +145,20 @@ tags:
 	
 	 
 
+---
+# After
+- cookie
+- session
+- url rewriting
+- hidden form field
 
-cookie
-session
-url rewriting
-hidden form field
 ---
  
 ## Reference
-[HTTP](https://developer.mozilla.org/ko/docs/Web/HTTP)
-[HTTP](https://ko.wikipedia.org/wiki/HTTP)
-[[웹기본개념] HTTP 그리고 REST API 다가가기](https://jinbroing.tistory.com/96)
-[[HTTP]HTTP란? 특징 및 구성요소](https://ourcstory.tistory.com/71)
-[HTTP (HyperText Transport Protocol)의 이해](http://wiki.gurubee.net/pages/viewpage.action?pageId=26739929)
+[HTTP](https://developer.mozilla.org/ko/docs/Web/HTTP)  
+[HTTP](https://ko.wikipedia.org/wiki/HTTP)  
+[[웹기본개념] HTTP 그리고 REST API 다가가기](https://jinbroing.tistory.com/96)  
+[[HTTP]HTTP란? 특징 및 구성요소](https://ourcstory.tistory.com/71)  
+[HTTP (HyperText Transport Protocol)의 이해](http://wiki.gurubee.net/pages/viewpage.action?pageId=26739929)  
 
 
