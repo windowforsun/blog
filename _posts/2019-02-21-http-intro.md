@@ -1,33 +1,34 @@
 --- 
 layout: single
 classes: wide
-title: "Http 란"
+title: "HTTP 란"
 header:
   overlay_image: /img/http-bg.jpg
-subtitle: 'Http란 무엇이고, 어떠한 특징을 가지고 있는지'
+subtitle: 'HTTP 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Http
+  - Web
 tags:
-    - Http
+    - HTTP
+    - Web
     - Intro
 ---  
 
-'Http란 무엇이고, 어떠한 특징을 가지고 있는지'
+'HTTP란 무엇이고, 어떠한 특징을 가지고 있는지'
 
-# Http 란
-- Http(Hyper Text Transport Protocol)은 웹서버와 클라이언트간의 문서를 교환하기 귀한 통신 규약
+# HTTP 란
+- HTTP(Hyper Text Transport Protocol)은 웹서버와 클라이언트간의 문서를 교환하기 귀한 통신 규약
 - WWW(World Wide Web)의 문산되어 있는 서버와 클라이언트 간에 Hypertext를 이용한 정보 교환이 가능하도록 하는 통신 규약
-- Http는 TCP/IP 기반으로 한지점에서 다른 지점(서버-클라이언트)으로 요청과 응답을 전송한다.
+- HTTP는 TCP/IP 기반으로 한지점에서 다른 지점(서버-클라이언트)으로 요청과 응답을 전송한다.
 
 ## More
-- Http는 HTML과 같은, 하이퍼미디어 문서 전송을 위한 응용계층 프로토톨이다.
-- Http는 웹 브라우저와 웹 서버 사이의 통신을 위해 설계되었지만, 다른 목적을 위해서도 사용 가능하다.
+- HTTP는 HTML과 같은, 하이퍼미디어 문서 전송을 위한 응용계층 프로토톨이다.
+- HTTP는 웹 브라우저와 웹 서버 사이의 통신을 위해 설계되었지만, 다른 목적을 위해서도 사용 가능하다.
 - 연결을 열고, 요청을 보낸 뒤 응답을 받을 때까지 대기하는 클라이언트를 이용하는 고전적인 클라이언트-서버 모델이다.
 - 무상태 프로토콜로 두 개의 요청 사이에 어떤 데이터(상태)도 서버가 유지하지 않는다.
 
-# Http 동작 방식
+# HTTP 동작 방식
 ![http 개요 기본 동작 방식1]({{site.baseurl}}/img/http-intro-baseoperation-1-sequencediagram.png)
 - 클라이언트 : 웹 애플리케이션의 경우, 크롬, 파폭, IE 등 브라우저를 통해서 서버에 요청(프로토콜 + 도메인 + URI)
 - 서버 : 클라이언트로 부터 받은 요청을 내부적으로 처리하여 그에 대한 결과를 응답
@@ -46,21 +47,21 @@ tags:
 	- 한 컴퓨터에서 어떤 데이터를 요청하면, 다른 컴퓨터에서는 그 요청에 대한 응답을 보내는 방식
 	- 웹 페이지는 Request-Response의 한 예
 1. 그외
-	- Http 메세지는 Http Server와 Http Client에 의해서 해석
+	- HTTP 메세지는 HTTP Server와 HTTP Client에 의해서 해석
 	- TCP/IP 프로토콜의 Application 계층에 위치
 	- TCP Protocol을 이용(Default Port 80)
 	
-# Http 1.1
-- Http 1.0의 성능 개선에 중점을 둠
+# HTTP 1.1
+- HTTP 1.0의 성능 개선에 중점을 둠
 
-## Http 1.0의 문제점
+## HTTP 1.0의 문제점
 - 단순한 OPEN, OPERATION, CLOSE
 - 매번 필요할 때마다 연결(비 지속성 연결방식) -> 성능 저하
 - 한번에 얻어서 가져올 수 있는 데이터의 양이 제한
 - URL의 크기도 작으며, 캐시 기능이 이흡(Last-Modified에 의존)
 - GET/HEAD/POST methdo만 허용
 
-## Http 1.1의 개선
+## HTTP 1.1의 개선
 - 지속적인 연결을 해 주는 persistent connection 지원
 - multiple request 처리 가능
 - request/response 가 pipeline 방식으로 진행
@@ -74,17 +75,17 @@ tags:
 - 연결과 종료횟수를 줄임으로서 네트워크 자원의 절약
 - 발생하는 패킷의 숫자를 감소, 네트워크 트래픽 감소
 
-# Http Request 구조
-- 사용자(웹 애플리케이션)가 서버에 요청을 보낼 때 Http Request 구조
+# HTTP Request 구조
+- 사용자(웹 애플리케이션)가 서버에 요청을 보낼 때 HTTP Request 구조
 | | Division | Example |
 |---|---|---|
 |Header|Request Line|GET /index.html HTTP/1.1
 |Header|Request Header|Host:www.example.com:80 User-Agent:Mozilla/5.0 ...
 |	|An Empty Line|<carriage return>
 |Message|Optional Message Body| POST Data
-- Request Line(Header) : 사용자가 서버에 요청하는 메소드, Http 버전 확인 가능
+- Request Line(Header) : 사용자가 서버에 요청하는 메소드, HTTP 버전 확인 가능
 - Request Header(Header) : 서버에 전달되는 사용자 정보(웹 애플리케이션 정보: 문자 코드, 언어, 파이 종류)
-- Optional Message Body(Message) : Http Request 요청 메시지를 담고 있는 부분, GET 메소드의 경우 요청정보가 주소에 담겨져 있어 본문은 빈상태
+- Optional Message Body(Message) : HTTP Request 요청 메시지를 담고 있는 부분, GET 메소드의 경우 요청정보가 주소에 담겨져 있어 본문은 빈상태
 
 # Request Method
 |Request Method|Description|
@@ -98,8 +99,8 @@ tags:
 |TRACE|원격지 서버에 Loopback(루프백)메시지를 호출하기 위해 사용된다.
 |CONNET|웹 서버에 프록시 기능을 요청할 때 사용된다.
 
-# Http Response 구조
-- 서버가 사용자(웹 애플리케이션) 요청에 응답을 할때 Http Response 구조
+# HTTP Response 구조
+- 서버가 사용자(웹 애플리케이션) 요청에 응답을 할때 HTTP Response 구조
 | | Devision | Example |
 |---|---|---|
 |Header|Response line|HTTP/1.1 200OK
