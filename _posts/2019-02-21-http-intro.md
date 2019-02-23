@@ -90,6 +90,7 @@ tags:
 - Optional Message Body(Message) : HTTP Request 요청 메시지를 담고 있는 부분, GET 메소드의 경우 요청정보가 주소에 담겨져 있어 본문은 빈상태
 
 # Request Method
+
 |Request Method|Description|
 |---|---|
 | GET | 지정된 URL의 정보를 가져온다.
@@ -116,6 +117,7 @@ tags:
 - Message Body(Message) : 사용자에게 전달한 데이터 내용을 담고 있음(요청에 대한 응답 데이터)
 
 # Response Status Code
+
 | Range | Status Code | Description |
 |---|---|---|
 | 1xx(Information) | | 
