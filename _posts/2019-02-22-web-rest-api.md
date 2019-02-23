@@ -28,13 +28,11 @@ tags:
 ## RMM
 
 ## REST API 설계
-
-## REST 안티 패턴
  
  
 ---
 ## Reference
-[REST API의 이해와 설계-#1 개념 소개](https://bcho.tistory.com/953)  
+[REST API 이해와 설계 - #2 API 설계 가이드](https://bcho.tistory.com/954?category=252770)  
 [[웹기본개념] HTTP 그리고 REST API 다가가기](https://jinbroing.tistory.com/96)  
 [RESTful API란 ?](https://brainbackdoor.tistory.com/53)  
 [RestFul이란 무엇인가?](https://lalwr.blogspot.com/2016/01/restful.html)  
