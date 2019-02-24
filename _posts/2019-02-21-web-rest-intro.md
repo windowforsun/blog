@@ -88,8 +88,41 @@ tags:
 	- 마이크로 서비스 아키텍쳐의 API Gateway, Reverse Proxy 등의 네트워크 기반의 중간 매체를 통해 구성할 수 있다.
 
 ## REST 안티 패턴
- 
+- GET/POST 를 이용한 터널링
+	- ex) http://www.my.com?method=update&id=cs
+		- 메서드의 실제 동작은 리소스를 업데이트 하는 내용이지만, PUT를 사용하지 않고, GET 쿼리 파라미터로 method=update라고 넘겨주며 이 메서드가 수정 동작임을 명시했다.
+	- HTTP 메서드의 규약을 따르지 않았기 때문에 REST라고 할 수 없고, 웹 캐시 인프라도 사용 불가능하다.
+	- 다른 안좋은 예는 POST를 이용한 터널링이다.
+	```
+	{
+		"method" : "GetUserInfo",
+		"id" : "cs"
+	}
+	``` 
+	
+	- Insert(Create)성 오퍼레이션이 아닌대도 불구하고, Json에 오퍼레이션 명을 넘기는 형태로 사용자 정보를 가지고 오고 있다.
+- Self-Descriptiveness 속성을 사용하지 않음
+	- REST의 특징 중하나인 Self-Descriptiveness는 자기 서술성으로 REST URI와 메서드 그리고 정의된 메시지 포맷에 의해 쉽게 API를 이해할 수 있는 기능이 되어야 한다.
+	- 하지만 Self-Descriptiveness 을 깨먹는 가장 대표적인 사례가 위에서 앞서 언급한 GET이나 POST을 이용한 터널링 구조가 된다.
+- HTTP Response Code를 사용하지 않음
+	- HTTP Response Code를 출실하게 따르지 않고, 성공은 200, 실패는 500과 같이 1~2 개의 HTTP Response Code만 사용하는 경우이다.
+	- 심한 경우에는 HTTP Response Code 200으로 정의한 후 별도의 에러 메시지를 200 Response Code와 함께 보내는 경우이다.
+	- 이는 REST 디자인 사상에도 어긋남은 물론이고 자기 서술성에도 어긋난다.
+	
 # RESTful 이란
+- RESTful은 일반적으로 REST라는 아키텍쳐를 구현하는 웹 서비스를 나타내기 위해 사용되는 용어이다.
+	- `REST API`를 제공하는 웹서비스를 `RESTful` 하다고 할 수 있다.
+- RESTful은 REST를 REST답게 쓰기 위한 방법으로, 누군가가 공식적으로 발표한 것이 아니다.
+	- `REST 원리`를 따르는 시스템은 `RESTful`이란 용어로 지칭된다.
+
+## RESTful의 목적
+- 이해하기 쉽고 사용하기 쉬운 REST API를 만드는 것
+- RESTful한 API를 구현하는 근본적인 목적이 성능 향상에 있는 것이 아니라 일관적인 컨벤션을 통한 API의 이해도 및 호환성을 높이는 것이 주 동기이다.
+- 성능이 중요한 상황에서는 굳이 RESTful한 API를 구현할 필요는 없다.
+
+## RESTful 하지 못한 경우
+- CRUD 기능을 모두 POST로만 처리하는 API
+- route에 resource, id외의 정보가 들어가는 경우(/students/updateName)
 
 ---
 ## Reference
