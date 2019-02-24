@@ -58,7 +58,7 @@ tags:
 | HATEOAS | X
 
 - URI + HTTP Method 조합으로 리소스를 구분하는 것으로 응답 상태를 HTTP Status code를 활용한다.
-- 현재 가장 많은 RESTful API가 이 단계를 제공한다.
+- 현재 가장 많은 [RESTful API]({{site.baseurl}}{% link _posts/2019-02-22-web-rest-api.md %})가 이 단계를 제공한다.
 - 발생한 에러의 종류를 전달하기 위해 HTTP Status code를 사용하는 것, 안전한 오퍼레이션(GET 등)과 안전하지 않은 오퍼레이션 간의 강한 분리를 제공하는 것이 이 레벨의 핵심 요소이다.
 - HTTP Status code의 사용
 	- 기존에는 특정 동작(Operation) 이후 다른 페이지로 이동 해야 할때 서버에서 302등의 Redirect 응답을 서버에서 내려 주는 방식
