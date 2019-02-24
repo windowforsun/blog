@@ -108,7 +108,7 @@ analytics:
 author:
   name             : "window_for_sun"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "Sun"
+  bio              : "Software Developer"
   location         : "Seoul, Korea"
   email            : "window_for_sun@naver.com"
   links:
