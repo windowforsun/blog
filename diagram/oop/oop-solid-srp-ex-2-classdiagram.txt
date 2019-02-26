@@ -1,0 +1,30 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Guitar {
+ - serialNumber : String
+ - guitarSpec : GuitarSpec
+ + getSerailNumber() : String
+ + getGuitarSpec() : GuitarSpec
+}
+
+class GuitarSpec {
+ - price : Doouble
+ - maker : Mamker
+ - type : Type
+ - model : String
+ - backWood : Wood
+ - topWood : Wood
+ - stringNum : int
+ + getPrice() : Double
+ + getType() : Type
+ + getBackWood() : Wood
+ + getTopWood() : Wood
+ + getModel() : String
+
+}
+
+Guitar --> GuitarSpec
+
+@enduml
+
