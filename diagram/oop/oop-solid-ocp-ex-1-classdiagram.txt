@@ -1,0 +1,19 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Guitar {
+}
+
+class GuitarSpec {
+}
+
+class Violin {
+}
+
+class ViolinSpec {
+}
+
+Guitar --> GuitarSpec
+Violin --> ViolinSpec
+@enduml
+

@@ -1,0 +1,33 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Instrument {
+    - serialNumber : String
+    - instrumentSpec : InstrumentSpec
+}
+
+abstract class InstrumentSpec {
+    - price : double
+    - model : String
+}
+
+class Guitar {
+}
+
+class GuitarSpec {
+}
+
+class Violin {
+}
+
+class ViolinSpec {
+}
+
+Instrument --> InstrumentSpec
+Instrument <|-- Guitar
+Instrument <|-- Violin
+InstrumentSpec <|-- GuitarSpec
+InstrumentSpec <|-- ViolinSpec
+
+@enduml
+
