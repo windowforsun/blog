@@ -1,0 +1,7 @@
+@startuml
+
+[Policy Layer] ..> [Mechanism Layer]
+[Mechanism Layer] ..> [Utility Layer]
+
+@enduml
+

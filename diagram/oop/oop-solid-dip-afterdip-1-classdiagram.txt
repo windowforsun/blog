@@ -1,0 +1,15 @@
+@startuml
+
+component [Policy Layer]
+component [Mechanism Abstract Layer] #Gray
+component [Mechanism Layer]
+component [Utility Abstract Layer] #Gray
+component [Utility Layer]
+
+[Policy Layer] ..> [Mechanism Abstract Layer]
+[Mechanism Abstract Layer] <|-- [Mechanism Layer]
+[Mechanism Layer] ..> [Utility Abstract Layer]
+[Utility Abstract Layer] <|-- [Utility Layer]
+
+@enduml
+
