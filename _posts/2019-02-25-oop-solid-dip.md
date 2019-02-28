@@ -20,7 +20,7 @@ tags:
 
 'SOLID-DIP 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
-### [SOLID 개요](({{site.baseurl}}{% link _posts/2019-02-24-oop-solid.md %}))
+### [SOLID 개요]({{site.baseurl}}{% link _posts/2019-02-24-oop-solid.md %})
 
 ## D - DIP(Dependency Inversion Principle) 의존성 역전 원칙
 > A. HIGH LEVEL MODULES SHOULD NOT DEPEND UPON LOW LEVEL MODULES. BOTH SHOULD DEPEND UPON ABSTRACTIONS  

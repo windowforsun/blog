@@ -20,7 +20,7 @@ tags:
 
 'SOLID-LSP 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
-### [SOLID 개요](({{site.baseurl}}{% link _posts/2019-02-24-oop-solid.md %}))
+### [SOLID 개요]({{site.baseurl}}{% link _posts/2019-02-24-oop-solid.md %})
 
 ## L - LSP(Liskov Substitution Principle) 리스코프 치환 원칙
 > *참고  
