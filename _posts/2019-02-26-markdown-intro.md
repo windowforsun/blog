@@ -36,44 +36,46 @@ tags:
 - 모든 HTML 마크업을 대신하지 못한다.
 
 # 마크다운 사용법
-1. 해더 (Header)
-	1. 큰 제목 (문서 제목)
-	
-		```markdown
-		This is Title H1
-		====
-		```   
-		  
-		This is Title H1
-		=====
-	1. 작원 제목 (문서 부제목)
-	
-		```markdown
-		This is SubTitle H2
-		===
-		```  
+## 해더 (Header)
+1. 큰 제목 (문서 제목)
+
+```markdown
+This is Title H1
+====
+```   
+	  
+This is Title H1
+===
+
+1. 작원 제목 (문서 부제목)
+
+```markdown
+This is SubTitle H2
+===
+```  
+
+This is SubTitle H2
+===
+
+## 글머리(1 ~ 6까지 지원)
+
+```markdown
+# This is H1
+## This is H2
+### This is H3
+#### This is H4
+##### This is H5
+###### This is H6
+```  
+
+# This is H1
+## This is H2
+### This is H3
+#### This is H4
+##### This is H5
+###### This is H6
 		
-		This is SubTitle H2
-		===
-	1. 글머리(1 ~ 6까지 지원)
-	
-		```markdown
-		# This is H1
-		## This is H2
-		### This is H3
-		#### This is H4
-		##### This is H5
-		###### This is H6
-		```  
-		
-		# This is H1
-		## This is H2
-		### This is H3
-		#### This is H4
-		##### This is H5
-		###### This is H6
-		
-1. 인용문 (BlockQuote)
+## 인용문 (BlockQuote)
 
 ```markdown
 > This is a blockquote 1
@@ -85,7 +87,7 @@ tags:
 >> This is a blockquote 2
 >>> This is a Blockquote 3  
 
-이 안에서는 다른 마크다운 요소를 포함할 수 있다.
+이 안에서는 다른 마크다운 요소를 포함할 수 있다.  
 
 ```
 > # This is Blockquote Title
@@ -103,92 +105,99 @@ tags:
 >			code
 >		```  
 
-1. 목록 (List)
-	1. 순서 있는 목록(번호)
+## 목록 (List)
+1. 순서 있는 목록(번호)
+
+	```markdown
+	1. 첫번째
+	1. 두번째
+	1. 세번째
+	3. 테스트 1
+	2. 테스트 2
+	```  
 	
-		```markdown
-		1. 첫번째
-		1. 두번째
-		1. 세번째
-		3. 테스트 1
-		2. 테스트 2
-		```  
-		
-		1. 첫번째
-		1. 두번째
-		1. 세번째
-		3. 테스트 1
-		2. 테스트 2
-		
-		어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.
-		
-	1. 순서 없는 목록(글머리 기호)
+	1. 첫번째
+	1. 두번째
+	1. 세번째
+	3. 테스트 1
+	2. 테스트 2
 	
-		```markdown
-		- 첫번째
-			- 두번째
-				- 세번째
-		* 첫번째
-			* 두번째
-				* 세번째
-		+ 첫번째
-			+ 두번째
-				+ 세번째
-		```  
-		
-		- 첫번째
-			- 두번째
-				- 세번째
-		* 첫번째
-			* 두번째
-				* 세번째
-		+ 첫번째
-			+ 두번째
-				+ 세번째
-		혼합해서 사용하는 것도 가능하다.
-		
-		```markdown
-		- 첫번째
-			* 두번째
-				+ 세번째
-		```  
-		
-1. 코드 (Code) 강조
-	- 인라인 (inline) 코드 강조
+	어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.  
 	
-		```markdown
-		`inline` 코드 강조 `강조 할 부분`
-		```  
+1. 순서 없는 목록(글머리 기호)
+
+	```markdown
+	- 첫번째
+		- 두번째
+			- 세번째
+	* 첫번째
+		* 두번째
+			* 세번째
+	+ 첫번째
+		+ 두번째
+			+ 세번째
+	```  
+	
+	- 첫번째
+		- 두번째
+			- 세번째
+	* 첫번째
+		* 두번째
+			* 세번째
+	+ 첫번째
+		+ 두번째
+			+ 세번째  
+			
+	혼합해서 사용하는 것도 가능하다.  
+	
+	```markdown
+	- 첫번째
+		* 두번째
+			+ 세번째
+	```  
 		
-		`inline` 코드 강조 `강조 할 부분`
+	- 첫번째
+		* 두번째
+			+ 세번째
 		
-	- 블록 (block) 코드 강조
-		`를 세번이상 입력하고 코드 종류도 적는다.
+## 코드 (Code) 강조
+- 인라인 (inline) 코드 강조
+
+```markdown
+`inline` 코드 강조 `강조 할 부분`
+```  
+
+`inline` 코드 강조 `강조 할 부분`
+	
+- 블록 (block) 코드 강조
+	`를 세번이상 입력하고 코드 종류도 적는다.
+	
+```markdown
+```markdown
+마크다운 코드 작성
+(```) 괄호 안에것만
+```  
+
+```markdown
+```java
+public class Main {
+	// ...
+}
+(```) 괄호 안에것만
+```   
+
+```markdown
+마크다운 코드 작성
+```  
+
+```java
+public class Main {
+	// ...
+}
+```  
 		
-		```markdown
-		```markdown
-		마크다운 코드 작성
-		```  
-		
-		```java
-		public class Main {
-			// ...
-		}
-		```  
-		```   
-		
-		```markdown
-		마크다운 코드 작성
-		```  
-		
-		```java
-		public class Main {
-			// ...
-		}
-		```  
-		
-1. 수평선 (Horizontal Rule)
-수평선을 만들어 페이지 나누기 용도로 많이 사용한다. 각 기호를 3개이상 입력한다.
+## 수평선 (Horizontal Rule)
+수평선을 만들어 페이지 나누기 용도로 많이 사용한다. 각 기호를 3개이상 입력한다.  
 
 ```markdown
 --- 
