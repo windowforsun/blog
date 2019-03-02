@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "test2"
+title: "마크다운 작성법"
 header:
   overlay_image: /img/blog-bg.jpg
-subtitle: 'test2'
+subtitle: 'Markdown 이란 무엇이고, 어떻게 작성하는 지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -18,7 +18,7 @@ tags:
     - Design Pattern
 ---  
 
-'test2'
+'Markdown 이란 무엇이고, 어떻게 작성하는 지'
 
 # 마크다운(Markdown) 이란
 - Markdown은 텍스트 기반의 마크업 언어로 2004년 존그루버에 의해 만들어졌다.
@@ -50,7 +50,7 @@ This is Title H1
 This is Title H1
 ===
 
-1. 작원 제목 (문서 부제목)
+1. 작은 제목 (문서 부제목)
 
 ```markdown
 This is SubTitle H2
