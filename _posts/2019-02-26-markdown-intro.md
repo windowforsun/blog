@@ -203,3 +203,9 @@ ___
 
 1. 링크 (Links)
 
+
+---
+## Reference
+[존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
+[마크다운 markdown 작성법](https://gist.github.com/ihoneymon/652be052a0727ad59601)  
+[MarkDown 사용법 총정리](https://heropy.blog/2017/09/30/markdown/)  
