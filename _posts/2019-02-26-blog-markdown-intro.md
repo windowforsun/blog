@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "마크다운 작성법"
+title: "마크다운(Markdown) 작성법"
 header:
   overlay_image: /img/blog-bg.jpg
 subtitle: 'Markdown 이란 무엇이고, 어떻게 작성하는 지'
@@ -36,7 +36,7 @@ tags:
 - 모든 HTML 마크업을 대신하지 못한다.
 
 # 마크다운 사용법
-## 해더 (Header)
+## #해더 (Header)
 1. 큰 제목 (문서 제목)
 
 ```markdown
@@ -57,7 +57,7 @@ This is SubTitle H2
 This is SubTitle H2
 ===
 
-## 글머리(1 ~ 6까지 지원)
+## #글머리(1 ~ 6까지 지원)
 
 ```markdown
 # This is H1
@@ -75,7 +75,7 @@ This is SubTitle H2
 ##### This is H5
 ###### This is H6
 		
-## 인용문 (BlockQuote)
+## #인용문 (BlockQuote)
 
 ```markdown
 > This is a blockquote 1
@@ -105,7 +105,7 @@ This is SubTitle H2
 >			code
 >		```  
 
-## 목록 (List)
+## #목록 (List)
 1. 순서 있는 목록(번호)
 
 	```markdown
@@ -160,7 +160,7 @@ This is SubTitle H2
 		* 두번째
 			+ 세번째
 		
-## 코드 (Code) 강조
+## #코드 (Code) 강조
 - 인라인 (inline) 코드 강조
 
 ```markdown
@@ -196,7 +196,7 @@ public class Main {
 }
 ```  
 		
-## 수평선 (Horizontal Rule)
+## #수평선 (Horizontal Rule)
 수평선을 만들어 페이지 나누기 용도로 많이 사용한다. 각 기호를 3개이상 입력한다.  
 
 ```markdown
@@ -219,7 +219,7 @@ ___
 ___
 (Underscores)
 
-## 링크 (Links)
+## #링크 (Links)
 
 
 ---
