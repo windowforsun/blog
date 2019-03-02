@@ -1,21 +1,19 @@
 --- 
 layout: single
 classes: wide
-title: "마크다운(Markdown) 작성법"
+title: "test"
 header:
   overlay_image: /img/blog-bg.jpg
-subtitle: 'Markdown 이란 무엇이고, 어떻게 사용하는 지'
+subtitle: 'test'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Blog
+  - test
 tags:
-	- intro
-	- Markdown
-	- Blog
+	- test
 ---  
 
-'Markdown 이란 무엇이고, 어떻게 사용하는 지'
+'test'
 
 # 마크다운(Markdown) 이란
 - Markdown은 텍스트 기반의 마크업 언어로 2004년 존그루버에 의해 만들어졌다.
