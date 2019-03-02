@@ -8,14 +8,11 @@ subtitle: 'Markdown 이란 무엇이고, 어떻게 작성하는 지'
 author: "window_for_sun"
 header-style: text
 categories :
-  - OOP
+  - Blog
 tags:
-    - OOP
-    - SRP
-    - 객체 지향
-    - SOLID
-    - 디자인 패턴
-    - Design Pattern
+    - Blog
+    - Markdown
+    - Intro
 ---  
 
 'Markdown 이란 무엇이고, 어떻게 작성하는 지'
