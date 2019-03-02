@@ -37,7 +37,6 @@ tags:
 
 # 마크다운 사용법
 1. 해더 (Header)
-<H1> ~ <H6> 까지 치환하여 표현된다.
 	1. 큰 제목 (문서 제목)
 		```
 		This is Title H1
@@ -71,6 +70,4 @@ tags:
 		##### This is H5
 		###### This is H6
 		
-		
-
-		
+1. Block Quote
