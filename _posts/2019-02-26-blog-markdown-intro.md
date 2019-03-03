@@ -226,7 +226,7 @@ ___
 [Google 링크설명](https://www.google.com "링크 설명")
 [상대참조링크](/_posts/post)
 구글 바로가기: <https://www.google.com>
-내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
+내 jekyll 블로그 포스트 링크 걸기 [Design Pattern](`{{site.baseurl}} {% link _posts/my_post.md %}`)
 
 ```  
 
@@ -261,7 +261,7 @@ _언더바(underscore)은 적용되지 않네요 ..
 ```markdown
 ![대체 텍스트(alternative text)를 입력하세요](/img/image.jpg "이미지 설명")
 ![이미지1](/img/image.jpg)
-![jekyll에서 이미지]({{site.baseurl}}/img/image.jpg)
+![jekyll에서 이미지](`{{site.baseurl}}/img/image.jpg`)
 ```  
 
 
