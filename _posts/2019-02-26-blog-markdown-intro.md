@@ -228,7 +228,7 @@ ___
 [Github][1]
 문서안의 [참조링크] 사용하기
 구글 바로가기: <https://www.google.com>
-내 jekyll 블로그 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
+내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
 
 [1]: https://github.com
 [참조링크]: https://www.google.com
@@ -241,7 +241,7 @@ ___
 [Github][1]  
 문서안의 [참조링크] 사용하기  
 구글 바로가기: <https://www.google.com>  
-내 jekyll 블로그 걸기 [Design Pattern]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
+내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
 [1]: https://github.com  
 [참조링크]: https://www.google.com  
 
@@ -260,6 +260,8 @@ ___
 **_이텔릭체_와 두껍게**를 같이 사용할 수 있습니다.  
 취소선은 ~~물결표시(tilde)~~를 사용하세요.  
 <u>밑줄</u>은 `<u></u>`를 사용하세요.  
+
+_언더바(underscore)은 적용되지 않네요 ..  
 
 ## #이미지 (Images)
 - 이미지
@@ -281,7 +283,7 @@ ___
 ![WifoSun's Blog(/img/image.jpg)](https://windowforsun.github.io/blog/)
 ```  
 
-![WifoSun's Blog({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
+![WifoSun's Blog(/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
 
 
 ---
