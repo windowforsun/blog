@@ -280,10 +280,10 @@ _언더바(underscore)은 적용되지 않네요 ..
 - 이미지에 링크
 
 ```markdown
-![WifoSun's Blog](/img/image.jpg)](https://windowforsun.github.io/blog/)
+[![WifoSun's Blog](/img/image.jpg)](https://windowforsun.github.io/blog/)
 ```  
 
-![WifoSun's Blog]({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
+[![WifoSun's Blog]({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
 
 ## #표(Table)
 헤더 셀을 구분할 때 3개 이상의 -(hyphen/dash) 기호가 필요합니다.  
