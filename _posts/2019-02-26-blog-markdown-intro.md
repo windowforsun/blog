@@ -335,35 +335,6 @@ _언더바(underscore)은 적용되지 않네요 ..
 가나다라마바사<br>
 가나다라마바사
 
-## #네임드 앵커 (Name Anchor)
-네임드 앵커는 특정 앵커로 점프하는 용도로 사용된다.
-
-```markdown
-- 앵커 리스트
-	- [테스트 앵커1](#test-1)
-	- [테스트 앵커2](#test-2)
-	- [이미지](#image-anchor)
-	- [표](#table-anchor)
-
-테스트 앵커1<a id=test-1"></a>  
-테스트 앵커2<a id=test-2"></a>  
-```  
-
-- 앵커 리스트
-	- [테스트 앵커1](#test-1)
-	- [테스트 앵커2](#test-2)
-	
-테스트 앵커1<a id=test-1"></a>  
-테스트 앵커2<a id=test-2"></a>  
-
-## #주석
-
-```markdown
-<!--
-마크다운에서 주석으로 처리되는 부분
--->
-```  
-
 ---
 ## Reference
 [존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
