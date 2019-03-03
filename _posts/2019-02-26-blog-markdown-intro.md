@@ -200,7 +200,7 @@ public class Main {
 수평선을 만들어 페이지 나누기 용도로 많이 사용한다. 각 기호를 3개이상 입력한다.  
 
 ```markdown
---- 
+---
 (Hyphens)
 
 ***
@@ -220,7 +220,19 @@ ___
 (Underscores)
 
 ## #링크 (Links)
+- 참조링크
+```markdown
+[Google](https://www.google.com)
+[Google 링크설명](https://www.google.com "링크 설명")
+[상대참조링크](/_posts/post)
+[Github][1]
+문서안의 [참조링크] 사용하기
+구글 바로가기: <https://www.google.com>
+내 jekyll 블로그 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
 
+[1]: https://github.com
+[참조링크]: https://www.google.com
+```
 
 ---
 ## Reference
