@@ -51,11 +51,11 @@ This is Title H1
 
 ```markdown
 This is SubTitle H2
-===
+---
 ```  
 
 This is SubTitle H2
-===
+---
 
 ## #글머리(1 ~ 6까지 지원)
 
@@ -335,7 +335,7 @@ _언더바(underscore)은 적용되지 않네요 ..
 가나다라마바사<br>
 가나다라마바사
 
-## #네임드 앵커
+## #네임드 앵커 (Name Anchor)
 네임드 앵커는 특정 앵커로 점프하는 용도로 사용된다.
 
 ```markdown
