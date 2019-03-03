@@ -267,18 +267,21 @@ ___
 ```markdown
 ![대체 텍스트(alternative text)를 입력하세요](/img/image.jpg "이미지 설명")
 ![이미지1](/img/image.jpg)
-![이미지2](image)
 ![jekyll에서 이미지]({{site.baseurl}}/img/image.jpg)
-[image]: /img/image.jpg "이미지 설명"
 ```  
 
 
-![대체 텍스트(alternative text)를 입력하세요]({{site.baseurl}}/img/home-bg-network.jpg "이미지 설명")
-![이미지1]({{site.baseurl}}/img/home-bg-network.jpg)
-![이미지2](image)
-![jekyll에서 이미지]({{site.baseurl}}/img/home-bg-network.jpg)
-[image]: {{site.baseurl}}/img/home-bg-network.jpg "이미지 설명"
+![대체 텍스트(alternative text)를 입력하세요]({{site.baseurl}}/img/home-bg-network_2.jpg "이미지 설명")
+![이미지1]({{site.baseurl}}/img/home-bg-network_2.jpg)
+![jekyll에서 이미지]({{site.baseurl}}/img/home-bg-network_2.jpg)
 
+- 이미지에 링크
+
+```markdown
+![WifoSun's Blog(/img/image.jpg)](https://windowforsun.github.io/blog/)
+```  
+
+![WifoSun's Blog({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
 
 
 ---
