@@ -314,7 +314,34 @@ _언더바(underscore)은 적용되지 않네요 ..
 | 값3 | 의미3 | 기본값3 | 설명3 |
 | 값4 | 의미4 | 기본값4 | 설명 4|
 
+## #원시 HTML (Raw HTML)
+마트다운 문법이 아닌 원시 HTML 문법을 사용할 수 있습니다.  
 
+```markdown
+<u>마크다운에서 지원하지 않는 기능</u>을 사용할 때 유용하며 대부분 잘 동작합니다.
+
+<img width="150" src="/img/image.jpg" alt="Prunus" title="A Wild Cherry (Prunus avium) in flower">
+
+![Prunus](/img/image.jpg)
+```  
+
+<u>마크다운에서 지원하지 않는 기능</u>을 사용할 때 유용하며 대부분 잘 동작합니다.  
+
+<img width="150" src="{{site.baseurl}}/img/home-bg-network_2.jpg" alt="Prunus" title="A Wild Cherry (Prunus avium) in flower">  
+
+![Prunus]({{site.baseurl}}/img/home-bg-network_2.jpg)  
+
+## #줄바꿈 (Line Breaks)
+
+```markdown
+가나다라마바사  <!-- 띄어쓰기 2번  -->
+가나다라마바사<br>
+가나다라마바사
+```  
+
+가나다라마바사  <!-- 띄어쓰기 2번  -->
+가나다라마바사<br>
+가나다라마바사
 
 ---
 ## Reference
