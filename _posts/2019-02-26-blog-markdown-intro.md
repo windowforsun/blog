@@ -51,11 +51,11 @@ This is Title H1
 
 ```markdown
 This is SubTitle H2
-===
+---
 ```  
 
 This is SubTitle H2
-===
+---
 
 ## #글머리(1 ~ 6까지 지원)
 
@@ -121,8 +121,8 @@ This is SubTitle H2
 	1. 세번째
 	3. 테스트 1
 	2. 테스트 2
-
-- 어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.  
+  
+ 어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.  
 	
 1. 순서 없는 목록(글머리 기호)
 
@@ -200,7 +200,7 @@ public class Main {
 수평선을 만들어 페이지 나누기 용도로 많이 사용한다. 각 기호를 3개이상 입력한다.  
 
 ```markdown
---- 
+---
 (Hyphens)
 
 ***
@@ -221,9 +221,167 @@ ___
 
 ## #링크 (Links)
 
+```markdown
+[Google](https://www.google.com)
+[Google 링크설명](https://www.google.com "링크 설명")
+[상대참조링크](/_posts/post)
+구글 바로가기: <https://www.google.com>
+내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
+
+```  
+
+
+[Google](https://www.google.com)  
+[Google 링크설명](https://www.google.com "링크 설명")  
+[상대참조링크]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
+구글 바로가기: <https://www.google.com>  
+내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
+
+## #강조 (Emphasis)
+
+```markdown
+이텔릭체는 *별표(asterisks)* 혹은 _언더바(underscore)_를 사용하세요.
+두껍게는 **별표(asterisks)2개** 혹은 __언더바(underscore)2개__를 사용하세요.
+**_이텔릭체_와 두껍게**를 같이 사용할 수 있습니다.
+취소선은 ~~물결표시(tilde)~~를 사용하세요.
+<u>밑줄</u>은 `<u></u>`를 사용하세요.
+```  
+
+이텔릭체는 *별표(asterisks)* 혹은 _언더바(underscore)_를 사용하세요.  
+두껍게는 **별표(asterisks)2개** 혹은 __언더바(underscore)2개__를 사용하세요.  
+**_이텔릭체_와 두껍게**를 같이 사용할 수 있습니다.  
+취소선은 ~~물결표시(tilde)~~를 사용하세요.  
+<u>밑줄</u>은 `<u></u>`를 사용하세요.  
+
+_언더바(underscore)은 적용되지 않네요 ..  
+
+## #이미지 (Images)<a id="image-anchor"></a>
+- 이미지
+
+```markdown
+![대체 텍스트(alternative text)를 입력하세요](/img/image.jpg "이미지 설명")
+![이미지1](/img/image.jpg)
+![jekyll에서 이미지]({{site.baseurl}}/img/image.jpg)
+```  
+
+
+![대체 텍스트(alternative text)를 입력하세요]({{site.baseurl}}/img/home-bg-network_2.jpg "이미지 설명")
+![이미지1]({{site.baseurl}}/img/home-bg-network_2.jpg)
+![jekyll에서 이미지]({{site.baseurl}}/img/home-bg-network_2.jpg)
+
+- 이미지에 링크
+
+```markdown
+[![WifoSun's Blog](/img/image.jpg)](https://windowforsun.github.io/blog/)
+```  
+
+[![WifoSun's Blog]({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
+
+## #표(Table)<a id="table-anchor"></a>
+헤더 셀을 구분할 때 3개 이상의 -(hyphen/dash) 기호가 필요합니다.  
+헤더 셀 구분하면서 :(Colons)기호로 셀(열/칸) 안에 내용을 정렬할 수 있습니다.  
+가장 좌측과 가장 우측에 있는 |(Vertical bar)기호는 생각 가능합니다.
+
+```markdown
+| 값 | 의미 | 기본값 | 설명 |
+|---|:---:|---:|:---|
+| 값11111 | 의미11111111111 | 기본값11111111111 | 설명11111111 |
+| 값2 | 의미2 | 기본값2 | 설명2 |
+| 값3 | 의미3 | 기본값3 | 설명3 |
+| 값4 | 의미4 | 기본값4 | 설명 4|
+
+ 값 | 의미 | 기본값 | 설명
+---|:---:|---:|:---
+ 값11111 | 의미11111111111 | 기본값11111111111 | 설명11111111 
+ 값2 | 의미2 | 기본값2 | 설명2 
+ 값3 | 의미3 | 기본값3 | 설명3 
+ 값4 | 의미4 | 기본값4 | 설명 4
+
+```  
+
+| 값 | 의미 | 기본값 | 설명 |
+|---|:---:|---:|:---|
+| 값11111 | 의미11111111111 | 기본값11111111111 | 설명11111111 |
+| 값2 | 의미2 | 기본값2 | 설명2 |
+| 값3 | 의미3 | 기본값3 | 설명3 |
+| 값4 | 의미4 | 기본값4 | 설명 4|
+
+## #원시 HTML (Raw HTML)
+마트다운 문법이 아닌 원시 HTML 문법을 사용할 수 있습니다.  
+
+```markdown
+<u>마크다운에서 지원하지 않는 기능</u>을 사용할 때 유용하며 대부분 잘 동작합니다.
+
+<img width="150" src="/img/image.jpg" alt="Prunus" title="A Wild Cherry (Prunus avium) in flower">
+
+![Prunus](/img/image.jpg)
+```  
+
+<u>마크다운에서 지원하지 않는 기능</u>을 사용할 때 유용하며 대부분 잘 동작합니다.  
+
+<img width="150" src="{{site.baseurl}}/img/home-bg-network_2.jpg" alt="Prunus" title="A Wild Cherry (Prunus avium) in flower">  
+
+![Prunus]({{site.baseurl}}/img/home-bg-network_2.jpg)  
+
+## #줄바꿈 (Line Breaks)
+
+```markdown
+가나다라마바사  <!-- 띄어쓰기 2번  -->
+가나다라마바사<br>
+가나다라마바사
+```  
+
+가나다라마바사  
+가나다라마바사<br>
+가나다라마바사
+
+## #네임드 앵커 (Name Anchor)
+네임드 앵커는 특정 앵커로 점프하는 용도로 사용된다.
+
+```markdown
+- 앵커 리스트
+	- [테스트 앵커1](#test-1)
+	- [테스트 앵커2](#test-2)
+	- [이미지](#image-anchor)
+	- [표](#table-anchor)
+
+테스트 앵커1<a id="test-1"></a>  
+테스트 앵커2<a id="test-2"></a>  
+```  
+
+- 앵커 리스트
+	- [테스트 앵커1](#test-1)
+	- [테스트 앵커2](#test-2)
+	- [이미지](#image-anchor)
+	- [표](#table-anchor)
+	
+테스트 앵커1<a id="test-1"></a>  
+테스트 앵커2<a id="test-2"></a>  
+
+## #주석
+
+```markdown
+<!--
+마크다운에서 주석으로 처리되는 부분
+-->
+```  
+
+## #각주
+본문의 어떤 부분을 설명하거나 보충하기 위해 본문 아래쪽에 별도로 작성하는 간단한 설명문으로서 주로 내용의 출처를 밝힐 때 사용된다.
+
+```markdown
+이러쿵 저러쿵 이야기들 어이쿵 요이쿵[^각주]
+\[^각주]: 이러쿵 저러쿵 각주
+```  
+
+이러쿵 저러쿵 이야기들 어이쿵 요이쿵[^각주]  
+\[^각주]: 이러쿵 저러쿵 각주  
+
+각주가 안되네.. ㅠㅠ  
 
 ---
 ## Reference
 [존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
+[마크다운 사용법 - Quick Start](http://taewan.kim/post/markdown/#chapter-2)  
 [마크다운 markdown 작성법](https://gist.github.com/ihoneymon/652be052a0727ad59601)  
 [MarkDown 사용법 총정리](https://heropy.blog/2017/09/30/markdown/)  
