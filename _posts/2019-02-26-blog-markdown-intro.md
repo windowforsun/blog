@@ -241,7 +241,7 @@ ___
 [Github][1]  
 문서안의 [참조링크] 사용하기  
 구글 바로가기: <https://www.google.com>  
-내 jekyll 블로그 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})  
+내 jekyll 블로그 걸기 [Design Pattern]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
 [1]: https://github.com  
 [참조링크]: https://www.google.com  
 
@@ -260,6 +260,24 @@ ___
 **_이텔릭체_와 두껍게**를 같이 사용할 수 있습니다.  
 취소선은 ~~물결표시(tilde)~~를 사용하세요.  
 <u>밑줄</u>은 `<u></u>`를 사용하세요.  
+
+## #이미지 (Images)
+- 이미지
+
+```markdown
+![대체 텍스트(alternative text)를 입력하세요](/img/image.jpg "이미지 설명")
+![이미지1](/img/image.jpg)
+![이미지2](image)
+![jekyll에서 이미지]({{site.baseurl}}/img/image.jpg)
+[image]: /img/image.jpg "이미지 설명"
+```  
+
+
+![대체 텍스트(alternative text)를 입력하세요]({{site.baseurl}}/img/home-bg-network.jpg "이미지 설명")
+![이미지1]({{site.baseurl}}/img/home-bg-network.jpg)
+![이미지2](image)
+![jekyll에서 이미지]({{site.baseurl}}/img/home-bg-network.jpg)
+[image]: {{site.baseurl}}/img/home-bg-network.jpg "이미지 설명"
 
 
 
