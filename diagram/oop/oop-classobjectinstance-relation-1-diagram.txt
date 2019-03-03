@@ -1,0 +1,7 @@
+@startuml
+package "Object" {
+    [Class] --> Instance : instantiation
+}
+
+@enduml
+
