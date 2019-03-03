@@ -121,8 +121,8 @@ This is SubTitle H2
 	1. 세번째
 	3. 테스트 1
 	2. 테스트 2
-
-- 어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.  
+  
+ 어떤 번호를 입력하더라도 순서는 내림차순으로 정의된다.  
 	
 1. 순서 없는 목록(글머리 기호)
 
@@ -225,25 +225,17 @@ ___
 [Google](https://www.google.com)
 [Google 링크설명](https://www.google.com "링크 설명")
 [상대참조링크](/_posts/post)
-[Github][1]
-문서안의 [참조링크] 사용하기
 구글 바로가기: <https://www.google.com>
 내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}} {% link _posts/2019-02-08-designpattern-intro.md %})
 
-[1]: https://github.com
-[참조링크]: https://www.google.com
 ```  
 
 
 [Google](https://www.google.com)  
 [Google 링크설명](https://www.google.com "링크 설명")  
-[상대참조링크](/_posts/post)  
-[Github][1]  
-문서안의 [참조링크] 사용하기  
+[상대참조링크]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
 구글 바로가기: <https://www.google.com>  
 내 jekyll 블로그 포스트 링크 걸기 [Design Pattern]({{site.baseurl}}{% link _posts/2019-02-08-designpattern-intro.md %})  
-[1]: https://github.com  
-[참조링크]: https://www.google.com  
 
 ## #강조 (Emphasis)
 
