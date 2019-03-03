@@ -42,11 +42,11 @@ tags:
 	- 실행 프로세스는 프로그램의 인스턴스다.
 	
 # 객체, 클래스, 인스턴스의 관계
-![객체 클래스 인스턴스 관계1]({{stie.baseurl}}/img/oop-classobjectinstance-relation-1-diagram.png)
+![객체 클래스 인스턴스 관계1]({{site.baseurl}}/img/oop-classobjectinstance-relation-1-diagram.png)
 
 - 사람이라는 특정 **대상** 즉 객체(Object)가 있다.
 - 사람이라는 대상의 특징을 **분류**한다.
-- 이를 구체적인 **설계도** 즉 클래스로 만든다.
+- 분류를 통해 구체적인 **설계도** 즉 클래스로 만든다.
 
 ```java
 class Person {
@@ -73,7 +73,7 @@ Person cs = new Person("CS", 20);
 
 - 위  코드에서는 Java문법의 new 키워드를 사용하여 **실체화**를 하였다.
 - **실체화**를 통해 cs라는 이름을 가진 **실체** 즉 인스턴스를 만들었다.
-- 대상(Object) -> 분류(Class) -> 실체화를 통한 실체(Instance)
+- 대상(Object) -> 분류 및 설계도(Class) -> 실체화를 통한 실체(Instance)
 
 
 ---
