@@ -255,7 +255,7 @@ ___
 
 _언더바(underscore)은 적용되지 않네요 ..  
 
-## #이미지 (Images)
+## #이미지 (Images) <a id="image-anchor"></a>
 - 이미지
 
 ```markdown
@@ -277,7 +277,7 @@ _언더바(underscore)은 적용되지 않네요 ..
 
 [![WifoSun's Blog]({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
 
-## #표(Table)
+## #표(Table) <a id="table-anchor"></a>
 헤더 셀을 구분할 때 3개 이상의 -(hyphen/dash) 기호가 필요합니다.  
 헤더 셀 구분하면서 :(Colons)기호로 셀(열/칸) 안에 내용을 정렬할 수 있습니다.  
 가장 좌측과 가장 우측에 있는 |(Vertical bar)기호는 생각 가능합니다.
@@ -335,8 +335,42 @@ _언더바(underscore)은 적용되지 않네요 ..
 가나다라마바사<br>
 가나다라마바사
 
+## #네임드 앵커
+네임드 앵커는 특정 앵커로 점프하는 용도로 사용된다.
+
+```markdown
+- 앵커 리스트
+	- [테스트 앵커1](#test-1)
+	- [테스트 앵커2](#test-2)
+	- [이미지](#image-anchor)
+	- [표](#table-anchor)
+
+테스트 앵커1  <a id=test-1"></a>  
+테스트 앵커2  <a id=test-2"></a>  
+```
+
+## #주석
+
+```markdown
+<!--
+마크다운에서 주석으로 처리되는 부분
+-->
+```  
+
+## #각주
+본문의 어떤 부분을 설명하거나 보충하기 위해 본문 아래쪽에 별도로 작성하는 간단한 설명문으로서 주로 내용의 출처를 밝힐 때 사용된다.
+
+```markdown
+이러쿵 저러쿵 이야기들 어이쿵 요이쿵[^각주]
+\[^각주]: 이러쿵 저러쿵 각주
+```  
+
+이러쿵 저러쿵 이야기들 어이쿵 요이쿵[^각주]
+\[^각주]: 이러쿵 저러쿵 각주
+
 ---
 ## Reference
 [존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
+[마크다운 사용법 - Quick Start](http://taewan.kim/post/markdown/#chapter-2)  
 [마크다운 markdown 작성법](https://gist.github.com/ihoneymon/652be052a0727ad59601)  
 [MarkDown 사용법 총정리](https://heropy.blog/2017/09/30/markdown/)  
