@@ -283,8 +283,12 @@ _언더바(underscore)은 적용되지 않네요 ..
 ![WifoSun's Blog(/img/image.jpg)](https://windowforsun.github.io/blog/)
 ```  
 
-![WifoSun's Blog(/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
+![WifoSun's Blog]({{site.baseurl}}/img/home-bg-network_2.jpg)](https://windowforsun.github.io/blog/)
 
+## #표(Table)
+헤더 셀을 구분할 때 3개 이상의 -(hyphen/dash) 기호가 필요합니다.  
+헤더 셀 구분하면서 :(Colons)기호로 셀(열/칸) 안에 내용을 정렬할 수 있습니다.  
+가장 좌측과 가장 우측에 있는 |(Vertical bar)기호는 생각 가능합니다.
 
 ---
 ## Reference
