@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Spring4 입문] 웹 애플리케이션 아키텍쳐"
 header:
-  overlay_image: /img/spring-bg.png
+  overlay_image: /img/spring-bg.jpg
 subtitle: '웹 애플리케이션 아키텍쳐에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
