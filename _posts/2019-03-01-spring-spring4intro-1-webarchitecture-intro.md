@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Spring4 입문] 웹 애플리케이션 아키텍쳐"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/spring-bg.png
 subtitle: '웹 애플리케이션 아키텍쳐에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
@@ -73,3 +73,16 @@ tags:
 	- 프리젠테이션 층에 변경(데스크톱 브라우저 -> 모바일 브라우저) 있을 경우와 데이터 액세스 층이 변경(RDB -> NoSQL)되었을 경우 등에서도 비지니스 층에 영향을 미치지 않는다.
 	- 비지니스 층은 시스템의 핵심, 기반이므로 다른 층이 바뀌기 되더라도 영향을 받지 않아야 한다.
 	- 비지니스 층을 다른 층들과 분리하기위해서는 레이어를 형식으로만 분류하지 않고 레이어의 결합 부분에 인터페이스를 도입한 약한 결합 설계나 구현을 해야 한다.
+	
+## 프리젠테이션 층의 역할
+- 프리젠테이션 층의 주된 역할은 사용자 인터페이스와 컨트롤러를 제공하는 것이다.
+- MVC2
+	- ![MVC2]({{site.baseurl}}/img/spring/spring-spring4intro-1-webarchitecture-mvc2-1.png)
+
+## 비지니스 로직 층의 역할
+- 비지니스 로직층은 서비스나 도메인 같은 비지니스 로직을 구현하는 웹 애플리케이션의 중심이다.
+-
+
+---
+## Reference
+[스프링4 입문](https://book.naver.com/bookdb/book_detail.nhn?bid=12685135)  
