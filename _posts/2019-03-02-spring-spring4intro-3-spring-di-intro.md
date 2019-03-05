@@ -52,8 +52,16 @@ tags:
 - DI 를 이용할때는 클래스는 인터페이스에 의존하고 실현 클래스에는 의존하지 않아야 한다 
 - 모든 참조 관계에서 인터페이스를 사용하였기 때문에 보다 유연한 구조가 될 수 있다.
 
-![인터페이스와 DI를 사용하는 예 시퀀스 다이어그램]()
+![인터페이스와 DI를 사용하는 예 시퀀스 다이어그램]({{site.baseurl}}/img/spring/spring-spring4intro-3-spring-di-intro-useinterfacedi-ex-sequencediagram.png)
 
+## DI 를 사용할 곳
+- 데이터베이스에서 값을 가지고 와서 도메인 오브젝트를 인스턴스화(DTO, VO)하는 작업에는 어울리지 않는다.
+- Controller와 Service, Service와 Dao 등의 의존관계에서는 DI가 잘 어울린다.
+
+## DI 사용하기
+- XML로 작성된 Bean 정의 파일
+- Annotation
+- JavaConfig
 
 
 ---
