@@ -23,6 +23,8 @@ tags:
 - 현재는 Pivotal 사의 소수 정예 엔지니어가 관리하고 있다.
 - DIxAop 컨테이터를 중심으로 MVC 프레임워크(스프링 MVC, 스프링 웹 플로우), JDBC를 추상화한 프레임워크(스프링 JDBC), 기존 프레임워크와의 통합 기능 등을 개발자에게 제공하는 애플리케이션 아키텍쳐의 기반이 된다.
 
+![스프링 프레임워크 구조]({{site.baseurl}}/img/spring/spring-spring4intro-1-spring-intro-springframeworkarchitecture.png)
+
 # 프리젠테이션 층
 ## 스프링 MVC 
 - 프리젠테이션 층에서는 스프링 MVC와 스프링 웹 플로우를 이용할 수 있다.
