@@ -17,20 +17,20 @@ tags:
     - POJO
 ---  
 
-'애너테이션을 이용해 POJO 관리하기'
+'Annotation 을 이용해 POJO 관리하기'
 
 # 목표
 Spring IoC 컨테이너에서 Annotation 을 이용해 POJO 를 관라리하자
 
 # 방법
 - POJO 클래스를 설계한다.
-- @Configuration, @Bean 을 붙인 자바 구성 클래스를 만들거나, @Component, @Repository, @Service, @Controller 등을 붙인 자바 컴포넌트를 구성한다.
+- @Configuration, @Bean 을 붙인 자바 설정 클래스를 만들거나, @Component, @Repository, @Service, @Controller 등을 붙인 자바 컴포넌트를 구성한다.
 - IoC 컨터이너는 Annotation 을 붙인 자바 클래스를 스캐닝(탐색)하여 애플리케이션의 이리부인 것처럼 POJO 인스턴스(Bean)을 구성한다.
 
 # 예제
 - 다목적 시퀀스(Sequence) 생성기 애플리케이션을 개발한다.
 - 시퀀스 유형별로 접두어(Prefix), 접미어(Suffix), 초깃값은 따로 있어서 생성기 인스턴스를 여러개 만들어야 한다.
-- Bean을 생성하는 POJO 클래스를 자바 구성으로 작성한다.
+- Bean을 생성하는 POJO 클래스를 자바 설정으로 작성한다.
 
 ```java
 public class SequenceGenerator {
@@ -68,8 +68,8 @@ public class SequenceGenerator {
 - 시퀀스 요건에 따라 prefix, suffix, initial 세 프로퍼티를 지닌 SequenceGenerator 클래스이다.
 	- 인스턴스에서 getSequence() 메서드를 호출하면 그때마다 prefix와 suffix가 조합된 마지막 시퀀스를 리턴한다.
 
-## 구성 클래스에서 @Configuration 과 @Bean 을 붙여 POJO 생성하기
-- 자바 구성 클래스에 초깃값을 지정하면 IoC 컨테이너에서 POJO 인스턴스를 정의할 수 있다.
+## 설정 클래스에서 @Configuration 과 @Bean 을 붙여 POJO 생성하기
+- 자바 설정 클래스에 초깃값을 지정하면 IoC 컨테이너에서 POJO 인스턴스를 정의할 수 있다.
 
 ```java
 @Configuration
@@ -87,18 +87,18 @@ public class SequenceGeneratorConfiguration {
 }
 ```  
 
-- SequenceGeneratorConfiguration 클래스의 @Configuration은 이 클래스가 구성 클래스임을 스프링에게 알린다.
+- SequenceGeneratorConfiguration 클래스의 @Configuration은 이 클래스가 설정 클래스임을 스프링에게 알린다.
 - 스프링은 @Configuration 이 달린 클래스를 보면 일단 그 안에서 빈 인스턴스 정의부, @Bean(빈 인스턴스를 생성해 반환해주는) 자바 메서드를 찾는다.
-- 구성 클래스의 메서드에 @Bean 을 붙이면 그 메서드와 동일한 이름의 빈이 생성된다.
+- 설정 클래스의 메서드에 @Bean 을 붙이면 그 메서드와 동일한 이름의 빈이 생성된다.
 - 빈 이름을 따로 명시하려면 @Bean 의 name 속성에 적는다.
 	- @Bean(name ="myBean")는 myBean 이라는 이름의 빈을 만든다.
 	
 ## IoC 컨테이너를 초기화하여 Annotation 스캐닝하기
 - Annotation 을 붙인 자바 클래스를 스캐닝하려면 우선 IoC 컨테이너를 인스턴스화 해야 스프링이 @Configuration, @Bean 을 읽고 IoC 컨테이너에서 빈 인스턴스를 가지고 올 수 있다.
 - 스프링은 기본 구현체인 빈 팩토리(Bean Factory) 이와 호환되는 고급 구현체인 애플리케이션 컨텍스트(Application Context) 두 가지 IoC 컨테이너를 제공한다.
-	- 구성 파일은 두 컨테이너 모두 동일하다.
+	- 설정 파일은 두 컨테이너 모두 동일하다.
 - ApplicationContext 는 기본 기능에 출실하면서도 BeanFactory 보다(스프링을 애플릿이나 모바일 기기에서 실행하는 등) 발전된 기능을 지니고 있으므로 리소스에 제약을 받는 상황이 아니라면 가급적 애플리케이션 컨텍스트를 사용하는 것이 좋다.
-- BeanFactory 와 ApplicationContext 는 각각 인터페이스로 구성되어 있다.
+- BeanFactory 와 ApplicationContext 는 각각 인터페이스로 설정되어 있다.
 - ApplicationContext 는 BeanFactory 의 하위 인터페이스여서 호환성이 보장된다.
 - ApplicationContext 는 인터페이스이므로 구현체가 필요하다.
 	- 스프링은 여러 구현체가 있지만, 그 중 유연한 AnnotationConfigApplicationContext 를 권장한다.
@@ -110,7 +110,7 @@ ApplicationContext context = new AnnotationConfigApplicationContext(SequenceGene
 - ApplicationContext 를 인스턴스화한 이후에 객체 레퍼런스(여기선 context)는 POJO 인스턴스 또는 빈에 액세스하는 창구 역할을 수행한다.
 
 ## IoC 컨테이너에서 POJO 인스턴스/빈 가져오기
-- 구성 클래스에서 선언된 빈을 빈 팩토리 또는 ApplicationContext 에서 가져오려면 유일한 빈이름을 getBean() 메서드의 인수로 호출한다.
+- 설정 클래스에서 선언된 빈을 빈 팩토리 또는 ApplicationContext 에서 가져오려면 유일한 빈이름을 getBean() 메서드의 인수로 호출한다.
 - getBean() 메서드는 java.lang.Object 형을 반환하므로 실제 타입에 맞게 캐스팅 해야 한다.
 
 ```java
@@ -155,7 +155,7 @@ public class Main {
 ```  
 
 ## POJO 클래스에 @Component 를 붙여 DAO 빈 생성하기
-- 위 예제에서는 자바 구성 클래스에서 값을 하드코딩해 스프링 빈을 인스턴스화 했다.
+- 위 예제에서는 자바 설정 클래스에서 값을 하드코딩해 스프링 빈을 인스턴스화 했다.
 - 실제로 POJO 는 대부분 DB 나 유저 입력을 활용해 인스턴스로 만든다.
 - 이에 맞춰 Domain 클래스 및 DAO(Data Access Object) 패턴을 이용해 POJO 를 생성 한다.
 - Sequence Domain 클래스
