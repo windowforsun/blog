@@ -31,7 +31,7 @@ tags:
 	
 
 # 서비스 란
-**플랫폼**에 종속되지 않는 표준 인터페이스(CORBA, 웹서비스)를 통해서 기업의 업무를 표헌한 Loosely coupled하고 상호 조합 가능한 소프트웨어 이다.
+**플랫폼**에 종속되지 않는 표준 인터페이스(CORBA, 웹서비스)를 통해서 기업의 업무를 표현한 Loosely coupled 하고 상호 조합 가능한 소프트웨어 이다.
 - SOA에서 서비스의 플랫폼 종속성은 SOAP 기반의 웹서비스 또는 XML을 통해서 구현된다.
 - 서비스를 표현하는데 있어서 가장 중요한 특징은 **기업의 업무를 표현한다**는 것이다.
 - 서비스의 예시
@@ -113,11 +113,32 @@ tags:
 - 서비스의 구성 방법은 기업의 SOA 성숙도와 발전 정도에 따라 단계적으로 적용되어야 한다.
 - Application front end란 서비스들이 사용되어 최종 사용자에게 보이는 곳이다.(ex. 클라이언트, 웹브라우저)
 ## Fundamental SOA (통합)
+- ![soa 아키텍쳐 fundamental soa]({{site.baseurl}}/img/web-soa-architecture-fundamentalsao-1.jpg)
 - 가장 기본적인 SOA 형태
 - 비지니스 서비스와 애플리케이션 서비스만 존재하며 이 서비스들의 조합들은 Application front end 에서 이루어진다.
 - 목적
 	- 기존의 시스템을 각각 **서비스화**하는 것이다.
-	- 독립되어 있던 시스템들을 **통합**하여 하나의 시스템으로 운영 하는 것이다.
+	- 독립되어 있던 시스템들을 **통합하여 하나의 시스템**으로 운영 하는 것이다.
+- 예시
+	- ![soa 아키텍쳐 fundamental soa 예]({{site.baseurl}}/img/web-soa-architecture-fundamentalsao-ex-1.jpg)
+
+## Networked SOA (유연성과 통제 추가)
+- Fundamental SOA 의 문제점
+	- 시스템은 시간이 갈수록 크기가 커지고 서비스 간의 호출의 관계 및 연결은 날이 갈 수록 복잡해진다.
+	- 서비스의 내용이 변경, 보강 됨에 따라 의존성에 의해서 서비스간에 수정이 필요한 경우가 발생한다.
+	- 이는 서비스의 변화를 어렵게 만들고 결과적으로 시스템의 유연성을 떨어뜨린다.
+	- 관리 및 중앙 통제에 있어서 문제가 발생한다.
+- ![soa 아키텍쳐 networked soa]({{site.baseurl}}/img/web-soa-architecture-networkedsoa-1.jpg)
+- 모든 서비스들을 중앙에 하나의 버스를 통해 관리하여 중앙 통제력 및 유연성을 강화한다.
+- 서비스간 연결 복잡도를 해소하고 Intermediary 서비스를 추가함으로써, 서비스의 내용이 변경되었을 때 그 차이를 보강해 줄 수 있어야 한다.
+- 중앙 버스 역할 하는 것이 Enterprise Service Bus(ESB)로 기본적인 통제와 유연성을 제공한다.
+	- 서비스에 대한 모니터링
+	- Intermediary 서비스 기능의 제공
+	- 위치에 대한 투명성 제공
+	
+## Process Oriendted SOA (민첩성의 추가)
+
+	
 
 # SOA 아케텍쳐 구현시 고려 사항
 
