@@ -136,15 +136,41 @@ tags:
 	- Intermediary 서비스 기능의 제공
 	- 위치에 대한 투명성 제공
 	
-## Process Oriendted SOA (민첩성의 추가)
-
+## Process Oriented SOA (민첩성의 추가)
+- ![soa 아키텍쳐 process oriented soa]({{site.baseurl}}/img/web-soa-architecture-processorientedsoa-1.jpg)
+- 업무프로세스가 자주 변화 되고, IT 시스템이 이에 민첩하게 반응해야 하거나, SOA로 구현해야 하는 업무들에 복잡한 업무 플로우가 존재할 경우 BPM 기반으로 구현한 SOA를 고려해 볼 수 있다.
+- 각 서비스를 조합하는 것을 BPM으로 구현함으로써, 업무의 조합이 별도의 코딩 없이 BPM툴로 이루어 지게 되고, 업무프로세스가 바뀌었을 때 BPM툴에서 업무프로세스를 조정하는 것만으로도 빠르게 비지니스 조직의 요구에 대응 가능하다.
+- 업무 조직과 기술 소직간의 의사 소통에 있어서도, 기술적인 지식 없이도 BPM에서 사용되는 모든 서비스는 이미 업무적인 의미를 가지는 컴포넌트 이기 때문에 IT조직과 업무 조직간의 의사소통 문제도 해결 할 수 있다.
+- BPM과 함께 생각할 수 있는 것이 BPA(Business Process Analysis)와 BAM(Business Activity Monitoring) 이다.
+- BPA는 실제 업무 플로우를 BPM으로 구현하기 전에 업무팀에서 해당 업무 플로우에 대한 설계를 하고 이에 대한 시뮬레이션을 할 수 있는 Business Process 분석 설계 도구이다.
+- BPA를 통해서 업무팀에서 해당 업무 프로세스를 정의하고, 작동 내용을 시뮬레이션 함으로써 보다 완성된 업무 프로세스를 얻을 수 있으며, 이렇게 설계된 업무는 IT개발팀에 의해서 BPM으로 변환 된다.
+- BPM으로 변환되니 업무는 SOA 시스템에 반영되어 시리제 운영이 되게 되고, BAM이라는 모니터리이 도구를 이용하여 반영된 BPM에 대한 평가가 이루어진다.
+- 이 평가를 기반으로 업무팀에서는 다시 BPA를 이용하여 해당 업무의 최적화를 수행하고 다시 이는 BPM으로 구현되는 반복을 통해 업무의 개선과 SOA시스템이 최적화를 이룰 수 있다.
 	
 
 # SOA 아케텍쳐 구현시 고려 사항
+## 서비스화
+- Service Adapter 고려
+	- 기존의 서비스를 손쉽게 웹서비스화 하기 위해서는 Service Adapter의 도입을 고려
+	- Ant Task등을 이용한 EJB, POJO의 자동 웹서비스화
+	- Adapter를 이용한 Tuxedo, SAP등의 Legacy 자동 웹서비스화
+- 서비스 인터페이스 표준 결정
+	- 인터페이스 표준을 어떤것을 사용 할것인가
+		- 웹서비스, CORBA, XML/HTTP -> 확장성, 기술 도입 편의성, 호환성
+		- 웹서비스의 경우 확장 구격인 WS(WS-Transaction, WS-Coordination, WS-Security 등)을 사용할 경우 Service Adapter별로 지원하는 수준이 다름
+
+## 트랜잭션 처리
+
+## 보안
+
+## 모니터링
+
+## 서비스 검색
 
 
 # SOA 수행 전략
 
+**정리 필요**
 
 
 
