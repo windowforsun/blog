@@ -12,7 +12,8 @@ categories :
 tags:
     - Web
     - Spring
-    - Spring4 입문
+    - Concept
+    - IoC
     - Intro
 ---  
 
