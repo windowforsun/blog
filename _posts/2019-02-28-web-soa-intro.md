@@ -44,7 +44,7 @@ tags:
 
 ## 서비스의 구성
 비지니스적 의미를 가지는 기능(Method)들을 모아 놓은 소프트웨어 컴포넌트이다.  
-![서비스의 구성]({{stie.baseurl}}/img/web-soa-service-architecture-1.jpg)
+![서비스의 구성]({{site.baseurl}}/img/web-soa-service-architecture-1.jpg)
 - 서비스 인터페이스
 	- 서비스내의 하나의 업무 기능을 뜻한다.
 	- 주문 서비스라는 서비스가 있을 때, 상품 주문과 주문 내용 조회라는 인터페이스를 가진다.
@@ -90,11 +90,11 @@ tags:
 		- 기존 구매 프로세스가 존재하였을 때, 일반 고객과 VIP고객에 대한 프로세스 차별화가 추가되었다.
 		- 고객의 요건에 따라 구매 프로세스를 서로 다르게 호출해야 한다. 이런 유형을 Routing 서비스라고 한다.
 	- Transformation
-		- ![서비스 종류 Intermediary Transformation]({{stie.baseurl}}/img/web-soa-service-intermediary-transformation-1.jpg)
+		- ![서비스 종류 Intermediary Transformation]({{site.baseurl}}/img/web-soa-service-intermediary-transformation-1.jpg)
 		- 서비스의 인자값의 데이터 타입이 변경되었을 때 기존에 서비스를 호출하던 모든 서비스들은 맞춰 변경해야 한다.
 		- 이런 경우 구 데이터 타입을 새로운 데이터 타입으로 변화시켜주는 서비스가 Tranformation 서비스 이다.
 	- 이 외에도 새로운 기능을 추가하는 Functional adding 서비스, Facade 기능을 구현한 서비스등을 예로 들수 있다.
-		- ![서비스 종류 Intermediary Functional adding]({{stie.baseurl}}/img/web-soa-service-intermediary-functionaladding-1.jpg)
+		- ![서비스 종류 Intermediary Functional adding]({{site.baseurl}}/img/web-soa-service-intermediary-functionaladding-1.jpg)
 - Process centric
 	- ![서비스 종류 Process centric]({{site.baseurl}}/img/web-soa-service-processcentric-1.jpg)
 	- 비지니스 서비스를 조합하여 하나의 업무 프로세스를 구현한다.
@@ -111,9 +111,13 @@ tags:
 
 # SOA 아키텍쳐 모델
 - 서비스의 구성 방법은 기업의 SOA 성숙도와 발전 정도에 따라 단계적으로 적용되어야 한다.
-- Application frontend란 서비스들이 사용되어 최종 사용자에게 보이는 곳이다.(ex. 클라이언트, 웹브라우저)
+- Application front end란 서비스들이 사용되어 최종 사용자에게 보이는 곳이다.(ex. 클라이언트, 웹브라우저)
 ## Fundamental SOA (통합)
-
+- 가장 기본적인 SOA 형태
+- 비지니스 서비스와 애플리케이션 서비스만 존재하며 이 서비스들의 조합들은 Application front end 에서 이루어진다.
+- 목적
+	- 기존의 시스템을 각각 **서비스화**하는 것이다.
+	- 독립되어 있던 시스템들을 **통합**하여 하나의 시스템으로 운영 하는 것이다.
 
 # SOA 아케텍쳐 구현시 고려 사항
 
