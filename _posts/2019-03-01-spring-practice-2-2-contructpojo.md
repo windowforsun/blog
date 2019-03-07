@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] 생성자로 POJO 구성하기"
+title: "[Spring 실습] 생성자로 POJO 구성하기 (Annotation)"
 header:
   overlay_image: /img/spring-bg.jpg
 subtitle: '생성자를 호출해서 POJO 생성하자'

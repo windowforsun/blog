@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Java로 POJO 구성하기"
+title: "[Spring 실습] Java로 POJO 구성하기 (Annotation)"
 header:
   overlay_image: /img/spring-bg.jpg
 subtitle: 'Annotation 을 이용해 POJO 관리하기'
