@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] POJO 레퍼런스를 자동연결(Autowired)"
+title: "[Spring 실습] POJO 레퍼런스를 자동연결(@Autowired)"
 header:
   overlay_image: /img/spring-bg.jpg
 subtitle: 'POJO 레퍼런와 자동 연결을 이용해 다른 POJO 와 연동해보자'

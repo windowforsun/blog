@@ -32,12 +32,12 @@ tags:
 
 ## @Resource 로 POJO 자동 연결하기
 - 타입을 통해 POJO 를 자동연결 해주는 것은 @Resource, @Autowired 모두 동일하다.
-- 아래와 같이 prefixGenerator 프로퍼티에 @Resource 를 붙이면 PrefixGenerator 형 POJO가 자동 연결된다.
+- 아래와 같이 monitor 프로퍼티에 @Resource 를 붙이면 monitor 형 POJO가 자동 연결된다.
 
 ```java
-public class SequenceGenerator {
+public class Computer {
 	@Resource
-	private PrefixGenerator prefixGenerator;
+	private Monitor monitor;
 }
 ```  
 
@@ -46,3 +46,53 @@ public class SequenceGenerator {
 
 ## @Inject 로 POJO 자동 연결하기
 - @Resource 와 @Autowired 처럼 @Inject 도 일단 타입으로 POJO 를 찾는다.
+
+```java
+public class Computer {
+	@Inject
+	private Monitor monitor;
+}
+```  
+
+- @Inject 는 @Resource, @Autowired 처럼 타입이 같은 POJO 가 여러개일 경우 다른 방법을 사용해야 한다.
+- @Inject 를 이용해 이름으로 자동 연결을 하려면 먼저 POJO 주입 클래스와 주입 지점을 구별하기 위해 Custom Annotation (사용자가 제작한 Annotation) 을 작성해야 한다.
+
+```java
+@Qualifier
+@Target(ElementType.Type, ElementType.Field, ElementType.PARAMETER)
+@Document
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MonitorAnnotation {
+	
+}
+```  
+
+- 위 Custom Annotation 에 붙인 @Qualifier 는 스프링에서 쓰는 @Qualifier 와는 다른, @Inject 와 동일한 패키지(javax.inject) 에 속한 Annotation 이다.
+- Custom Annotation 을 작성한 다음, 빈 인스턴스를 생성하는 POJO 주입 클래스 즉 DellMonitor 에 붙인다.
+
+```java
+@MonitorAnnotation
+public class DellMonitor implements Monitor {
+	
+}
+```  
+
+- Custom Annotation 을 POJO 속성 또는 주입 지점에서 사용하면 된다.
+
+```java
+public class Computer {
+	@Inject @MonitorAnnotation
+	private Monitor monitor;
+}
+```  
+
+- @Autowired, @Resource, @Inject 셋 중 어느것을 사용하더라도 결과는 같다.
+- @Autowired 는 스프링, @Resource, @Inject 는 자바 표준(JSP) 에 근거한 방법이라는 차이점만 있다.
+- 이름을 기준으로 한다면 구문이 단순한 @Resource 가 낫고, 타입을 기준으로 한다면 셋중 어느것을 사용하더라도 무방하다.
+
+
+---
+## Reference
+[스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  
+
+
