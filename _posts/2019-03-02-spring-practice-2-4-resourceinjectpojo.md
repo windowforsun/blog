@@ -24,7 +24,7 @@ tags:
 # 방법
 - @Resource 는 JSR-250(Common Annotation for the Java Platform) 에 규정된 Annotation 이다.
 - 이름을 사용하여 POJO 레퍼런스를 찾아 연결한다.
-- JSR-330(표준 주입 Annotation)에 규저어된 @Inject 는 타입으로 POJO 레퍼런스를 찾아 연결한다.
+- JSR-330(표준 주입 Annotation)에 규정된 @Inject 는 타입으로 POJO 레퍼런스를 찾아 연결한다.
 
 # 예제
 - @Autowired 는 Spring Framework 의 org.springframework.bean.factory.annotation 패키지에 속해 있어서 스프링에서만 쓸 수 있다.
