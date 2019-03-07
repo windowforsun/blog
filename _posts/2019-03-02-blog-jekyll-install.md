@@ -52,5 +52,9 @@ bundle exec jekyll serve
 
 
 
+---
+## Reference
+[지킬 한국어 페이지](https://jekyllrb-ko.github.io/)  
+
 
 
