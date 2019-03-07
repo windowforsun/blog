@@ -4,7 +4,7 @@ classes: wide
 title: "REST API"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'REST API 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'REST API 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -17,8 +17,6 @@ tags:
     - ROA
     - Intro
 ---  
-
-'REST API 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # REST API 란
 - API (Application Programming Interface) 란

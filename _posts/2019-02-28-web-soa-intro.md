@@ -4,7 +4,7 @@ classes: wide
 title: "SOA 개요"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'SOA 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'SOA 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,6 @@ tags:
     - SOA
     - Intro
 ---  
-
-'SOA 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # SOA(Service Oriented Architecture) 란
 ![SOA 구조1]({{site.baseurl}}/img/web-soa-ex-1.jpg)

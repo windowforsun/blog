@@ -4,7 +4,7 @@ classes: wide
 title: "HTTP 개요"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'HTTP 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'HTTP 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,9 +15,6 @@ tags:
     - Intro
 ---  
 
-'HTTP란 무엇이고, 어떠한 특징을 가지고 있는지'
-
----
 # HTTP 란
 - HTTP(Hyper Text Transport Protocol)은 웹서버와 클라이언트간의 문서를 교환하기 귀한 통신 규약
 - WWW(World Wide Web)의 문산되어 있는 서버와 클라이언트 간에 Hypertext를 이용한 정보 교환이 가능하도록 하는 통신 규약

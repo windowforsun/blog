@@ -4,7 +4,7 @@ classes: wide
 title: "ROA 개요"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'ROA 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'ROA 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,8 +15,6 @@ tags:
     - ROA
     - Intro
 ---  
-
-'ROA 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # ROA 란
 Resource Oriented Architecture의 약자로, 웹의 모든 리소스를 URI로 표현하고 구조적이고 유기적으로 연결하여 비 상태 자향적인 방법으로 정해진 Mehtod만을 사용하여 리소스를 사용하는 아키텍쳐. 4가지의 고유한 속성(Addressability, Connectedness, Statelessness, Homogeneous Interface)과 연관되어 진다.([REST]({{site.baseurl}}{% link _posts/2019-02-21-web-rest-intro.md %})는 이 속성들을 지향한다.)

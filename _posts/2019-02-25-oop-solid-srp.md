@@ -4,7 +4,7 @@ classes: wide
 title: "객체 지향 프로그래밍(OOP) 객체 지향 디자인 5원칙(SOLID 원칙) - SRP"
 header:
   overlay_image: /img/oop-bg.jpg
-subtitle: 'SOLID-SRP 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'SOLID-SRP 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -17,8 +17,6 @@ tags:
     - 디자인 패턴
     - Design Pattern
 ---  
-
-'SOLID-SRP 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 ### [SOLID 개요]({{site.baseurl}}{% link _posts/2019-02-24-oop-solid.md %})
 

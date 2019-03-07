@@ -2,7 +2,7 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 개요"
-subtitle: '디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
+excerpt: '디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
 header:
   overlay_image: /img/designpattern-bg.jpg
 author: "window_for_sun"
@@ -14,8 +14,6 @@ tags:
   - Design Pattern
   - Intro
 ---
-
-'디자인 패턴이 무엇이고, 종류와 분류에는 어떤 것들이 있는지'
 
 # 디자인 패턴 이란
 - 소프트웨어를 설계할 때 특정 맥락에서 자주 발생하는 고질적인 문제들이 또 발생 했을 때 재사용 할 수있는 훌륭한 해결책

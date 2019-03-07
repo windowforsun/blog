@@ -4,7 +4,7 @@ classes: wide
 title: "RMM 개요"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'RMM 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'RMM 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,8 +15,6 @@ tags:
     - RMM
     - Intro
 ---  
-
-'RMM 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 
 # RMM 이란

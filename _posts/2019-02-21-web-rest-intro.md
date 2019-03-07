@@ -4,7 +4,7 @@ classes: wide
 title: "REST 개요"
 header:
   overlay_image: /img/web-bg.jpg
-subtitle: 'REST 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'REST 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,8 +16,6 @@ tags:
     - ROA
     - Intro
 ---  
-
-'REST 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # REST 란
 - Representational State Transfer

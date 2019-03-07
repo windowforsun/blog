@@ -4,7 +4,7 @@ classes: wide
 title: "디자인 패턴(Design Pattern) 커맨드 패턴(Command Pattern)"
 header:
   overlay_image: /img/designpattern-bg.jpg
-subtitle: '커맨드 패턴이 무엇이고, 어떠한 특징을 가지는지'
+excerpt: '커맨드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,6 @@ tags:
     - Design Pattern
     - Command Pattern
 ---  
-
-'커맨드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 # 커맨드 패턴이란
 - 실행될 기능을 캡슐화함으로써 주어진 여러 기능을 실행할 수 있는 재사용성이 높은 클래스를 설계하는 패턴

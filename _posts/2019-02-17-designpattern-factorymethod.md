@@ -4,7 +4,7 @@ classes: wide
 title: "디자인 패턴(Design Pattern) 팩토리 메서드 패턴(Factory Method Pattern)"
 header:
   overlay_image: /img/designpattern-bg.jpg
-subtitle: '팩토리 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
+excerpt: '팩토리 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,6 @@ tags:
     - Design Pattern
     - Factory Method
 ---  
-
-'팩토리 메서드 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 # 팩토리 메서드 패턴이란
 - 객체, 생성 처리를 서브 클래스로 분리 해 처리하도록 캡슐화하는 패턴

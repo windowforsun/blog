@@ -2,7 +2,7 @@
 layout: single
 classes: wide
 title: "디자인 패턴(Design Pattern) 싱글턴 패턴(Singleton Pattern)"
-subtitle: '싱글턴 패턴이 무엇이고, 어떠한 특징을 가지는지'
+excerpt: '싱글턴 패턴이 무엇이고, 어떠한 특징을 가지는지'
 header:
   overlay_image: /img/designpattern-bg.jpg
 author: "window_for_sun"
@@ -14,8 +14,6 @@ tags:
     - Design Pattern
     - Singleton
 ---  
-
-'싱글턴 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 # 싱글턴 패턴이란
 - 전역 변수를 사용하지 않고 객체를 하나만 생성 하도록 하며, 생성된 객체를 어디에서든지 참조할 수 있도록 하는 패턴

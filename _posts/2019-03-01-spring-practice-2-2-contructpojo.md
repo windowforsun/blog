@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] 생성자로 POJO 구성하기 (Annotation)"
 header:
   overlay_image: /img/spring-bg.jpg
-subtitle: '생성자를 호출해서 POJO 생성하자'
+excerpt: '생성자를 호출해서 POJO 생성하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,8 +16,6 @@ tags:
     - Annotation
     - POJO
 ---  
-
-'생성자를 호출해서 POJO 생성하자'
 
 # 목표
 - IoC 컨테이너에서 생성자를 호출해서 POJO 인스턴스/빈을 생성해보자.

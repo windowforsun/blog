@@ -4,7 +4,7 @@ classes: wide
 title: "클래스, 객체 그리고 인스턴스의 차이(관계)"
 header:
   overlay_image: /img/oop-bg.jpg
-subtitle: '클래스, 객체, 인스턴스는 개념적으로 어떤 차이점(관계)을 보이는지'
+excerpt: '클래스, 객체, 인스턴스는 개념적으로 어떤 차이점(관계)을 보이는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,8 +15,6 @@ tags:
     - Object
     - Instance
 ---  
-
-'클래스, 객체, 인스턴스는 개념적으로 어떤 차이점(관계)을 보이는지'
 
 ## 객체(Object) 란
 - 구현해야할 **대상**

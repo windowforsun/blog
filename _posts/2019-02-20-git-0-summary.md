@@ -4,7 +4,7 @@ classes: wide
 title: "깃(Git) 정리"
 header:
   overlay_image: /img/git-bg.jpg
-subtitle: 'git을 간략하게 정리'
+excerpt: 'git을 간략하게 정리'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,8 +13,6 @@ tags:
     - Git
     - Summary
 ---  
-
-'git을 간략하게 정리'
 
 # Git 명령어
 ## Git 설정

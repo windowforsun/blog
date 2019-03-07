@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring4 입문] Spring 개요"
 header:
   overlay_image: /img/spring-bg.jpg
-subtitle: 'Spring 란 무엇이고, 어떠한 특징을 가지고 있는지'
+excerpt: 'Spring 란 무엇이고, 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,8 +15,6 @@ tags:
     - Spring4 입문
     - Intro
 ---  
-
-'Spring 란 무엇이고, 어떠한 특징을 가지고 있는지'
 
 # 스프링(Spring) 이란
 - 스프링은 로드 존슨을 중심으로 개발된 Java/Java EE용 프레임워크이다.

@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Java로 POJO 구성하기 (Annotation)"
 header:
   overlay_image: /img/spring-bg.jpg
-subtitle: 'Annotation 을 이용해 POJO 관리하기'
+excerpt: 'Annotation 을 이용해 POJO 관리하기'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,8 +16,6 @@ tags:
     - Annotation
     - POJO
 ---  
-
-'Annotation 을 이용해 POJO 관리하기'
 
 # 목표
 Spring IoC 컨테이너에서 Annotation 을 이용해 POJO 를 관라리하자

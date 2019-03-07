@@ -4,7 +4,7 @@ classes: wide
 title: "디자인 패턴(Design Pattern) 추상 팩토리 패턴(Abstract Factory Pattern)"
 header:
   overlay_image: /img/designpattern-bg.jpg
-subtitle: '추상 팩토리 패턴이 무엇이고, 어떠한 특징을 가지는지'
+excerpt: '추상 팩토리 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,6 @@ tags:
     - Design Pattern
     - Abstract Factory
 ---  
-
-'추상 팩토리 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 # 추상 팩토리 패턴이란
 - 구체적인 클래스에 의존하지 않고 서로 연관되거나 의존적인 객체들의 조합을 만드는 인터페이스를 제공하는 패턴

@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] POJO 레퍼런스를 자동연결(@Autowired)"
 header:
   overlay_image: /img/spring-bg.jpg
-subtitle: 'POJO 레퍼런와 자동 연결을 이용해 다른 POJO 와 연동해보자'
+excerpt: 'POJO 레퍼런와 자동 연결을 이용해 다른 POJO 와 연동해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,8 +16,6 @@ tags:
     - Autowired
     - POJO
 ---  
-
-'POJO 레퍼런와 자동 연결을 이용해 다른 POJO 와 연동해보자'
 
 # 목표
 - 애플리케이션을 구성하는 POJO/빈 인스턴스들은 서로 함께 동작을 수행 한다.

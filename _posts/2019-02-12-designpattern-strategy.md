@@ -4,7 +4,7 @@ classes: wide
 title: "디자인 패턴(Design Pattern) 스트래티지 패턴(Strategy Pattern)"
 header:
   overlay_image: /img/designpattern-bg.jpg
-subtitle: '스트래티지 패턴이 무엇이고, 어떠한 특징을 가지는지'
+excerpt: '스트래티지 패턴이 무엇이고, 어떠한 특징을 가지는지'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,6 @@ tags:
     - Design Pattern
     - Strategy Pattern
 ---  
-
-'스트래티지 패턴이 무엇이고, 어떠한 특징을 가지는지'
 
 # 스트래티지 패턴 이란
 - 행위를 클래스로 캡슐화해 동적으로 행위를 자유롭게 바꿀 수 있게 해주는 패턴
