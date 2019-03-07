@@ -7,6 +7,7 @@ header:
 excerpt: '윈도우에서 Jekyll 구성하는 법을 알아보자'
 author: "window_for_sun"
 header-style: text
+toc: true
 categories :
   - Blog
 tags:
