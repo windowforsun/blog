@@ -7,7 +7,6 @@ header:
 excerpt: 'POJO 레퍼런와 자동 연결을 이용해 다른 POJO 와 연동해보자'
 author: "window_for_sun"
 header-style: text
-toc: true
 categories :
   - Spring
 tags:
