@@ -18,7 +18,7 @@ tags:
 ---  
 
 # 목표
-Spring IoC 컨테이너에서 Annotation 을 이용해 POJO 를 관라리하자
+Spring IoC 컨테이너에서 Annotation 을 이용해 POJO 를 관리하자
 
 # 방법
 - POJO 클래스를 설계한다.
