@@ -123,5 +123,25 @@ Shopping cart 1 contains [AAA 2.5, CD-RW 1.5]
 Shopping cart 2 contains [AAA 2.5, CD-RW 1.5, DVD-RW 3.0]
 ```  
 
-- 스프링 기본 스코프가 singleton 이기 때문에 IoC 컨테이너당 카트 인스턴스가 한개만 생성 되었기 때문에 위와 같은 결과가 출력된다.
-- getBean() 메서드
+- 스프링 기본 스코프가 singleton 이라서 IoC 컨테이너당 카트 인스턴스가 한개만 생성 되었기 때문에 위와 같은 결과가 출력된다.
+- shoppingCart 빈 스코프를 prototype 으로 설정하면 스프링은 getBean() 메서드를 호출 할 때마다 빈 인스턴스를 새로 만든다.
+
+```java
+@Component
+@Scope("prototype")
+public class ShoppingCart {
+	// ...
+}
+```  
+
+- Main 클래스를 다시 실행하면 결과는 다음과 같다.
+
+```
+Shopping cart 1 contains [AAA 2.5, CD-RW 1.5]
+Shopping cart 2 contains [DVD-RW 3.0]
+```  
+
+---
+## Reference
+[스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  
+
