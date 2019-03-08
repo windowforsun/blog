@@ -1,0 +1,36 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Computer {
+    - deviceList : List<Device>
+
+    + addDevice(device : Device) : void
+    + getDeviceList() : List<Device>
+}
+
+abstract class Device {
+    - modelNumber : String
+    - modleName : String
+    + Data(modelNumber String, modelName : String)
+    // getter, setter
+}
+
+class Monitor {
+    - inch : int
+    + Monitor(inch : int)
+    // getter, setter
+}
+
+class Mouse {
+    - buttonCount : int
+    Mouse(buttonCount : int)
+    // getter, setter
+}
+
+Computer ..> Device
+Device <|-- Monitor
+Device <|-- Mouse
+
+
+
+@enduml
