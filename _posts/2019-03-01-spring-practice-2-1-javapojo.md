@@ -14,6 +14,8 @@ tags:
     - Spring
     - Practice
     - Annotation
+    - A-Component
+    - A-ComponentScan
     - POJO
 ---  
 

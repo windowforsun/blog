@@ -13,13 +13,13 @@ tags:
     - Web
     - Spring
     - Practice
-    - Inject
-    - Resource
+    - A-Inject
+    - A-Resource
     - POJO
 ---  
 
 # 목표
-- @Autowired 를 사용하지 않고, 자바 표준 Annotation @Resource, @index 로 POJO 를 자동연결 해본다.
+- @Autowired 를 사용하지 않고, 자바 표준 Annotation @Resource, @Inject 로 POJO 를 자동연결 해본다.
 
 # 방법
 - @Resource 는 JSR-250(Common Annotation for the Java Platform) 에 규정된 Annotation 이다.
