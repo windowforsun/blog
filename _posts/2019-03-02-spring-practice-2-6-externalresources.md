@@ -134,6 +134,63 @@ public class ShopConfiguration {
 ```  
 
 - @Value("classpath:banner.txt") 를 통해 스프링은 ClassPath 에서 banner.txt 파일을 찾아 banner 프로퍼티에 주입하고 미리 등록된 프로퍼티 편집기 ResourceEditor 를 이용해 배너 파일을 빈에 주입하기 전 Resource 객체로 변환한다.
+- 배너 파일은 자바 클래스 패스에 있으므로 리소스 경로는 접두어 **classpath:** 로 시작한다.
+- 위 예제에서는 파일 시스템의 상대 경로로 리소스 위치를 명시 했지만 절대경로도 가능하다.
 
+```
+file:c/shop/banner.txt
+```  
 
+- 자바 클래스패스 위치한 리소스는 접두어 classpath: 를 사용한다. 경로를 지정하지 않으면 클래스패스 루트에서 읽는다.
 
+```
+classpath:banner.txt
+```  
+
+- 특정 패키지에 위치한 리소스는 클래스피스 루트부터 절대 경로를 명시한다.
+
+```
+classpath:com/apress/springrecipes/shop/banner.txt
+```  
+
+- 시스템 경로, 클래스패스 뿐만 아니라 URL 로 위치를 특정 할 수 있다.
+
+```
+http://spring.co.kr/shop/banner.txt
+```  
+
+- showBanner() 메서드에 붙인 @PostConstruct 로 인해 IoC 컨테이너 구성 시즘에 배너가 출력된다.
+- 애플리케이셔녀이 종료 될 때 discounts.properties 파일에 나열된 할인율을 출력한다고 하자.
+- 스프링 Resource 메커니즘을 활용하여 프로퍼티 파일 내용을 가져오면 된다.
+
+```java
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+    	// ...
+    	
+        Resource resource = new ClassPathResource("discounts.properties");
+        Properties props = PropertiesLoaderUtils.loadProperties(resource);
+        System.out.println("And don't forget our discounts!");
+        System.out.println(props);
+    }
+}
+```  
+
+- 스프링 ClassPathResource 클래스로 discounts.properties 파일 데이터를 가져와 Resource 객체로 캐스팅 하고, 다시 PropertiesLoaderUtils 유틸 클래스를 이용해 Properties 객체로 변경한다.
+- 정보 파일(discounts.properties 등)은 자바 클래스패스에 있는 리로스라서 ClassPathResource 로 액세스 가능하다.
+- 외부 파일 시스템에 있는 리소스는 FileSystemResource 로 가져온다.
+
+```java
+Resource resource = new FileSystemResource("c:/shop/banner.txt");
+```  
+
+- URL 로 외부 리소스를 액세스하려면 스프링 UrlResource 를 이용한다.
+
+```java
+Resource resource = new UrlResource("http://www.apress.com/");
+```  
+
+---
+## Reference
+[스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  
