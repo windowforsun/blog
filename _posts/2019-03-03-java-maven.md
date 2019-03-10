@@ -30,6 +30,16 @@ tags:
 ## 구조
 ![maven 구조]({{site.baseurl}}/img/java/java-maven-architecture-1.png)
 
+## 디렉토리 구조
+![메이블 디렉토리 구조]({{site.baseurl}}/img/java/java-maven-directory.jpg)
+- src 밑으로 main 과 test 라는 디렉토리가 존재하고, 각 하위에는 java 와 resources 가 위치한다.
+	- src/main/java : 자바 소스 파일이 위치한다.
+		- 이 하위에 com.project.protype 와 같은 패키지를 배치한다.
+	- src/main/resources : 프로퍼티나 XML 등 리소스 파일이 위치한다.
+	- src/main/webapp : Web Project 일 경우 WEB-INF 등 웹 애플리케이션 리소스를 위치 시킨다.
+	- src/test/java : JUnit 등의 테스트 파일이 위치한다.
+	- src/test/resources : 테스트 시에 필요한 resource 파일이 위치한다.
+
 # Plugin
 - 메이븐은 플러그인을 구동해주는 프레임워크(Plugin execution framework)이다. 모든 작업은 플로그인에서 수행한다.
 - 플러그인은 다른 산출물(Artifacts)와 같이 저장소에서 관리된다.
@@ -209,6 +219,7 @@ Tools | ant, antruna, archetpye, assembly, dependency, pdf, plugin, repository |
 ## Reference
 [Maven](http://maven.apache.org/index.html)  
 [maven (메이븐 구조, 차이점, 플러그인, 라이프사이클, 의존성, pom.xml)](https://sjh836.tistory.com/131)  
+[Maven 을 이용한 프로젝트 생성 및 활용](https://unabated.tistory.com/entry/Maven-%EC%9D%84-%EC%9D%B4%EC%9A%A9%ED%95%9C-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EC%83%9D%EC%84%B1-%EB%B0%8F-%ED%99%9C%EC%9A%A9)  
 [[Maven] 메이븐이란 무엇인가?](https://mangkyu.tistory.com/8)  
 [Maven이란?](https://boxfoxs.tistory.com/324)  
 
