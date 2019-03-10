@@ -37,5 +37,6 @@ tags:
 ## Reference
 [Gradle](http://www.gradle.org/)  
 [[Gradle] Gradle 준비](https://araikuma.tistory.com/460)  
+[Gradle Java Plugin](http://kwonnam.pe.kr/wiki/gradle/java)  
 [Maven vs Gradle](https://bkim.tistory.com/13)  
 
