@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "메이븐(Maven) 개요"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/java-bg.jpg
 excerpt: 'Maven 이란 무엇이고 어떠한 특징을 가지고 있는지'
 author: "window_for_sun"
 header-style: text
