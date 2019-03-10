@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 개념] Spring 개요"
+title: "[Spring 개념] Spring 개요 (OLD)"
 header:
   overlay_image: /img/spring-bg.jpg
 subtitle: 'Spring 란 무엇이고, 어떠한 특징을 가지고 있는지'

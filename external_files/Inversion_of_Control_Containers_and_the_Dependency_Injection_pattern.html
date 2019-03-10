@@ -1,0 +1,697 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!-- saved from url=(0136)http://mfiles.naver.net/8354b46c79224ffdd3b1/data3/2004/5/25/99/Inversion_of_Control_Containers_and_the_Dependency_Injection_pattern.htm -->
+<!-- saved from url=(0051)http://www.martinfowler.com/articles/injection.html --><HTML><HEAD><TITLE>Inversion of Control Containers and the Dependency Injection pattern</TITLE>
+<META http-equiv=Content-Type content="text/html; charset=ks_c_5601-1987">
+<META content="MSHTML 6.00.2800.1400" name=GENERATOR></HEAD>
+<BODY><A href="http://www.martinfowler.com/"><IMG 
+src="http://www.martinfowler.com/articles/mflogo.gif" 
+align=left border=0></A> 
+<TABLE style="BORDER-BOTTOM: #d54000 thick solid" height=64 cellPadding=5>
+  <TBODY>
+  <TR>
+    <TD></TD>
+    <TD><A class=nav href="http://martinfowler.com/">Home</A></TD>
+    <TD><A class=nav href="http://martinfowler.com/bliki">Blog</A></TD>
+    <TD><A class=nav 
+    href="http://martinfowler.com/articles.html">Articles</A></TD>
+    <TD><A class=nav href="http://martinfowler.com/books.html">Books</A></TD>
+    <TD><A class=nav href="http://martinfowler.com/aboutMe.html">About 
+    Me</A></TD>
+    <TD><A class=nav 
+      href="http://martinfowler.com/aboutMe.html#contactInfo">Contact Me</A></TD>
+    <TD><A class=nav 
+  href="http://www.thoughtworks.com/">ThoughtWorks</A></TD></TR></TBODY></TABLE>
+<H1>Inversion of Control Containers and the Dependency Injection pattern</H1>
+<P align=center><A href="http://martinfowler.com/">Martin Fowler</A></P>
+<P><I>Java community 에서는 경량 컨테이너의 전성기이다. 경량 컨테이너는 다른 프로젝트들로 부터나온 컴포넌트를 응집력있는 애플리케이션으로 조립하는 것을 지원한다. 이러한 경량 컨테이너의 근간에는, 컴포넌트를 연결시키는 방법에 대한 공통된 패턴이 있다. 그 공통된 패턴의 개념은 "Inversion of Control"이라는 매우 포괄적인 이름으로 인용되고 있다. 이 기사에서는, 본인은 이러한 
+패턴이 어떻게 작동하는지에 대해 깊이 있게 살펴보며, "Dependency Injection"이라는 좀더 명확한 이름으로, 이것을 Service Locator의 대안으로서 비교한다. 그것들 사이에 선택은 중요하지 않다. 중요한것은 "이용으로 부터 설정을 분리한다"는 원칙이 중요하다.</I></P>
+<P>Last significant update: <A 
+href="http://www.martinfowler.com/articles/injection.html#Significant Revisions">23 
+Jan 04</A></P>
+<P>| <A 
+href="http://gigix.blogdriver.com/diary/gigix/inc/DependencyInjection.pdf">Chinese</A> 
+| <A href="http://www.kakutani.com/trans/fowler/injection.html">Japanese</A> | 
+</P>
+<UL>
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#ComponentsAndServices">Components 
+  and Services</A> 
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#ANaiveExample">A 
+  Naive Example</A> 
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#InversionOfControl">Inversion 
+  of Control</A> 
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#FormsOfDependencyInjection">Forms 
+  of Dependency Injection</A> 
+  <UL>
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#ConstructorInjectionWithPicocontainer">Constructor 
+    Injection with PicoContainer</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#SetterInjectionWithSpring">Setter 
+    Injection with Spring</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#InterfaceInjection">Interface 
+    Injection</A> </LI></UL>
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#UsingAServiceLocator">Using 
+  a Service Locator</A> 
+  <UL>
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#UsingASegregatedInterfaceForTheLocator">Using 
+    a Segregated Interface for the Locator</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#ADynamicServiceLocator">A 
+    Dynamic Service Locator</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#UsingBothALocatorAndInjectionWithAvalon">Using 
+    both a locator and injection with Avalon</A> </LI></UL>
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#DecidingWhichOptionToUse">Deciding 
+  which option to use</A> 
+  <UL>
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#ServiceLocatorVsDependencyInjection">Service 
+    Locator vs Dependency Injection</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#ConstructorVersusSetterInjection">Constructor 
+    versus Setter Injection</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#CodeOrConfigurationFiles">Code 
+    or configuration files</A> 
+    <LI><A 
+    href="http://www.martinfowler.com/articles/injection.html#SeparatingConfigurationFromUse">Separating 
+    Configuration from Use</A> </LI></UL>
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#SomeFurtherIssues">Some 
+  further issues</A> 
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#ConcludingThoughts">Concluding 
+  Thoughts</A> 
+  <LI><A 
+  href="http://www.martinfowler.com/articles/injection.html#Acknowledgements">Acknowledgements</A> 
+  </LI></UL>
+<P>Enterprise Java world 진영에 즐거운 일중에 하나는 메인스트림 J2EE 기술들에 대한 대체안을 구축하려고 하는 매우 많은 활동이 있다. 이 활동의 많은 부분이 Open source 진영에서 일어나고 있다.
+대체로는, 중량의 복잡한 메인스트림의 J2EE 계에 대한 반동이지만, 그것 만이 아니다. 대체안들의 모색이거나 창조적인 생각의 제안이기도 하다. 처리해야하는 공통적인 문제점은 어떻게 다른 요소들을 함께 연결하는가 이다: 예를 들어, 이 web controller architecture와 배후에 있는 데이타베이스 인터페이스와 어떻게 적절히 맞출것이지? 다른 팀들이 전자의 것들을 서로의 적은 지식을 이용하여 어떻게 구축할것인지? 하는 예이다. 많은 프레임웍들은 이러한 문제에 대해 시도해 보고 있다. 이들중 몇몇들은 다른 레이들로 부터 컴포넌트들을 조립할 수 있는 전반적인 기능을 제공하기 시작하고 있는 것도 있다. 이것들은 종종 경량 컨테이너로서 불려 지기도 하며, 예를 들어 <A href="http://www.picocontainer.org/">PicoContainer</A>나 <A href="http://www.springframework.org/">Spring</A>이 거기에 해당한다.</P>
+<P>이러한 컨테이너의 근저에 있는 것은 수많은 흥미로운 설계 원칙이며, 이러한 특정 컨테이너들과 Java platform 양쪽 모두 한정되지 않는 것들이 있다. 여기에서 나는 이런한 몇가지 원칙들을 살펴가는 것으로부터 시작하려 한다. 내가 사용하는 샘플들은 Java을 이용하지만, 언급하는 원칙의 대부분은 다른 객체 지향 환경, 특히 .NET에도 적용할 수 있을 것이다.</P>
+<A name=ComponentsAndServices>
+<H2>Components and Services</H2>
+<P>요소를 정히한다고 하는 화제를 다루자 마자, 서비스나 컴포넌트라고 하는 용어에 관련되는 까다로운 문제들에 직면한다. 여러분은 쉽게 이러한 용어들의 정의에 관한 길고 논쟁되는 기사들을 발견한다. 여기에서는 본기사에서의 목적을 위해, 여기저기에서 사용되고 있는 용어에 대해 나나름의 정의를 준다.</P>
+<P>컴퍼넌트는 소프트웨어의 덩어리를 의미한다. 컴포넌트는 변경되는 일 없이 이용되는 것이다. 그리고, 컴퍼넌트를 이용하는 애플리케이션은 컴퍼넌트 작성자의 제어 밖에 있다. "변경되는 일 없이"란 컴포넌트를 이용하는 애플리케이션이 이용 대상이 되는 컴퍼넌트의 소스 코드를 변경하지 않는 것을 의미한다. 다만, 컴퍼넌트의 행동은 컴퍼넌트 작성자들의 허용하는 방법들로 컴포넌트을 확장하는것으로 변경이 가능하다.</P>
+<P>서비스는 외부의 애플리케이션에의해 이용된다고 하는 의미에서는 컴퍼넌트와 비슷하다. 주요하게 다른점은 컴퍼넌트는 내부적으로 이용되다는 것이다(jar file, assembly, dll, 또는 source import 라고 생각하라). 서비스는 리모트 인터페이스를 통해서 원격적으로 이용되는 것이며, 동기식 거나 비동기식 (예: web service, messaging system, RPC, 또는 socket)</P>
+<P>이 기사에서는 주로 서비스를 사용하지만, 많은 같은 로직을 또한 로컬 컴포넌트에도 적용될 수 있다. 물론, 여러분은 리모트 서비스에 쉽게 접근할수 있는 어떤 종류의 로컬 컴퍼넌트 프레임웍이 필요로 하는 일도 종종 있지만, "컴퍼넌트 혹은 서비스"라고 쓰는 것은 읽는것도 쓰는 것도 지치게 한다. 그리고, 이시점에서 서비스라고 쓰는 편이 적당하다.</P><A name=ANaiveExample>
+<H2>A Naive Example</H2>
+<P>보다 구체적으로 이해를 돕기 위해서, 이 모든것에 대해 얘기하기 위한 구동되는 예를 사용할것이다. 샘플은 여느때처럼 매우 단순하다. 너무 짧아 실용적이지 않지만, 무엇을 하고 있는지를 눈으로 보고 알리는데 충분하다. 이것이라면 실용적인 샘플의 수렁에 빠질 것도 없다.</P>
+<P>이번 샘플에서는, 어느 특정의 감독에 의한 영화의 리스트를 제공하는 컴퍼넌트를 작성할것이다. 이 멋드러지게 유용한 함수는 하나의 메소드에 의해 구현되어진다.</P>
+<PRE>class MovieLister...
+    public Movie[] moviesDirectedBy(String arg) {
+        List allMovies = finder.findAll();
+        for (Iterator it = allMovies.iterator(); it.hasNext();) {
+            Movie movie = (Movie) it.next();
+            if (!movie.getDirector().equals(arg)) it.remove();
+        }
+        return (Movie[]) allMovies.toArray(new Movie[allMovies.size()]);
+    }
+</PRE>
+<P>이 함수의 구현은 극도로 간략하다. finder 오브젝트(편의상 호명)에 알고있는 모든 영화를 리턴하도록 요청한다. 그러면, 특정 감독에 의한 영화를 리턴하기 위해 이 리스트를 뒤질것이다. 이 간략한 처리 자체를 수정할 생각은 없다. 이것은 어디까지나, 본기사의 의도하는것을 성명하기 위한 발판에 지나지 않기 때문이다.</P>
+<P>본기사의 중요한 포인트는 이 finder 오브젝트이다. 좀더 말하면, MovieLister 오브젝트와 finder 오브젝트를 어떻게 연결할까이다. 이것이 왜 흥미로운가 이유인가 하면, <CODE>moviesDirectedBy</CODE> 메소드를 어떻게 하면 모든 영화들이 보존되어지는가 하는 것으로부터 완전하게 독립 하게 하고 싶기 때문이다. 메소드는 finder에의 참조를 소유만 하면 finder는 <CODE>findAll</CODE>메소드의 호출에 응할 수가 있기만 하면 된다. 이것을 명확하게 하기 위해서 finder의 인터페이스를 정의한다.</P>
+<PRE>public interface MovieFinder {
+    List findAll();
+}
+</PRE>
+<P>이것으로 훌륭하게 결합도가 완화되었다. 하지만, 어딘가의 시점에서 실제로 영화 리스트를 취급하는 실재 클래스를 준비해야 한다. 여기에서는 그 코드를 MovieLister 클래스의 생성자에 쓰기로 한다.</P>
+<PRE>class MovieLister...
+	private MovieFinder finder;
+	public MovieLister() {
+		finder = new ColonDelimitedMovieFinder("movies1.txt");
+	}
+</PRE>
+<P>구현 클래스의 이름(ColonDelimitedMovieFinder)은 영화 리스트가 콜론(:)경계구분의 텍스트 파일로 부터 얻어오는것이어서 지어졌다. 이것의 구현의 자세한 것은 여러분을 에게 남겨둘것다. 결국 여기서는 어떤 구현이 있다는 것이다.</P>
+<P>여기서 만일 단순히 이 클래스를 사용하는 것이 나 자신만이라고 한다면, 이것으로 만사 끝이다. 하지만 만약 친구가 이 훌륭한 기능에 첫눈 반해서 "너의 프로그램좀 써도되니?"라고 말해 오면 어떻게 하겠는가? 만일 친구들 또한 콜론(:)경계구분으로된 그리고 파일명도 "movies1.txt"로 저장된 파일로 영화리스트들이 존재한다면, 만사 끝이다. 비록 영화 리스트의 파일명이 다르다 해도, 파일명을 프로퍼티 파일로 영화리스트 파일명을 관리할수 있도록하는 것은 간단하다. 그러나, 영화 리스트의 저장 방법이 근본적으로 차이가 난다면 어떨까. 예를 들면, SQL데이타베이스, XML파일, Web서비스, 또는 단지 텍스트 파일의 다른 포맷이라 한다면. 이런 경우에서 데이터를 가져오기 위해서 다른 클래스가 필요하다. 그런 일도 있으리라고 여겨, <CODE>MovieFinder</CODE> interface를 정의해 두었다. 그래서 <CODE>moviesDirectedBy</CODE> 메소드는 변경 하지 않아도 된다. 하지만 여전히 적절한 finder구현의 인스턴스를 얻어오기 위한 어떤 방법을 가져야만 한다.</P>
+<A name=naive.gif></A><IMG src="http://www.martinfowler.com/articles/naive.gif" align=top></IMG> 
+<P><I>Figure 1: 리스트를 생성하는 클래스(MovieLister)안에서 단순한 생성을 사용하는 의존관계(dependencies)</I></P>
+<P>Figure <A href="http://www.martinfowler.com/articles/injection.html#naive.gif">1</A>는 현재의 상황에 대한 의존관계(dependencies)를 나타내고 있다. <CODE>MovieLister</CODE> 클래스는 <CODE>MovieFinder</CODE> interface와 인터페이스 구현의 양쪽 모두에 의존하고 있다. 인터페이스에만 의존하는 것이 바람직하지만, 그렇다면 이런 전자의 의존관계를 가지고 작동하기 위해 인스턴스는 어떻게 생성하면 좋겠는가?</P>
+<P>마틴파울러 저서 <A href="http://www.martinfowler.com/books.html#eaa">P of EAA</A> 에서는, 이러한 상황을 <A href="http://martinfowler.com/eaaCatalog/plugin.html">Plugin</A>이라고 불러 설명하고 있다. 사용하는 친구들이 무엇을 사용할 예정인지 알지못하기 때문에, MovieFinder의 구현클래스는 컴파일시점에 프로그램로 링크되지 않는다. 우리는 <CODE>MovieLister</CODE>가 어떤 구현을 이용하여 동작 가능하게 하는 것을 원하는것이 아니라, 나중에 구현을 Plugin 시키도록 한다. 그러면 나의 손으로부터는 떨어진다. 문제는 어떻게 하면 <CODE>MovieLister</CODE> 클래스가 MovieFinder 의 구현클래스를 알지 못하고도 상관없게 할수(연결될수) 있을까 하는것이다. 하지만 그것이 해결됐다고 해도, 처리를 실행하기 위해서는 여전히 인터페이스를 구현한 인스턴스와의 대화가 필요하게 될수 있다.</P>
+<P>이것을 실제의 시스템에 전개하면 , 수십의 이런 서비스와 컴퍼넌트가 필요하게 될 것이다. 인터페이스를 통해서 각각의 컴퍼넌트들의 이용을 추상화 할 수 있다(인터페이스를 고려해 설계되어 있지 않으면 어댑터를 이용하면 좋다). 그러나, 시스템을 다른 방법으로 디플로이 하고 싶다면, 서비스간의 상호작용을 핸들 하기 위해서 plugin들을 이용할 필요가 있다. 여기서 plugin들을 이용할 수 있으면 다른 디플로이에는 다른 구현들을 이용할 수가 있다.</P>
+<P>그럼, 중심이 되는 문제는 "어떻게 애플리케이션에 이러한 plugin들을 조립할 것인가?" 이다. 확실히 이것은 신종의 경량 컨테이너가 임하고 있는 주요한 문제의 하나이며, 전반적으로 경량 컨테이너로 불리는 것이 모두 "제어의 반전(Inversion of Control: IoC)"을 이용해 해결하려고 하고 있는 문제이다.</P><A 
+name=InversionOfControl>
+<H2>Inversion of Control</H2>
+<P>경량 컨테이너가 왜 유용한가라고 하면, 제어의 반전을 구현하고 있기 때문이라고 한다. 그러나 전자와 같이 하면 나는 매우 난처한 상황에 당면하게 된다. 제어의 반전은 프레임웍들의 공통되는 특성이기 때문에 "경량 컨테이너는 훌륭하다. 아무튼 제어의 반전(inversion of control,IoC)을 사용하고 있으니까요"라고 말하는 것은 "나의 자동차는 훌륭하다. 아무튼 차바퀴가 붙어 있으니까요" 라고 말하는 것과 같은 것이다.</P>
+<P>여기서 의문인 것은, 경량 컨테이너는 제어의 어떤 측면을 반전시키고 있는지 라고 하는 것이다. 내가 처음 제어의 반전(inversion of control)이라는 것으로 달려 들어갔을 때, 그것은 유저 인터페이스의 메인 제어 안에 있었다. 초기의 유저 인터페이스는 응용 프로그램에의해 제어되고 있었다. "이름 입력", "주소의 입력" 같은 일련의 커멘드를 취급하고 싶다고 한다면, 프로그램으로 prompt의 표시와 각각의 입력을 제어한다. 이것이 그래픽컬한UI(심지어 콘솔기반조차)가 되면서, UI 프레임웍은 이 메인 루프를 포함하고 있어, 프레임웍으로부터 스크린상의 다양한 필드들에 대한 이벤트 핸들러가 제공되고 있다. 프로그램에서는 이 이벤트 핸들러를 취급한다. 여기에서는 프로그램의 중심이 되는 제어가 반전되고 있다. 제어는 개개의 프로그램으로부터 프레임웍으로 옮겨지고 있다.</P>
+
+<P>신종의 컨테이너에 대해 반전되고있는 것은 어떻게 plugin 구현을 룩업하는 방법에 대한 것이다. 나의 native sample에서 MovieLister은 MovieFinder의 구현을 직접 인스턴스화하는 것으로 룩업했다. 이것으로 finder(MovieFinder)가 plugin이라고 할수 없다. 신종의 컨테이너가 채용하고 있는 접근법에는 plugin을 이용하려는 어떤 사용자가 어떠한 규약을 반드시 따르지 않으면 안되는 것을 보장하는것이며, 이 규약은 독립된 어셈블러모듈에게 MovieLister 오브젝트에 MovieFinder 구현을 주입(inject)하는 것을 가능하게 한다.</P>
+<P>결론을 말하면, 이 패턴에는 좀 더 명확한 이름이 필요하다고 생각한다. "제어의 반전(Inversion 
+of Control,IoC)"이라고 하는 용어는 너무 포괄적 의미를 지니다. 그래서, 그것에 대해 혼란하는 사람이 나오는 것도 무리는 아니다. 다양한IoC 지지자들과 많은 논의를 거듭한 끝에 그 이름을 <I>Dependency Injection</I>(의존성 주입)로 결정했다.</P>
+<P>Dependency Injection의 다양한 형태들에 대해 얘기하는것으로 시작할것이다. 하지만 그 전에 미리 지적해 두고 싶은 것은 Dependency Injection 만이 의존성을 어플리케이션 클래스로부터 제거해서 plugin 구현으로 옮기는 유일한 방법은 아니다라는 것을 말하고 싶다. 다른 패턴을 사용해도 같은 것이 생긴다. 그것은 Service Locator 이다. 그러나, 이것에 대해서는 다음에 논의하기로 하자. 먼저 Dependency Injection의 설명을 정리하고 싶다.</P>
+<A name=FormsOfDependencyInjection>
+<H2>Forms of Dependency Injection</H2>
+<P>Dependency Injection의 기본적인 생각은 독립된 오브젝트를 에셈블러(Assembler)로서 준비해서, MovieLister 클래스에서 MovieFinder 인터페이스에대한 적절한 구현을 이용하여 필드를 설정시킨다고 하는 것이다. 의존관계(dependencies)는 Figure <A href="http://www.martinfowler.com/articles/injection.html#injector.gif">2</A>과 같이 된다.</P>
+<A name=injector.gif></A><IMG src="http://www.martinfowler.com/articles/injector.gif" align=top></IMG> 
+<P><I>Figure 2: Dependency Injection 에서의 의존관계(dependencies)</I></P>
+<P>Dependency Injection에는 3개의 주요한 형식이 있다. 이 3개에 대해 이용하려는 명명은 다음과 같다. Constructor Injection, Setter Injection, Interface Injection. 여러분들이 최근의 Inversion of Control(IoC)에 관한 논의에서 이 소재에 대해 읽어보았다면, type 1 IoC (interface injection), type 2 IoC (setter injection) 그리고 type 3 IoC (constructor injection) 로서 인용되어진 것들을 들엇을 것이다. 하지만, 숫자의 이름이라는 것은 기억하기 힘들다. 본 기사에서는 각각을 이름으로 부르기로 한다.</P>
+<A name=ConstructorInjectionWithPicocontainer>
+<H3>Constructor Injection with PicoContainer</H3>
+<P>Constructor Injection이 어떻게 사용되어지는지 <A href="http://www.picocontainer.org/">PicoContainer</A>로 불리는 경량 컨테이너를 사용하여 소개할 것이다. 처음으로 이 컨테이너를 채택하는 이유는 ThoughtWorks에서의 나의 동료가 PicoContainer 의 개발에 열심이기 때문이다(그렇다, 약간의 인간관계에서 일종으로..).</P>
+<P>PicoContainer는 MovieFinder구현체를 MovieLister 클래스에 주입(inject)하는 방법을 으로 constructor을 이용한다. 이것을 실현하기 위해서, MovieLister클래스에서는 주입(inject)되어야 할 모든 인스턴스를 포함하는(인수로 취하는) constructor을 선언해야만 한다.</P>
+<PRE>class MovieLister...
+    public MovieLister(MovieFinder finder) {
+        this.finder = finder;       
+    }
+</PRE>
+<P>MovieFinder 그 자체도 또한 PicoContainer에의해 관리된다. 따라서 텍스트 파일의 파일명도 컨테이너에 의해 주입(inject)된다.</P>
+<PRE>class ColonMovieFinder...
+    public ColonMovieFinder(String filename) {
+        this.filename = filename;
+    }
+</PRE>
+<P>그리고, PicoContainer는 각각의 인터페이스가 어느 구현클래스와 연결시킬 수 있는지를 통지받아야만 한다. MovieFinder에 어떤 파일명이 주입(inject)되는지에 대해서도 함께 통지받아야만 한다.</P>
+<PRE>
+    private MutablePicoContainer configureContainer() {
+        MutablePicoContainer pico = new DefaultPicoContainer();
+        Parameter[] finderParams =  {new ConstantParameter("movies1.txt")};
+        pico.registerComponentImplementation(MovieFinder.class, ColonMovieFinder.class, finderParams);
+        pico.registerComponentImplementation(MovieLister.class);
+        return pico;
+    }
+</PRE>
+<P>일반적으로 이 설정 코드는 다른 설정 클래스에서 기술되어야 할 것이다. 이 샘플에서는, 나의 MovieLister 클래스를 이용하는 각 친구들은 그들 자신의 어떤 설정 클래스에서 적절한 설정 코드를 쓰는 것으로 하자. 물론, 이러한 설정 정보를 독립된 설정파일들에서 분리하여 가지고있는 일도 자주 있다. 여러분은 config 파일을 읽기 위한 어떤 클래스를 작성하여 적당하게 컨테이에 설정할수 있다. 비록 PicoContainer 그것 자체에서 이런 기능을 포함하지만, NanoContainer 이라고 불리는 밀접하게 관련된 프로젝트가 있다. 이 NanoContainer는 XML설정파일을 쓸 수 있도록하기 위한 적절한 래퍼들를 제공하고 있다. 그러한 NanoContainer은 XML을 파싱해서 기본적인 PicoContainer에 필요한 것을 설정을 실시한다. NanoContainer의 철학은 설정파일의 포맷을 기본적인 컨테이너의 메카니즘으로부터 분리하는 것이다.</P>
+<P>PicoContainer를 이용하기 위해서는, 이하와 같은 코드를 쓴다.</P>
+<PRE>    
+    public void testWithPico() {
+        MutablePicoContainer pico = configureContainer();
+        MovieLister lister = (MovieLister) pico.getComponentInstance(MovieLister.class);
+        Movie[] movies = lister.moviesDirectedBy("Sergio Leone");
+        assertEquals("Once Upon a Time in the West", movies[0].getTitle());
+    }
+</PRE>
+<P>비록 이 샘플에서는 constructor injection을 이용하고 있지만, PicoContainer 또한 setter injection도 지원한다. 비록 개발자들은 constructor injection을 더선호하지만. 
+</P>
+<A name=SetterInjectionWithSpring>
+<H3>Setter Injection with Spring</H3>
+<P><A href="http://www.springframework.org/">Spring framework</A>은 엔터프라이즈 Java 개발전용의 수비 범위의 넓은 프레임웍이다. transactions, persistence frameworks, web application development 그리고 JDBC에 관한 추상 레이어를 포함한다. PicoContainer와 같이, Spring Framework도 constructor injection과　setter injection을 지원하고 있지만, Spring 개발자들은 setter injection을 선호하는 경향이 있는것 같다. - 그러므로, 여기서 샘플로 하는데 적당하다.</P>
+<P>Injection을 대응하여 받아들이기 위한 MovieLister를 얻기위해, 서비스 설정용의 setter 메소드를 정의해야 한다.</P>
+<PRE>class MovieLister...
+    private MovieFinder finder;
+	public void setFinder(MovieFinder finder) {
+		this.finder = finder;
+	}
+</PRE>
+<P>같게 MovieFinder에는 String에 대한 setter을 정의한다.</P>
+<PRE>class ColonMovieFinder...
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+</PRE>
+<P>3번째 과정은 그 파일들에 관한 설정을 기술하는 것이다. Spring에서의 설정은 XML 파일에서도 코드에서도 가능하지만, 설정을 셋업하기위해 당연하게 기대하는 방식은 XML이다.</P>
+<PRE>    &lt;beans&gt;
+        &lt;bean id="MovieLister" class="spring.MovieLister"&gt;
+            &lt;property name="finder"&gt;
+                &lt;ref local="MovieFinder"/&gt;
+            &lt;/property&gt;
+        &lt;/bean&gt;
+        &lt;bean id="MovieFinder" class="spring.ColonMovieFinder"&gt;
+            &lt;property name="filename"&gt;
+                &lt;value&gt;movies1.txt&lt;/value&gt;
+            &lt;/property&gt;
+        &lt;/bean&gt;
+    &lt;/beans&gt;
+</PRE>
+<P>그러므로 테스트는 이하처럼 보일 것이다.</P>
+<PRE>    
+    public void testWithSpring() throws Exception {
+        ApplicationContext ctx = new FileSystemXmlApplicationContext("spring.xml");
+        MovieLister lister = (MovieLister) ctx.getBean("MovieLister");
+        Movie[] movies = lister.moviesDirectedBy("Sergio Leone");
+        assertEquals("Once Upon a Time in the West", movies[0].getTitle());
+    }
+</PRE><A name=InterfaceInjection>
+<H3>Interface Injection</H3>
+<P>3번째 injection technique은 인젝션용의 인터페이스들을 정의해 이용하는 방법이다. <A href="http://avalon.apache.org/">Avalon</A>은 이 방법을 채용하고 있는 프레임웍의 예이다. Avalon에 대해서는 다음에 좀 더 자세하게 논할 생각이므로, 여기에서는 간단한 샘플 코드를 사용해 설명하고 싶다. </P>
+<P>이 방법에서는 우선 injection을 행하기 위한 인터페이스를 정의하는 것으로부터 시작한다. 이하는 MovieFinder을 오브젝트에 주입(injecting)하기 위한 인터페이스이다.</P>
+<PRE>
+    public interface InjectFinder {
+        void injectFinder(MovieFinder finder);
+    }
+</PRE>
+<P>이 인터페이스는 MovieFinder interface를 제공하는 모든 클래스를 위해서 정의된다. MovieFinder를 이용하고 싶은 어떤 클래스는 반드시 아래의 코드의 InjectFinder 인터페이스를 구현해야 한다. 여기에서는 MovieLister 이 거기에 해당한다.</P>
+<PRE>class MovieLister implements InjectFinder...
+    public void injectFinder(MovieFinder finder) {
+        this.finder = finder;
+    }
+</PRE>
+<P>파일명을 MovieFinder 구현체에 주입(inject) 하기 위해서 같은 접근방식을 취한다.</P>
+<PRE>
+    public interface InjectFinderFilename {
+        void injectFilename (String filename);
+    }
+</PRE>
+<PRE>class ColonMovieFinder implements MovieFinder, InjectFinderFilename......
+    public void injectFilename(String filename) {
+        this.filename = filename;
+    }
+</PRE>
+<P>따라서, 여느때처럼, 구현체들을 연결하기 위해 어떤 설정코드가 필요하다. 간단하게 하기 위해서 여기에서는 코드로 설정한다.</P>
+<PRE>class Tester...
+    private Container container;
+
+     private void configureContainer() {
+     	container = new Container();
+     	registerComponents();
+     	registerInjectors();
+     	container.start();
+    }
+</PRE>
+<P>이 설정에는 2개의 단계들을 가진다. 컴퍼넌트의 등록에 룩 업용의 키를 이용하는 개소는 , 룩업 키들을 통해 등록된 컴퍼넌트들은 다른 샘플들과 꽤 유사한 면이 있다.</P>
+<PRE>class Tester...
+	private void registerComponents() {
+		container.registerComponent("MovieLister", MovieLister.class);
+		container.registerComponent("MovieFinder", ColonMovieFinder.class);
+	}
+</PRE>
+<P>A new step is to register the injectors that will inject the dependent 
+components. Each injection interface needs some code to inject the dependent 
+object. Here I do this by registering injector objects with the container. Each 
+injector object implements the injector interface. </P><PRE>class Tester...
+	private void registerInjectors() {
+		container.registerInjector(InjectFinder.class, container.lookup("MovieFinder"));
+		container.registerInjector(InjectFinderFilename.class, new FinderFilenameInjector());
+	}
+</PRE><PRE>public interface Injector {
+	public void inject(Object target);
+
+}
+</PRE>
+<P>When the dependent is a class written for this container, it makes sense for 
+the component to implement the injector interface itself, as I do here with the 
+movie finder. For generic classes, such as the string, I use an inner class 
+within the configuration code. </P><PRE>class ColonMovieFinder implements Injector......
+	public void inject(Object target) {
+		((InjectFinder) target).injectFinder(this);				
+	}
+</PRE><PRE>class Tester...
+	public static class FinderFilenameInjector implements Injector {
+		public void inject(Object target) {
+			((InjectFinderFilename)target).injectFilename("movies1.txt");			
+		}
+    }
+</PRE>
+<P>The tests then use the container.</P><PRE>class FinderFilenameInjector...
+    public void testIface() {
+    	configureContainer();
+    	MovieLister lister = (MovieLister)container.lookup("MovieLister");
+    	Movie[] movies = lister.moviesDirectedBy("Sergio Leone");
+    	assertEquals("Once Upon a Time in the West", movies[0].getTitle());
+    }
+</PRE>
+<P>The container uses the declared injection interfaces to figure out the 
+dependendencies and the injectors to inject the correct dependents. (The 
+specific container implementation I did here isn't important to the technique, 
+and I won't show it because you'd only laugh.)</P><A name=UsingAServiceLocator>
+<H2>Using a Service Locator</H2>
+<P>The key benefit of a Dependency Injector is that it removes the dependency 
+that the <CODE>MovieLister</CODE> class has on the concrete 
+<CODE>MovieFinder</CODE> implementation. This allows me to give listers to 
+friends and for them to plug in a suitable implementation for their own 
+environment. Injection isn't the only way to break this dependency, another is 
+to use a <A 
+href="http://java.sun.com/blueprints/corej2eepatterns/Patterns/ServiceLocator.html">service 
+locator</A>.</P>
+<P>The basic idea behind a service locator is to have an object that knows how 
+to get hold of all of the services that an application might need. So a service 
+locator for this application would have a method that returns a movie finder 
+when one is needed. Of course this just shifts the burden a tad, we still have 
+to get the locator into the lister, resulting in the dependencies of Figure <A 
+href="http://www.martinfowler.com/articles/injection.html#locator.gif">3</A></P><A 
+name=locator.gif></A><IMG 
+src="http://www.martinfowler.com/articles/locator.gif" 
+align=top></IMG> 
+<P><I>Figure 3: The dependencies for a Service Locator</I></P>
+<P>In this case I'll use the ServiceLocator as a singleton <A 
+href="http://martinfowler.com/eaaCatalog/registry.html">Registry</A>. The lister 
+can then use that to get the finder when it's instantiated.</P><PRE>class MovieLister...
+    MovieFinder finder = ServiceLocator.movieFinder();
+</PRE><PRE>class ServiceLocator...
+    public static MovieFinder movieFinder() {
+        return soleInstance.movieFinder;
+    }
+    private static ServiceLocator soleInstance;
+    private MovieFinder movieFinder;
+</PRE>
+<P>As with the injection approach, we have to configure the service locator. 
+Here I'm doing it in code, but it's not hard to use a mechanism that would read 
+the appropriate data from a configuration file.</P><PRE>class Tester...
+    private void configure() {
+        ServiceLocator.load(new ServiceLocator(new ColonMovieFinder("movies1.txt")));
+    }
+</PRE><PRE>class ServiceLocator...
+    public static void load(ServiceLocator arg) {
+        soleInstance = arg;
+    }
+
+    public ServiceLocator(MovieFinder movieFinder) {
+        this.movieFinder = movieFinder;
+    }
+</PRE>
+<P>Here's the test code.</P><PRE>class Tester...
+    public void testSimple() {
+        configure();
+        MovieLister lister = new MovieLister();
+        Movie[] movies = lister.moviesDirectedBy("Sergio Leone");
+        assertEquals("Once Upon a Time in the West", movies[0].getTitle());
+    }
+</PRE>
+<P>I've often heard the complaint that these kinds of service locators are a bad 
+thing because they aren't testable because you can't substitute implementations 
+for them. Certainly you can design them badly to get into this kind of trouble, 
+but you don't have to. In this case the service locator instance is just a 
+simple data holder. I can easily create the locator with test implementations of 
+my services.</P>
+<P>For a more sophisticated locator I can subclass service locator and pass that 
+subclass into the registry's class variable. I can change the static methods to 
+call a method on the instance rather accessing instance variables directly. I 
+can provide thread specific locators by using thread specific storage. All of 
+this can be done without changing clients of service locator.</P>
+<P>A way to think of this is that service locator is a registry not a singleton. 
+A singleton provides a simple way of implementing a registry, but that 
+implementation decision is easily changed. </P><A 
+name=UsingASegregatedInterfaceForTheLocator>
+<H3>Using a Segregated Interface for the Locator</H3>
+<P>One of the issues with the simple approach above, is that the MovieLister is 
+dependent on the full service locator class, even though it only uses one 
+service. We can reduce this by using a segregated interface. That way, instead 
+of using the full service locator interface, the lister can declare just the bit 
+of interface it needs.</P>
+<P>In this situation the provider of the lister would also provide a locator 
+interface which it needs to get hold of the finder.</P><PRE>public interface MovieFinderLocator {
+    public MovieFinder movieFinder();
+</PRE>
+<P>The locator then needs to implement this interface to provide access to a 
+finder.</P><PRE>    MovieFinderLocator locator = ServiceLocator.locator();
+    MovieFinder finder = locator.movieFinder();
+</PRE><PRE>   public static ServiceLocator locator() {
+        return soleInstance;
+    }
+    public MovieFinder movieFinder() {
+        return movieFinder;
+    }
+    private static ServiceLocator soleInstance;
+    private MovieFinder movieFinder;
+</PRE>
+<P>You'll notice that since we want to use an interface, we can't just access 
+the services through static methods any more. We have to use the class to get a 
+locator instance and then use that to get what we need. </P><A 
+name=ADynamicServiceLocator>
+<H3>A Dynamic Service Locator</H3>
+<P>The above example was static, in that the service locator class has methods 
+for each of the services that you need. This isn't the only way of doing it, you 
+can also make a dynamic service locator that allows you to stash any service you 
+need into it and make your choices at runtime.</P>
+<P>In this case, the service locator uses a map instead of fields for each of 
+the services, and provides generic methods to get and load services.</P><PRE>class ServiceLocator...
+    private static ServiceLocator soleInstance;
+    public static void load(ServiceLocator arg) {
+        soleInstance = arg;
+    }
+    private Map services = new HashMap();
+    public static Object getService(String key){
+        return soleInstance.services.get(key);
+    }
+    public void loadService (String key, Object service) {
+        services.put(key, service);
+    }
+</PRE>
+<P>Configuring involves loading a service with an appropriate key.</P><PRE>class Tester...
+    private void configure() {
+        ServiceLocator locator = new ServiceLocator();
+        locator.loadService("MovieFinder", new ColonMovieFinder("movies1.txt"));
+        ServiceLocator.load(locator);
+    }
+</PRE>
+<P>I use the service by using the same key string.</P><PRE>class MovieLister...
+    MovieFinder finder = (MovieFinder) ServiceLocator.getService("MovieFinder");
+</PRE>
+<P>On the whole I dislike this approach. Although it's certainly flexible, it's 
+not very explicit. The only way I can find out how to reach a service is through 
+textual keys. I prefer explicit methods because it's easier to find where they 
+are by looking at the interface definitions.</P><A 
+name=UsingBothALocatorAndInjectionWithAvalon>
+<H3>Using both a locator and injection with Avalon</H3>
+<P>Dependency injection and a service locator aren't necessarily mutually 
+exclusive concepts. A good example of using both together is the Avalon 
+framework. Avalon uses a service locator, but uses injection to tell components 
+where to find the locator.</P>
+<P>Berin Loritsch sent me this simple version of my running example using 
+Avalon.</P><PRE>public class MyMovieLister implements MovieLister, Serviceable {
+    private MovieFinder finder;
+
+    public void service( ServiceManager manager ) throws ServiceException {
+        finder = (MovieFinder)manager.lookup("finder");
+    } 
+      </PRE>
+<P>The service method is an example of interface injection, allowing the 
+container to inject a service manager into MyMovieLister. The service manager is 
+an example of a service locator. In this example the lister doesn't store the 
+manager in a field, instead it immediately uses it to lookup the finder, which 
+it does store.</P><A name=DecidingWhichOptionToUse>
+<H2>Deciding which option to use</H2>
+<P>So far I've concentrated on explaining how I see these patterns and their 
+variations. Now I can start talking about their pros and cons to help figure out 
+which ones to use and when.</P><A name=ServiceLocatorVsDependencyInjection>
+<H3>Service Locator vs Dependency Injection</H3>
+<P>The fundamental choice is between Service Locator and Dependency Injection. 
+The first point is that both implementations provide the fundamental decoupling 
+that's missing in the naive example - in both cases application code is 
+independent of the concrete implementation of the service interface. The 
+important different between the two patterns is about how that implementation is 
+provided to the application class. With service locator the application class 
+asks for it explicitly by a message to the locator. With injection there is no 
+explicit request, the service appears in the application class - hence the 
+inversion of control.</P>
+<P>Inversion of control is a common feature of frameworks, but it's something 
+that comes at a price. It tends to be hard to understand and leads to problems 
+when you are trying to debug. So on the whole I prefer to avoid it unless I need 
+it. This isn't to say it's a bad thing, just that I think it needs to justify 
+itself over the more straightforward alternative.</P>
+<P>The key difference is that with a Service Locator every user of a service has 
+a dependency to the locator. The locator can hide dependencies to other 
+implementations, but you do need to see the locator. So the decision between 
+locator and injector depends on whether that dependency is a problem.</P>
+<P>Using dependency injection can help make it easier to see what the component 
+dependencies are. With dependency injector you can just look at the injection 
+mechanism, such as the constructor, and see the dependencies. With the service 
+locator you have to search the source code for calls to the locator. Modern IDEs 
+with a find references feature make this easier, but it's still not as easy as 
+looking at the constructor or setting methods.</P>
+<P>A lot of this depends on the nature of the user of the service. If you are 
+building an application with various classes that use a service, then a 
+dependency from the application classes to the locator isn't a big deal. In my 
+example of giving a Movie Lister to my friends, then using a service locator 
+works quite well. All they need to do is to configure the locator to hook in the 
+right service implementations, either through some configuration code or through 
+a configuration file. In this kind of scenario I don't see the injector's 
+inversion as providing anything compelling.</P>
+<P>The difference comes if the lister is a component that I'm providing to an 
+application that other people are writing. In this case I don't know much about 
+the APIs of the service locators that my customers are going to use. Each 
+customer might have their own incompatible service locators. I can get around 
+around some of this by using the segregated interface. Each customer can write 
+an adapter that matches my interface to their locator, but in any case I still 
+need to see the first locator to lookup my specific interface. And once the 
+adapter appears then the simplicity of the direct connection to a locator is 
+beginning to slip.</P>
+<P>Since with an injector you don't have a dependency from a component to the 
+injector, the component cannot obtain further services from the injector once 
+it's been configured. </P>
+<P>A common reason people give for preferring dependency injection is that it 
+makes testing easier. The point here is that to do testing, you need to easily 
+replace real service implementations with stubs or mocks. However there is 
+really no difference here between dependency injection and service locator: both 
+are very amenable to stubbing. I suspect this observation comes from projects 
+where people don't make the effort to ensure that their service locator can be 
+easily substituted. This is where continual testing helps, if you can't easily 
+stub services for testing, then this implies a serious problem with your 
+design.</P>
+<P>Of course the testing problem is exacerbated by component environments that 
+are very intrusive, such as Java's EJB framework. My view is that these kinds of 
+frameworks should minimize their impact upon application code, and particularly 
+should not do things that slow down the edit-execute cycle. Using plugins to 
+substitute heavyweight components does a lot help this process, which is vital 
+for practices such as Test Driven Development.</P>
+<P>So the primary issue is for people who are writing code that expects to be 
+used in applications outside of the control of the writer. In these cases even a 
+minimal assumption about a Service Locator is a problem.</P><A 
+name=ConstructorVersusSetterInjection>
+<H3>Constructor versus Setter Injection</H3>
+<P>For service combination, you always have to have some convention in order to 
+wire things together. The advantage of injection is primarily that it requires 
+very simple conventions - at least for the constructor and setter injections. 
+You don't have to do anything odd in your component and it's fairly 
+straightforward for an injector to get everything configured.</P>
+<P>Interface injection is more invasive since you have to write a lot of 
+interfaces to get things all sorted out. For a small set of interfaces required 
+by the container, such as in Avalon's approach, this isn't too bad. But it's a 
+lot of work for assembling components and dependencies, which is why the current 
+crop of lightweight containers go with setter and constructor injection.</P>
+<P>The choice between setter and constructor injection is interesting as it 
+mirrors are more general issue with object-oriented programming - should you 
+fill fields in a constructor or with setters.</P>
+<P>My long running default with objects is as much as possible, to create valid 
+objects at construction time. This advice goes back to Kent Beck's <A 
+href="http://www.amazon.com/exec/obidos/ASIN/013476904X">Smalltalk Best Practice 
+Patterns</A>: Constructor Method and Constructor Parameter Method. Constructors 
+with parameters give you a clear statement of what it means to create a valid 
+object in an obvious place. If there's more than one way to do it, create 
+multiple constructors that show the different combinations.</P>
+<P>Another advantage with constructor initialization is that it allows you to 
+clearly hide any fields that are immutable by simply not providing a setter. I 
+think this is important - if something shouldn't change then the lack of a 
+setter communicates this very well. If you use setters for initialization, then 
+this can become a pain. (Indeed in these situations I prefer to avoid the usual 
+setting convention, I'd prefer a method like <CODE>initFoo</CODE>, to stress 
+that it's something you should only do at birth.)</P>
+<P>But with any situation there are exceptions. If you have a lot of constructor 
+parameters things can look messy, particularly in languages without keyword 
+parameters. It's true that a long constructor is often a sign of an over-busy 
+object that should be split, but there are cases when that's what you need.</P>
+<P>If you have multiple ways to construct a valid object, it can be hard to show 
+this through constructors, since constructors can only vary on the number and 
+type of parameters. This is when Factory Methods come into play, these can use a 
+combination of private constructors and setters to implement their work. The 
+problem with classic Factory Methods for components assembly is that they are 
+usually seen as static methods, and you can't have those on interfaces. You can 
+make a factory class, but then that just becomes another service instance. A 
+factory service is often a good tactic, but you still have to instantiate the 
+factory using one of the techniques here.</P>
+<P>Constructors also suffer if you have simple parameters such as strings. With 
+setter injection you can give each setter a name to indicate what the string is 
+supposed to do. With constructors you are just relying on the position, which is 
+harder to follow.</P>
+<P>If you have multiple constructors and inheritance, then things can get 
+particularly awkward. In order to initialize everything you have to provide 
+constructors to forward to each superclass constructor, while also adding you 
+own arguments. This can lead to an even bigger explosion of constructors.</P>
+<P>Despite the disadvantages my preference is to start with constructor 
+injection, but be ready to switch to setter injection as soon as the problems 
+I've outlined above start to become a problem. </P>
+<P>This issue has led to a lot of debate between the various teams who provide 
+dependency injectors as part of their frameworks. However it seems that most 
+people who build these frameworks have realized that it's important to support 
+both mechanisms, even if there's a preference for one of them.</P><A 
+name=CodeOrConfigurationFiles>
+<H3>Code or configuration files</H3>
+<P>A separate but often conflated issue is whether to use configuration files or 
+code on an API to wire up services. For most applications that are likely to be 
+deployed in many places, a separate configuration file usually makes most sense. 
+Almost all the time this will be an XML file, and this makes sense. However 
+there are cases where it's easier to use program code to do the assembly. One 
+case is where you have a simple application that's not got a lot of deployment 
+variation. In this case a bit of code can be clearer than separate XML file. 
+</P>
+<P>A contrasting case is where the assembly is quite complex, involving 
+conditional steps. Once you start getting close to programming language than XML 
+starts breaking down and it's better to use a real language that has all the 
+syntax to write a clear program. You then write a builder class that does the 
+assembly. If you have distinct builder scenarios you can provide several builder 
+classes and use a simple configuration file to select between them. </P>
+<P>I often think that people are over-eager to define configuration files. Often 
+a programming language makes a straightforward and powerful configuration 
+mechanism. Modern languages can easily compile small assemblers that can be used 
+to assemble plugins for larger systems. If compilation is a pain, then there are 
+scripting languages that can work well also. </P>
+<P>It's often said that configuration files shouldn't use a programing language 
+because they need to be edited by non-programmers. But how often is this the 
+case? Do people really expect non-programmers to alter the transaction isolation 
+levels of complex server-side application? Non-language configuration files work 
+well only to the extent they are simple. If they become complex then it's time 
+to think about using a proper programming language.</P>
+<P>One thing we're seeing in the Java world at the moment is a cacophony of 
+configuration files, where every component has its own configuration files which 
+are different to everyone else's. If you use a dozen of these components, you 
+can easily end up with a dozen configuration files to keep in sync.</P>
+<P>My advice here is to always provide a way to do all configuration easily with 
+a programmatic interface, and then treat a separate configuration file as an 
+optional feature. You can easily build configuration file handling to use the 
+programmatic interface. If you are writing a component you then leave it up to 
+your user whether to use the programmatic interface, your configuration file 
+format, or to write their own custom configuration file format and tie it into 
+the programmatic interface</P><A name=SeparatingConfigurationFromUse>
+<H3>Separating Configuration from Use</H3>
+<P>The important issue in all of this is to ensure that the configuration of 
+services is separated from their use. Indeed this is a fundamental design 
+principle that sits with the separation of interfaces from implementation. It's 
+something we see within an object-oriented program when conditional logic 
+decides which class to instantiate, and then future evaluations of that 
+conditional are done through polymorphism rather than through duplicated 
+conditional code.</P>
+<P>If this separation is useful within a single code base, it's especially vital 
+when you're using foreign elements such as components and services. The first 
+question is whether you wish to defer the choice of implementation class to 
+particular deployments. If so you need to use some implementation of plugin. 
+Once you are using plugins then it's essential that the assembly of the plugins 
+is done separately from the rest of the application so that you can substitute 
+different configurations easily for different deployments. How you achieve this 
+is secondary. This configuration mechanism can either configure a service 
+locator, or use injection to configure objects directly.</P><A 
+name=SomeFurtherIssues>
+<H2>Some further issues</H2>
+<P>In this article, I've concentrated on the basic issues of service 
+configuration using Dependency Injection and Service Locator. There are some 
+more topics that play into this which also deserve attention, but I haven't had 
+time yet to dig into. In particular there is the issue of life-cycle behavior. 
+Some components have distinct life-cycle events: stop and starts for instance. 
+Another issue is the growing interest in using aspect oriented ideas with these 
+containers. Although I haven't considered this material in the article at the 
+moment, I do hope to write more about this either by extending this article or 
+by writing another.</P>
+<P>You can find out a lot more about these ideas by looking at the web sites 
+devoted to the lightweight containers. Surfing from the <A 
+href="http://www.picocontainer.org/">picocontainer</A> and <A 
+href="http://www.springframework.org/">spring</A> web sites will lead to you 
+into much more discussion of these issues and a start on some of the further 
+issues.</P><A name=ConcludingThoughts>
+<H2>Concluding Thoughts</H2>
+<P>The current rush of lightweight containers all have a common underlying 
+pattern to how they do service assembly - the dependency injector pattern. 
+Dependency Injection is a useful alternative to Service Locator. When building 
+application classes the two are roughly equivalent, but I think Service Locator 
+has a slight edge due to its more straightforward behavior. However if you are 
+building classes to used in multiple applications then Dependency Injection is a 
+better choice.</P>
+<P>If you use Dependency Injection there are a number of styles to choose 
+between. I would suggest you follow constructor injection unless you run into 
+into one of the specific problems with that approach, in which case switch to 
+setter injection. If you are choosing to build or obtain a container, look for 
+one that supports both constructor and setter injection.</P>
+<P>The choice between Service Locator and Dependency Injection is less important 
+than the principle of separating service configuration from the use of services 
+within an application. </P><A name=Acknowledgements>
+<H2>Acknowledgements</H2>
+<P>My sincere thanks to the many people who've helped me with this article. Rod 
+Johnson, Paul Hammant, Joe Walnes, Aslak Helles?, Jon Tirs? and Bill Caputo 
+helped me get to grips with these concepts and commented on the early drafts of 
+this article. Berin Loritsch and Hamilton Verissimo de Oliveira provided some 
+very helpful advice on how Avalon fits in. Dave W Smith persisted in asking 
+questions about my initial interface injection configuration code and thus made 
+me confront the fact that it was stupid.</P><A name="Significant Revisions">
+<H2>Significant Revisions</H2>
+<P><I>23 Jan 04: </I>Redid the configuration code of the interface injection 
+example.</P>
+<P><I>16 Jan 04: </I>Added a short example of both locator and injection with 
+Avalon.</P>
+<P><I>14 Jan 04: </I>First Publication</P>
+<HR>
+
+<TABLE width="100%">
+  <TBODY>
+  <TR>
+    <TD align=left><A href="http://www.martinfowler.com/"><IMG height=51 
+      src="http://www.martinfowler.com/articles/mflogo.gif" 
+      width=147 border=0></A></TD>
+    <TD align=right><A href="http://www.thoughtworks.com/"><IMG 
+      src="http://www.martinfowler.com/articles/twlogo.gif" 
+      border=0></A></TD></TR></TBODY></TABLE>
+<HR>
+?<SMALL>Copyright <A href="http://www.martinfowler.com/">Martin Fowler</A>, all 
+rights reserved</SMALL> </BODY></HTML>
