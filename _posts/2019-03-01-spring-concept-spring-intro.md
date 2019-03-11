@@ -17,8 +17,6 @@ tags:
     - Intro
 ---  
 
-'Spring 란 무엇이고, 어떠한 특징을 가지고 있는지'
-
 Lightweight Container 의 선두두자인 Spring Framework 를 알아보기 전에 웹 아텍쳐의 변화(발전) 과정에 대해 간단하게 알아보자.  
 
 # 웹 아키텍쳐 발달 과정
