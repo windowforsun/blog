@@ -49,6 +49,12 @@ jekyll serve // 안된다면 아래것
 bundle exec jekyll serve
 ```  
 
+- 인코딩 에러가 발생한다면 아래 명령어를 치고 다시 진행한다.
+
+```
+chcp 65001
+```  
+
 
 
 ---

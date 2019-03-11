@@ -101,19 +101,40 @@ Java Enterprise 개발을 편하게 해주는 오픈소스 경량급 애플리�
 	- 속성값의 getter/setter, 속성 할당, 메서드 호출, 배열 요소 접근, 콜렉션 과 인덱싱, 논리 및 산술 연산자, Named 변수, IoC 컨테이너 별 빈 인스턴스 검색 등을 지원한다.
 
 ### AOP and Instrumentation
-
-
+- `spring-aop` 모듈은 AOP(Aspect Oriented Programming) 를 제공하여 공통된 기능을 기존 코드에서 분리할수 있는 Intercept 와 Pointcut 을 제공한다.
+	- 이런 기능은 메타데이터와 같은 설정 파일에서 기술하여 사용할수도 있고, 공통 기능에 대한 정보를 코드 포함시켜 구현 가능하다. 
+	- AspectJ 와의 통합도 제공하여 AOP 에서는 AspectJ 문법을 사용한다.
+- `spring-instrument` 모듈은 애플리케이션 서버에서 class instrument 지원과 classloader 구현을 제공한다.
+	- `spring-instrument-tomcat` 모듈에는 Tomcat 을 위한 spring instrument 가 포함되어 있다.
+	
 ### Messaging
-
-
+- `spring-message` 모듈은 Spring Integration Project(Message, MessageChannan, MessageHandler) 에서 추상화를 통해 Message-base(메시지 기반) 애플리케이션의 기반을 제공한다.
+	- Spring MVC Annotation 프로그래밍 기반 모델과 비슷한 메시지를 메서드에 매핑 시키는 Annotation 을 제공한다.
+	
 ### Data Access/Integration
-
-
+- Data Access/Integration Layer 는 JDBC, ORM, OXM, JMS, 트랜잭션 모듈로 구성되어 있다.
+- `spring-jdbc` 모듈은 JDBC 의 추상적인 Layer 제공한다. 이를 통해 반복적인 JDBC 코딩 및 파싱을 개선할 수 있다.
+- `spring-tx` 모듈은 해당 인터페이스를 구현한 클래스와 모든 POJO 에서 선언적(declarative) 트랜잭션과 명시적(programmatic) 트랜잭션을 제공한다.
+- `spring-orm` 모듈은 JPA, JDO, Hibernate 등 ORM(Object Relation Mapping) API 를 위한 통합된 Layer 를 제공한다.
+	- 선언적 트랜잭션 뿐만아니라 스프링이 제공하는 모든 기능과 함께 O/R 매핑 프레임워크들을 사용할 수 있다.
+- `spring-oxm` 모듈은 JAXB, Castor, XMLBeans, JiBX, XStream 과 같은 Object/XML 매핑 구현의 추상화 Layer 를 제공한다.
+- `spring-jms` 모듈(Java Messaging Source)은 메시지를 생산하고 소비하는 기능을 포함한다.
+	- Spring Framework 4.1 부터 `spring-message` 모듈과 통합을 제공한다. 
+	
 ### Web
-
-
+- Web Layer 는 `spring-web`, `spring-webmvc`, `spring-websocket`, `spring-webmvc-portlet` 으로 구성되어 있다.
+- `spring-web` 모듈은 기본적인 Web-Oriented(웹 지향) 통합 기능을 제공한다.
+	- Servlet Listners 와  웹 지향 애플리케이션 컨텍스트 등을 이용하여 다중 파일 업로드 기능을 제공한다.
+	- IoC 컨테이너의 초기화 등의 기본적인 기능을 제공한다.
+	- HTTP 클라이언트 와 스프링의 원격 지원의 웹 관련 부분을 포함한다.
+- `spring-webmvc` 모듈(Web-Servlet module)은 웹 애플리케이션을 위한 Spring 의 MVC(Model-View-Controller) 와 REST Web 서비스 구현을 포함한다.
+	- Spring MVC Framework 는 Domain, Model, Code, Web from 들의 분리를 제공한다.
+	- Web 애플리케이션에서 Spring Framework 의 다른 모든 특징들과 통합을 제공한다.
+	
 ### Test
-
+- `spring-test` 모듈은 JUnit, TestNG 를 통해 스프링 구성요소의 Unit Test(단위 테스트) 와 Integration Test(통합 테스트)를 제공한다.
+	- Spring ApplocationContext 의 일관된 로딩과 캐싱을 제공한다.
+	- 코드를 기존 코드와 분리시켜 테스트할 수 있는 Mock Object 도 제공한다.
 	
 # IoC 
 ## IoC(Inversion of controller) 이란
