@@ -82,29 +82,38 @@ Java Enterprise 개발을 편하게 해주는 오픈소스 경량급 애플리�
 - Java SE 로 된 오브젝트
 
 ## Spring Framework 구성
-![spring framework 구성]({{site.baseurl}}/img/spring-concept-spring-composition.png)
-- Spring Core
-	- Spring Framework 의 근간이 되는 IoC(또는 DI) 기능을 지원한다.
-	- BeanFactory 를 기반으로 Bean 클래스들을 제어할 수 있는 기능을 지원한다.
-- Spring Context
-	- Spring Core 바로 위에 있으면서 Spring Core 에서 지원하는 기능외에 추가적인 기능들과 좀 더 쉬운 개발이 가능하도록 지원하고 있다.
-	- JNDI, EJB 등을 위한 Adapter 들을 포함하고 있다.
-- Spring DAO
-	- JDBC 기반하의 DAO 개발을 좀 더 쉽고, 일관된 방법으로 개발하는 것이 가능 하도록 지원한다.
-	- Spring DAO 를 이용할 경우 지금까지 개발하던 DAO 보다 적은 코드와 쉬운 방법으로 DAO 를 개발하는 것이 가능하다.
-- Spring ORM
-	- ORM(Object Relation Mapping) 프레임워크인 Hibernate, IBatis(?), JDO 와의 결합을 지원하기 위한 기능이다.
-	- Spring ORM 을 이용할 경우 위의 프레임워크 들과 쉽게 통합하는 것이 가능하다.
-- Spring AOP
-	- Spring Framework 에 AOP(Aspect Oriented Programming)을 지원하는 기능이다.
-	- AOP Alliance 기반하에서 개발되었다.
-- Spring Web
-	- Web Application 개발에 필요한 Web Application Context 와 Multipart Request 등의 기능을 지원한다.
-	- Struts, Webwork 와 같은 프레임워크의 통합도 지원한다.
-- Spring Web MVC
-	- Spring Framework 에서 독립적으로 Web UI Layer 에 Model-View-Controller 를 지원하기 위한 기능이다.
-	- Struts, Webwork 가 담당했던 기능들을 Spring Web MVC 를 이용하여 대체하는 것이 가능하다.
-	- Velocity, Excel, PDF 와 같은 다양한 UI 기술들을 사용하기 위한 API를 제공하고 있다.
+![spring framework 구성]({{site.baseurl}}/img/spring/spring-concept-overview.png)
+### Core Container
+-  Core Container 는 `spring-core`, `spring-beans`, `spring-context`, `spring-context-support`, `spring-expression` 모듈들로 구성 되어 있다.
+- `spring-core` 와 `spring-beans` 모듈은 Spring Framework 의 기본적이면서 핵심 기능인 IoC(제어역전) 와 DI(의존성 주입)를 제공해 준다.
+	- `BeanFactory` 는 팩토리 패턴의 구현채로, 코드상에서 Singleton 에 대한 구현이 필요 없어지고 실제 프로그램 로직에서 의존성의 구성과 명세를 분리하도록 제공한다.
+- Context(`spring-conext`) 모듈은 Core And Beans(`spring-core` 와 `spring-beans` 모듈)을 통해 SOLID 기반으로 구현 되었고, 추가적인 기능들과 좀 더 쉬운 개발이 가능하도록 제공해 준다.
+	- JNDI 레지스트리와 비슷한 프레임워크 스타일로 오브젝트에 접근 할 수 있도록 제공한다.
+	- Servlet 컨테이너를 통한 국제화, 이벤트 전파, 자원 로딩을 제공한다.
+	- EJB, JMX 같은 Java EE 기능을 제공한다.
+	- Application Context 인터페이스는 Context 모듈이 기반이다.
+- `spring-context-support` 모듈은 Spring 애플리케이션 컨텍스트에 있는 통합된 공통 Third-Party 라이브러리들에 대한 지원을 제공한다.
+	- Caching : EhCache, Guava, JCache
+	- Maling : JavaMail
+	- Scheduling : CommonJ, Quartz
+	- Template Engines : FreeMarker, JasperReports, Velocity
+- `spring-expression` 모듈은 런타임에 객체를 조작할수 있는 강력한 Expression Language(JSP 2.1 사양의 Unified EL) 를 제공한다.
+	- 속성값의 getter/setter, 속성 할당, 메서드 호출, 배열 요소 접근, 콜렉션 과 인덱싱, 논리 및 산술 연산자, Named 변수, IoC 컨테이너 별 빈 인스턴스 검색 등을 지원한다.
+
+### AOP and Instrumentation
+
+
+### Messaging
+
+
+### Data Access/Integration
+
+
+### Web
+
+
+### Test
+
 	
 # IoC 
 ## IoC(Inversion of controller) 이란
