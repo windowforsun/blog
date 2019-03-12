@@ -16,6 +16,7 @@ tags:
     - A-Inject
     - A-Resource
     - POJO
+    - IoC
 ---  
 
 # 목표

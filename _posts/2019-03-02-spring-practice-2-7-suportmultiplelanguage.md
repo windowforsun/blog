@@ -15,6 +15,7 @@ tags:
     - Practice
     - Property
     - MessageSource
+    - IoC
 ---  
 
 # 목표

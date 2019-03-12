@@ -15,6 +15,7 @@ tags:
     - Practice
     - A-Required
     - BeanPostProcessor
+    - IoC
 ---  
 
 # 목표

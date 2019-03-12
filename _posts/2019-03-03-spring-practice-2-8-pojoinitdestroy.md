@@ -17,6 +17,7 @@ tags:
     - A-PreDestroy
     - A-Lazy
     - A-DependOn
+    - IoC
 ---  
 
 # 목표

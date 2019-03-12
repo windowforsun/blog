@@ -15,6 +15,7 @@ tags:
     - Practice
     - A-Scope
     - POJO
+    - IoC
 ---  
 
 # 목표

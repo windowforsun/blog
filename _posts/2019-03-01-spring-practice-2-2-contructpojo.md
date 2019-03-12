@@ -15,6 +15,7 @@ tags:
     - Practice
     - Annotation
     - POJO
+    - IoC
 ---  
 
 # 목표

@@ -14,6 +14,7 @@ tags:
     - Spring
     - Practice
     - A-Profile
+    - IoC
 ---  
 
 # 목표

@@ -17,6 +17,7 @@ tags:
     - Resource
     - A-PropertySource
     - POJO
+    - IoC
 toc: true
 ---  
 

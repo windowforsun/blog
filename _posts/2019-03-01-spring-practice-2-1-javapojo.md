@@ -17,6 +17,7 @@ tags:
     - A-Component
     - A-ComponentScan
     - POJO
+    - IoC
 ---  
 
 # 목표

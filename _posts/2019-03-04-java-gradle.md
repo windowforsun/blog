@@ -36,6 +36,8 @@ tags:
 ---
 ## Reference
 [Gradle](http://www.gradle.org/)  
+[Gradle[권남]](http://kwonnam.pe.kr/wiki/gradle#gradle)  
+[운영 자동화#1 — 빌드 자동화 by Gradle](https://medium.com/@goinhacker/%EC%9A%B4%EC%98%81-%EC%9E%90%EB%8F%99%ED%99%94-1-%EB%B9%8C%EB%93%9C-%EC%9E%90%EB%8F%99%ED%99%94-by-gradle-7630c0993d09)  
 [[Gradle] Gradle 준비](https://araikuma.tistory.com/460)  
 [Gradle Java Plugin](http://kwonnam.pe.kr/wiki/gradle/java)  
 [Maven vs Gradle](https://bkim.tistory.com/13)  
