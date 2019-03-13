@@ -17,6 +17,7 @@ tags:
     - A-Resource
     - POJO
     - IoC
+    - spring-core
 ---  
 
 # 목표

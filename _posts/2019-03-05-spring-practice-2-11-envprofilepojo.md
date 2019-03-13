@@ -15,6 +15,7 @@ tags:
     - Practice
     - A-Profile
     - IoC
+    - spring-core
 ---  
 
 # 목표

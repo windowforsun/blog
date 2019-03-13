@@ -18,6 +18,7 @@ tags:
     - A-Lazy
     - A-DependOn
     - IoC
+    - spring-core
 ---  
 
 # 목표

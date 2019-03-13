@@ -18,6 +18,7 @@ tags:
     - A-Import
     - POJO
     - IoC
+    - spring-core
 ---  
 
 # 목표

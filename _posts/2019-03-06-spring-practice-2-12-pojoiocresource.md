@@ -15,6 +15,7 @@ tags:
     - Practice
     - Aware
     - IoC
+    - spring-core
 ---  
 
 # 목표

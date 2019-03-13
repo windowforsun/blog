@@ -16,6 +16,7 @@ tags:
     - Property
     - MessageSource
     - IoC
+    - spring-core
 ---  
 
 # 목표

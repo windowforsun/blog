@@ -16,6 +16,7 @@ tags:
     - Annotation
     - POJO
     - IoC
+    - spring-core
 ---  
 
 # 목표

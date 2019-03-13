@@ -15,6 +15,7 @@ tags:
     - Practice
     - FactoryBean
     - IoC
+    - spring-core
 ---  
 
 # 목표

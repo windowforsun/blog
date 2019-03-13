@@ -16,6 +16,7 @@ tags:
     - A-Scope
     - POJO
     - IoC
+    - spring-core
 ---  
 
 # 목표

@@ -18,6 +18,7 @@ tags:
     - A-ComponentScan
     - POJO
     - IoC
+    - spring-core
 ---  
 
 # 목표

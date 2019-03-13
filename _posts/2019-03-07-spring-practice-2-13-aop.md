@@ -15,6 +15,7 @@ tags:
     - Practice
     - Annotation
     - AOP
+    - spring-core
 ---  
 
 # 목표

@@ -18,6 +18,7 @@ tags:
     - A-PropertySource
     - POJO
     - IoC
+    - spring-core
 toc: true
 ---  
 

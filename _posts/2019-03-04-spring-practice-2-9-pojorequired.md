@@ -16,6 +16,7 @@ tags:
     - A-Required
     - BeanPostProcessor
     - IoC
+    - spring-core
 ---  
 
 # 목표
