@@ -216,7 +216,7 @@ Cache HIT for (3,5)
 ```  
 
 - IoC 컨테이너에 선언한 빈이 `Complex(int, int)` 생성자를 호출할 경우 스프링 Agent 가 Advice 를 적용하기 때문에 위와같은 결과가 출력된다.
-- 복소수 객체를 생성한 건 Main 클래스이므로 스프링 Agent 가 생성자를 호출해도 Advice 가 정용되지 않는다.
+- 복소수 객체를 생성한 건 Main 클래스이므로 스프링 Agent 가 생성자를 호출해도 Advice 가 적용되지 않는다.
 
 ---
 ## Reference
