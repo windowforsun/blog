@@ -905,7 +905,7 @@ toc: true
 
 ### Maintenance
 
-- Add contributing information to `README.md`. [#357](https://github.com/mmistakes/minimal-mistakes/issues/357)
+- Add contributing information to `README_tmp.md`. [#357](https://github.com/mmistakes/minimal-mistakes/issues/357)
 
 ## [3.2.7](https://github.com/mmistakes/minimal-mistakes/releases/tag/3.2.7)
 
