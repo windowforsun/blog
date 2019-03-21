@@ -13,6 +13,7 @@ tags:
     - Web
     - Spring
     - Practice
+    - spring-core
     - TaskExecutor
 ---  
 
@@ -165,7 +166,7 @@ public interface Callable<V> {
 	- Java SE 와는 달리 관리되는 환경에서 컴포넌트에 동시성을 부여하고 Thread 를 제어할 수 있는 간단하면서 이식성 좋은 표준이 없었다.
 
 ## Spring 의 TaskExecutor
-- Spring 은 Java5의 java.util.concurrent.Executor 를 상속한 org.springframeworks.core.task.TaskExecutor 인터페이스라는 통합 솔류선을 제공한다.
+- Spring 은 Java5의 java.util.concurrent.Executor 를 상속한 org.springframework.core.task.TaskExecutor 인터페이스라는 통합 솔루션을 제공한다.
 - TaskExecutor 인터페이스는 Spring Framework 내부에서 다양하게 사용된다.
 	- Spring Quartz 연계 및 Message-Driven POJO 컨테이너 지원 기능 등
 	
@@ -184,12 +185,118 @@ public interface TaskExecutor extends Executor {
 - DemonstrationRunnable 를 Spring TaskExecutor 로 활용한 예제 이다.
 
 ```java
+@Component
+public class SpringExecutorsDemo {
 
-```
+    @Autowired
+    private SimpleAsyncTaskExecutor asyncTaskExecutor;
+    @Autowired
+    private SyncTaskExecutor syncTaskExecutor;
+    @Autowired
+    private TaskExecutorAdapter taskExecutorAdapter;
+    @Autowired
+    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    @Autowired
+    private DemonstrationRunnable task;
 
+    @PostConstruct
+    public void submitJobs() {
+        syncTaskExecutor.execute(task);
+        taskExecutorAdapter.submit(task);
+        asyncTaskExecutor.submit(task);
 
+        for (int i = 0; i < 500; i++)
+            threadPoolTaskExecutor.submit(task);
+    }
 
+    public static void main(String[] args) {
+        new AnnotationConfigApplicationContext(ExecutorsConfiguration.class)
+                .registerShutdownHook();
+    }
 
+}
+```  
+
+- 위 클래스는 단순 POJO 클래스로 여러 TaskExecutor 인스턴스를 Autowired 하고, Runnable 인스턴스를 TaskExecutor 에 전달해준다.
+- 아래는 위 클래스에서 사용하는 빈 인스턴스와 관련 설정 클래스이다.
+
+```java
+@Configuration
+@ComponentScan
+public class ExecutorsConfiguration {
+
+    @Bean
+    public TaskExecutorAdapter taskExecutorAdapter() {
+        return new TaskExecutorAdapter(Executors.newCachedThreadPool());    
+    }
+
+    @Bean
+    public SimpleAsyncTaskExecutor simpleAsyncTaskExecutor() {
+        return new SimpleAsyncTaskExecutor();
+    }
+
+    @Bean
+    public SyncTaskExecutor syncTaskExecutor() {
+        return new SyncTaskExecutor();
+    }
+
+    @Bean
+    public ScheduledExecutorFactoryBean scheduledExecutorFactoryBean(ScheduledExecutorTask scheduledExecutorTask) {
+        ScheduledExecutorFactoryBean scheduledExecutorFactoryBean = new ScheduledExecutorFactoryBean();
+        scheduledExecutorFactoryBean.setScheduledExecutorTasks(scheduledExecutorTask);
+        return scheduledExecutorFactoryBean;
+    }
+
+    @Bean
+    public ScheduledExecutorTask scheduledExecutorTask(Runnable runnable) {
+        ScheduledExecutorTask scheduledExecutorTask = new ScheduledExecutorTask();
+        scheduledExecutorTask.setPeriod(1000);
+        scheduledExecutorTask.setRunnable(runnable);
+        return scheduledExecutorTask;
+    }
+
+    @Bean
+    public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
+        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+        taskExecutor.setCorePoolSize(50);
+        taskExecutor.setMaxPoolSize(100);
+        taskExecutor.setAllowCoreThreadTimeOut(true);
+        taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+        return taskExecutor;
+    }
+}
+```  
+
+- 위 설정 클래스에서 다양한 TaskExecutor 구현체를 생성하는 방법이 나와있다.
+- 대부분 단순한 방식이며 ScheduledExecutorFactoryBean 의 경우에만 팩토리 빈에 위임하여 실행을 자동 트리거한다.
+
+### 다양한 TaskExecutor 구현
+- TaskExecutorAdapter
+	- java.util.concurrent.Executors 인스턴스를 감싼 단순 래퍼이므로 Spring TaskExecutor 인터페이스와 같은 방식으로 사용할 수 있다.
+	- Spring 을 이용해 Executor 인스턴스를 구성하고, TaskExecutorAdapter 의 생성자 인수로 전달한다.
+- SimpleAsyncTaskExecutor
+	- 사용하는 Job 마다 Thread 를 새로 만들어 제공하며 Thread 를 Pooling 하거나 재사용하지 않는다.
+	- 사용하는 각 Job 들은 Thread 에서 Async(비동기) 로 실행된다.
+- SyncTaskExecutor
+	- 가장 단순한 TaskExecutor 구현체이다.
+	- 동기적으로 Thread 를 띄워 Job 을 실행한 다음, join() 메서드로 바로 연결한다.
+	- Threading 은 하지 않고 호출 Thread 에서 run() 메서드를 수동 실행한 것과 같다.
+- ScheduledExecutorFactoryBean
+	- ScheduledExecutorTask 빈으로 정의된 잡을 자동 트리거 한다.
+	- ScheduledExecutorTask 인스턴스 목록을 지정해서 여러 Job 을 동시 실행할 수도 있다.
+	- ScheduledExecutorTask 인스턴스에는 직접 실행 간 공백 시간을 인수로 넣을 수 있다.
+- ThreadPoolTaskExecutor
+	- java.util.concurrent.ThreadPoolExecutor 를 기반으로 모든 기능이 있는 Thread Pool 구현체이다.
+- TaskExecutor 지원 기능은 애플리케이션 서버에서 하나로 통합된 인터페이스를 사용해 서비스를 스케쥴링하는 강력한 방법이다.
+- 모든 애플리케이션 서버(Tomcat, Jetty 등)에 배포 가능한 더 확실한 솔류션이 필요할 경우에는 Spring Quartz 를 고려하는 것도 하나의 방법이다. (다른 것들에 비해 무거울 수도 있다)
+	
+### 그 외 Thread/Concurrent
+- IBM WebSphere 같은 애플리케이션 서버에서 사용가능한 CommonJ WorkManager/TimerManager 지원 기능을 이용해 애플리케이션을 개발할 때는 org.springframework.scheduling.commonj.WorkManagerTaskExecutor 를 사용한다.
+	- WorkManagerTaskExecutor 는 WebSphere 내부에서 CommonJ WorkManager 레퍼런스에 할 일을 넘긴다.
+	- 보통은 해당 리소스를 바라보는 JNDI 레퍼런스를 지정하게 된다.
+- JEE7 부터는 javax.enterpirse.concurrent 패키지에 ManagerExecutorService 가 추가 됐다.
+	- JEE7 호환 서버는 반드시 ManagerExecutorService 인스턴스를 제공하도록 규정되어 있다.
+	- Spring TaskExecutor 지원 기능과 병행하려면 DefaultManagedTaskExecutor 를 구성해 기본 ManagerExecutorService 를 감지하게 하거나 개발자가 명시하면 된다.
 
 
 
