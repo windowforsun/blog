@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[알고리즘] 백준 1005 ACM Craft"
+title: "[풀이] 백준 1005 ACM Craft"
 header:
   overlay_image: /img/algorithm-bg.jpg
 excerpt: '위상정렬을 통해 건물이 지어지는 최소 시간을 구하자'
@@ -11,7 +11,8 @@ categories :
   - Algorithm
 tags:
   - Algorithm
-  - TMP
+  - Topological Sort
+  - DFS
 ---  
 
 # 문제
@@ -61,7 +62,133 @@ tags:
 ```  
 
 # 풀이
+- 각 건물을 짓기전에 선행 선물이 있는지 확인해봐야 한다.
+- 하나의 건물을 지을 때 선행 건물이 모두 지어져야 해당 건물을 지을 수 있다.
+	- 4번 건물을 지을 때 2, 3 번 건물이 모두 지어져야 한다.
+	- 4번 건물을 지을 때 걸리는 시간은 2, 3번 중 가장 오래걸리는 시간에서 4번 건물이 걸리는 시간을 더하는 것이다.
 
+## 해결방법
+- 진입차수가 0인(바로 지을 수 있는) 건물 번호 부터 시작해서 DFS 탐색을 한다.
+- 각 건물의 결과시간을 저장하는 곳에 각 건물을 지을 때 걸리는 시간을 넣어준다.
+- DFS 탐색을 위해 진입차수가 0일 경우 queue에 넣어준다.
+- queue 에서 건물 번호를 하나씩 빼서, 해당 건물의 다음 건물 번호를 탐색한다.
+- 다음 건물 번호의 진입차수를 감소시키고 다음 건물의 시간을 갱신한다.
+	- 다음 건물의 결과시간 = max(다음 건물의 결과시간, 지금 건물의 결과시간 + 다음 건물의 시간)
+- 다음 건물의 진입 차수가 0 일 경우 해당 건물도 지을 수 있기 때문에 queue 에 넣어준다.
+
+```java
+public class Main {
+    // 출력 결과 저장
+    private StringBuilder result;
+    // 각 건물 번호가 걸리는 시간
+    private int[] delayTime;
+    // 테스트 케이스 수
+    private int testCaseCount;
+    // 건물의 선행 관계 저장
+    private List[] matrix;
+    // 걸리는 시간을 알아내야 하는 건물 번호
+    private int target;
+    // 건물 개수
+    private int buildingCount;
+    // 건물 선행 관계 개수
+    private int buildingCaseCount;
+    // 각 건물 번호의 진입차수 (선행 되어야 하는 건물의 개수)
+    private int[] indegree;
+
+    public Main() {
+        this.result = new StringBuilder();
+        this.delayTime = null;
+    }
+
+    public static void main(String[] args) {
+        Main main = new Main();
+        main.input();
+        main.output();
+    }
+
+    public void input(){
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        try{
+            this.testCaseCount = Integer.parseInt(reader.readLine());
+            StringTokenizer token;
+
+            for(int i = 0; i < this.testCaseCount; i++ ) {
+                token = new StringTokenizer(reader.readLine(), " ");
+                buildingCount = Integer.parseInt(token.nextToken());
+                buildingCaseCount = Integer.parseInt(token.nextToken());
+                this.delayTime = new int[buildingCount + 1];
+                this.matrix = new List[buildingCount + 1];
+                this.indegree = new int[buildingCount + 1];
+
+                token = new StringTokenizer(reader.readLine(), " ");
+                for(int j = 1; j < buildingCount + 1; j++){
+                    this.matrix[j] = new ArrayList<Integer>();
+                    this.delayTime[j] = Integer.parseInt(token.nextToken());
+                }
+
+                for(int j = 0; j < buildingCaseCount; j++){
+                    token = new StringTokenizer(reader.readLine(), " ");
+                    int from = Integer.parseInt(token.nextToken());
+                    int to = Integer.parseInt(token.nextToken());
+
+                    this.matrix[from].add(to);
+                    this.indegree[to]++;
+                }
+
+                this.target = Integer.parseInt(reader.readLine());
+                this.solution();
+            }
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void output() {
+        System.out.print(this.result);
+    }
+
+    public void solution() {
+        // 지을수 있는 건물의 번호를 넣는 큐
+        LinkedList<Integer> queue = new LinkedList<>();
+        // 각 건물 번호를 짓는데 걸리는 시간
+        int[] resultTime = new int[this.buildingCount + 1];
+        int current;
+
+        // indegree 가 0 일때(건물을 짓기위한 선행 건물이 없을경우) queue 에 넣어준다.
+        for(int i = 1; i <= this.buildingCount; i++) {
+            resultTime[i] = this.delayTime[i];
+
+            if(this.indegree[i] == 0) {
+                queue.addLast(i);
+            }
+        }
+
+        // queue 에 원소가 있을 때 까지
+        while(!queue.isEmpty()) {
+            // 현재 지을수 있는 건물 번호
+            current = queue.removeFirst();
+
+            // 현재 번호 건물을 지었을 경우 다음에 지을 수 있는 건물 번호를 탐색
+            for(int next : (List<Integer>)this.matrix[current]) {
+                // 다음에 지을 수 있는 건물번호의 진입차수 감소
+                this.indegree[next]--;
+
+                // 다음 건물 번호의 결과시간이랑 현재 건물의 시간 + 다음 건물의 시간을 비교한 것중 큰 것을 결과시간에 넣는다.
+                resultTime[next] = Integer.max(resultTime[next], resultTime[current] + this.delayTime[next]);
+
+                // 다음 건물번호의 진입차수가 0 이면 건물을 지을 수 있으므로 queue 에 넣는다.
+                if(this.indegree[next] == 0 ){
+                    queue.addLast(next);
+                }
+            }
+        }
+
+        this.result.append(resultTime[this.target]).append("\n");
+    }
+}
+```  
 
 
 ---
