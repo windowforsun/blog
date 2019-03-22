@@ -39,7 +39,28 @@ Spring 주요 기능은 대부분 IoC 컨테이너 안에서 POJO 를 설정 및
 ### 외부 리소스
 - Spring 에서 외부 리소스를 읽을 때는 @PropertySource, @Value 로 구성/생성한 POJO 에서 사용할 읽어 사용할 수 있다.
 
-### @Bean 
+### @Bean 초기화/폐기
+- initMethod(), destroyMethod() 속성 또는 @PostConstruct, @PreDestroy 를 이용해 POJO 를 초기화, 폐기관련 로직을 커스터마이징 할 수 있다.
+- @PreDestroy 로 초기화를 지연시키고, @DependOn 으로 초기화 의존 관계를 정의 할 수 있다.
+
+### Bean(POJO) 검증
+- Spring Post Processor 를 활 용해서 POJO 값을 검증 및 수정 할 수 있고, Spring 환경 및 Profile 을 이용해 여러 가지 POJO 를 로드 할 수 있다.
+- @Required, @Profile 도 활용 가능하다.
+
+### AOP
+- @Aspect 를 비롯해 @Before, @After, @AfterReturning, @AfterThrowing, @Around 같은 다양한 Annotation 을 활용해 AOP 를 관련 로직 수정없이 적용 할 수 있다.
+- AOP Joinpoint 정보를 가져와 다른 프로그램의 실행 포인트에 적용할 수 있다.
+- @Order 로 Aspect 간 우선순위를 지정할 수 있고, Aspect Pointcut 정의부를 재활용할 수 있다.
+- AspectJ Pointcut 표현식을 작성하여 AOP 를 활용 가능하다.
+- AOP Introduction 개념을 활용해 여러 구현 클래스로부터 동시에 로직을 상속 받을 수 있다.
+- AOP 를 통해 상태를 POJO 레 들여오거나, 로드 타임 Weaving 을 할 수 있다.
+- Spring 에서 AspectJ 를 구성하거나, POJO 를 도메인 객체에 주입 할 수 있다.
+
+### Thread/Concurrent
+- Spring TaskExecutor 를 사용해서 동시성을 다룰 수 있다.
+
+### Event
+- ApplicationEvent 및 @EventListener 를 사용해서 이벤트를 생성, 발행, 리스닝 할 수 있다.
 
 ---
 ## Reference
