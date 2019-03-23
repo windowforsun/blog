@@ -1,0 +1,20 @@
+@startuml
+
+box "Local Heap"
+    participant LocalObject
+    participant LocalSupportObject
+end box
+box "Remote Heap"
+    participant ServiceSupportObject
+    participant ServiceObject
+end box
+
+LocalObject -> LocalSupportObject : method call
+LocalSupportObject -> ServiceSupportObject : request
+ServiceSupportObject -> ServiceObject : method call
+ServiceObject -> ServiceSupportObject : Result
+ServiceSupportObject -> LocalSupportObject : Response
+LocalSupportObject -> LocalObject : Result
+
+@enduml
+

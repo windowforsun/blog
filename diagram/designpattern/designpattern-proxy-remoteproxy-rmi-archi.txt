@@ -1,0 +1,20 @@
+@startuml
+
+box "Local Heap"
+    participant LocalObject
+    participant RMIStub
+end box
+box "Remote Heap"
+    participant RMISkeleton
+    participant ServiceObject
+end box
+
+LocalObject -> RMIStub : method call
+RMIStub -> RMISkeleton : request
+RMISkeleton -> ServiceObject : method call
+ServiceObject -> RMISkeleton : Result
+RMISkeleton -> RMIStub : Response
+RMIStub -> LocalObject : Result
+
+@enduml
+

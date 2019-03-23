@@ -1,0 +1,15 @@
+@startuml
+
+box "Local Heap"
+    participant GumballMonitor
+    participant Proxy
+end box
+box "Remote Heap"
+    participant GumballMachine
+end box
+
+GumballMonitor -> Proxy
+Proxy -> GumballMachine
+
+@enduml
+
