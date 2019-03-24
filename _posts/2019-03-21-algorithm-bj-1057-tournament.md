@@ -78,9 +78,13 @@ N은 100,000보다 작거나 같은 자연수이고, 김지민의 번호와 임�
 
 ```java
 public class Main {
+	// 출력 결과값
     private StringBuilder result;
+    // 토너먼트를 진행하는 총 인원
     private int count;
+    // 두 명중 한명의 번호
     private int a;
+    // 두 명중 한명의 번호
     private int b;
 
     public Main() {
@@ -112,16 +116,21 @@ public class Main {
     }
 
     public void solution() {
+    	// 라운드 카운트
         int resultCount = 0;
+        // 두 명의 각 번호 
         float newA = this.a, newB = this.b;
 
+        // 두 명의 다음 라운드 번호가 다를 때까지 반복
         while(newA != newB) {
+        	// 다음 라운드 값 = 반올림(현재 라운드값 / 2)
             newA /= 2;
             newA = Math.round(newA);
 
             newB /= 2;
             newB = Math.round(newB);
 
+            // 라운드 카운트 증가
             resultCount++;
         }
 
