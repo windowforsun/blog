@@ -142,7 +142,7 @@ public class Main {
 
         // 총 노드의 수만큼 반복하며
         for(int i = 0; i < this.nodeCount; i++) {
-            // 해당 노드에 자식 노드가 있을 경우에
+            // 해당 노드에 자식 노드가 있을 경우
             if(this.isAdjacent[node][i] == true) {
                 // 리프 노드가 아님
                 isLeaf = false;
@@ -151,7 +151,7 @@ public class Main {
             }
         }
 
-        // 자식노드일 경우 카운트 값 증가
+        // 리프노드일 경우 카운트 값 증가
         if(isLeaf) {
             this.result++;
         }
