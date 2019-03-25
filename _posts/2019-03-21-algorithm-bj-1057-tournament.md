@@ -141,4 +141,4 @@ public class Main {
 
 ---
 ## Reference
-[1026-보물](https://www.acmicpc.net/problem/1026)  
+[1057-토너먼트](https://www.acmicpc.net/problem/1057)  
