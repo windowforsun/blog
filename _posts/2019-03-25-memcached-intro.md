@@ -41,7 +41,7 @@ tags:
 - 다양한 언어(Java, PHP, C, C++, Node, Go ..) 에서 사용할 수 있는 오픈소스 클라이언트를 사용할 수 있다.
 
 ## 확장성
-![memcached 확장성](/img/memcached/memcached-usage.png)
+![memcached 확장성]({{site.baseurl}}/img/memcached/memcached-usage.png)
 - Memcached 의 분산 및 Multi-Thread Architecture 를 사용하면 손쉬운 확장이 가능하다.
 - 여러 노드간에 데이터를 나눌 수 있고, 클러스터에 새로운 노드 추가를 통해 용량도 확장 가능하다.
 - Memcached 는 Multi-Thread 이므로 주어진 노드에서 여러 개의 코어를 사용할 수 있어, 성능적인 확장도 가능하다.
