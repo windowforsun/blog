@@ -1,0 +1,33 @@
+@startuml
+
+package "Spring MVC" {
+
+component DispatcherServlet [
+
+
+DispatcherServlet
+
+
+]
+[View]
+[HandlerMapping]
+[Controller]
+[ViewResolver]
+}
+
+[Client] -right-> [DispatcherServlet] : Request(1)
+[DispatcherServlet] -left-> [Client] : Response(10)
+
+
+[View] -up-> [DispatcherServlet] : Response(9)
+[DispatcherServlet] -down-> [View] : Model(8)
+[HandlerMapping] -down-> [DispatcherServlet] : Controller(3)
+[DispatcherServlet] -up-> [HandlerMapping] : Request(2)
+[Controller] -left-> [DispatcherServlet] : ModelAndView(5)
+[DispatcherServlet] -right-> [Controller] : Request(4)
+[ViewResolver] -left-> [DispatcherServlet] : View(7)
+[DispatcherServlet] -right-> [ViewResolver] : ViewName(6)
+[Controller] -[hidden]down- [ViewResolver]
+
+@enduml
+

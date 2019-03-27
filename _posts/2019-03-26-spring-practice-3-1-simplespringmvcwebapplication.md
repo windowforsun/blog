@@ -20,7 +20,7 @@ tags:
 - 간단한 Web Application 을 Spring MVC 로 개발하면서 Framework 의 기본 개념과 구성 방법에 대해 알아본다.
 
 # 방법
-![]()
+![spring mvc request flow]({{site.baseurl}}/img/spring/spring-practice-3-1-springmvc-requestflow.png)
 - Front Controller 는 Spring MVC 의 중심 컴포넌트이다.
 	- 간단한 Spring MVC Application 은 Java Web deployment descriptor(web.xml, ServletContainerInitializer) 에 Front Controller 의 Servlet 만 구성하면 된다.
 	- Dispatcher Servlet(Spring MVC Controller) 는 코어 Java EE 디자인 패턴 중 하나인 Front Controller Pattern 을 구현한 것이다.
@@ -185,7 +185,6 @@ public class CourtServletContainerInitializer implements ServletContainerInitial
         courtRegistration.addMapping("/");
     }
 }
-
 ```  
 
 - CourtServletContainerInitializer 클래스에서 정의한 DispatcherServlet 은 Spring MVC 의 핵심 Servlet 클래스로 웹 요청을 받아 적절한 핸들러에 전달한다.
@@ -193,7 +192,121 @@ public class CourtServletContainerInitializer implements ServletContainerInitial
 - URL 패턴을 더 자세히 지정할 수 있다.
 	- 대규모 애플리케이션이라면 이런 Servlet 을 여러개 만들어 URL 패턴별로 위임할 수도 있다.
 - CourtServletContainerInitializer 를 Spring 이 감지하려면 javax.servlet.ServletContainerInitializer 라는 파일에 추가 작업이 필요하다.
-	- com.apress.
+	- META-INF/services 파일 경로에 javax.servlet.ServletContainerInitializer 이름의 파일을 만든다.
+	- javax.servlet.ServletContainerInitializer 파일에 현재 Servlet 들이 정의되어 있는ㄷ CourtServletContainerInitializer 의 패키지 경로를 기입한다.
+- @Configuration 을 붙인 CourtConfiguration 클래스를 추가한다.
+
+```java
+package ...config;
+
+@Configuration
+@ComponentScan("com.apress.springrecipes.court")
+public class CourtConfiguration {
+	// ...
+}
+```  
+
+- @ComponentScan 으로 현재 애플리케이션에 필요한 패키지(및 그 하위 패키지)를 스캐닝 하여 감지한 빈들(ReservationServiceImpl ..)을 등록할 수 있도록 한다.
+
+## Spring MVC Controller 작성하기
+- Annotation 을 붙인 Controller 클래스는 @Controller 만 붙어 있고, 인터페이스의 구현 클래스의 상속 등을 하지 않은 평범한 POJO 이다.
+- Controller 에는 하나 이상의 작업을 수행할 Handler Method 를 정의하고 Handler Method 는 다양한 Arguments 를 선언해서 구현을 할수 있다.
+- @RequestMapping 은 클래스/메서드 레벨에 사용 가능한 Annotation 이다.
+- 아래는 Controller 클래스에는 URL 패턴, Handler Method 에는 HTTP 메서드를 매핑하는 예이다.
+
+```java
+@Controller
+@RequestMapping("/welcome")
+public class WelcomeController {
+
+    @RequestMapping(method = RequestMethod.GET)
+    public String welcome(Model model) {
+        Date today = new Date();
+        model.addAttribute("today", today);
+
+        return "welcome";
+    }
+
+}
+```  
+
+- WelcomeController 클래스는 java.util.Date 객체를 생성해 오늘 날짜를 설정하고 입력 받은 Model 객체에 추가해서 View 에서 화면에 표시할 수 있도록 제공한다.
+- @Controller 는 Spring MVC Controller 임을 선언하는 Annotation 이다.
+- @RequestMapping 은 프로퍼티를 지정할 수 있고 클래스/메서드 레벨에 사용할 수 있다.
+- 클래스 레벨의 @RequestMapping 값인 "/welcome" 은 Controller 의 URL 이다.
+	- URL 이 /welcome 인 요청은 모두 WelcomeController 클래스에서 처리하게 된다.
+- Controller 클래스가 요청을 받게 되면 우선 HTTP GET 핸들러로 선언한 메서드로 넘기게 된다.
+	- 특정 URL 로 처음 요청을 할때는 GET 방식이기 때문에
+- Controller 가 /welcome URL 호출을 받게되면 바로 기본 HTTP GET Handler Method 를 찾아 처리를 넘긴다.
+	- @RequestMapping(method - RequestMethod.GET) 을 붙인 welcome() 메서드
+	- 기본 HTTP GET Handler Method 가 없으면 ServletException 예외가 발생하기 때문에 Spring MVC Controller 에는 최소한 URL 경로와 GET 핸들러는 있는 것이 좋다.
+- URL 경로 및 HTTP 메서드를 모두 선언한 @RequestMapping 은 메서드 레벨에서도 가능하다.
+
+```java
+@Controller
+public class WelcomeController {
+
+    @RequestMapping(value="/welcome", method = RequestMethod.GET)
+    public String welcome(Model model) {
+		// ...
+    }
+
+}
+```  
+
+- @RequestMapping
+	- value 속성은 매핑 URL
+	- method 속성은 메서드가 처리할 HTTP Method
+- @RequestMapping 외에도 @GetMapping, @PostMapping 등이 있다.
+
+```java
+@Controller
+public class WelcomeController {
+	@GetMapping("/welcome")
+	public String welcome(Model model) {
+		// ...
+	}
+}
+```  
+
+- @GetMapping, @PostMapping 등은 클래스 코드를 줄이고 가독성을 높이는 Annotation 이다.
+- Controller 에서는 비지니스 로직이 있는 Back-End 서비스를 호출하게 되는데 코드는 아래와 같다.
+
+```java
+@Controller
+@RequestMapping("/reservationQuery")
+public class ReservationQueryController {
+
+    private final ReservationService reservationService;
+
+    public ReservationQueryController(ReservationService reservationService) {
+        this.reservationService = reservationService;
+    }
+
+    @GetMapping
+    public void setupForm() {
+    }
+
+    @PostMapping
+    public String sumbitForm(@RequestParam("courtName") String courtName, Model model) {
+
+        List<Reservation> reservations = java.util.Collections.emptyList();
+
+        if (courtName != null) {
+            reservations = reservationService.query(courtName);
+        }
+
+        model.addAttribute("reservations", reservations);
+
+        return "reservationQuery";
+    }
+}
+```  
+
+- setupForm() Handler Method 의 경우 매개변수, 반환 값이 존재하지 않는다.
+	- (JSP같은)구현체 템플릿에서 하트코딩된 데이터를 보여주겠다.
+	- 기본 뷰이름이 요청 URL 에 따라 결정되도록 하겠다. (URL 이 /reserveQuery 일경우 reserveQuery 뷰 이름이 반환된다.)
+- 
 	 
 
 
