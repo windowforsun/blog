@@ -193,7 +193,7 @@ public class CourtServletContainerInitializer implements ServletContainerInitial
 	- 대규모 애플리케이션이라면 이런 Servlet 을 여러개 만들어 URL 패턴별로 위임할 수도 있다.
 - CourtServletContainerInitializer 를 Spring 이 감지하려면 javax.servlet.ServletContainerInitializer 라는 파일에 추가 작업이 필요하다.
 	- META-INF/services 파일 경로에 javax.servlet.ServletContainerInitializer 이름의 파일을 만든다.
-	- javax.servlet.ServletContainerInitializer 파일에 현재 Servlet 들이 정의되어 있는ㄷ CourtServletContainerInitializer 의 패키지 경로를 기입한다.
+	- javax.servlet.ServletContainerInitializer 파일에 현재 Servlet 들이 정의되어 있는 CourtServletContainerInitializer 의 패키지 경로를 기입한다.
 - @Configuration 을 붙인 CourtConfiguration 클래스를 추가한다.
 
 ```java
@@ -306,10 +306,139 @@ public class ReservationQueryController {
 - setupForm() Handler Method 의 경우 매개변수, 반환 값이 존재하지 않는다.
 	- (JSP같은)구현체 템플릿에서 하트코딩된 데이터를 보여주겠다.
 	- 기본 뷰이름이 요청 URL 에 따라 결정되도록 하겠다. (URL 이 /reserveQuery 일경우 reserveQuery 뷰 이름이 반환된다.)
-- 
-	 
+- submitForm() 메서드엔 @PostMapping 이 선언되었기 때문에 /reservationQuery 로 오는 POST 요청은 해당 매서드에서 처리하게 된다.
+	- @RequestParam("courtName") String courtName 은 요청 매개변수 courtName 의 값을 매핑 하겠다는 선언이다.
+	- /reservationQuery?courtName=<코트명> URL 로 POST 요청을 하면 <코트명>을 courtName 이라는 변수에 매핑한다.
+	- Model 은 나중에 반환되는 View 에 넘길 데이터를 담아 둘 객체이다.
+	- reservationQuery View 를 반환 하지만, 반환하지 않아도 URL 이 reservationQuery 이기 때문에 반환하지 않더라도 결과는 같다.
+	
+## JSP View 작성하기
+- Spring MVC 에는 JSP, HTML, PDF, XLS, XML, JSON, ATOM, RSS 피드, JasperReports 등 다양한 Third-Party View 구현체 등 여러가지 표현 기술별로 다양한 View 가 준비되어 있다.
+- Spring MVC 애플리케이션의 View 는 JSTL 이 추가된 JSP 템플릿이 대부분이다.
+- web.xml 파일에 정의된 DispatcherServlet 은 핸들러가 전달하는 논리적인 뷰 이름을 실제로 렌더링할 View 구현체로 해석한다.
+- CourtConfiguration 클래스에서 InternalResourceViewResolver 빈을 구성하면 웹 애플리케이션 컨텍스트가 Logical View 이름을 /WEB-INF/jsp/ 디렉토리에 있는 실제 JSP 파일로 해석한다.
 
+```java
+@Configuration
+public class CourtConfiguration {
+    @Bean
+    public InternalResourceViewResolver internalResourceViewResolver() {
 
+        InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+        viewResolver.setPrefix("/WEB-INF/jsp/");
+        viewResolver.setSuffix(".jsp");
+        return viewResolver;
+    }
+}
+```  
+
+- Controller 가 reservationQuery 라는 Logical View 이름을 넘기면 /WEB-INF/jsp/reservationQuery.jsp 라는 View 구현체로 처리가 위임된다.
+- welcome Controller 에서 사용할 JSP 템플릿(welcome.jsp) 을 아래와 같이 작성하고 /WEB-INF/jsp/ 디렉토리에 위치 시킨다.
+
+	```
+	<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+    
+    <html>
+    <head>
+        <title>Welcome</title>
+    </head>
+    
+    <body>
+    <h2>Welcome to Court Reservation System</h2>
+    Today is <fmt:formatDate value="${today}" pattern="yyyy-MM-dd"/>.
+    </body>
+    </html>
+	```  
+
+	- JSTL fmt 태그 라이브러리를 이용해서 모델 속성 today 를 yyyy-MM-dd 형식으로 맞추었다.
+	- 태그 라이브러리는 JSP 템플릿 최상단에 반드시 선언해야 한다.
+- Reservation Controller 에서 사용하는 JSP 템플릿 이다. 파일명은 Logical View 이름을 그대로 사용해 reservationQuery.jsp 로 한다.
+
+	```
+	<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+    <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+    
+    <html>
+    <head>
+        <title>Reservation Query</title>
+    </head>
+    
+    <body>
+    <form method="post">
+        Court Name
+        <input type="text" name="courtName" value="${courtName}"/>
+        <input type="submit" value="Query"/>
+    </form>
+    
+    
+    <table border="1">
+        <tr>
+            <th>Court Name</th>
+            <th>Date</th>
+            <th>Hour</th>
+            <th>Player</th>
+        </tr>
+        <c:forEach items="${reservations}" var="reservation">
+            <tr>
+                <td>${reservation.courtName}</td>
+                <td><fmt:formatDate value="${reservation.date}" pattern="yyyy-MM-dd"/></td>
+                <td>${reservation.hour}</td>
+                <td>${reservation.player.name}</td>
+            </tr>
+        </c:forEach>
+    </table>
+    </body>
+    </html>
+
+	```  
+	
+	- 사용자가 코트 이름을 입력하는 폼이 하나 있고 <c:forEach> 테그를 써서 resercations 객체를 순회하며 HTML<table> 엘레먼트를 생성한다.
+
+## Web Application 배포하기
+- Web Application 을 배포할 Java EE Application 서버는 테스트/디버깅용 Web Container 가 있는 서버를 설치하는 것이 좋다.
+- 구성/배포 편의성 Apache Tomcat 8.5.x Web Container 를 사용한다.
+	- Tomcat Web Container 의 배포 디렉토리는 webapps 이고 기본 리스니 포트는 8080번 이다.
+	- 배포되는 Application Context 명은 WAR 파일명과 같다.
+	- 코트 예약 애플리케이션을 court.war 파일로 패키징하면 welcome 및 reservationQuery Controller 는 다음 URL 로 접속한다.
+		- `http://localhost:8080/court/welcome`
+		- `http://localhost:8080/court/reservationQuery`
+- Docker Container 를 만들어 Application 을 배포하는 방법도 있다.
+	- ../gradlew buildDocker 명령으로 Tomcat 및 Application 이 내장된 Docker Container 를 생성한다.
+	- docker run -p 8080:8090 <프로젝트명>/court-web 으로 실행 한다.
+	
+## WebApplicationInitializer 로 Application 구동 시키기
+- 배포한 애플리케이션을 구동시키기 위해서는 CourtServletContainerInitializer 를 작성하면서 META-INF/service/javax.serlvet.ServletContainerInitialzier 파일도 함께 필요하다고 언급했다.
+- Spring 의 SpringServletContainerInitializer 를 빌려 아주 간단하게 가능한 방법이 있다.
+	- ServletContainerInitializer 인터페이스를 구현한 SpringServletContainerInitializer 는 Classpath 에서 WebApplicationInitializer 인터페이스 구현체를 찾는다.
+	- WebApplicationInitializer 인터페이스 구현체는 Spring 에 몇 가지 구현체가 있기 때문에 선택해서 사용할 수 있다.
+	- AbstractAnnotationConfigDispatcherServletInitializer 도 그 몇 가지 중 하나이다.
+	
+	```java
+	public class CourtApplicationInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+        @Override
+        protected Class<?>[] getRootConfigClasses() {
+            return new Class<?>[]{ServiceConfiguration.class};
+        }
+    
+        @Override
+        protected Class<?>[] getServletConfigClasses() {
+            return new Class<?>[]{WebConfiguration.class};
+        }
+    
+        @Override
+        protected String[] getServletMappings() {
+            return new String[]{"/", "/welcome"};
+        }
+    }
+	```  
+	
+	- 위와 같이 CourtApplicationInitializer 를 수정하면 DispatcherServlet 에 대한 설정은 거의 완료 되었고 몇가지 간단한 설정만 남았다..
+	- getServletMappings() 메서드에 매핑을 설정한다.
+	- getSerlvetConfigClasses() 메서드에서 로드할 설정 클래스를 지정한다.
+	- ContextLoaderListener 컴포넌트 역시 선택적으로 구성 가능하다.
+		- ServletContextListner 인터페이스 구현체인 ContextLoaderListener 는 ApplicationContext 를 생성하고 ApplicationContext 가 바로 DispatcherServlet 에서 상위 ApplicationContext 로 사용된다.
+		- ContextLoaderListener 를 통해 여러 Servlet 이 같은 빈(서비스, 데이터 소스 ..)에 접근할때 편리한 메커니즘을 제공한다.
+		
 ---
 ## Reference
 [스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  
