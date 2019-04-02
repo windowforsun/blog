@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Linux 실습] Java(jdk) 설치하기"
 header:
-  overlay_image: /img/algorithm-bg.jpg
+  overlay_image: /img/linux-bg.png
 excerpt: 'Linux 에 Java 를 설치하자'
 author: "window_for_sun"
 header-style: text
@@ -21,16 +21,14 @@ tags:
 ## jdk 설치 확인
 
 ```
-[root@test ~]# java -version
+[root@windowforsun ~]# java -version
 bash: java: command not found
 ```  
 
 - `command not found` 라는 결과를 통해 설치 되지 않았음을 확인할 수 있다.
 
-## jdk 설치 확인
-
 ```
-[root@test ~]# yum list java*jdk-devel
+[root@windowforsun ~]# yum list java*jdk-devel
 Loaded plugins: fastestmirror, security
 Loading mirror speeds from cached hostfile
  * base: centos4.zswap.net
@@ -48,7 +46,7 @@ java-1.8.0-openjdk-devel.x86_64               1:1.8.0.201.b09-2.el6_10          
 ## jdk 설치
 
 ```
-[root@test ~]# yum install java-1.8.0-openjdk-devel.x86_64
+[root@windowforsun ~]# yum install java-1.8.0-openjdk-devel.x86_64
 생략 ..
 Dependencies Resolved
 
@@ -124,7 +122,7 @@ Complete!
 ## jdk 설치 확인
 
 ```
-[root@test ~]# javac -version
+[root@windowforsun ~]# javac -version
 javac 1.8.0_201
 ```  
 
