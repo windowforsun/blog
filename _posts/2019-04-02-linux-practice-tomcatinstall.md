@@ -20,7 +20,7 @@ tags:
 - Tomcat 8.5
 
 ## 사전 작업
-- [jdk 설치]({{site.baseurl}}{% link 2019-04-01-linux-practice-javainstall.md %})
+- [jdk 설치]({{site.baseurl}}{% link _posts/2019-04-01-linux-practice-javainstall.md %})
 
 ## 다운로드 및 설치
 
