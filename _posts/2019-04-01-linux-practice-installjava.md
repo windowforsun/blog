@@ -8,10 +8,10 @@ excerpt: 'Linux 에 Java 를 설치하자'
 author: "window_for_sun"
 header-style: text
 categories :
-	- Linux
+  - Linux
 tags:
-	- Linux
-	- Java
+  - Linux
+  - Java
 ---  
 
 ## 환경
