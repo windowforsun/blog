@@ -11,6 +11,10 @@ categories :
   - Algorithm
 tags:
   - Algorithm
+  - String
+  - Simulation
+  - Brute Force
+  - Grid Algorithm
 ---  
 
 # 문제
@@ -158,4 +162,4 @@ public class Main {
 
 ---
 ## Reference
-[1110-더하기 사이클](https://www.acmicpc.net/problem/1110)  
+[1120-문자열](https://www.acmicpc.net/problem/1120)  
