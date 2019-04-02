@@ -25,8 +25,20 @@ tags:
 ## 다운로드 및 설치
 
 ```
+[root@windowforsun ~]# wget http://apache.mirror.cdnetworks.com/tomcat/tomcat-8/v8.5.39/bin/apache-tomcat-8.5.39.tar.gz
+--2019-04-02 09:30:19--  http://apache.mirror.cdnetworks.com/tomcat/tomcat-8/v8.5.39/bin/apache-tomcat-8.5.39.tar.gz
+Resolving apache.mirror.cdnetworks.com... 14.0.101.165
+Connecting to apache.mirror.cdnetworks.com|14.0.101.165|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 9672485 (9.2M) [application/x-gzip]
+Saving to: “apache-tomcat-8.5.39.tar.gz”
 
+100%[===========================================================================>] 9,672,485    138K/s   in 94s
+
+2019-04-02 09:31:54 (100 KB/s) - “apache-tomcat-8.5.39.tar.gz” saved [9672485/9672485]
 ```  
+
+
 
 
 
