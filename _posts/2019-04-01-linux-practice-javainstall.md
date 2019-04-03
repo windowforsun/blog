@@ -123,13 +123,6 @@ Complete!
 
 ...
 
-## jdk 설치 확인
-
-```
-[root@windowforsun ~]# javac -version
-javac 1.8.0_201
-```  
-
 ## 환경변수 설정
 - JAVA_HOME 환경변수 확인
 
@@ -164,9 +157,10 @@ javac 1.8.0_201
 
 ```
 JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
+CLASSPATH=$JAVA_HOME/lib
 PATH=$PATH:$JAVA_HOME/bin
 
-export JAVA_HOME PATH
+export JAVA_HOME CLASSPATH PATH
 ```  
 
 - 수정한 profile 파일 적용
@@ -181,6 +175,13 @@ export JAVA_HOME PATH
 [root@windowforsun ~]# echo $JAVA_HOME
 /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
 [root@windowforsun ~]# $JAVA_HOME/bin/javac -version
+javac 1.8.0_201
+```  
+
+## jdk 설치 확인
+
+```
+[root@windowforsun ~]# javac -version
 javac 1.8.0_201
 ```  
 

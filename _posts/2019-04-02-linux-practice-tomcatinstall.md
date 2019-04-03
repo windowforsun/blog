@@ -127,9 +127,10 @@ exit 0
 ```
 JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
 CATALINA_HOME=/usr/local/tomcat8
+CLASSPATH=$JAVA_HOME/lib:$CATALINA_HOME/lib
 PATH=$PATH:$JAVA_HOME/bin:$CALTALINA_HOME
 
-export JAVA_HOME PATH CATALINA_HOME
+export JAVA_HOME CLASSPATH PATH CATALINA_HOME
 ```                                                               
 
 - tomcat8 service 등록 확인
