@@ -18,6 +18,9 @@ tags:
 - CentOS 6
 - Jenkins 2.164
 
+## 사전 작업
+- [jdk 설치]({{site.baseurl}}{% link _posts/2019-04-01-linux-practice-javainstall.md %})
+
 ## 설치(LTS)
 
 ```
