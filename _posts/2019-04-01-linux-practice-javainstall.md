@@ -119,6 +119,10 @@ Dependency Installed:
 Complete!
 ```  
 
+### 다른 버전 설치하기
+
+...
+
 ## jdk 설치 확인
 
 ```
@@ -126,6 +130,62 @@ Complete!
 javac 1.8.0_201
 ```  
 
+## 환경변수 설정
+- JAVA_HOME 환경변수 확인
+
+```
+[root@windowforsun init.d]# echo $JAVA_HOME
+
+```  
+
+- javac 위치 확인 (심볼릭 링크 경로)
+
+```
+[root@windowforsun ~]# which javac
+/usr/bin/javac
+```  
+
+- javac 위치 확인 (원본 파일 경로)
+
+```
+[root@windowforsun ~]# readlink -f /usr/bin/javac
+/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64/bin/javac
+```  
+
+- JAVA_HOME 의 경로는 /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64 가된다.
+
+### $JAVA_HOME 설정
+
+```
+[root@windowforsun ~]# vi /etc/profile
+```  
+
+- 파일 하단에 아래 내용을 추가한다.
+
+```
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
+PATH=$PATH:$JAVA_HOME/bin
+
+export JAVA_HOME PATH
+```  
+
+- 수정한 profile 파일 적용
+
+```
+[root@windowforsun ~]# source /etc/profile
+```  
+
+- JAVA_HOME 환경변수 확인
+
+```
+[root@windowforsun ~]# echo $JAVA_HOME
+/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
+[root@windowforsun ~]# $JAVA_HOME/bin/javac -version
+javac 1.8.0_201
+```  
+
 ---
 ## Reference
 [CentOS JDK 설치](https://zetawiki.com/wiki/CentOS_JDK_%EC%84%A4%EC%B9%98)  
+[CentOs7에 jdk 설치 및 환경변수(JAVA_HOME)설정](https://blog.hanumoka.net/2018/04/30/centOs-20180430-centos-install-jdk/)  
+[CentOS 6 JDK (java) 설치, 설정](https://m.blog.naver.com/PostView.nhn?blogId=dawning160723&logNo=220976230538&proxyReferer=https%3A%2F%2Fwww.google.com%2F)  

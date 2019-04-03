@@ -73,6 +73,11 @@ ls: cannot access /etc/init.d/tomcat8: No such file or directory
 #export JRE_HOME
 #PATH=$JAVA_HOME/bin:$PATH  
 #export PATH
+
+# chkconfig: 345 90 90
+# description: init file for tomcat
+# processname: tomcat
+
 CATALINA_HOME="/usr/local/tomcat8"
 NAME="$(basename $0)"
 case $1 in  
@@ -110,6 +115,22 @@ echo "Usage: $0 {start|stop|restart|status|version}"
 esac      
 exit 0
 ```  
+
+### 환경변수 설정
+
+```
+[root@windowforsun ~]# vi /etc/profile
+```  
+
+- /etc/profile 하단에 아래 내용을 추가한다.
+
+```
+JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.201.b09-2.el6_10.x86_64
+CATALINA_HOME=/usr/local/tomcat8
+PATH=$PATH:$JAVA_HOME/bin:$CALTALINA_HOME
+
+export JAVA_HOME PATH CATALINA_HOME
+```                                                               
 
 - tomcat8 service 등록 확인
 
@@ -178,6 +199,15 @@ iptables: Applying firewall rules:                         [  OK  ]
 
 - GCP, AWS 등의 클라우드 서버의 경우 VM 인스턴스의 방화벽에 tcp:8080 포트를 추가해준다.
 
+## 부팅시 자동 실행
+
+```
+[root@windowforsun ~]# chkconfig --add tomcat8
+[root@windowforsun ~]# chkconfig tomcat8 on
+```  
+
 ---
 ## Reference
 [리눅스 톰캣7 컴파일 설치](https://zetawiki.com/wiki/%EB%A6%AC%EB%88%85%EC%8A%A4_%ED%86%B0%EC%BA%A37_%EC%BB%B4%ED%8C%8C%EC%9D%BC_%EC%84%A4%EC%B9%98)  
+[JDK Tomcat 설치](https://nayha.tistory.com/292)  
+[CentOS 6 tomcat 설치, 설정](https://m.blog.naver.com/dawning160723/220977208322)  
