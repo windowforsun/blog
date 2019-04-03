@@ -124,6 +124,12 @@ Starting Jenkins                                           [  OK  ]
 - 모든 설정을 완료하면 위와 같은 페이지가 보인다.
 - 추가적인 플러그인은 **Jenkins 관리 -> 플러그인 관리 -> 설치가능** 에서 설치할 수 있다.
 
+## 부팅시 자동 실행
+
+```
+[root@windowforsun ~]# chkconfig jenkins on
+```  
+
 ---
 ## Reference
 [Centos7 Jenkins 설치](https://goddaehee.tistory.com/82)  
