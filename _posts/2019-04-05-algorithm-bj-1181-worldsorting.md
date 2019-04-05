@@ -144,4 +144,4 @@ public class Main {
 
 ---
 ## Reference
-[1181-단여 정렬](https://www.acmicpc.net/problem/1181)  
+[1181-단어 정렬](https://www.acmicpc.net/problem/1181)  
