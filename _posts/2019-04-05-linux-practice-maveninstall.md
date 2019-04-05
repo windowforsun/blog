@@ -1,17 +1,17 @@
 --- 
 layout: single
 classes: wide
-title: "[Linux 실습] Git 설치하기"
+title: "[Linux 실습] Maven 설치하기"
 header:
   overlay_image: /img/linux-bg-2.jpg
-excerpt: 'Linux 에 Git 를 설치하자'
+excerpt: 'Linux 에 Maven 를 설치하자'
 author: "window_for_sun"
 header-style: text
 categories :
   - Linux
 tags:
   - Linux
-  - Git
+  - Maven
 ---  
 
 ## 환경
