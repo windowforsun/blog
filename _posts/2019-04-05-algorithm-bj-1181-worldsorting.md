@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[풀이] 백준 1181 단여 정렬"
+title: "[풀이] 백준 1181 단어 정렬"
 header:
   overlay_image: /img/algorithm-bg.jpg
 excerpt: '특정 조건에 맞게 단어를 정렬해 보자'
@@ -11,8 +11,7 @@ categories :
   - Algorithm
 tags:
   - Algorithm
-  - String
-  - Loop
+  - Sorting
 ---  
 
 # 문제
