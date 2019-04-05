@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Jetbrains] Intellij Spring MVC Maven 프로젝트 만들기"
 header:
-  overlay_image: /img/linux-bg-2.jpg
+  overlay_image: /img/jetbrains-bg.jpg
 excerpt: 'Intellij 에서 Spring MVC Maven 프로젝트를 만들어 보자'
 author: "window_for_sun"
 header-style: text
