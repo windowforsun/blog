@@ -40,6 +40,41 @@ tags:
 
 ![spring mvc maven 프로젝트 초기 생성 화면]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-3-1.png) 
 
+- Add Framework Support...
+
+![spring mvc maven 프로젝트 프레임워크 추가]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-4.png)
+
+- Maven 추가
+
+![spring mvc maven 프로젝트 maven 추가]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-5.png)
+
+- Project Structure
+
+![spring mvc maven 프로젝트 project structure]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-6.png)
+
+- Spring Framework 라이브러리 추가
+
+![spring mvc maven 프로젝트 spring 라이브러리]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-7.png)
+
+![spring mvc maven 프로젝트 spring 라이브러리 추가 완료]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-8.png)
+
+- Run -> Edit Configurations...
+
+![spring mvc maven 프로젝트 run edit configurations]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-9.png) 
+
+- Tomcat Server 추가
+
+![spring mvc maven 프로젝트 tomcat 서버 추가]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-10.png)
+
+- Tomcat Server 추가 화면 및 Deployment 설정을 위해 fix 클릭
+
+![spring mvc maven 프로젝트 deployment 설정]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-11.png)
+
+![spring mvc maven 프로젝트 deployment 설정 완료]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-12.png)
+
+- 생성된 프로젝트 구조
+
+![spring mvc maven 프로젝트 생성 구조]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-13.png)
 
 ---
 ## Reference
