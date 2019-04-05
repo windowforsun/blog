@@ -77,7 +77,142 @@ tags:
 
 ![spring mvc maven 프로젝트 생성 구조]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-13.png)
 
+- 초기 프로젝트 구동 화면
+
+![spring mvc maven 프로젝트 초기 구동 화면]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-14.png)
+
+## 프로젝트 테스트
+
+![spring mvc maven 프로젝트 프로젝트 테스트 구조]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-15.png)
+
+- web.xml 수정
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+    <context-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>/WEB-INF/applicationContext.xml</param-value>
+    </context-param>
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+    <servlet>
+        <servlet-name>dispatcher</servlet-name>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>dispatcher</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+</web-app>
+```  
+
+- dispatcher-servlet.xml 수정
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/context
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/mvc
+       http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+    <!-- Annotation 활성화 -->
+    <mvc:annotation-driven/>
+    <!-- Component 패키지 지정 -->
+    <context:component-scan base-package="com"/>
+
+    <!-- View Resolver 를 지정해서 View Object prefix 경로, suffix 확장자를 설정한다. -->
+    <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="prefix" value="/WEB-INF/views/"/>
+        <property name="suffix" value=".jsp"/>
+    </bean>
+</beans>
+```  
+
+- /web/WEB-INF/views/first_view.jsp 추가
+
+```
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>Title</title>
+</head>
+<body>
+    <h2>Hello First View</h2>
+</body>
+</html>
+```  
+
+- FirstController 추가
+
+```java
+package com.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller
+public class FirstController {
+    @RequestMapping(value="/first")
+    public String firstHandlerMethod() {
+        return "first_view";
+    }
+}
+
+```  
+
+- 서버 구동 결과 화면
+
+![spring mvc maven 프로젝트 테스트 구동 화면]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-16.png)
+
+## 추가 사항
+
+```
+Error:java: javacTask: source release 8 requires target release 1.8
+```  
+
+- 위 에러 발생시 pom.xml 에 아래 내용 추가
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>groupId</groupId>
+    <artifactId>dontrise</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+	<!-- 추가할 부분 -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```  
+
 ---
 ## Reference
 [IntelliJ에서 Spring MVC 시작하기 (Maven)](https://cjh5414.github.io/intellij-spring-start/)  
 [[SpringMVC] IntelliJ에서 SpringMVC, Tomcat 설정](https://gmlwjd9405.github.io/2018/10/25/intellij-springmvc-tomcat-setting.html)  
+[Error javaTask: source release 8 requires target release 1.8](https://stackoverflow.com/questions/29888592/errorjava-javactask-source-release-8-requires-target-release-1-8)  
