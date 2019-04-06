@@ -114,6 +114,7 @@ Dependency Installed:
   hicolor-icon-theme.noarch 0:0.11-1.1.el6
   java-1.8.0-openjdk.x86_64 1:1.8.0.201.b09-2.el6_10
   java-1.8.0-openjdk-headless.x86_64 1:1.8.0.201.b09-2.el6_10
+  
   생략 ..
 
 Complete!

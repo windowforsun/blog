@@ -23,9 +23,18 @@ tags:
 	- Maven
 	- Tomcat 8.5
 
+how to deploy jenkins.war file in tomcat webapps folder
+
+
 
 ---
 ## Reference
-[IntelliJ에서 Spring MVC 시작하기 (Maven)](https://cjh5414.github.io/intellij-spring-start/)  
-[[SpringMVC] IntelliJ에서 SpringMVC, Tomcat 설정](https://gmlwjd9405.github.io/2018/10/25/intellij-springmvc-tomcat-setting.html)  
-[Error javaTask: source release 8 requires target release 1.8](https://stackoverflow.com/questions/29888592/errorjava-javactask-source-release-8-requires-target-release-1-8)  
+[Tomcat :: 톰캣8 manager 403 access denied 해결 방법](https://hongku.tistory.com/196)  
+[[Spring/Jenkins] 젠킨스로 배포하기 - 지속적인 통합 ( CI )](https://victorydntmd.tistory.com/230)  
+[gitHub와 Jenkins 연결하기](https://bcho.tistory.com/1237)  
+[jenkins tomcat 배포](https://handcoding.tistory.com/25)  
+[JENKINS/GITHUB/MAVEN 으로 빌드&배포하기-1/4](https://dukeom.wordpress.com/2017/03/19/jenkinsgithubmaven-%EC%9C%BC%EB%A1%9C-%EB%B9%8C%EB%93%9C%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-14/)  
+[[애플리케이션 배포] 웹 애플리케이션 Tomcat 서버에 배포하기 - 젠킨스(Jenkins) (2)](https://blog.tophoon.com/2018/03/23/deploy-war-to-tomcat-jenkins.html)  
+[Maven maven-war-plugin 사용시 Error 처리](https://enosent.tistory.com/49)  
+[jenkins tomcat 401 Unauthorized](http://jagdeesh1009.blogspot.com/2016/04/jenkins-tomcat-401-unauthorized-org.html)  
+[The username you provided is not allowed to use the text-based Tomcat Manager (error 403) when deploying on remote Tomcat8 using Jenkins](https://stackoverflow.com/questions/41675813/the-username-you-provided-is-not-allowed-to-use-the-text-based-tomcat-manager-e)  
