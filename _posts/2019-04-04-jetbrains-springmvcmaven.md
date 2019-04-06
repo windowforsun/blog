@@ -85,6 +85,47 @@ tags:
 
 ![spring mvc maven 프로젝트 프로젝트 테스트 구조]({{site.baseurl}}/img/jetbrains/jetbrains-springmaven-newproject-15.png)
 
+- pom.xml 수정
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>groupId</groupId>
+    <artifactId>dontrise</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+	<!-- Spring 프레임워크 라이브리러 형상관리를 위해 의존성 추가 -->
+    <properties>
+        <org.springframework-version>4.3.18.RELEASE</org.springframework-version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring core -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${org.springframework-version}</version>
+        </dependency>
+        <!-- Spring Web ( Servlet / Anotation ) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>${org.springframework-version}</version>
+        </dependency>
+        <!-- Spring MVC -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>${org.springframework-version}</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
 - web.xml 수정
 
 ```xml
