@@ -17,11 +17,11 @@ tags:
 ---  
 
 ## 환경
-	- Intellij
-	- Java 8
-	- Spring 4
-	- Maven
-	- Tomcat 8.5
+- Intellij
+- Java 8
+- Spring 4
+- Maven
+- Tomcat 8.5
 
 ## 프로젝트 생성
 
