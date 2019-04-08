@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Jenkins] Jenkins Github Maven 빌드 및 Tomcat 배포하기"
 header:
-  overlay_image: /img/jetbrains-bg.jpg
+  overlay_image: /img/jenkins-bg.jpg
 excerpt: 'Jenkins 로 Github 에 있는 Maven 프로젝트를 Tomcat 서버에 배포하자'
 author: "window_for_sun"
 header-style: text
