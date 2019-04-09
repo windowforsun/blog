@@ -346,7 +346,11 @@ tags:
 
 ![create item 빌드 후 조치 war context path]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-11.png)
 
+
 [여기보고 이여서 시작 tomcat manager 계정 credential 추가 부터](https://dukeom.wordpress.com/2017/03/20/jenkinsgithubmaven-%EC%9C%BC%EB%A1%9C-%EB%B9%8C%EB%93%9C%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-34/)
+
+
+## 배포하기
 
 how to deploy jenkins.war file in tomcat webapps folder
 
