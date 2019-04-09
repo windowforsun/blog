@@ -346,15 +346,38 @@ tags:
 
 ![create item 빌드 후 조치 war context path]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-11.png)
 
+- Container > Credentials > Add > Jenkins 를 눌러 Tomcat 배포 계정을 추가해 준다.
 
-[여기보고 이여서 시작 tomcat manager 계정 credential 추가 부터](https://dukeom.wordpress.com/2017/03/20/jenkinsgithubmaven-%EC%9C%BC%EB%A1%9C-%EB%B9%8C%EB%93%9C%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-34/)
+![create item tomcat credentials 추가 진입]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-12.png)
+
+- Tomcat 에서 추가한 배포 계정의 Username, Password 를 적고 Add 버튼을 누른다.
+
+![create item tomcat 배포 계정 credential 추가]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-13.png)
+
+- Credentials 에 추가한 credential 선택
+
+![create item tomcat credential 선택]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-14.png)
+
+- Tomcat URL 에 현재 배포하고자 하는 서버 도메인 입력을 입력한다.
+
+![create item tomcat 서버 도메인 입력]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-createitem-15.png)
+
+- Apply, Save 눌러 적용 한다.
 
 
 ## 배포하기
+- 위에 만든 배포 프로젝트 `firstdeploy` 에 들어가 Build Now 를 눌러 배포를 시작한다.
 
-how to deploy jenkins.war file in tomcat webapps folder
+![deploy build now]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-deploy-1.png)
 
+- Build History 에서 성공 여부를 확인 한다. 빨간색일 경우 배포가 실패한 경우이다.
+	- 실패 했거나 배포 로그를 확인 해야 할경우 해당 Build 를 눌르고 Console Output 를 눌러 확인 할 수 있다.
 
+![deploy 배포 성공 확인]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-deploy-2.png)
+
+- 배포한 서버에서 프로젝트의 Context Path 로 접속을 확인 한다. `서버IP:포트/ContextPath`
+
+![deploy 서버에서 페이지 확인]({{site.baseurl}}/img/jenkins/jenkins-gitmaventomcatdeploy-deploy-3.png)
 
 ---
 ## Reference
