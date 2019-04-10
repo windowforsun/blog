@@ -11,7 +11,7 @@ categories :
   - Algorithm
 tags:
   - Algorithm
-  - Segment Tree
+  - Numeral System
 ---  
 
 # 문제
