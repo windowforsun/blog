@@ -11,7 +11,7 @@ categories :
   - Memcached
 tags:
   - Memcached
-  - In-Memory
+  - In Memory
   - Caching
 ---  
 
