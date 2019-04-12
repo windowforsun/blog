@@ -128,8 +128,18 @@ HASH_SLOT = CRC16(key) mode 16384
 - Redis Cluster 에서는 별도의 센티널이 필요하지 않다.
 
 ## Redis Cluster 제한 사항
-- 
+- 기본적으로 멀티 키 명령은 수행할 수 없다.
+	- MSET key1 value1 key2 value2
+	- SUNION key1 key2
+	- SORT
+- hash tag 를 사용하여 위 명렁어의 key 를 다음과 같이 사용하면 가능하다.
+    - {user001}.following 과 {user001}.followers 는 같이 슬롯에 저장된다.
+- Data Merge(멀티 키 명령)를 허용하지 않는 이유
+	- 노드간 데이터(key, value) 를 전송하는 것은 병목 현상이 발생할 수 있어 성능이 우선인 Redis 에게는 치명적이다.
+	- merge 가 필요한데 key 에 hash tag 를 사용하지 않았다면 어려운 상황이 발생할 수 있다.
+- Cluster 모드에서는 DB 0번만 사용할 수 있다.
+- Redis 3.0 버전 이상 부터 Cluster 가 가능하다.
 
 ---
 ## Reference
-[성능 향상 방법 - How to improve performance](http://redisgate.kr/redis/cluster/cluster_introduction.php)  
+[Redis CLUSTER Introduction](http://redisgate.kr/redis/cluster/cluster_introduction.php)  
