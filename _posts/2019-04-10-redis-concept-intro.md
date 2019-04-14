@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "Redis 란"
+title: "[Redis 개념] Redis 란"
 header:
   overlay_image: /img/redis-bg.png
 excerpt: 'Redis 가 무엇이고, 어떠한 특징을 가지는 지 알아보자'

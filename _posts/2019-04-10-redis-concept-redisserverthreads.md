@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "Redis Server Threads 관련"
+title: "[Redis 개념] Server Threads 관련"
 header:
   overlay_image: /img/redis-bg.png
 excerpt: 'Redis Server 의 Thread 에 관련해서 알아보자'

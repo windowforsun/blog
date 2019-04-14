@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "Redis 의 Cluster 란"
+title: "[Redis 개념] Cluster 란"
 header:
   overlay_image: /img/redis-bg.png
 excerpt: 'Redis 의 Cluster 에 대해 알아보자'
