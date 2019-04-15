@@ -572,42 +572,6 @@ f2bcff12612ab068b68f48bc46de575895b947e5 127.0.0.1:7003@17003 master - 0 1555303
 995c0743f7e499b2b6af8e808c148d200f40bb6e 127.0.0.1:7001@17001 myself,master - 0 1555303894000 1 connected 0-5460
 ```  
 
-
-
-
-
-
-
-gem install redis
-
-yum install ruby-devel ruby-irb ruby-rdoc ruby-ri
-
-출처: https://binshuuuu.tistory.com/30 [지식저장소]
-
-
-
-
-redis config file paht is /etc/redis.conf
-
-redis local cluster 설정관련
-https://binshuuuu.tistory.com/30
-https://blog.leocat.kr/notes/2017/11/07/redis-simple-cluster
-https://brunch.co.kr/@daniellim/31
-http://redisgate.jp/redis/cluster/cluster_start.php
-
-
-
-## 설치 안해도 될듯 redis-cli --cluster 로 가능한듯 내껀 5버전이라서
-ruby 2.3 설치
-https://zetawiki.com/wiki/CentOS6_ruby-2.3_%EC%84%A4%EC%B9%98
-
-gem update
-
-gem update --system
-
-gem install redis
-
-
 ---
 ## Reference
 [Redis CLUSTER Start](http://redisgate.kr/redis/cluster/cluster_start.php)  
