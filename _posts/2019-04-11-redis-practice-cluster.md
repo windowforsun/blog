@@ -337,11 +337,50 @@ f2bcff12612ab068b68f48bc46de575895b947e5 127.0.0.1:7003@17003 master - 0 1555256
 
 
 
+## 에러 및 이슈 관련
+- Cluster 노드를 추가하거나 Reshard 를 하다보면 아래와 같은 WARNING 메시지를 볼 수 있다.
 
+```
+[root@windowforsun ~]# redis-cli --cluster add-node 127.0.0.1:7004 127.0.0.1:7001
+>>> Adding node 127.0.0.1:7004 to cluster 127.0.0.1:7001
+>>> Performing Cluster Check (using node 127.0.0.1:7001)
+M: 995c0743f7e499b2b6af8e808c148d200f40bb6e 127.0.0.1:7001
+   slots:[0-5460] (5461 slots) master
+M: 433e9fbd5a51a829bfbf87a8d1755c78f852f0d2 127.0.0.1:7002
+   slots:[5461-10922] (5462 slots) master
+M: f2bcff12612ab068b68f48bc46de575895b947e5 127.0.0.1:7003
+   slots:[10923-16383] (5461 slots) master
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+[WARNING] Node 127.0.0.1:7001 has slots in importing state 12539.
+[WARNING] The following slots are open: 12539.
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+```  
 
+- cluster nodes 를 확인하보면 아래 처럼 7001 포트에 해당되는 Slot 이 아닌, Slot 번호가 보인다.
 
+127.0.0.1:7001> cluster nodes
+433e9fbd5a51a829bfbf87a8d1755c78f852f0d2 127.0.0.1:7002@17002 master - 0 1555256681791 2 connected 5461-10922
+995c0743f7e499b2b6af8e808c148d200f40bb6e 127.0.0.1:7001@17001 myself,master - 0 1555256680000 1 connected 0-5460 [12539-<-f2bcff12612ab068b68f48bc46de575895b947e5]
+f2bcff12612ab068b68f48bc46de575895b947e5 127.0.0.1:7003@17003 master - 0 1555256680788 3 connected 10923-16383
+```  
 
+- 아래 명령어를 통해 해당 Slot 을 Stable 시켜주면 
 
+```
+[root@dontrise windowforsun_com]# redis-cli -p 7001 cluster setslot 12539 STABLE
+OK
+```  
+
+- 아래와 같이 정상으로 Slot 들이 각 node 에 잘 분배된 것을 확인 할 수 있다.
+
+```
+127.0.0.1:7001> cluster nodes
+433e9fbd5a51a829bfbf87a8d1755c78f852f0d2 127.0.0.1:7002@17002 master - 0 1555303895862 2 connected 5461-10922
+f2bcff12612ab068b68f48bc46de575895b947e5 127.0.0.1:7003@17003 master - 0 1555303895000 3 connected 10923-16383
+995c0743f7e499b2b6af8e808c148d200f40bb6e 127.0.0.1:7001@17001 myself,master - 0 1555303894000 1 connected 0-5460
+```  
 
 
 
