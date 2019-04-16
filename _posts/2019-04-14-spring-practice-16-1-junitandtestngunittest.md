@@ -220,6 +220,24 @@ public class SimpleInterestCalculatorTestNGTests {
 
 - 테스트 케이스인 calculator() 메서드는 1회, illegalCalculator() 메서드는 3회 실행되고, 데이터 공급자 illegal 은 3개 데이터 세트를 반환한다.
 
+## Spring Junit 단위 테스트 하기
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(locations ={"classpath:<bean-config-file-path>.xml"})
+public class SomethingTest {
+	
+}
+```  
+
+```java
+@RunWith(SpringJUnit4ClassRunner.class)
+@ContextConfiguration(classes = ConfigClass.class)
+public class SomethingTest {
+	
+}
+```  
+
 ---
 ## Reference
 [스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  

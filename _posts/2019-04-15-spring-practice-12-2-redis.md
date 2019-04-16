@@ -50,6 +50,8 @@ tags:
     </dependency>
 	```  
 	
+	- spring-data-redis 2 버전은 Spring Framework 5 이상 부터 사용할 수 있다.
+	
 - Gradle(build.gradle)
 
 	```
@@ -219,9 +221,25 @@ public class RedisConfig {
         return template;
     }
 
+    // spring-data-redis 2 이상
     @Bean
     public RedisConnectionFactory redisConnectionFactory() {
-        return new JedisConnectionFactory();
+        RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
+        redisStandaloneConfiguration.setHostName("localhost");
+        redisStandaloneConfiguration.setPort(6379);
+//        redisStandaloneConfiguration.setPassword(RedisPassword.of("password"));
+
+        JedisConnectionFactory jedisConnectionFactory = new JedisConnectionFactory(redisStandaloneConfiguration);
+        return jedisConnectionFactory;
+    }
+    
+    // spring-data-redis 2 미만    
+    @Bean
+    public RedisConnectionFactory redisConnectionFactory() {
+        JedisConnectionFactory jedisConnectionFactory = new JedisConnectionFactory();
+        jedisConnectionFactory.setHostName("35.227.20.44");
+        jedisConnectionFactory.setPort(6379);
+        return jedisConnectionFactory;
     }
 }
 ```  
