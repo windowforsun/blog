@@ -70,6 +70,11 @@ public class SimpleInterestCalculator implements InterestCalculator {
 	- Maven(pom.xml)
 	
 		```xml
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>4.3.18</version>
+        </dependency>
 		<dependency>
 			<groupId>junit</groupId>
 			<atifactId>junit</atifactId>
@@ -81,6 +86,7 @@ public class SimpleInterestCalculator implements InterestCalculator {
 	
 		```
 		dependencies {
+			testCompile "org.springframework:spring-test:4.3.18"
 			testCompile "junit:junit:4.12"
 		}
 		```  
