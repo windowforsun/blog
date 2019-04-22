@@ -201,6 +201,163 @@ Hello world
 
 ### 매개 변수가 있는 람다식
 
+```java
+@FunctionalInterface
+public interface MyInterface {
+	public void method(int x);
+}
+```  
+
+- 위와 같은 인터페스를 타겟 타입으로 갖는 람다식은 아래와 같이 작성한다.
+
+```java
+MyInterface mi = (x) -> {
+	// ...
+}
+
+// 혹은
+
+MyInterface mi = x -> {
+	// ...
+}
+```  
+
+- 람다식이 대입된 인터페이스의 참조 변수는 아래와 같이 메소드를 호출 할 수 있다.
+
+```java
+mi.method(5);
+```  
+
+- 예제 코드
+
+```java
+public class Main {
+
+    public static void main(String[] args) {
+        MyInterface mi;
+
+        mi = (x) -> {
+            int result = x * 10;
+            System.out.println(result);
+        };
+
+        mi.method(5);
+
+        mi = (x) -> {
+            System.out.println(x * 10);
+        };
+
+        mi.method(5);
+
+        mi = x -> {
+            int a = 10;
+            System.out.println(x * a);
+        };
+
+        mi.method(5);
+    }
+
+    @FunctionalInterface
+    interface MyInterface {
+        public void method(int x);
+    }
+}
+```  
+
+```
+50
+50
+50
+``` 
+
+### 리턴값이 있는 람다식
+
+```java
+@FunctionalInterface
+public interface MyInterface {
+	public int method(int x, int y);
+}
+```  
+
+- 위와 같은 인터페이스를 타겟 타입으로 갖는 람다식은 아래와 같다.
+
+```java
+MyInterface mi = (x, y) -> {
+	// ...
+	return 값;
+}
+```  
+
+- 실행문에 리턴문 만 있다면 아래와 같이 작성 가능하다.
+
+```java
+MyInterface mi = (x, y) -> return x + y;
+```  
+
+```java
+MyInterface mi = (x, y) -> {
+	return sum(x, y);
+}
+
+MyInterface mi = (x, y) -> sum(x, y);
+```  
+
+- 인터페이스의 참조 변수는 아래와 같이 메소드를 호출 하여 사용할 수 있다.
+
+```java
+int result = mi.method(2, 5);
+```  
+
+- 예제 코드
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        MyInterface mi;
+
+        mi = (x, y) -> {
+            int result = x + y;
+            return result;
+        };
+
+        System.out.println(mi.method(2, 5));
+
+        mi = (x, y) -> {
+            return x + y;
+        };
+
+        System.out.println(mi.method(2, 5));
+
+        mi = (x, y) -> x + y;
+
+        System.out.println(mi.method(2, 5));
+
+        mi = (x, y) -> sum(x, y);
+
+        System.out.println(mi.method(2, 5));
+    }
+
+    public static int sum(int x, int y) {
+        return x + y;
+    }
+
+    @FunctionalInterface
+    interface MyInterface {
+        public int method(int x, int y);
+    }
+}
+```  
+
+```
+7
+7
+7
+7
+```  
+
+## 클래스 멤버와 로컬 변수 사용
+
+
 
 ---
 ## Reference
