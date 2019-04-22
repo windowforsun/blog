@@ -218,6 +218,8 @@ public class RedisConfig {
     public RedisTemplate<String, Vehicle> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Vehicle> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
+		template.setKeySerializer(new StringRedisSerializer());
+		template.setValueSerializer(new StringRedisSerializer());
         return template;
     }
 
@@ -246,6 +248,7 @@ public class RedisConfig {
 
 - redisTemplate() 메서드가 반환하는 RedisTemplate 는 Generic 형이기 때문에 Key, Value 를 String, Vehicle 로 지정했다.
 	- 객체 조회/저장 시에 발생하는 형변환은 RedisTemplate 이 RedisSerializer 인터페이스 구현체를 사용하여 처리 한다.
+- template 설정에서 setKeySerializer(), setValueSerializer() 메서드로 설정을 하지 않을 경우, redis-cli 에서 조회할때 key 혹은 value 값이 `/xac/xed/x00/x15` 와 같은 식으로 나온다.([관련링크](https://stackoverflow.com/questions/31608394/get-set-value-from-redis-using-redistemplate))
 
 이름|설명
 ---|---
@@ -298,3 +301,4 @@ public class RedisConfig {
 ---
 ## Reference
 [스프링5 레시피](https://book.naver.com/bookdb/book_detail.nhn?bid=13911953)  
+[Spring에서 Redis 설정](https://yookeun.github.io/java/2017/05/21/spring-redis/)  
