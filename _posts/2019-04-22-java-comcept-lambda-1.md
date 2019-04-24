@@ -4,7 +4,7 @@ classes: wide
 title: "[Java 개념] Lambda Expressions (람다식)"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: 'Maven 이란 무엇이고 어떠한 특징을 가지고 있는지'
+excerpt: 'Lambda Expression 이란 무엇이고, Java Lambda 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -362,6 +362,147 @@ public class Main {
 ### 클래스의 맴버 사용
 - 위의 설명 처럼 람다식에서 클래스의 멤버는 제약 없이 사용 가능하다. 하지만 `this` 키워드에는 몇가지 주의 사항이 있다.
 - 람다식에서 `this` 는 내부적으로 생성되는 익명 객체의 참조가 아니라 람다식을 실행한 객체의 참조이다.
+- 예제 코드
+
+```java
+public class Main {
+    public int outterValue = 10;
+
+    class InnerClass {
+        public int innerValue = 20;
+
+        void method() {
+            MyInterface mi = () -> {
+                System.out.println("outerValue : " + outterValue);
+                System.out.println("outerValue : " + Main.this.outterValue);
+                System.out.println("innerValue : " + innerValue);
+                System.out.println("innerValue : " + this.innerValue);
+            };
+
+            mi.method();
+        }
+    }
+
+    public static void main(String[] args) {
+        Main main = new Main();
+        InnerClass innerClass = main.new InnerClass();
+        innerClass.method();
+    }
+
+    @FunctionalInterface
+    interface MyInterface {
+        public void method();
+    }
+}
+```  
+
+```
+outerValue : 10
+outerValue : 10
+innerValue : 20
+innerValue : 20
+```  
+
+- 위 예제는 람다식에서 바깥 객체와 중첩 객체의 참조를 얻어 값을 출력하는 방법을 보여주고 있다.
+- 중첩 객체 InnerClass 에서 람다식을 실행했기 때문에 람다식 내부에서의 `this`는 중첩 객체 InnerClass 이다.
+
+### 로컬 변수 사용
+- 메소드의 매개변수 또는 로컬 변수를 람다식에서 사용하기 위해서는 `final` 특성을 가져야 한다.
+- 매개변수, 로컬 변수를 람다식에서 읽는 것은 가능하지만, 람다식 내부, 외부에서 변경은 불가능 하다.
+- 예제 코드
+
+```java
+public class Main {
+    public void method(int paramValue) {
+           int localValue = 40;
+
+           MyInterface mi = () -> {
+               System.out.println("paramVallue : " + paramValue);
+               System.out.println("localValluee : " + localValue);
+           };
+
+           mi.method();
+    }
+
+    public static void main(String[] args) {
+        Main main = new Main();
+        main.method(20);
+    }
+
+    @FunctionalInterface
+    interface MyInterface {
+        public void method();
+    }
+}
+```  
+
+```
+paramValue : 20
+localValue : 40
+```  
+
+## 표준 API 의 함수적 인터페이스
+- Java 에서 제공되는 표준 API 중 한 개의 추상 메소드를 가지는 인터페이스는 모두 람다식으로 이용 가능하다.
+- 예제 코드
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Runnable runnable = () -> {
+            for(int i = 1; i <= 10; i++) {
+                System.out.println(i);
+            }
+        };
+
+        Thread thread = new Thread(runnable);
+        thread.start();
+    }
+}
+```  
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Thread thread = new Thread(() -> {
+            for(int i = 1; i <= 10; i++) {
+                System.out.println(i);
+            }
+        });
+
+        thread.start();
+    }
+}
+```  
+
+```
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+```  
+
+- Java8 부터 함수적 인터페이스(functional interface) 를 java.util.function 패키지 표준 API 로 지원한다.
+- 위 패키지는 메소드, 생성자의 매개 타입으로 사용되어 람다식을 대입할 수 있도록 하기 위해서이다.
+- java.util.function 패키지의 함수적 인터페이스는 크게 Consumer, Supplier, Function, Operator, Predicate 로 구분된다.
+- 구분 되는 기준은 인터페이스의 선언된 추상 메소드의 매개값과 리턴값의 유무이다.
+
+종류|추상 메소드 특징|
+---|---|
+Consumer|매개값은 있고, 리턴값은 없음
+Supplier|매개값은 없고, 리턴값은 있음
+Function|매개값도 있고, 리턴값도 있음, 주로 매개값을 리턴값으로 매핑(타입변환)
+Operator|매개값도 있고, 리턴값도 있음, 주로 매개값을 연산하고 결과를 리턴
+Predicate|매개값은 있고, 리턴 타입은 boolean, 매가값을 조사해서 boolean 값 리턴
+
+### Consumer 함수적 인터페이스
+- Consumer 의 특징은 리턴값이 없는 accept() 메소드를 가지고 있다.
+- accept() 메소드는 매개값을 소비하고 값을 리턴하지 않는다.
 
 
 ---
