@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Redis 실습] Watch, Multi 로 Transaction 및 Synchronized"
+title: "[Redis 개념] Watch, Multi 로 Transaction"
 header:
   overlay_image: /img/redis-bg.png
-excerpt: 'Redis 에서 Transaction 과 Synchronized 동작을 구현해 보자'
+excerpt: 'Redis 에서 Transaction 동작을 구현해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,7 +12,8 @@ categories :
 tags:
   - Redis
   - Transaction
-  - Synchronized
+  - Watch
+  - Multi
 ---  
 
 ## 환경
@@ -23,7 +24,7 @@ tags:
 - Redis 에서도 RDB 와 같이 Transaction 관련 수행을 할 수 있지만 방식에는 차이가 있다.
 - RDB 와 같은 Lock 의 개념은 지원되지 않는다.
 
-## Transaction, Synchronized 관련 명령어
+## Transaction 관련 명령어
 ### MULTI
 - 트랜잭션 블록의 시작을 표시한다.
 - 후속 명령어인 EXEC 를 사용하여 원자적으로 여러개의 명령어를 실행할 수 있다.
@@ -86,7 +87,7 @@ OK
 - DISCARD 를 통해 Queue 에 있는 명령어들을 플러시 한다.
 - 결과적으로 아무 명령어도 수행되지 않은 1 값을 확인 할 수 있다.
 
-## WATCH 을 이용한 Optimistic Locking 을 이용한 Synchronized
+## WATCH 을 이용한 Optimistic Locking
 - Redis 의 Locking 은 RDB 의 Locking 의 개념과 다르다.
 - RDB 의 경우 Lock 걸린 부분을 Transaction 이 잡고 있어 다른 Transaction 에서 해당 부분을 접근할 수 없다.
 - Redis 는 Sequential 하게 요청을 수행하도록 보장해 주는 역할만 수행한다.
@@ -127,6 +128,12 @@ A|A결과|B|B결과
  | |127.0.0.1:6379> get key3|"2"
  
 - Redis 는 RDB 와 다르게 Key 값의 변화에 따라 Sequential 한 요청을 보장하는 장치를 사용하여 Locking 동작이 수행된다.
+
+## Redis Transaction Flow
+
+![redis transaction flow]({{site.baseurl}}/img/redis/practice-transaction-sequence.png)
+
+- Redis 에서 Transaction 의 전체적인 흐름은 위와 같다.
 
 ---
 ## Reference
