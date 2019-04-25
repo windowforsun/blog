@@ -46,78 +46,78 @@ tags:
 ### 예시
 - 아래와 같은 주어진 방향 그래프가 있다.
 
-![kosaraju 1]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-1.png)
+![kosaraju 1]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-1.png)
 
 - 방향이 반대인 역방향 그래프는 아래와 같다.
 
-![kosaraju re 1]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-re-1.png)
+![kosaraju re 1]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-re-1.png)
 		
 - 주어진 그래프, 역방향 그래프, 스택을 준비한다.
 - 예시에서는 작은 노드 번호에 높은 우선순위가 있다고 가정하겠다.
 - 방문 한 노드는 노드에 빨간색, 방문으로 사용한 엣지는 순서대로 숫자를 기입한다.
 - 1번 노드로 시작해서 DFS 를 수행한다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-2.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-2.png)
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-3.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-3.png)
 
 - 6 번 노드에서 방문할 수 있는 노드는 1번 밖에 없기 때문에 6번을 스택에 넣고 1번으로 돌아간다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-4.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-4.png)
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-5.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-5.png)
 
 - 7 번 노드에서 방문할 수 있는 노드는 1번 밖에 없기 때문에 7번을 스택에 넣고 1번으로 돌아간다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-6.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-6.png)
 
 - 1번 노드에서 방문할 수 있는 노드는 모두 방문 했기 때문에 1번을 스택에 넣고 다음 방문하지 않은 노드를 방문한다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-7.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-7.png)
 
 - 2번 노드에서 방문 할 수 있는 노드가 없기 때문에 2번을 스택에 넣고 다음 방문하지 않는 노드를 방문한다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-8.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-8.png)
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-9.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-9.png)
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-10.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-10.png)
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-11.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-11.png)
 
 - 5번 노드에서 더 이상 방문 할 수 있는 노드가 없기 때문에 5번을 스택에 넣고 4번 노드로 돌아간다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-12.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-12.png)
 
 - 4번 노드에서 더 이상 방문 할 노드가 없기 때문에 4번을 스택에 넣고 3번 노드로 돌아간다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-13.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-13.png)
 
 - 3번 노드에서 더 이상 방문할 노드가 없기 때문에 3번을 스택에 놓고 DFS 를 종료한다.
 
-![kosaraju dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-14.png)
+![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-14.png)
 
 - 모든 노드가 들어간 스택의 top 에서부터 하나씩 빼내며 역방향 그래프로 DFS 탐색을 수행한다.
 - 빼낸 노드번호는 스택에서 빨간색으로 처리한다.
 - 3번 노드를 스택에서 빼내고 3->5->5 순으로 DFS 탐색을 했다.
 - 3번 노드에서는 더 이상 방문할 노드가 없기 때문에 3, 4, 5는 SCC 를 이루고 있다.
 
-![kosaraju re dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-re-2.png)
+![kosaraju re dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-re-2.png)
 
 - 스택에서 이미 방문한 5, 4번 노드를 빼낸다.
 - 2번 노드를 스택에서 빼내고 방문한다. 2번 노드에서 더 이상 방문 할 노드가 없기 때문에 2번은 SCC 를 이루고 있다.
 
-![kosaraju re dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-re-3.png)
+![kosaraju re dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-re-3.png)
 
 - 1번 노드를 스택에서 빼내고 방문한다.
 - 1->6->7 순으로 방문 후 1번 노드에서 더이상 방문할 노드가 없기 때문에 1, 6, 7는 SCC 를 이루고 있다.
 
-![kosaraju re dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-re-4.png)
+![kosaraju re dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-re-4.png)
 
 - 스택에 남은 6, 7 까지 빼낸다.
 - 최종적으로 서로다른 3개의 SCC 집합으로 이루고 있음을 알아낼 수 있다.
 
-![kosaraju re dfs]({{sitebase.url}}/img/algorithm/concept-scc-kosaraju-re-5.png)
+![kosaraju re dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-re-5.png)
 
 - 코사라주 알고리즘은 DFS 를 2번 수행하기 때문에 DFS 와 같은 시간복잡도인 O(v+e) 가 된다.
 - 하지만 DFS 를 2번 수행한다는 점, 스택과 추가적인 역방향 그래프를 표현해야 하기 때문에 시간적, 공간적으로 다른 알고리즘에 비해 살짝 좋지 않다.
