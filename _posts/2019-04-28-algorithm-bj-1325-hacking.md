@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[풀이] 백준 1325 아직 안함"
+title: "[풀이] 백준 1325 효율적인 해킹"
 header:
   overlay_image: /img/algorithm-bg.jpg
 excerpt: '주어진 그래프에서 SCC 집합을 구하자'
