@@ -55,6 +55,7 @@ tags:
 - 주어진 그래프, 역방향 그래프, 스택을 준비한다.
 - 예시에서는 작은 노드 번호에 높은 우선순위가 있다고 가정하겠다.
 - 방문 한 노드는 노드에 빨간색, 방문으로 사용한 엣지는 순서대로 숫자를 기입한다.
+- 스택에 존재하는 노드는 검은색, 삭제된 노드는 붉은색으로 표시한다.
 - 1번 노드로 시작해서 DFS 를 수행한다.
 
 ![kosaraju dfs]({{site.baseurl}}/img/algorithm/concept-scc-kosaraju-2.png)
@@ -126,7 +127,6 @@ tags:
 
 ```java
 public class Main {
-	
     private int nodeCount;
     private int edgeCount;
     // 정방향 그래프
@@ -139,15 +139,61 @@ public class Main {
     private LinkedList<Integer> stack;
     // 방문 플래그 배열
     private boolean[] isVisited;
-    
-    public static void main(String[] args) {    	
-    	
-    	// 그래프 정보 입력 및 graph, reverseGraph 구성하기
-    	
-        int currentNode, count = 0;
-        ArrayList<Integer> scc;
 
-        // 정방향 그래프 DFS
+    public Main() {
+        this.input();
+        this.solution();
+        this.output();
+    }
+
+    public static void main(String[] args) {
+        new Main();
+    }
+
+    public void input() {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        try{
+            StringTokenizer token = new StringTokenizer(reader.readLine());
+            int start, end;
+
+            this.nodeCount = Integer.parseInt(token.nextToken());
+            this.edgeCount = Integer.parseInt(token.nextToken());
+            this.stack = new LinkedList<>();
+            this.isVisited = new boolean[this.nodeCount + 1];
+            this.sccArray = new ArrayList[this.nodeCount];
+            this.graph = new ArrayList[this.nodeCount + 1];
+            this.reverseGraph = new ArrayList[this.nodeCount + 1];
+
+            for(int i = 0; i <= this.nodeCount; i++) {
+                this.graph[i] = new ArrayList();
+                this.reverseGraph[i] = new ArrayList();
+            }
+
+            for(int i = 0; i < this.edgeCount; i++) {
+                token = new StringTokenizer(reader.readLine(), " ");
+                start = Integer.parseInt(token.nextToken());
+                end = Integer.parseInt(token.nextToken());
+
+                this.graph[start].add(end);
+                this.reverseGraph[end].add(start);
+            }
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void output() {
+        System.out.println(this.result);
+    }
+
+    public void solution() {
+        int currentNode, count = 0;
+
+        this.result = new StringBuilder();
+
+        // 정방향 그래프 DFS 탐색 하며 스택에 노드 넣어주기
         for(int i = 1; i <= this.nodeCount; i++) {
             if(!this.isVisited[i]) {
                 this.dfs(i);
@@ -156,19 +202,25 @@ public class Main {
 
         this.isVisited = new boolean[this.nodeCount + 1];
 
-        // 스택에서 하나씩 빼면서 역방향 그래프 DFS
+        // 스택에서 노드를 빼면서 역방향 그래프 DFS 탐색
         while(!this.stack.isEmpty()) {
             currentNode = this.stack.removeFirst();
 
-            // 스택에서 뺀 노드를 DFS 탐색 할때마다 SCC 집합이 생성됨
+            // 스택에서 빼내어진 노드를 DFS 탐색 수행 할때마다 SCC 집합이 하나씩 생성됨
             if(!this.isVisited[currentNode]) {
                 this.sccArray[count] = new ArrayList();
                 this.reverseDfs(currentNode, count);
                 count++;
             }
-        }        
-    }    
-    
+
+        }
+        
+        // 구성된 SCC 집합 출력
+        for(int i = 0; i < count; i++) {
+        	System.out.println(Arrays.toString(this.sccArray[i].toArray()));
+        }
+    }
+
     public void dfs(int node) {
         this.isVisited[node] = true;
 
@@ -180,7 +232,7 @@ public class Main {
             }
         }
 
-        // 현재 node 에서 방문할 수 있는 노드를 모두 방문하고나면 stack 에 현재 node 를 넣음
+        // 현재 node 에서 모든 노드를 방문하고 나면 스택에 넣음
         this.stack.addFirst(node);
     }
 
@@ -195,14 +247,185 @@ public class Main {
             }
         }
 
-        // SCC 개수를 기준으로 해당되는 node 추가
+        // SCC 집합 개수를 기준으로 해당되는 node 추가
         this.sccArray[count].add(node);
     }
 }
 ```  
 
 ## Tarjan's Algorithm
-- 타잔 알고리즘은 한번 
+- 타잔 알고리즘은 한번의 DFS 연산과 하나의 방향 그래프, 스택을 이용해서 SCC 집합을 구할 수 있는 알고리즘이다.
+- 알고리즘 순서
+	1. DFS 는 가장 인접한 노드들 중 가장 적은 DFS 순서번호를 반환한다.
+	1. 주어진 방향 그래프의 임의의 정점에서 부터 DFS 를 수행한다. 
+	1. DFS 를 방문하는 순서에 맞게 각 노드에 번호를 부여하고, 스택에 넣어준다.
+		- DFS 방문 순서번호는 해당 노드를 방문 했는지에 대한 쓰임과 만들어야 하는 SCC 노드들 중 스택의 최대하단의 노드인지 판별할 때 사용 된다.
+	1. 현재 노드의 DFS 순서번호와 인접 노드의 최소 순서번호가 같다면 스택에서 자신보다 위에 있는(나중에 들어간) 노드를 빼서 SCC 집합으로 만든다.
+		- SCC 집합을 만들때, SCC 집합으로 포함되는 각 노드들에 SCC 집합에 대한 연산이 모두 끝났다는 finished 와 같은 불린 배열에 표시한다.
+		
+### 예시
+- 적은 노드 번호가 방문에서 더 높은 우선순위를 갖는다.
+- 방문한 노드는 붉은색으로 표시하고 DFS 순서번호는 괄호로 표시한다.
+- 스택에 존재하는 노드는 검은색, 삭제된 노드는 붉은색으로 표시한다.
+- 노드 탐색은 1번 노드 부터 진행한다.
+- 아래와 같은 연결 그래프가 존재한다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-1.png)
+
+- 1번 노드에서 방문 가능한 노드를 방문하면 아래와 같다. (1->7->1->6->1)
+	- 7->1, 6->1 탐색의 경우 7번, 6번 DFS 탐색에서 1번 노드를 다시 탐색하는 것이 아니다.
+	- 1번 노드의 순서 번호가 이미 부여 되었기 때문에 7번, 6번 DFS 탐색을 빠져나와 1번 DFS 탐색으로 다시 돌아가는 것을 뜻한다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-2.png)
+
+- 1번 노드에서 더이상 방문할 노드가 없기 때문에 스택에서 1번 위에 쌓인 노드를 모두 빼내어 SCC 집합으로 묶어 준다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-3.png)
+
+- 다음 노드인 2번 노드를 방문 한다.
+- 2번 노드는 더이상 방문할 수 있는 노드가 없기 때문에 2번 위에 쌓인 노드들을 빼내어 SCC 집합으로 만든다.
+	- 1번 노드의 경우 이미 SCC 집합에 구성되었기 때문에 방문할 수 없다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-4.png)
+
+- 다음 노드인 3번 노드를 방문한다.
+- 3번 노드에서 방문 가능한 노드를 모두 방문하면 아래와 같다. (3->4->5->3)
+	- 5->3 탐색의 경우도 5번 DFS 탐색에서 3번 노드의 순서 번호가 이미 부여 되었기 때문에 DFS 탐색을 빠져나와 3번 DFS 탐색으로 돌아가는 것이다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-5.png)
+
+- 3번 노드에서 더이상 방문할 노드가 없기 때문에 스택에서 3번 위에 쌓이 노드를 모두 빼내어 SCC 집합으로 묶어 준다.
+
+![tarjan]({{site.baseurl}}/img/algorithm/concept-scc-tarjan-6.png)
+
+### 소스코드
+
+```java
+public class Main {
+    // 노드 수
+    private int nodeCount;
+    // 엣지 수
+    private int edgeCount;
+    // 방향 그래프 정보
+    private ArrayList<Integer>[] graph;
+    // 스택
+    private LinkedList<Integer> stack;
+    // DFS 탐색 순서번호
+    private int[] dfsCountArray;
+    // SCC 탐색이 완료된 노드인지(SCC 집합에 이미 구성원인)
+    private boolean[] finished;
+    // 현재 구성된 SCC 집합 배열
+    private ArrayList<Integer>[] sccGroupList;
+    // DFS 탐색 할때마다 증가하는 DFS 순서번호 변수
+    private int dfsCount;
+    // 현재 구성된 SCC 집합 개수
+    private int sccGroupCount;
+
+    public Main() {
+        this.input();
+        this.solution();
+        this.output();
+    }
+
+    public static void main(String[] args) {
+        new Main();
+    }
+
+    public void input() {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        try{
+            StringTokenizer token = new StringTokenizer(reader.readLine(), " ");
+
+            this.nodeCount = Integer.parseInt(token.nextToken());
+            this.edgeCount = Integer.parseInt(token.nextToken());
+            this.graph = new ArrayList[this.nodeCount + 1];
+            this.stack = new LinkedList<>();
+            this.dfsCountArray = new int[this.nodeCount + 1];
+            this.finished = new boolean[this.nodeCount + 1];
+            this.sccGroupList = new ArrayList[this.nodeCount + 1];
+            this.result = new StringBuilder();
+            this.dfsCount = 1;
+
+            for(int i = 1; i <= this.nodeCount; i++) {
+                this.graph[i] = new ArrayList<>();
+            }
+
+            for(int i = 0; i < this.edgeCount; i++) {
+                token = new StringTokenizer(reader.readLine(), " ");
+
+                this.graph[Integer.parseInt(token.nextToken())].add(Integer.parseInt(token.nextToken()));
+            }
+
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void output() {
+        System.out.println(this.result);
+    }
+
+    public void solution() {
+        // 1번 노드 부터 순차적으로 DFS 순서 번호가 부여되지 않았으면 DFS 탐색을 수행
+        for(int i = 1; i <= this.nodeCount; i++) {
+            if(this.dfsCountArray[i] == 0) {
+                this.dfs(i);
+            }
+        }
+        
+        // 구성된 SCC 집합 출력
+        for(int i = 0; i < this.sccGroupCount; i++) {
+        	System.out.println(Arrays.toString(this.sccGroupList[i].toArray()));
+        }
+    }
+
+    public int dfs(int node) {
+        // 현재 노드의 DFS 탐색 순서번호
+        this.dfsCountArray[node] = this.dfsCount++;
+        // DFS 탐색하는 순서대로 스택에 넣음
+        this.stack.addFirst(node);
+
+        // 현재 노드 및 인접 노드 중 최소 순서 번호
+        int dfsCountMin = this.dfsCountArray[node];
+        // 현재 노드에서 인접한 노드 리스트
+        ArrayList<Integer> adjList = this.graph[node];
+
+        for(int next : adjList) {
+            if(this.dfsCountArray[next] == 0) {
+                // 아직 방문하지 않은 노드
+                dfsCountMin = Integer.min(dfsCountMin, this.dfs(next));
+            } else if(!this.finished[next]) {
+                // 방문 하였지만, SCC 집합으로 구성되지 않은 노드
+                dfsCountMin = Integer.min(dfsCountMin, this.dfsCountArray[next]);
+            }
+        }
+
+        // 현재 노드가 인접한 노드들 중 가장 순서 번호가 빠르다면 SCC 추출
+        if(dfsCountMin == this.dfsCountArray[node]) {
+            int sccNode;
+            ArrayList<Integer> sccGroup = new ArrayList<>();
+
+            // 스택의 맨위에서부터 하나씩 빼면서 자신이 나올때까지 반복
+            do {
+                sccNode = this.stack.removeFirst();
+                sccGroup.add(sccNode);
+                this.finished[sccNode] = true;
+
+            } while(sccNode != node);
+            
+            this.sccGroupList[this.sccGroupCount] = sccGroup;
+            this.sccGroupCount++;
+        }
+
+        return dfsCountMin;
+    }
+}
+```  
+
+## SCC 활용
+
+
 
 
 ---
