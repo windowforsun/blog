@@ -60,22 +60,6 @@ tags:
 
 ```java
 public class Main {
-    public TestHelper testHelper = new TestHelper();
-
-    class TestHelper {
-        private ByteArrayOutputStream out;
-
-        public TestHelper() {
-            this.out = new ByteArrayOutputStream();
-
-            System.setOut(new PrintStream(this.out));
-        }
-
-        public String getOutput() {
-            return this.out.toString().trim();
-        }
-    }
-
     private StringBuilder result;
     private int nodeCount;
     private int edgeCount;
