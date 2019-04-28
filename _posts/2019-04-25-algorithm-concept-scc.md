@@ -202,12 +202,13 @@ public class Main {
 ```  
 
 ## Tarjan's Algorithm
-
+- 타잔 알고리즘은 한번 
 
 
 ---
 ## Reference
 [SCC(Strongly Connected Component)](https://jason9319.tistory.com/98)  
+[강한 연결 요소(Strongly Connected Component)](https://kks227.blog.me/220802519976)  
 [SCC-코사라주 알고리즘(Kosaraju's Algorithm)](https://wondy1128.tistory.com/130)  
 [강결합 컴포넌트 (Strongly Connected Component)](https://seungkwan.tistory.com/7)  
 [SCC(Strongly Connected Component)](https://www.crocus.co.kr/950)  
