@@ -4,7 +4,7 @@ classes: wide
 title: "[풀이] 백준 1302 베스트셀러"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '책중 가장 많이 팔린 책을 알아내자'
+excerpt: '책 중 가장 많이 팔린 책을 알아내자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -44,22 +44,6 @@ top
 
 ```java
 public class Main {
-    public TestHelper testHelper = new TestHelper();
-
-    class TestHelper {
-        private ByteArrayOutputStream out;
-
-        public TestHelper() {
-            this.out = new ByteArrayOutputStream();
-
-            System.setOut(new PrintStream(this.out));
-        }
-
-        public String getOutput() {
-            return this.out.toString().trim();
-        }
-    }
-
     private StringBuilder result;
     private int bookCount, max;
     private HashMap<String, Integer> bestsellerMap;
