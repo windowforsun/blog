@@ -112,7 +112,7 @@ public class Main {
         // 2 부터 시작해서 가장 큰 수의 제곱근 수만큼 반복
         for(int i = 2; i <= max; i++) {
 
-            // 소수가 아니리 경우에는 수행하지 않음
+            // 소수가 아닌 경우에는 수행하지 않음
             if(!this.isNotPrime[i]) {
                 // i * (2 ~) 값은 소수가 아님
                 for(int j = i + i; j <= this.maxNum; j += i) {
