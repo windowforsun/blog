@@ -44,7 +44,7 @@ tags:
 - 시작 노드는 1번으로 한다.
 - 1번 노드를 시작으로 우선순위 큐에 (1, 0) 1번 노드에서 1번노드의 가중치는 0이라는 값을 넣어준다.
 
-![dijkstra ex](/img/algorithm/concept-dijkstra-1.png)
+![dijkstra ex]({{site.baseurl}}/img/algorithm/concept-dijkstra-1.png)
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
@@ -57,7 +57,7 @@ tags:
 - 우선순위 큐에서 가중치가 가장 적은 노드인 1번 노드를 빼내고 1번 노드에 대한 방문 처리와 인접 노드들을 우선순위 큐에 넣어준다.
 	- 우선순위 큐에 인접 노드를 넣어 줄때 현재 노드(1번)의 가중치 + 인접 노드(3, 4번)의 가중치를 더한 값을 넣어준다.
 	
-![dijkstra ex](/img/algorithm/concept-dijkstra-2.png)
+![dijkstra ex]({{site.baseurl}}/img/algorithm/concept-dijkstra-2.png)
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
@@ -69,7 +69,7 @@ tags:
 
 - 큐에서 가중치가 가장 적은 4번 노드를 빼내어 방문 처리 및 인접 노드에 대한 가중치 갱신하여 큐에 넣어준다.
 
-![dijkstra ex](/img/algorithm/concept-dijkstra-3.png)
+![dijkstra ex]({{site.baseurl}}/img/algorithm/concept-dijkstra-3.png)
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
@@ -82,7 +82,7 @@ tags:
 - 큐에서 가중치가 가장 적은 2번 노드를 빼내어 방문 처리를 해준다.
 	- 인접 노드 처리는 2번 인접 노드인 1번은 이미 방문했으면서 가중치가 2번을 거쳐가는 것보다 적기 때문에 갱신하지 않고, 5번 노드에 대한 갱신 작업만 해준다.
 
-![dijkstra ex](/img/algorithm/concept-dijkstra-4.png)
+![dijkstra ex]({{site.baseurl}}/img/algorithm/concept-dijkstra-4.png)
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
@@ -96,7 +96,7 @@ tags:
 	- 3번 노드에서 인접한 4번 노드 또한 이미 방문 했으면서 가중치가 3번 노드를 거쳐 가는 것보다 적기 때문에 갱신하지 않는다.
 - 큐에서 다시 노드를 빼내면 이미 방문한 노드이면서 가중치가 더큰 3번 노드이므로 아무런 작업을 수행하지 않는다.
 
-![dijkstra ex](/img/algorithm/concept-dijkstra-5.png)
+![dijkstra ex]({{site.baseurl}}/img/algorithm/concept-dijkstra-5.png)
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
@@ -127,7 +127,6 @@ public class Main {
     public Main() {
         this.input();
         this.solution();
-        this.output();
     }
 
     public static void main(String[] args) {
@@ -165,10 +164,6 @@ public class Main {
         }
     }
 
-    public void output() {
-        System.out.println(this.result);
-    }
-
     public void solution() {
         this.dijkstra(this.startNode);
 
@@ -176,17 +171,22 @@ public class Main {
     }
 
     public void dijkstra(int startNode) {
+        // 최소 비용 순으로 뺄 우선순위 큐
         PriorityQueue<Node> queue = new PriorityQueue<>();
         Node currentNode, adjNode;
         ArrayList<Node> adjNodeList;
         int size;
 
+        // 시작 노드에 대한 정보 설정
         this.costArray[startNode] = 0;
         queue.offer(new Node(startNode, 0));
 
+        // 큐가 빌때 까지
         while(!queue.isEmpty()) {
+        	// 현재 방문할 노드
             currentNode = queue.poll();
 
+            // 현재 노드의 최소 거리가 현재 노드의 비용보다 크면 (현재 노드가 최소 거리가 아니라면)
             if(this.costArray[currentNode.node] >= currentNode.cost) {
                 adjNodeList = this.adjNodeListArray[currentNode.node];
                 size = adjNodeList.size();
