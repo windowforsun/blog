@@ -86,7 +86,7 @@ tags:
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
-최단거리|0|5|INF|3|INF
+최단거리|0|4|INF|3|INF
 
 우선순위|1|2|
 ---|---|---
@@ -100,7 +100,7 @@ tags:
 
 노드|1|2|3|4|5
 ---|---|---|---|---|---
-최단거리|0|5|5|3|INF
+최단거리|0|4|5|3|INF
 
 우선순위|
 ---|---
@@ -110,23 +110,33 @@ tags:
 
 	노드|1|2|3|4|5
 	---|---|---|---|---|---
-	최단거리|0|5|5|3|INF
+	최단거리|0|4|5|3|INF
 	
-- 다익스트라 알고리즘 시간복잡도 분석 추가하기!!!! 	
+- 우선순위 큐나 힙을 사용할 경우 다익스트라 알고리즘의 시간복잡도는 O(ElogV) 가 된다.
+	- 노드마다 인접한 간선들을 모드 검사하는 작업과 우선순위 큐에 원소를 넣고 삭제하는 작업에서 각 노드는 한번씩 방문되고, 모든 간선은 한번씩 검사되므로 모든 간선을 검서하는데 O(E) 의 시간이 걸린다.
+	- 큐에 들어가 O(E) 에서 큐에서 빼내고 다시 검사하는 작업을 추가하면 최종적으로 O(ElogE) 가되는데 그래프 간선의 개수는 노드의 개수보다 작기 때문에 O(logE) = O(logV) 로 볼수 있어서 최종적으로 O(ElogV) 가된다.
 
 ### 소스코드
 
 ```java
 public class Main {
+    // 출력 결과
+    private StringBuilder result;
+    // 노드 수
     private int nodeCount;
+    // 간선 수
     private int edgeCount;
+    // 시작 노드
     private int startNode;
+    // 단방향 연결 그래프 정보
     private ArrayList<Node>[] adjNodeListArray;
+    // 최단 거리 배열
     private int[] costArray;
 
     public Main() {
         this.input();
         this.solution();
+        this.output();
     }
 
     public static void main(String[] args) {
@@ -145,6 +155,8 @@ public class Main {
             this.startNode = Integer.parseInt(reader.readLine());
             this.adjNodeListArray = new ArrayList[this.nodeCount + 1];
             this.costArray = new int[this.nodeCount + 1];
+            this.result = new StringBuilder();
+
             Arrays.fill(this.costArray, Integer.MAX_VALUE);
 
             for(int i = 1; i <= this.nodeCount; i++) {
@@ -164,10 +176,21 @@ public class Main {
         }
     }
 
+    public void output() {
+        System.out.println(this.result);
+    }
+
     public void solution() {
         this.dijkstra(this.startNode);
 
-		System.out.println(Arrays.toString(this.costArray));
+        for(int i = 1; i <= this.nodeCount; i++) {
+            if(this.costArray[i] == Integer.MAX_VALUE) {
+                this.result.append("INF");
+            } else {
+                this.result.append(this.costArray[i]);
+            }
+            this.result.append("\n");
+        }
     }
 
     public void dijkstra(int startNode) {
@@ -177,32 +200,37 @@ public class Main {
         ArrayList<Node> adjNodeList;
         int size;
 
-        // 시작 노드에 대한 정보 설정
-        this.costArray[startNode] = 0;
+        // 시작 노드에서 시작노드의 비용은 0
         queue.offer(new Node(startNode, 0));
 
-        // 큐가 빌때 까지
+        // 큐가 빌때까지 반복
         while(!queue.isEmpty()) {
-        	// 현재 방문할 노드
+            // 혅재 방문할 노드
             currentNode = queue.poll();
 
-            // 현재 노드의 최소 거리가 현재 노드의 비용보다 크면 (현재 노드가 최소 거리가 아니라면)
-            if(this.costArray[currentNode.node] >= currentNode.cost) {
+            // 방문하지 않은 노드라면
+            if(this.costArray[currentNode.node] == Integer.MAX_VALUE) {
+                // 큐에 넣은 비용을 최단 거리로 설정
+                this.costArray[currentNode.node] = currentNode.cost;
+
+                // 현재 노드의 인접 노드들
                 adjNodeList = this.adjNodeListArray[currentNode.node];
                 size = adjNodeList.size();
 
                 for(int i = 0; i < size; i++) {
                     adjNode = adjNodeList.get(i);
 
-                    if(this.costArray[adjNode.node] > this.costArray[currentNode.node] + adjNode.cost) {
-                        this.costArray[adjNode.node] = this.costArray[currentNode.node] + adjNode.cost;
+                    // 인접 노드가 방문하지 않았다면
+                    if(this.costArray[adjNode.node] == Integer.MAX_VALUE) {
+                        // 인접 노드의 최단 거리 = 현재 노드의 최소 비용 + 인접 노드의 비용
+                        adjNode.cost += currentNode.cost;
                         queue.offer(adjNode);
                     }
                 }
             }
         }
     }
-    
+
     class Node implements Comparable<Node> {
         public int node;
         public int cost;
@@ -224,6 +252,7 @@ public class Main {
 - 우선순위 큐를 사용하지 않을 경우 결과는 같지만 성능에 차이가 있다.
 	- 다익스트라 알고리즘의 속도는 큐에서 노드를 꺼내오는 획수와 우선순위 큐의 갱신 횟수이다.
 	- 가중치가 가장 적은 노드를 먼저 방문해야 연산의 횟수를 줄일 수 있다.
+	- 하지만 정점의 수가 적거나, 간선의 수가 매우 많을 경우 우선순위 큐를 사용할 때가 더 성능적으로 안좋을 수도 있다.
 - 다익스트라 알고리즘을 구현할때는 상황에 따라 우선순위 큐에 대한 조건이 달라질 수 있다.
 	1. 큐에 넣은 순서
 	1. 정점까지의 거리 먼/가까운
@@ -239,3 +268,4 @@ public class Main {
 [다익스트라 알고리즘(Dijkstra's Algorithm)](https://jason9319.tistory.com/307)  
 [Dijkstra의 최단 경로 알고리즘 기본개념과 알고리즘](https://mattlee.tistory.com/50)  
 [13. 다익스트라(Dijkstra) 최단 거리 알고리즘](https://makefortune2.tistory.com/26)  
+[다익스트라 알고리즘(Dijkstra)](https://sungjk.github.io/2016/05/13/Dijkstra.html)  
