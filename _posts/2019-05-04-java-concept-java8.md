@@ -91,7 +91,7 @@ Collections.sort(myList, (My m1, My m2) -> {
 - 위의 예시와 같이 람다 표현식을 툥해 더욱 간결하고 직관적인 코드로 동일한 로직을 작성할 수 있다.
 - 위에서 언급했던 것과 같이 람다식은 **Functional Interface** 라는 메서드가 하나뿐인 함수형 인터페이스에만 사용할 수 있다.
 
-#### Stream API
+### Stream API
 - Java8 은 람다 표현식의 도입과 함께 람다식을 효율적으로 사용할 수 있도록 기존 API 에 람다식을 적용했다.
 - 대표적인 API 가 Stream API 이다.
 - Stream 은 Collection 을 다루는 새로운 방법이다.
@@ -121,7 +121,7 @@ int sum = myList.stream().filter(m -> m.getValue() < 5).mapToInt(My::getValue).s
 int sum = myList.parallelStream().filter(m -> m.getValue() < 5).mapToInt(My::getValue).sum();
 ```  
 
-#### Method Reference
+### Method Reference
 - Method Reference 는 이미 이름이 있는 메소드를 대상으로 한 람다식의 간략형을 뜻한다.
 - 메소드 참조를 나타내는 예약어로 `::` 를 사용한다.
 - 메소드 참조의 예와 대응하는 람다식은 아래와 같다.
@@ -140,7 +140,7 @@ ArrayList::new
 () -> new ArrayList<>();
 ```  
 
-#### 인터페이스의 Default Method
+### 인터페이스의 Default Method
 - Java 에서 Interface 에 새로운 메서드가 추가되면 하위 호환성이 깨지기 때문에 해당 인터페이스를 구현하는 모든 클래스에서 해당 메서드를 구현해야 한다.
 - Java8 에서는 Default Method 라는 개념이 추가되어 하위 호환성 문제 없이 Interface 에 새로운 메서드를 추가할 수 있다.
 - Default Method 란 Interface 에 구현된 메서드로 Interface 를 구현하는 클래스가 Override 하지 않을 경우 기본 구현체로 적용 된다.
