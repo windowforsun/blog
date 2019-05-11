@@ -4,7 +4,7 @@ classes: wide
 title: "[풀이] 백준 1135 뉴스 전하기"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '주어진 그래프에서 SCC 집합을 구하자'
+excerpt: '트리구조의 집단에서 뉴스를 전하는 최소 시간을 구하자'
 author: "window_for_sun"
 header-style: text
 categories :
