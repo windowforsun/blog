@@ -25,14 +25,14 @@ tags:
 # 방법
 - Rest API Unit Test 를 위한 의존성을 추가한다.
 - Rest API 에서 주고 받을 Model 객체를 만든다.
-- Rest API 로 쓸 Controller 를 만든다.
+- Rest API 로 사용할 Controller 를 만든다.
 - 필요에 따라 Service 클래스도 구현해 준다.
 - 테스트에 필요한 설정 클래스를 작성한다.
 - Junit 을 통해 Test 클래스에 Test Case 를 작성한다.
 
 # 예제
-## Test 관련 의존성 추가
-- pom.xml 에 아래와 같은 의존성이 필요하다. (Spring, Web 관련 의존성은 제외했다.)
+## 의존성 추가
+- pom.xml 에 아래와 같은 의존성이 필요하다.
 
 ```xml
 <dependency>
