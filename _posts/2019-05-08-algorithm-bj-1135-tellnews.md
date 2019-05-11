@@ -100,7 +100,7 @@ public class Main {
         System.out.println(this.result);
     }
 
-    // DFS 탐색을 해당 노드의 최대 깊이에 따른 전달 시간 반환
+    // DFS 탐색을 해당 노드의 깊이와 자식수에 따른 최대 전달 시간반환
     public int solution(int node) {
         // 현재 노드에서 자식노드의 깊이에 따른 전달 시간
         int maxDept = 0;
@@ -128,9 +128,9 @@ public class Main {
         // 오래된 순으로 탐색, 가장 깊이가 깊으면서 전달 시간이 오래 걸리는 노드를 먼저 방문해야함
         for(int i = 0; i < size; i++) {
             child = childList.get(i);
-            // 해당 자식노드를 방문하는 순서는 탐색 순서에 비례함
+            // 해당 자식노드를 방문하는 순서는 탐색 순서에 비례, 자식 노드의 전달 시간에 현재 노드가 방문하는 순서에 따른 시간을 추가
             child[1] += i;
-            // 현재 노드에서 전달 시간이 가장 오래 걸리는 자식 노드
+            // 현재 노드에서 전달 시간이 가장 오래걸리는 자식노드 + 자신이 자식노드를 방문하는 수를 통해 자신이 전달하는데 걸리는 최대 시간을 구함
             maxDept = Integer.max(maxDept, child[1]);
         }
 
