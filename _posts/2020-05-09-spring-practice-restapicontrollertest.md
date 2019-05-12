@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Rest API Unit Test"
+title: "[Spring 실습] Simple Rest API Unit Test"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Rest API 의 Unit Test 를 진행해보자'
+excerpt: '간단한 Rest API 의 Unit Test 를 진행해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -59,6 +59,23 @@ tags:
     <groupId>junit</groupId>
     <artifactId>junit</artifactId>
     <version>RELEASE</version>
+</dependency>
+<dependency>
+    <groupId>com.jayway.jsonpath</groupId>
+    <artifactId>json-path</artifactId>
+    <version>2.2.0</version>
+</dependency>
+<dependency>
+    <groupId>com.jayway.jsonpath</groupId>
+    <artifactId>json-path-assert</artifactId>
+    <version>2.2.0</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <version>2.23.4</version>
+    <scope>test</scope>
 </dependency>
 <dependency>
     <groupId>javax.servlet</groupId>
@@ -131,6 +148,12 @@ public class TestService {
         return result;
     }
 
+    public TestModel indate(TestModel model) {
+        modelMap.put(model.getKey(), model);
+
+        return model;
+    }
+
     public TestModel remove(String key) {
         return modelMap.remove(key);
     }
@@ -158,7 +181,6 @@ public class TestService {
     public void removeAll() {
         modelMap.clear();
     }
-}
 ```  
 
 ## Controller 클래스 만들기
@@ -236,9 +258,9 @@ public class TestRestController {
         return this.testService.read(key);
     }
 
-    @GetMapping("/{keyList}")
-    public List<TestModel> findList(@PathVariable List<String> keyList) {
-        return this.testService.readList(keyList);
+    @GetMapping("/[{keyList}]")
+    public List<TestModel> findList(@PathVariable String[] keyList) {
+        return this.testService.readList(Arrays.asList(keyList));
     }
 
     @PostMapping
@@ -246,9 +268,14 @@ public class TestRestController {
         return this.testService.create(model);
     }
 
-    @PatchMapping("/{key}")
-    public TestModel update(@PathVariable String key, @RequestBody TestModel model) {
+    @PatchMapping
+    public TestModel update(@RequestBody TestModel model) {
         return this.testService.update(model);
+    }
+
+    @PutMapping
+    public TestModel indate(@RequestBody TestModel model) {
+        return this.testService.indate(model);
     }
 
     @DeleteMapping("/{key}")
@@ -256,13 +283,14 @@ public class TestRestController {
         return this.testService.remove(key);
     }
 }
+
 ```  
 
 ## 설정 클래스 작성하기
 
 ```java
 @Configuration
-@ComponentScan("research")
+@ComponentScan("research.rest.exmy")
 public class TestControllerConfig {
     @Bean
     public ObjectMapper objectMapper() {
@@ -531,6 +559,189 @@ public class TestPostControllerTest {
 
 ```java
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
+
+@RunWith(SpringJUnit4ClassRunner.class)
+@WebAppConfiguration
+@ContextConfiguration(classes = TestControllerConfig.class)
+public class TestRestControllerTest {
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private TestRestController testRestController;
+    @Autowired
+    private TestService testService;
+    private TestModel defaultModel;
+
+    @Before
+    public void setUp() throws Exception {
+        this.mockMvc = standaloneSetup(this.testRestController).build();
+
+        ArrayList<String> strList = new ArrayList<>();
+        strList.add("a");
+        strList.add("b");
+
+        HashMap<String, String> map = new HashMap<>();
+        map.put("a", "a");
+        map.put("b", "b");
+
+        this.defaultModel = new TestModel("key1", 1, "a", strList, map);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        this.testService.removeAll();
+    }
+
+    @Test
+    public void create_Ok() throws Exception {
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(post("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(content)));
+    }
+
+    @Test
+    public void create_Fail() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        String expected = "";
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(post("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+
+    public void findOne_Ok() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        String expected = this.objectMapper.writeValueAsString(this.defaultModel);
+        String key = "key1";
+        this.mockMvc.perform(get("/test-rest/" + key)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+
+    @Test
+    public void findList_Ok() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        TestModel model2 = new TestModel();
+        model2.setKey("key2");
+        model2.setNum(22);
+        model2.setStr("2222");
+        this.testService.create(model2);
+
+        List<String> keyList = new ArrayList<>();
+        keyList.add("key1");
+        keyList.add("key2");
+        keyList.add("key3");
+
+        List<TestModel> expectedList = this.testService.readList(keyList);
+
+        String expected = this.objectMapper.writeValueAsString(expectedList);
+        String content = this.objectMapper.writeValueAsString(keyList);
+
+        this.mockMvc.perform(get("/test-rest/" + Arrays.toString(keyList.toArray()))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+
+    @Test
+    public void update_Ok() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        this.defaultModel.setStr("aaaaaaaaaaaaaaaa");
+        this.defaultModel.setNum(11111111);
+
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(patch("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(content)));
+    }
+
+    @Test
+    public void update_Fail() throws Exception {
+        this.defaultModel.setStr("aaaaaaaaaaaaaaaa");
+        this.defaultModel.setNum(11111111);
+
+        String expected = "";
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(patch("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+
+    @Test
+    public void indate_Ok() throws Exception {
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(put("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(content)));
+    }
+
+    @Test
+    public void indate2_Ok() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        this.defaultModel.setStr("aaaaaaaaaaaaaaaa");
+        this.defaultModel.setNum(11111111);
+
+        String content = this.objectMapper.writeValueAsString(this.defaultModel);
+
+        this.mockMvc.perform(put("/test-rest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(content))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(content)));
+    }
+
+    @Test
+    public void delete_Ok() throws Exception {
+        this.testService.create(this.defaultModel);
+
+        String expected = this.objectMapper.writeValueAsString(this.defaultModel);
+        String key = "key1";
+
+        this.mockMvc.perform(delete("/test-rest/" + key)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+
+    @Test
+    public void delete_Fail() throws Exception {
+        String expected = "";
+        String key = "key1";
+
+        this.mockMvc.perform(delete("/test-rest/" + key)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().string(equalTo(expected)));
+    }
+}
 ```  
 
 ---
