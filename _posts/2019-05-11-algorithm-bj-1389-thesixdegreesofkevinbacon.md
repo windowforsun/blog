@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Algorithm 개념] Floyd Warshall (플로이드 와샬) 알고리즘"
+title: "[풀이] 백준 1389 케빈 베이컨의 6단계 법칙"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '모든 정점의 최단거리를 구하는 Floyd Warshall 알고리즘에 대해 알아보자'
+excerpt: '케빈 베이턴의 수가 가장 적은 사람을 구하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,22 +16,39 @@ tags:
   - Floyd Warshall
 ---  
 
-## Floyd Warshall Algorithm 이란
-- 플로이드 와샬 알고리즘은 그래프에서 모든 꼭지점 사이의 최단 경로의 거리를 구하는 알고리즘이다.
-- 다익스트라 알고리즘을 모든 정점에서 수행한 것과 같은 알고리즘이지만 프로이드 와샬 알고리즘의 구현은 간단하다.
-- 음의 가중치를 갖는 간선이라도, 사이클이 존재하지 않는다면 결과값을 도출해 낼 수 있다.
+# 문제
+- 케빈 베이컨의 6단계 법칙이란
+	- 지구에 있는 모든 사람들은 최대 6단계 이내에서 서로 아는 사람으로 연결 될 수 있다.
+	- 케빈 베이컨 게임은 임의의 두 사람이 최소 몇 단계 만에 이어질 수 있는지 계산하는 게임이다.
+- 사람인 노드와 친구관계인 간선이 주어질 때 케빈 베이컨의 수가 가장 적은 사람을 구하라.
 
-## Floyd Warshall Algorithm
-- 플로이드 와샬 알고리즘은 3개의 반복문으로 이루어 진다.
-- 가장 바깥쪽 반복문은 A->..->Z 에서 `...` 에 해당되는 거쳐가는 노드이다.
-- 그 안쪽 반복문은 출발하는 노드 A에 해당된다.
-- 가장 안쪽 반복문은 도착하는 노드 Z에 해당된다.
-- 반복문 3개로 이루어져 있기 때문에 시간 복잡도는 O(n^3) 이 된다.
-	
-### 예시
+## 입력
+첫째 줄에 유저의 수 N (2 ≤ N ≤ 100)과 친구 관계의 수 M (1 ≤ M ≤ 5,000)이 주어진다. 둘째 줄부터 M개의 줄에는 친구 관계가 주어진다. 친구 관계는 A와 B로 이루어져 있으며, A와 B가 친구라는 뜻이다. A와 B가 친구이면, B와 A도 친구이며, A와 B가 같은 경우는 없다. 친구 관계는 중복되어 들어올 수도 있으며, 친구가 한 명도 없는 사람은 없다. 또, 모든 사람은 친구 관계로 연결되어져 있다.
 
+## 출력
+첫째 줄에 BOJ의 유저 중에서 케빈 베이컨의 수가 가장 작은 사람을 출력한다. 그런 사람이 여러 명일 경우에는 번호가 가장 작은 사람을 출력한다.
 
-### 소스코드
+## 예제 입력
+
+```
+5 5
+1 3
+1 4
+4 5
+4 3
+3 2
+```  
+
+## 예제 출력
+
+```
+3
+```  
+
+## 풀이
+- 주어진 모든 노드의 최단 거리를 구하면 된다.
+- 그래프에서 모든 노드에 대한 최단 거리를 구하는 알고리즘은 [플로이드 와샬 알고리즘]({{site.baseurl}}{% link _post/2019-05-10-algorithm-concept-floydwarshall.md %})이 있다.
+- 위 알고리즘을 모든 노드에 대한 최단 거리를 구하고, 이중 가장 적은 값을 가진 가장 적은 노드 번호가 결과값이 된다.
 
 ```java
 public class Main {
@@ -42,6 +59,7 @@ public class Main {
     }
 
     final int MAX = 10000000;
+    private int result;
     private int nodeCount;
     private int edgeCount;
     private int[][] adjMatrix;
@@ -111,19 +129,28 @@ public class Main {
             }
         }
 
-        for(int i = 0; i <= this.nodeCount; i++) {
-            System.out.println(Arrays.toString(this.adjMatrix[i]));
+        int sum, maxSum = MAX;
+        this.result = MAX;
+
+        for(int i = this.nodeCount; i > 0; i--) {
+            // 현재 노드에서 다른 노드까지의 가중치 총합
+            sum = 0;
+            for(int j = 1; j <= this.nodeCount; j++) {
+                if(i != j) {
+                    sum += this.adjMatrix[i][j];
+                }
+            }
+
+            // 최소값을 결과값으로
+            if(maxSum >= sum) {
+                this.result = i;
+                maxSum = sum;
+            }
         }
     }
 }
-```
-
-## Dijkstra Algorithm 참고사항
+```  
 
 ---
 ## Reference
-[Floyd-Warshall(플로이드 와샬) 알고리즘](https://dongdd.tistory.com/107)  
-[[알고리즘] ASP(3) - 플로이드 워셜 알고리즘 ( Flyod-Warshall Algorithm)](https://victorydntmd.tistory.com/108)  
-[플로이드 와샬 알고리즘 :: 마이구미](https://mygumi.tistory.com/110)  
-[플로이드-워셜 알고리즘(Floyd-Warshall Algorithm)](https://hsp1116.tistory.com/45)  
-
+[1389-케빈 베이컨의 6단계 법칙](https://www.acmicpc.net/problem/1389)  
