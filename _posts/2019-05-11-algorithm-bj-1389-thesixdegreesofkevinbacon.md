@@ -47,7 +47,7 @@ tags:
 
 ## 풀이
 - 주어진 모든 노드의 최단 거리를 구하면 된다.
-- 그래프에서 모든 노드에 대한 최단 거리를 구하는 알고리즘은 [플로이드 와샬 알고리즘]({{site.baseurl}}{% link _post/2019-05-10-algorithm-concept-floydwarshall.md %})이 있다.
+- 그래프에서 모든 노드에 대한 최단 거리를 구하는 알고리즘은 [플로이드 와샬 알고리즘]({{site.baseurl}}{% link _post/2019-05-10-algorithm-concept-floydwarshall.md %}) 이 있다.
 - 위 알고리즘을 모든 노드에 대한 최단 거리를 구하고, 이중 가장 적은 값을 가진 가장 적은 노드 번호가 결과값이 된다.
 
 ```java
