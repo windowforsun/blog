@@ -34,7 +34,7 @@ tags:
 ### 예시
 - 아래와 같은 총 4개의 정점과 6개의 정점으로 이루어진 그래프가 있다.
 
-![플로이드 와샬 1]({{site.baserurl}}/img/algorithm/concept-floydwarshall-1.png)
+![플로이드 와샬 1]({{site.baseurl}}/img/algorithm/concept-floydwarshall-1.png)
 
 - 4*4 이차원 배열을 INF(무한대)값으로 초기화 해준다.
 	- 사이클 간선을 뜻하는 `1*1, 2*2` .. 의 배열의 위체는 0값을 넣어준다.
@@ -64,7 +64,7 @@ tags:
 - 1번 노드를 경유하는 경우는 아래와 같다.
 	- 2->5 로 바로가는 경로보다 2->1->5 로가는 경로가 더 짧기 때문에 2->5 로가는 경로 정보를 갱신한다.
 
-		![플로이드 와샬 2]({{site.baserurl}}/img/algorithm/concept-floydwarshall-2.png)
+		![플로이드 와샬 2]({{site.baseurl}}/img/algorithm/concept-floydwarshall-2.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -77,7 +77,7 @@ tags:
 - 3번 노드를 경유하는 경우는 아래와 같다.
 	- 2->4 의 경로 보다 2->3->4 의 경로가 더 짧기 때문에 2->4 의 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 3]({{site.baserurl}}/img/algorithm/concept-floydwarshall-3.png)
+		![플로이드 와샬 3]({{site.baseurl}}/img/algorithm/concept-floydwarshall-3.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -89,7 +89,7 @@ tags:
 	
 	- 5->4 경로는 INF 이고, 5->3->4 의 경로가 존재하므로 5->4의 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 4]({{site.baserurl}}/img/algorithm/concept-floydwarshall-4.png)
+		![플로이드 와샬 4]({{site.baseurl}}/img/algorithm/concept-floydwarshall-4.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -102,7 +102,7 @@ tags:
 - 4번 노드를 경유하는 경우는 아래와 같다.
 	- 3->5 로 가는 경로는 INF 값이고, 3->4->5 로가는 경로가 존재 하므로 3->5 의 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 5]({{site.baserurl}}/img/algorithm/concept-floydwarshall-5.png)
+		![플로이드 와샬 5]({{site.baseurl}}/img/algorithm/concept-floydwarshall-5.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -115,7 +115,7 @@ tags:
 - 5번 노드를 경유하는 경우는 아래와 같다.
 	- 1->3 경로는 INF 이고, 1->5->3 의 경로가 존재하기 때문에 1->3 경로 정보를 갱신해준다.
 	
-		![플로이드 와샬 6]({{site.baserurl}}/img/algorithm/concept-floydwarshall-6.png)
+		![플로이드 와샬 6]({{site.baseurl}}/img/algorithm/concept-floydwarshall-6.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -127,7 +127,7 @@ tags:
 		
 	- 1->4 경로는 INF 이고, 1->5->4 의 경로가 존재하기 때문에 1->4 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 7]({{site.baserurl}}/img/algorithm/concept-floydwarshall-7.png)
+		![플로이드 와샬 7]({{site.baseurl}}/img/algorithm/concept-floydwarshall-7.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -139,7 +139,7 @@ tags:
 		
 	- 2->3 경로 보다 2->5->3 의 경로가 짧기 때문에 2->3 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 8]({{site.baserurl}}/img/algorithm/concept-floydwarshall-8.png)
+		![플로이드 와샬 8]({{site.baseurl}}/img/algorithm/concept-floydwarshall-8.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
@@ -151,7 +151,7 @@ tags:
 		
 	- 4->3 경로는 INF 이고, 4->5->3 의 경로가 존재하기 때문에 4->3 의 경로 정보를 갱신한다.
 	
-		![플로이드 와샬 9]({{site.baserurl}}/img/algorithm/concept-floydwarshall-9.png)
+		![플로이드 와샬 9]({{site.baseurl}}/img/algorithm/concept-floydwarshall-9.png)
 		
 		행\열|1|2|3|4|5
 		---|---|---|---|---|---
