@@ -20,6 +20,9 @@ tags:
 - 플로이드 와샬 알고리즘은 그래프에서 모든 꼭지점 사이의 최단 경로의 거리를 구하는 알고리즘이다.
 - 다익스트라 알고리즘을 모든 정점에서 수행한 것과 같은 알고리즘이지만 프로이드 와샬 알고리즘의 구현은 간단하다.
 - 음의 가중치를 갖는 간선이라도, 사이클이 존재하지 않는다면 결과값을 도출해 낼 수 있다.
+- 플로이드 와샬 알고리즘의 원리는 아래와 같다.
+	- 두 정점을 잇는 최소 비용 경로는 경유지를 거치거나 거치지 않는 경로 중 하나이다.
+	- 경유지를 거친다면 그것을 이루는 부분 경로 역시 최소 비용 경로어야 한다.
 
 ## Floyd Warshall Algorithm
 - 플로이드 와샬 알고리즘은 3개의 반복문으로 이루어 진다.
@@ -29,90 +32,193 @@ tags:
 - 반복문 3개로 이루어져 있기 때문에 시간 복잡도는 O(n^3) 이 된다.
 	
 ### 예시
+- 아래와 같은 총 4개의 정점과 6개의 정점으로 이루어진 그래프가 있다.
 
+![플로이드 와샬 1]({{site.baserurl}}/img/algorithm/concept-floydwarshall-1.png)
+
+- 4*4 이차원 배열을 INF(무한대)값으로 초기화 해준다.
+	- 사이클 간선을 뜻하는 `1*1, 2*2` .. 의 배열의 위체는 0값을 넣어준다.
+
+행\열|1|2|3|4|5
+---|---|---|---|---|---
+1|0|INF|INF|INF|INF
+2|INF|0|INF|INF|INF
+3|INF|INF|0|INF|INF
+4|INF|INF|INF|0|INF
+5|INF|INF|INF|INF|0
+
+
+- 위의 그래프에서 노드-간선->노드의 정보를 2차원 배열에 설정한다.
+
+
+행\열|1|2|3|4|5
+---|---|---|---|---|---
+1|0|INF|INF|INF|4
+2|-3|0|5|9|3
+3|INF|INF|0|2|INF
+4|INF|INF|INF|0|3
+5|INF|INF|1|INF|0
+
+- 그래프에서 경유(거쳐가는) 노드는 노란색, 출발 노드는 붉은색, 도착노드는 파란색으로 표시한다.
+- 경유하는 간선이 있는 경우만 예시로 든다.
+- 1번 노드를 경유하는 경우는 아래와 같다.
+	- 2->5 로 바로가는 경로보다 2->1->5 로가는 경로가 더 짧기 때문에 2->5 로가는 경로 정보를 갱신한다.
+
+		![플로이드 와샬 2]({{site.baserurl}}/img/algorithm/concept-floydwarshall-2.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|INF|INF|4
+		2|-3|0|5|9|1
+		3|INF|INF|0|2|INF
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|INF|0
+
+- 3번 노드를 경유하는 경우는 아래와 같다.
+	- 2->4 의 경로 보다 2->3->4 의 경로가 더 짧기 때문에 2->4 의 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 3]({{site.baserurl}}/img/algorithm/concept-floydwarshall-3.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|INF|INF|4
+		2|-3|0|5|7|1
+		3|INF|INF|0|2|INF
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|INF|0
+	
+	- 5->4 경로는 INF 이고, 5->3->4 의 경로가 존재하므로 5->4의 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 4]({{site.baserurl}}/img/algorithm/concept-floydwarshall-4.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|INF|INF|4
+		2|-3|0|5|7|1
+		3|INF|INF|0|2|INF
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|3|0
+
+- 4번 노드를 경유하는 경우는 아래와 같다.
+	- 3->5 로 가는 경로는 INF 값이고, 3->4->5 로가는 경로가 존재 하므로 3->5 의 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 5]({{site.baserurl}}/img/algorithm/concept-floydwarshall-5.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|INF|INF|4
+		2|-3|0|5|7|1
+		3|INF|INF|0|2|5
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|3|0
+		
+- 5번 노드를 경유하는 경우는 아래와 같다.
+	- 1->3 경로는 INF 이고, 1->5->3 의 경로가 존재하기 때문에 1->3 경로 정보를 갱신해준다.
+	
+		![플로이드 와샬 6]({{site.baserurl}}/img/algorithm/concept-floydwarshall-6.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|5|INF|4
+		2|-3|0|5|7|1
+		3|INF|INF|0|2|5
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|3|0
+		
+	- 1->4 경로는 INF 이고, 1->5->4 의 경로가 존재하기 때문에 1->4 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 7]({{site.baserurl}}/img/algorithm/concept-floydwarshall-7.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|5|7|4
+		2|-3|0|5|7|1
+		3|INF|INF|0|2|5
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|3|0
+		
+	- 2->3 경로 보다 2->5->3 의 경로가 짧기 때문에 2->3 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 8]({{site.baserurl}}/img/algorithm/concept-floydwarshall-8.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|5|7|4
+		2|-3|0|4|7|1
+		3|INF|INF|0|2|5
+		4|INF|INF|INF|0|3
+		5|INF|INF|1|3|0
+		
+	- 4->3 경로는 INF 이고, 4->5->3 의 경로가 존재하기 때문에 4->3 의 경로 정보를 갱신한다.
+	
+		![플로이드 와샬 9]({{site.baserurl}}/img/algorithm/concept-floydwarshall-9.png)
+		
+		행\열|1|2|3|4|5
+		---|---|---|---|---|---
+		1|0|INF|5|7|4
+		2|-3|0|4|7|1
+		3|INF|INF|0|2|5
+		4|INF|INF|4|0|3
+		5|INF|INF|1|3|0
+		
+- 최종적으로 주어진 그래프에서 모든 정점에 대한 최단거리는 아래와 같다.
+
+행\열|1|2|3|4|5
+---|---|---|---|---|---
+1|0|INF|5|7|4
+2|-3|0|4|7|1
+3|INF|INF|0|2|5
+4|INF|INF|4|0|3
+5|INF|INF|1|3|0
 
 ### 소스코드
 
 ```java
 public class Main {
-    public Main() {
+
+    private final int MAX = 10000;
+    private int[][] adjMatrix;
+
+    public FloydWarshall() {
         this.input();
         this.solution();
         this.output();
     }
-
-    final int MAX = 10000000;
-    private int nodeCount;
-    private int edgeCount;
-    private int[][] adjMatrix;
-
 
     public static void main(String[] args) {
         new Main();
     }
 
     public void input() {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-
-        try {
-            StringTokenizer token = new StringTokenizer(reader.readLine(), " ");
-            int a, b;
-
-            this.nodeCount = Integer.parseInt(token.nextToken());
-            this.edgeCount = Integer.parseInt(token.nextToken());
-            this.adjMatrix = new int[this.nodeCount + 1][this.nodeCount + 1];
-
-            for (int i = 1; i <= this.nodeCount; i++) {
-                for (int j = 1; j <= this.nodeCount; j++) {
-                    if (i == j) {
-                        this.adjMatrix[i][j] = 0;
-                    } else {
-                        this.adjMatrix[i][j] = MAX;
-                    }
-                }
-
-            }
-
-            for (int i = 0; i < this.edgeCount; i++) {
-                token = new StringTokenizer(reader.readLine(), " ");
-                a = Integer.parseInt(token.nextToken());
-                b = Integer.parseInt(token.nextToken());
-
-                this.adjMatrix[a][b] = 1;
-                this.adjMatrix[b][a] = 1;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        this.adjMatrix = new int[][]{
+                {0, MAX, MAX, MAX, 4},
+                {-3, 0, 5, 9, 3},
+                {MAX, MAX, 0, 2, MAX},
+                {MAX, MAX, MAX, 0, 3},
+                {MAX, MAX, 1, MAX, 0}
+        };
     }
 
     public void output() {
-        System.out.println(this.result);
+        for(int i = 0; i < 5; i++) {
+            System.out.println(Arrays.toString(this.adjMatrix[i]));
+        }
     }
 
     public void solution() {
-        int value;
+        int middleValue;
 
-        // 거쳐가는 중간 노드
-        for(int middle = 1; middle <= this.nodeCount; middle++) {
-            // 시작 노드
-            for(int start = 1; start <= this.nodeCount; start++) {
-                // 도착 노드
-                for(int end = 1; end <= this.nodeCount; end++) {
-                    // (시작 - 중간) + (중간 + 도착)
-                    value = this.adjMatrix[start][middle] + this.adjMatrix[middle][end];
-                    // 중간노드를 거쳐가는게 더 가중치가 적다면 갱신
-                    if(this.adjMatrix[start][end] > value) {
-                        this.adjMatrix[start][end] = value;
+        for(int middle = 0; middle < 5; middle++) {
+            for(int start = 0; start < 5; start++) {
+                for(int end = 0; end < 5; end++) {
+                    middleValue = this.adjMatrix[start][middle] + this.adjMatrix[middle][end];
+
+                    if(this.adjMatrix[start][end] > middleValue) {
+                        System.out.println((start + 1) + ", " + (middle + 1) + ", " + (end + 1) + " = " + middleValue);
+                        this.adjMatrix[start][end] = middleValue;
                     }
                 }
             }
-        }
-
-        for(int i = 0; i <= this.nodeCount; i++) {
-            System.out.println(Arrays.toString(this.adjMatrix[i]));
         }
     }
 }
