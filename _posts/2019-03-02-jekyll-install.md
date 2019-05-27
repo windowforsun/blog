@@ -1,14 +1,14 @@
 --- 
 layout: single
 classes: wide
-title: "윈도우에서 Jekyll 환경 구성하기"
+title: "[Jekyll] 윈도우에서 Jekyll 환경 구성하기"
 header:
   overlay_image: /img/blog-bg.jpg
 excerpt: '윈도우에서 Jekyll 구성하는 법을 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Blog
+  - Jekyll
 tags:
     - Blog
     - Jekyll
