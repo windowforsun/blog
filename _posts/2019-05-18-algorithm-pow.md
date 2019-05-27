@@ -12,6 +12,7 @@ categories :
 tags:
   - Algorithm
   - Pow
+use_math : true
 ---  
 
 ## 지수승 알고리즘
@@ -104,6 +105,16 @@ $$
 \mbox{Concatenation: } & A\circ B  = \{xy\mid x\in A \mbox{ and } y\in B\} \\
 \mbox{Star: } & A^\star  = \{x_1x_2\ldots x_k \mid  k\geq 0 \mbox{ and each } x_i\in A\} \\
 \end{align}
+$$
+
+$
+This formula $f(x) = x^2$ is an example.
+$
+
+$$
+\lim_{x\to 0}{\frac{e^x-1}{2x}}
+\overset{\left[\frac{0}{0}\right]}{\underset{\mathrm{H}}{=}}
+\lim_{x\to 0}{\frac{e^x}{2}}={\frac{1}{2}}
 $$
 
 ---
