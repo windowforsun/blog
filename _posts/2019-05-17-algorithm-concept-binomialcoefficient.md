@@ -20,12 +20,18 @@ tags:
 - 주어진 크기의 집합에서 원하는 개수만큼 순서없이 뽑느 조합의 가짓수를 말한다.
 - 2를 상징하는 이항이라는 말이 붙은 이유는 하나의 원소에 대해 뽑거나, 안뽑거나 두 가지 선택만 있기 때문이다.
 - N 개의 공에서 K개의 공을 뽑은 경우의 수
-	- nCk
+	- nCk 
 
 ## 이항 계수(Binomial Coefficient) 알고리즘
-- 직접 계산 : nCk = n! / k!(n-k)!)
-- DP : nCk = n-1Ck-1 + nCk-1
-- 페르마의 소정리 : 
+### 직접 계산
+- nCk = n! / k!(n-k)!)
+
+### DP
+- nCk = n-1Ck + nCk-1
+
+### 페르마의 소정리
+
+- ㅇ
 	
 ### 예시
 
@@ -36,5 +42,6 @@ tags:
 
 ---
 ## Reference
-[Floyd-Warshall(플로이드 와샬) 알고리즘](https://dongdd.tistory.com/107)  \ 
+[[조합론] 이항계수 알고리즘 3가지](https://shoark7.github.io/programming/algorithm/3-ways-to-get-binomial-coefficients.html)
+[38. 이항계수 구하기 알고리즘 (재귀 프로그래밍)](https://makefortune2.tistory.com/109)
 
