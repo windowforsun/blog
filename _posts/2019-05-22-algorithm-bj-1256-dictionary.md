@@ -39,11 +39,11 @@ azaz
 ```  
 
 ## 풀이
-- 조합 알고리즘을 이용해서 a와 z의 개수에 따른 문자열의 개수는 아래와 같다.
-	- a+zCa = a+zCz
-	- ai,zj = a(i-1),zj + ai,z(j-1)
+- 조합 알고리즘을 이용해서 a의 개수 n과 z의 개수 m에 따른 문자열의 총 개수는 아래와 같다.
+	- n+mCn = n+mCm
+	- n+mCn = n-1+mCm + n+m-1Cn
 
-a\z|1|2|3|4|5|6
+n\m|1|2|3|4|5|6
 ---|---|---|---|---|---|---
 1|2|3|4|5|6|7
 2|3|3|10|15|21|28 
@@ -52,8 +52,8 @@ a\z|1|2|3|4|5|6
 5|6|21|56|126|252|462
 6|7|28|84|210|462|904
 
-- ai,zj = a(i-1),zj + ai,z(j-1) 식을 다른 표현으로 하면 ai,zj = (a로 시작하는 개수) + (z로 시작하는 개수)
-- 위 식을 통해 ai,zj 에서 a로 시작하는 개수는 a(i-1),zj 의 개수임을 알 수 있다.
+- n+mCn = n-1+mCm + n+m-1Cn 식을 다른 표현으로 하면 n+mCn = (a로 시작하는 개수) + (z로 시작하는 개수)
+- 위 식을 통해 n+mCn 에서 a로 시작하는 개수는 n-1+mCm 임을 알 수 있다.
 
 ```java
 public class Main {
@@ -123,6 +123,7 @@ public class Main {
         // DP 를 통해 문자열의 총 개수를 구함
         for(int i = 1; i <= this.aCount; i++) {
             for(int j = 1; j <= this.zCount; j++) {
+            	// n+mCn = n-1+mCm + n+m-1Cn
                 this.totalCountMatrix[i][j] = Integer.min(this.totalCountMatrix[i - 1][j] + this.totalCountMatrix[i][j - 1], MAX);
             }
         }
