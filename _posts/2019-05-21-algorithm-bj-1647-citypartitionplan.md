@@ -13,7 +13,6 @@ tags:
   - Algorithm
   - MST
   - Disjoint Set
-  - MST
 ---  
 
 # 문제
