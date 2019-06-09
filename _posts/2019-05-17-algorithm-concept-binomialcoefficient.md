@@ -28,6 +28,33 @@ tags:
 ### 직접 계산
 - nCk = n! / k!(n-k)!
 
+```java
+public class Main {
+    public static void main(String[] args){
+        Main main = new Main();
+
+        System.out.println(main.solution(20, 4));
+    }
+
+    public long solution(int n, int k) {
+        long result = 1;
+
+        if(n < k) {
+            result = 0;
+        } else if(k == 0) {
+            result = 1;
+        } else {
+            for(int i = n, j = 1; j <= k; i--, j++) {
+                result *= i;
+                result /= j;
+            }
+        }
+
+        return result;
+    }
+}
+```  
+
 ### DP
 - nCk = n-1Ck + n-1Ck-1
 
