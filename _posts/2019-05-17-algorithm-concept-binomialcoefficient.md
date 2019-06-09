@@ -27,7 +27,7 @@ tags:
 - nCk = n! / k!(n-k)!)
 
 ### DP
-- nCk = n-1Ck + nCk-1
+- nCk = n-1Ck + n-1Ck-1
 
 ### 페르마의 소정리
 
