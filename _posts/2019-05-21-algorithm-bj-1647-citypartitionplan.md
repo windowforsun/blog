@@ -4,7 +4,7 @@ classes: wide
 title: "[풀이] 백준 1647 도시 분할 계획"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '주어진 그래프에서 SCC 집합을 구하자'
+excerpt: '도시를 2개로 분할하는 최소 비용을 구하자'
 author: "window_for_sun"
 header-style: text
 categories :
