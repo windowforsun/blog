@@ -83,12 +83,12 @@ total 12
 ### `scp` FTP 명령어를 사용해서 키 등록
 
 ```
-[windowforsun@localhost ~]$ scp /home/windowforsun/.ssh/id_rsa.pub windowforsun2@removeserver:/home/windowforsun2/.ssh/authorized_keys
-windowforsun2@removeserver's password: # 접속 서버 계정의 암호
+[windowforsun@localhost ~]$ scp /home/windowforsun/.ssh/id_rsa.pub windowforsun2@remoteserver:/home/windowforsun2/.ssh/authorized_keys
+windowforsun2@remoteserver's password: # 접속 서버 계정의 암호
 id_rsa.pub                                          100%  233     0.2KB/s   00:00  
 ```  
 
-- 현재 접속으로 사용할 계정인 `windowforsun` 의 공개키를 removeserver 의 `windowforsun2` 의 `authorized_keys` 에 복사해 키를 등록한다.
+- 현재 접속으로 사용할 계정인 `windowforsun` 의 공개키를 remoteserver 의 `windowforsun2` 의 `authorized_keys` 에 복사해 키를 등록한다.
 
 ### 원격 서버에 직접 접속해서 키 등록
 
@@ -102,8 +102,8 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAsEc+lci3mHqjbY11nDAJFp+FP4aSRfj7c6NZ46RxiwWd
 - 접속할 원격 서버에 접속한다.
 
 ```
-[windowforsun@localhost ~]$ ssh windowforsun2@removeserver
-windowforsun2@removeserver's password: # 접속 서버 계정의 암호
+[windowforsun@localhost ~]$ ssh windowforsun2@remoteserver
+windowforsun2@remoteserver's password: # 접속 서버 계정의 암호
 ```  
 
 - 원격 서버 계정의 `/hom/<원격서버계정명>/.ssh/authorized_keys` 에 복사한 public key 를 넣어 준다.
@@ -118,7 +118,7 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAsEc+lci3mHqjbY11nDAJFp+FP4aSRfj7c6NZ46RxiwWd
 - 등록된 원격 서버에 접속하고 키 생성시 입력했던 비밀번호가 있다면 입력해 준다.
 
 ```
-[windowforsun2@localhost ~]$ ssh windowforsun@removeserver
+[windowforsun2@localhost ~]$ ssh windowforsun@remoteserver
 Enter passphrase for key '/home/windowforsun/.ssh/id_rsa':
 ```  
 
