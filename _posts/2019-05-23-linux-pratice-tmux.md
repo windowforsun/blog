@@ -418,6 +418,8 @@ bind-key y set-window-option synchronize-panes
 
 - `<prefix> + z` : 현재 팬을 전체화면으로 확대하거나, 전체화면으로 확대된 팬을 다시 원래 팬 레아이웃으로 축소한다.
 
+- `<prefix> + y` : 현재 윈도우에 구성된 모든 팬에 같은 입력을 하도록 한다.
+
 - `tmux list-windows` : 현재 구성된 팬 레아이웃 정보를 출력한다.
 
 ## 기타 단축키 관련
