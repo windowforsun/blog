@@ -155,11 +155,11 @@ name: test_project
 root: ~/
 
 # tmux 세션을 시작 할 때 만들 윈도우 및 팬, 레아이웃, 명령어를 지정
+ # 3개의 윈도우가 실행 된다.
 windows:
-  # 3개의 윈도우가 실행 된다.
+  # editor 윈도우에는 2개의 팬이 존재한다.
   - editor:
       layout: main-vertical
-      # editor 윈도우에는 2개의 팬이 존재한다.
       panes:
         - vim
         - guard
