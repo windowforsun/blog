@@ -21,10 +21,10 @@ tags:
 - CentOS 6
 - tmux 2.3
 - RVM
-- Ruby 2.6 
+- Ruby 2.4
 
 ## 사전 작업
-	- [Ruby 설치]({{site.baseurl}}{% link _posts/2019-05-25-linux-practice-ruby.md %})
+- tmuxinator 설치를 위해서는 [ruby 2.4]({{site.baseurl}}{% link _posts/2019-05-25-linux-practice-ruby.md %}) 이상 버전이 설치되어야 한다.
 
 ## Tmuxinator 란
 

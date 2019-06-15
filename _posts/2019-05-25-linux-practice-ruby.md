@@ -18,11 +18,10 @@ tags:
 ## 환경
 - CentOS 6
 - RVM
-- Ruby 2.6 
+- Ruby 2.4
 
 ## RVM / Ruby 설치
 
-- tmuxinator 설치를 위해서는 ruby 2.4 이상 버전이 설치되어야 한다.
 - Centos 에서 안전하게 2.4 이상의 Ruby 를 설치하기 위해 RVM(Ruby Version Manager) 를 사용한다.
 
 - ruby 설치를 위한 기본적인 패키지 설치
