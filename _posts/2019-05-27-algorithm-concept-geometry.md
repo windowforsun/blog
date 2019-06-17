@@ -36,7 +36,7 @@ use_math : true
 	- a는 b로 부터 반시계 방향에 위치하고 있다.
 	- a는 c로 부터 시계 방향에 위치하고 있다.
 
-![두 선번 방향1](/img/algorithm/concept-geometry-1.jpg)
+![두 선번 방향1]({{site.baseurl}}/img/algorithm/concept-geometry-1.jpg)
 
 - 이렇게 벡터들에 대해서 상대적인으로 시계, 반시계 방향인지 몇도인지 파악하는 것이 방향 판별이다.
 
@@ -214,7 +214,7 @@ class Vector {
 ## 두 선분의 교차점 구하기
 - 한 직선위의 두 선분의 교차점 구하기에서는 아래와 같은 경우로 나눠 생각한다.
 
-	![두 선번 방향2](/img/algorithm/concept-geometry-2.jpg)
+	![두 선번 방향2]({{site.baseurl}}/img/algorithm/concept-geometry-2.jpg)
 
 	- 선분이 한점에서 겹친다.
 	- 선분이 완전히 겹친다.
@@ -460,7 +460,7 @@ class Vector{
 	- $\vec{A}$와 $\vec{B}$ 를 지나는 선분 x
 	- $\vec{C}$와 $\vec{D}$ 를 지나는 선분 y
 
-	![두 선번 방향3](/img/algorithm/concept-geometry-3.jpg)
+	![두 선번 방향3]({{site.baseurl}}/img/algorithm/concept-geometry-3.jpg)
 	
 	- $\vec{A}$ 를 기준으로 $\vec{C}$는 시계방향이고, $\vec{D}$는 반시계 방향이다.
 	- 즉 선분의 한 벡터를 기준으로 교차하는지 구하는 선분의 두 벡터가 각각 시계방향, 반시계방향이면 이는 교차함을 알수 있다.
@@ -633,12 +633,12 @@ class Vector{
 
 ## 다각형에서 내부 외부 판별하기
 
-![두 선번 방향3](/img/algorithm/concept-geometry-4.jpg)
+![두 선번 방향3]({{site.baseurl}}/img/algorithm/concept-geometry-4.jpg)
 
 - 위 그림에서 K의 점과 L점이 주어진 다각형에 내부에 위치하는지 외부에 위치하는지 판별해보자.
 - 각 두 점에서 x축과 평행하는 직선을 그어 준다.
 
-![두 선번 방향3](/img/algorithm/concept-geometry-5.jpg)
+![두 선번 방향3]({{site.baseurl}}/img/algorithm/concept-geometry-5.jpg)
 
 - 다각형의 외부에 있는 L은 오른쪽 방향으로 보았을 때 다각형의 면과 교차되는 점의 개수가 짝수개이다.
 - 다각형의 내부에 있는 K는 오른쪽 방향으로 보았을 때 다각형의 면과 교차되는 점의 개수가 홀수개이다.
