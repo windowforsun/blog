@@ -14,6 +14,7 @@ tags:
   - Geometry
   - Vector
   - Polygon
+  - CCW
 use_math : true
 ---  
 
