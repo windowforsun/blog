@@ -19,7 +19,7 @@ use_math : true
 
 ## Convex Hull(볼록 껍질) 이란
 - 2차원 평면상에 여러개의 점이 있을 때 주어진 점들을 모두 포함하는 최소 크기의 다각형을 뜻한다.
-- 볼록 껍질은 `Graham's Scan` 알고리즘을 통해 구할 수 있다.
+- 볼록 껍질은 `Graham's Scan` 그라함 스캔 알고리즘을 통해 구할 수 있다.
 
 ![convex hull 1]({{site.baseurl}}/img/algorithm/concept-convexhull-1.png)
 
