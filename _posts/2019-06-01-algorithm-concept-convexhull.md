@@ -152,7 +152,130 @@ G|H|I
 - 소스코드
 
 ```java
+public class Main {
+    public Vertex[] vertexArray;
 
+    public Main() {
+        this.vertexArray = new Vertex[9];
+        this.vertexArray[0] = new Vertex(0, 0); // A
+        this.vertexArray[1] = new Vertex(3, 1); // D
+        this.vertexArray[2] = new Vertex(4, 2); // E
+        this.vertexArray[3] = new Vertex(3, 3); // F
+        this.vertexArray[4] = new Vertex(2, 4); // G
+        this.vertexArray[5] = new Vertex(-1, 3); // H
+        this.vertexArray[6] = new Vertex(-2, 1); // I
+        this.vertexArray[7] = new Vertex(0, 2); // C
+        this.vertexArray[8] = new Vertex(2, 3); // B
+
+        this.solution();
+    }
+
+    public static void main(String[] args) {
+        Main main = new Main();
+    }
+
+    public void solution() {
+        int size = this.vertexArray.length, nextIndex;
+        Vertex start, end, next = null;
+        LinkedList<Vertex> stack = new LinkedList<>();
+
+        // 좌표 순으로 정렬한다. y값이 가장 작거나, x값이 가장 작은
+        Arrays.sort(this.vertexArray);
+
+        // 가장 작은 좌표가 기준점이 된다.(배열에서 0번째)
+        // 기준점에 대한 각 좌표들의 상대 좌표를 구한다.
+        for(int i = 1; i < size; i++) {
+            this.vertexArray[i].p = this.vertexArray[i].x - this.vertexArray[0].x;
+            this.vertexArray[i].q = this.vertexArray[i].y - this.vertexArray[0].y;
+        }
+
+        // 기준점 상대 좌표를 통한 각도가 작은 순으로 정렬
+        Arrays.sort(this.vertexArray);
+
+        stack.push(this.vertexArray[0]);
+        stack.push(this.vertexArray[1]);
+        nextIndex = 2;
+
+        while(nextIndex < size) {
+
+            // 스택에 2개이상의 점이 있거나 start-end 선과 next 점이 반시계(좌회전) 일때까지 반복한다.
+            while(stack.size() >= 2) {
+                end = stack.pop();
+                start = stack.peek();
+                next = this.vertexArray[nextIndex];
+
+                // start-end 선과 next 점이 반시계(좌회전) 일 경우
+                if(this.ccw(start, end, next) >= 0) {
+                    stack.push(end);
+                    break;
+                }
+            }
+
+            // 각도로 정렬된 순서에서 다음 점으로 이동
+            nextIndex++;
+            stack.push(next);
+        }
+
+        System.out.println(Arrays.toString(stack.toArray()));
+    }
+
+    public double ccw(Vertex p, Vertex v1, Vertex v2) {
+        return this.ccw(minusVector(v1, p), minusVector(v2, p));
+    }
+
+    public static double ccw(Vertex v1, Vertex v2) {
+        return (v1.x * v2.y) - (v1.y * v2.x);
+    }
+    
+    public Vertex minusVector(Vertex v1, Vertex v2) {
+        return new Vertex(v1.x - v2.x, v1.y - v2.y);
+    }
+
+    class Vertex implements Comparable<Vertex> {
+        public int x;
+        public int y;
+        // 기준점으로 부터 상대 위치
+        public int p;
+        public int q;
+
+        public Vertex(int x, int y) {
+            this.x = x;
+            this.y = y;
+            this.p = 1;
+            this.q = 0;
+        }
+
+        @Override
+        public int compareTo(Vertex o) {
+            long angleValue1 = this.q * o.p;
+            long angleValue2 = this.p * o.q;
+            int result = 0;
+
+            if(angleValue1 != angleValue2) {
+                // 각도로 정렬할 때
+                if(angleValue1 < angleValue2) {
+                    result = -1;
+                } else {
+                    result = 1;
+                }
+            } else {
+                // 좌표로 정렬할 때
+                if(this.y != o.y) {
+                    result = this.y - o.y;
+                } else {
+                    result = this.x - o.x;
+                }
+            }
+
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "x:" + this.x + ", y:" + this.y + ", p:" + this.p + ", p:" + this.q + "\n";
+        }
+    }
+}
 ```  
 
 ---
