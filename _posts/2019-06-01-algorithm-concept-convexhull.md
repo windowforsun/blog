@@ -148,7 +148,7 @@ G|H|I
 ![convex hull 14]({{site.baseurl}}/img/algorithm/concept-convexhull-14.png)
 
 - 주의할 사항으로는 `ccw < 0` 일 경우에는 `start-end, next` 의 ccw 가 >= 0일 때까지 pop(end), peek(start), next 를 계속 반복해준다.
-
+- `Graham Scan` 알고리즘은 2번의 정렬이 필요한데, 이로인해 시간복잡도는 정렬 알고리즘에 비례하는 O(nlogn) 이 된다.
 - 소스코드
 
 ```java
@@ -205,6 +205,8 @@ public class Main {
                 next = this.vertexArray[nextIndex];
 
                 // start-end 선과 next 점이 반시계(좌회전) 일 경우
+                // >= 일경우에는 같은 직선상에서 가운데에 있는 점도 껌질로 포함하고
+                // > 일경우에는 같은 직선상에서 가운데에 있는 점은 껍질로 포함하지 않는다.
                 if(this.ccw(start, end, next) >= 0) {
                     stack.push(end);
                     break;
