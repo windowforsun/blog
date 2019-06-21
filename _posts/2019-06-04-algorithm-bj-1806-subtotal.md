@@ -41,7 +41,7 @@ use_math : true
 
 ## 풀이
 - 문제는 별다른 알고리즘없이 $O(N^2)$ 의 시간복잡도로 해결할 수 있다.
-- [Two Pointers]({{site.baseurl}}{% link _posts/2019-05-27-algorithm-concept-twopointers.md %}) 알고리즘을 사용하면 $O(N)$ 의 시간복잡도로 문제 해결이 가능하다.
+- [Two Pointers]({{site.baseurl}}{% link _posts/2019-06-03-algorithm-concept-twopointers.md %}) 알고리즘을 사용하면 $O(N)$ 의 시간복잡도로 문제 해결이 가능하다.
 
 ```java
 public class Main {

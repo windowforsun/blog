@@ -57,7 +57,7 @@ tags:
 ## 풀이
 - 문제을 해결하기 위해서 아래의 알고리즘을 활용한다.
 	- [CCW]({{site.baseurl}}{% link _posts/2019-05-27-algorithm-concept-geometry.md %}) : 한 선분에서 다른 점까지의 각도가 180도 이하인지 를 판별한다.
-	- [Graham's Scan]({{site.baseurl}}{% link _posts/2019-05-27-algorithm-concept-convexhull.md %}) : ccw 를 활용해서 볼록 껍질을 구한다.
+	- [Graham's Scan]({{site.baseurl}}{% link _posts/2019-06-01-algorithm-concept-convexhull.md %}) : ccw 를 활용해서 볼록 껍질을 구한다.
 
 ```java
 public class Main {
