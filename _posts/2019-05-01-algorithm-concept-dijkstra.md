@@ -180,11 +180,13 @@ public class Main {
         System.out.println(this.result);
     }
 
-    public void solution() {
-        this.dijkstra(this.startNode);
 
-        for(int i = 1; i <= this.nodeCount; i++) {
-            if(this.costArray[i] == Integer.MAX_VALUE) {
+    public void solution() {
+        this.dijkstraWithPriorityQueue(this.startNode);
+//        this.dijkstra(this.startNode);
+
+        for (int i = 1; i <= this.nodeCount; i++) {
+            if (this.costArray[i] == Integer.MAX_VALUE) {
                 this.result.append("INF");
             } else {
                 this.result.append(this.costArray[i]);
@@ -193,7 +195,7 @@ public class Main {
         }
     }
 
-    public void dijkstra(int startNode) {
+    public void dijkstraWithPriorityQueue(int startNode) {
         // 최소 비용 순으로 뺄 우선순위 큐
         PriorityQueue<Node> queue = new PriorityQueue<>();
         Node currentNode, adjNode;
@@ -204,12 +206,12 @@ public class Main {
         queue.offer(new Node(startNode, 0));
 
         // 큐가 빌때까지 반복
-        while(!queue.isEmpty()) {
+        while (!queue.isEmpty()) {
             // 혅재 방문할 노드
             currentNode = queue.poll();
 
             // 방문하지 않은 노드라면
-            if(this.costArray[currentNode.node] == Integer.MAX_VALUE) {
+            if (this.costArray[currentNode.node] == Integer.MAX_VALUE) {
                 // 큐에 넣은 비용을 최단 거리로 설정
                 this.costArray[currentNode.node] = currentNode.cost;
 
@@ -217,12 +219,41 @@ public class Main {
                 adjNodeList = this.adjNodeListArray[currentNode.node];
                 size = adjNodeList.size();
 
-                for(int i = 0; i < size; i++) {
+                for (int i = 0; i < size; i++) {
                     adjNode = adjNodeList.get(i);
 
                     // 인접 노드가 방문하지 않았다면
-                    if(this.costArray[adjNode.node] == Integer.MAX_VALUE) {
+                    if (this.costArray[adjNode.node] == Integer.MAX_VALUE) {
                         // 인접 노드의 최단 거리 = 현재 노드의 최소 비용 + 인접 노드의 비용
+                        adjNode.cost += currentNode.cost;
+                        queue.offer(adjNode);
+                    }
+                }
+            }
+        }
+    }
+
+    public void dijkstra(int startNode) {
+        LinkedList<Node> queue = new LinkedList<>();
+        Node currentNode, adjNode;
+        ArrayList<Node> adjList;
+        int size;
+
+        queue.offer(new Node(startNode, 0));
+
+        while(!queue.isEmpty()) {
+            currentNode = queue.poll();
+
+            if(this.costArray[currentNode.node] > currentNode.cost) {
+                this.costArray[currentNode.node] = currentNode.cost;
+
+                adjList = this.adjNodeListArray[currentNode.node];
+                size = adjList.size();
+
+                for(int i = 0; i < size; i++) {
+                    adjNode = adjList.get(i);
+
+                    if(this.costArray[adjNode.node] > adjNode.cost + currentNode.node) {
                         adjNode.cost += currentNode.cost;
                         queue.offer(adjNode);
                     }
