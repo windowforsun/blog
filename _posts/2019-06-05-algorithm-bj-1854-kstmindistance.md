@@ -59,39 +59,23 @@ n개의 줄을 출력한다. i번째 줄에 1번 도시에서 i번 도시로 가
 
 ## 풀이
 - 기존 Dijkstra 알고리즘을 활용한다.
-- Dijkstra 알고리즘에서 기존에 사용하던 방문 노드의 순서를 거리의 오름차순으로 저장하던 우선순위 큐외에, 각 노드에 도착할 수 있는 거리를 내림차순으로 저장하는 우선순위 큐를 사용한다.
+- Dijkstra 알고리즘에서 기존에 사용하던 방문 노드의 순서를 거리의 오름차순으로 저장하던 우선순위 큐외에, 각 노드에 도착할 수 있는 거리를 내림차순으로 저장하는 우선순위 큐배열을 추가적으로 사용한다.
 - Dijkstra 알고리즘에서 아래 조건에 따라 목적지에 대한 최단경로가 아니여서 제외되는 경로의 정보를 취합하면 문제를 해결 할 수 있다.
 	- 노드의 우선순위 큐 원소의 개수가 k 보다 작으면 큐에 추가한다.
 	- 노드의 우선순위 큐 원소의 개수가 k 와 같거나 크지만, 가장 큰 수가 현재 거리보다 작다면 우선순위 큐를 갱신해준다.
+- Java 의 PriorityQueue 를 사용할때 시간이 생각보다 오래 걸려서 
 
 ```java
 public class Main {
-
-    public TestHelper testHelper = new TestHelper();
-
-    class TestHelper {
-        private ByteArrayOutputStream out;
-
-        public TestHelper() {
-            this.out = new ByteArrayOutputStream();
-
-            System.setOut(new PrintStream(this.out));
-        }
-
-        public String getOutput() {
-            return this.out.toString().trim();
-        }
-    }
-
-    public static void main(String[] args) {
-        new Main();
-    }
-
     private StringBuilder result;
     private int nodeCount;
     private int edgeCount;
     private int k;
     private ArrayList<Node>[] adjListArray;
+    
+    public static void main(String[] args) {
+        new Main();
+    }
 
     public Main() {
         this.input();
