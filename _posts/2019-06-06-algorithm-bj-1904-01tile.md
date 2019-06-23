@@ -13,7 +13,7 @@ tags:
   - Algorithm
   - DP
   - Math
- use_math : true
+use_math : true
 ---  
 
 # 문제
