@@ -4,7 +4,7 @@ classes: wide
 title: "[풀이] 백준 1806 부분합"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '주어진 그래프에서 SCC 집합을 구하자'
+excerpt: '주어진 수열에서 부분합을 맞족하는 개수를 구하자'
 author: "window_for_sun"
 header-style: text
 categories :
