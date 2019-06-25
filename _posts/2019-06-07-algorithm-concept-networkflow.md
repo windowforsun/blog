@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Algorithm 개념] Network Flow 포드 풀커슨(Ford Fulkerson), 에드몬드 카프(Edmonds-Karp) 알고리즘"
+title: "[Algorithm 개념] 네트워크 플로우(Network Flow) 포드 풀커슨(Ford Fulkerson), 에드몬드 카프(Edmonds-Karp) 알고리즘"
 header:
   overlay_image: /img/algorithm-bg.jpg
 excerpt: '포드 풀커슨, 에드몬드 카프 알고리즘으로 네트워크 플로우를 구하자'
