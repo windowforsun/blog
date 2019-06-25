@@ -96,6 +96,9 @@ use_math : true
 ![network flow 6]({{site.baseurl}}/img/algorithm/concept-networkflow-6.png)
 
 - 최종적으로 위 그래프에서 S->T 까지 보낼 수 있는 최대 유량은 9가 된다.
+
+![network flow 7]({{site.baseurl}}/img/algorithm/concept-networkflow-7.png)
+
 - 실제 코드를 돌렸을 때 경로의 선정과 각 간선들에서 흐르는 유량의 값은 다를 수 있지만 최대 유량은 변함없다.
 
 ## 에드몬드 카프(Edmonds-Karp) 소스코드
