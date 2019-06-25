@@ -102,7 +102,6 @@ use_math : true
 
 ```java
 public class Main {
-
     private int MAX;
     private int result;
     private int source;
@@ -256,12 +255,7 @@ public class Main {
         }
     }
 }
-
 ```
-
-
-
-
 
 ---
 ## Reference
