@@ -148,7 +148,7 @@ public class Main {
 
     public void add(int start, int end, int capacity) {
         Edge edge = new Edge(end, capacity);
-        Edge reverseEdge = new Edge(start, capacity);
+        Edge reverseEdge = new Edge(start, 0);
 
         edge.reverseEdge = reverseEdge;
         reverseEdge.reverseEdge = edge;
@@ -267,4 +267,5 @@ public class Main {
 [네트워크 유량(Network Flow) (수정: 2018-12-13)](http://blog.naver.com/PostView.nhn?blogId=kks227&logNo=220804885235)  
 [네트워크플로우(Network flow) - 포드 풀커슨(Ford-Fulkerson) 알고리즘](https://coderkoo.tistory.com/4)  
 [네트워크 플로우(network flow)](https://www.zerocho.com/category/Algorithm/post/5893405b588acb00186d39e0)  
+[[Algorithm] 네트워크플로우(network flow) ( 2188 축사 배정)](https://lyhyun.tistory.com/57)  
 
