@@ -101,7 +101,7 @@ use_math : true
 
 - 실제 코드를 돌렸을 때 경로의 선정과 각 간선들에서 흐르는 유량의 값은 다를 수 있지만 최대 유량은 변함없다.
 
-## 에드몬드 카프(Edmonds-Karp) 소스코드
+## 에드몬드 카프(Edmonds-Karp) 소스코드 (BFS)
 
 ```java
 public class Main {
@@ -258,7 +258,138 @@ public class Main {
         }
     }
 }
+```  
+
+## 포드 풀커슨(Ford-Fulkerson) 소스코드 (DFS)
+
+```java
+public class MainMatrix {
+    private int MAX;
+    private int result;
+    private int source;
+    private int sink;
+    // 실제 흐르는 유량
+    private int[][] flow;
+    // 간선의 흐를 수 있는 용량
+    private int[][] capacity;
+    // 인접 여부
+    private ArrayList<Integer>[] isAdjListArray;
+    private int[] prev;
+
+    public MainMatrix() {
+        this.input();
+        this.solution();
+        this.output();
+    }
+
+    public static void main(String[] args) {
+        new MainMatrix();
+    }
+
+    public void input() {
+        this.MAX = 7;
+        // 시작 노드
+        this.source = 1;
+        // 끝 노드
+        this.sink = 7;
+        this.flow = new int[MAX + 1][MAX + 1];
+        this.capacity = new int[MAX + 1][MAX + 1];
+        this.isAdjListArray = new ArrayList[MAX + 1];
+
+        for(int i = 0; i <= MAX; i++) {
+            this.isAdjListArray[i] = new ArrayList<>();
+        }
+
+        this.add(1, 2, 3);
+        this.add(1, 4, 3);
+        this.add(1, 3, 4);
+        this.add(2, 4, 1);
+        this.add(2, 5, 3);
+        this.add(3, 6, 5);
+        this.add(4, 3, 2);
+        this.add(4, 5, 3);
+        this.add(4, 6, 4);
+        this.add(5, 7, 4);
+        this.add(6, 7, 5);
+    }
+
+    public void add(int start, int end, int capacity) {
+        this.isAdjListArray[start].add(end);
+        this.isAdjListArray[end].add(start);
+        this.capacity[start][end] += capacity;
+//        this.capacity[end][start] = capacity;
+    }
+
+    public void output() {
+        System.out.println(this.result);
+
+        for(int i = 1; i <= MAX; i++) {
+            System.out.println(Arrays.toString(this.flow[i]));
+        }
+    }
+
+    public void solution() {
+        int minFlow;
+        this.prev = new int[this.MAX + 1];
+
+        // 잔류 유량이 있는 경로가 있을 때까지 반복
+        while(this.dfs(this.source)) {
+
+            // 현재 경로의 최소 유량 저장
+            minFlow = Integer.MAX_VALUE;
+            for(int node = this.sink; node != this.source; node = this.prev[node]) {
+                minFlow = Integer.min(minFlow, this.capacity[this.prev[node]][node] - this.flow[prev[node]][node]);
+            }
+
+            // 현재 경로의 최소 유량 만큼 유량을 흘려 보냄
+            for(int node = this.sink; node != this.source; node = this.prev[node]) {
+                this.flow[this.prev[node]][node] += minFlow;
+                this.flow[node][this.prev[node]] -= minFlow;
+            }
+
+            // 총 유량 증가
+            this.result += minFlow;
+            this.prev = new int[this.MAX + 1];
+        }
+    }
+
+    public boolean dfs(int start) {
+        boolean result = false;
+
+        if(start == this.sink) {
+            // 싱크에 도착했으면 종료
+            result = true;
+        } else {
+            // start 노드와 연결되어 있는 노드들
+            ArrayList<Integer> adjList = this.isAdjListArray[start];
+            int adj, adjListSize = adjList.size();
+
+            for(int i = 0; i < adjListSize; i++) {
+                adj = adjList.get(i);
+
+                // 경로에 설정되지 않았으면서
+                if(this.prev[adj] == 0) {
+                    // 잔류 유량이 있으면
+                    if(this.capacity[start][adj] - this.flow[start][adj] > 0) {
+                        // 경로에 추가
+                        this.prev[adj] = start;
+
+                        // 추가되 노드부터 다시 경로 탐색
+                        if(this.dfs(adj)) {
+                            result = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+}
 ```
+
+## 추가사항
+- 단방향일경우 `reserveEdge` 의 용량에 0을 넣어주고 양방향일 경우에는 순방향 간선의 용량과 동일한 용량을 넣어 주면된다.
 
 ---
 ## Reference
