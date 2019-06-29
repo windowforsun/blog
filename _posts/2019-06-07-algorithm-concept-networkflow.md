@@ -102,7 +102,7 @@ use_math : true
 - 실제 코드를 돌렸을 때 경로의 선정과 각 간선들에서 흐르는 유량의 값은 다를 수 있지만 최대 유량은 변함없다.
 
 ## 에드몬드 카프(Edmonds-Karp) 소스코드 (BFS)
-- $O(E \sqrt(V))$
+- $O(E \sqrt{V})$
 
 ```java
 public class Main {
