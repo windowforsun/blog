@@ -14,7 +14,7 @@ tags:
   - Caching
   - In Memory
   - NoSQL
- use_math : true
+use_math : true
 ---  
 
 # Redis 란
