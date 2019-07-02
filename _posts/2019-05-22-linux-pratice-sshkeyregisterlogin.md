@@ -122,6 +122,8 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAsEc+lci3mHqjbY11nDAJFp+FP4aSRfj7c6NZ46RxiwWd
 Enter passphrase for key '/home/windowforsun/.ssh/id_rsa':
 ```  
 
+## 참고
+- `ssh-copy-id userid@hostname`
 
 ---
 ## Reference
