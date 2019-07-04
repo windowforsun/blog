@@ -12,6 +12,7 @@ categories :
 tags:
   - Algorithm
   - Segment Tree
+use_math : true
 ---  
 
 # 문제
@@ -54,14 +55,16 @@ M개의 줄에 입력받은 순서대로 각 a, b에 대한 답을 출력한다.
 ```  
 
 ## 풀이
+- 반복문을 통해서만 문제를 해결하면 최대 $O(NM)$ 의 시간 복잡도가 소요된다.
+- [세그먼트 트리]({{site.baseurl}}{% link _posts/2019-06-12-algorithm-concept-segmenttree.md %}) 를 사용하면 이를 $O(M \log_2 N)$ 의 시간 복잡도로 줄일 수 있다.
 
 ```java
 public class Main {
     private StringBuilder result;
     private int numCount;
     private int queryCount;
-    private long[] dataArray;
-    private long[] minSegmentArray;
+    private int[] minSegmentArray;
+    private int dataStartIndex;
     private int treeSize;
 
     public Main() {
@@ -81,20 +84,22 @@ public class Main {
 
             this.numCount = Integer.parseInt(token.nextToken());
             this.queryCount = Integer.parseInt(token.nextToken());
-            this.dataArray = new long[this.numCount];
-            this.treeSize = this.getTreeSize(this.numCount);
-            this.minSegmentArray = new long[this.treeSize];
+            this.dataStartIndex = this.getDataStartIndex(this.numCount);
+            this.treeSize = this.dataStartIndex * 2;
+            this.minSegmentArray = new int[this.treeSize];
             this.result = new StringBuilder();
 
-            for(int i = 0; i < this.numCount; i++) {
-                this.dataArray[i] = Integer.parseInt(reader.readLine());
+            Arrays.fill(this.minSegmentArray, Integer.MAX_VALUE);
+
+            for(int i = this.dataStartIndex; i < this.dataStartIndex + this.numCount; i++) {
+                this.minSegmentArray[i] = Integer.parseInt(reader.readLine());
             }
 
-            this.initSegmentTree(1, 0, this.numCount - 1);
+            this.initSegmentTree();
 
             for(int i = 0; i < this.queryCount; i++) {
                 token = new StringTokenizer(reader.readLine(), " ");
-                this.result.append(this.min(1, 0, this.numCount - 1, Integer.parseInt(token.nextToken()) - 1, Integer.parseInt(token.nextToken()) - 1));
+                this.result.append(this.min(Integer.parseInt(token.nextToken()) - 1, Integer.parseInt(token.nextToken()) - 1));
                 this.result.append("\n");
             }
 
@@ -107,40 +112,47 @@ public class Main {
         System.out.println(this.result);
     }
 
-    public long initSegmentTree(int node, int start, int end) {
-        if(start == end) {
-            this.minSegmentArray[node] = this.dataArray[start];
-        } else {
-            int mid = (start + end) / 2;
-            long min = Long.min(this.initSegmentTree(node * 2, start, mid), this.initSegmentTree(node * 2 + 1, mid + 1, end));
-            this.minSegmentArray[node] = min;
+    public void initSegmentTree() {
+        for(int i = this.treeSize - 1; i > 0; i -= 2) {
+            this.minSegmentArray[i / 2] = Integer.min(this.minSegmentArray[i], this.minSegmentArray[i - 1]);
         }
-
-        return this.minSegmentArray[node];
     }
 
-    public long min(int node, int start, int end, int minStart, int minEnd) {
-        long min = Long.MAX_VALUE;
+    public int min(int minStart, int minEnd) {
+        int min = Integer.MAX_VALUE;
+        minStart += this.dataStartIndex;
+        minEnd += this.dataStartIndex;
 
-        if(end >= minStart && minEnd >= start) {
-            if(minStart <= start && end <= minEnd) {
-                min = this.minSegmentArray[node];
-            } else {
-                int mid = (start + end) / 2;
-                min = Long.min(this.min(node * 2, start, mid, minStart, minEnd), this.min(node * 2 + 1, mid + 1, end, minStart, minEnd));
+        while(minStart < minEnd) {
+            if(minStart % 2 == 1) {
+                min = Integer.min(min, this.minSegmentArray[minStart]);
+                minStart++;
             }
+
+            if(minEnd % 2 == 0) {
+                min = Integer.min(min, this.minSegmentArray[minEnd]);
+                minEnd--;
+            }
+
+            minStart /= 2;
+            minEnd /= 2;
+        }
+
+        if(minStart == minEnd) {
+            min = Integer.min(min, this.minSegmentArray[minStart]);
         }
 
         return min;
     }
 
-    public int getTreeSize(int dataSize) {
-        int height = (int)Math.ceil(this.logBottomTop(2, dataSize));
-        return (1 <<(height + 1));
-    }
+    public int getDataStartIndex(int dataCount) {
+        int result = 1;
 
-    public double logBottomTop(double bottom, double top) {
-        return Math.log(top) / Math.log(bottom);
+        while(result < dataCount) {
+            result <<= 1;
+        }
+
+        return result;
     }
 }
 ```  

@@ -60,11 +60,10 @@ public class Main {
     private int updateCount;
     private int queryCount;
     private int treeSize;
-    private long[] dataArray;
+    private int dataStartIndex;
     private long[] sumSegmentTree;
     private final int UPDATE = 1;
     private final int QUERY = 2;
-
 
     public Main() {
         this.input();
@@ -84,24 +83,23 @@ public class Main {
             this.numCount = Integer.parseInt(token.nextToken());
             this.updateCount = Integer.parseInt(token.nextToken());
             this.queryCount = Integer.parseInt(token.nextToken());
-            this.dataArray = new long[this.numCount];
-            this.treeSize = this.getTreeSize(this.numCount);
-            this.sumSegmentTree = new long[this.treeSize + 1];
+            this.dataStartIndex = this.getDataStartIndex(this.numCount);
+            this.treeSize = this.dataStartIndex * 2;
+            this.sumSegmentTree = new long[this.treeSize];
             this.result = new StringBuilder();
 
-            for(int i = 0; i < this.numCount; i++) {
-                this.dataArray[i] = Integer.parseInt(reader.readLine());
+            for(int i = this.dataStartIndex; i < this.dataStartIndex + this.numCount; i++) {
+                this.sumSegmentTree[i] = Long.parseLong(reader.readLine());
             }
 
-            this.initSegmentTree(1, 0, this.numCount - 1);
+            this.initSegmentTree();
             int count = this.updateCount + this.queryCount;
 
             for(int i = 0; i < count; i++) {
                 token = new StringTokenizer(reader.readLine(), " ");
 
-                this.solution(Integer.parseInt(token.nextToken()), Integer.parseInt(token.nextToken()), Integer.parseInt(token.nextToken()));
+                this.solution(Integer.parseInt(token.nextToken()), Integer.parseInt(token.nextToken()), Long.parseLong(token.nextToken()));
             }
-
 
         } catch(Exception e) {
             e.printStackTrace();
@@ -112,83 +110,65 @@ public class Main {
         System.out.println(this.result);
     }
 
-    public void solution(int type, int indexOrStart, int updateOrEnd) {
+    public void solution(int type, int indexOrStart, long updateOrEnd) {
         if(type == UPDATE) {
-            // 업데이트 수행
             this.update(indexOrStart - 1, updateOrEnd);
         } else {
-            // 구간 합
-            this.result.append(this.sum(1, 0, this.numCount - 1, indexOrStart - 1, updateOrEnd - 1)).append("\n");
+            this.result.append(this.sum(indexOrStart - 1, updateOrEnd - 1)).append("\n");
         }
     }
 
-    // 세그먼트 트리 초기화
-    public long initSegmentTree(int node, int start, int end) {
-        if(start == end) {
-            return this.sumSegmentTree[node] = this.dataArray[start];
+    public void initSegmentTree() {
+        for(int i = this.treeSize - 1; i > 0; i-= 2) {
+            System.out.println((i / 2) + ", " + i + ", " + (i - 1));
+            this.sumSegmentTree[i / 2] = this.sumSegmentTree[i] + this.sumSegmentTree[i - 1];
         }
-
-        int mid = (start + end) / 2;
-        long sum = this.initSegmentTree(node * 2, start, mid) + this.initSegmentTree(node * 2 +1, mid + 1, end);
-        this.sumSegmentTree[node] += sum;
-
-        return this.sumSegmentTree[node];
     }
 
-    // 값 변경
-    public void update(int index, int value) {
-        if(index < 0 || index >= this.numCount) {
-            return;
+    public void update(int index, long value) {
+        index += this.dataStartIndex;
+        this.sumSegmentTree[index] = value;
+        while(index > 1) {
+            index /= 2;
+            this.sumSegmentTree[index] = this.sumSegmentTree[index * 2] + this.sumSegmentTree[index * 2 + 1];
         }
-
-        long before = this.dataArray[index];
-        long diff = value - before;
-        this.dataArray[index] = value;
-        this.updateSegmentTree(1, 0, this.numCount - 1, index, diff);
     }
 
-    public void updateSegmentTree(int node, int start, int end, int index, long diff) {
-        if(index < start || end < index) {
-            return;
-        }
-
-        this.sumSegmentTree[node] += diff;
-
-        if(start == end) {
-            return;
-        }
-
-        int mid = (start + end) / 2;
-        this.updateSegmentTree(node * 2, start, mid, index, diff);
-        this.updateSegmentTree(node * 2 + 1, mid + 1, end, index, diff);
-    }
-
-    // sumStart-sumEnd 의 구간합
-    public long sum(int node, int start, int end, int sumStart, int sumEnd) {
+    public long sum(int sumStart, long sumEnd) {
         long sum = 0;
+        sumStart += this.dataStartIndex;
+        sumEnd += this.dataStartIndex;
 
-        if(end >= sumStart && sumEnd >= start) {
-            if(sumStart <= start && end <= sumEnd) {
-                sum = this.sumSegmentTree[node];
-            } else {
-                int mid = (start + end) / 2;
-                sum = this.sum(node * 2, start, mid, sumStart, sumEnd) + this.sum(node * 2 + 1, mid + 1, end, sumStart, sumEnd);
+        while(sumStart < sumEnd) {
+            if(sumStart % 2 == 1) {
+                sum += this.sumSegmentTree[sumStart];
+                sumStart++;
             }
+
+            if(sumEnd % 2 == 0) {
+                sum += this.sumSegmentTree[(int)sumEnd];
+                sumEnd--;
+            }
+
+            sumStart /= 2;
+            sumEnd /= 2;
+        }
+
+        if(sumStart == sumEnd) {
+            sum += this.sumSegmentTree[sumStart];
         }
 
         return sum;
     }
 
-    public int getTreeSize(int dataSize) {
-        int result = 0;
-        int height = (int)Math.ceil(this.logBottomTop(2, dataSize));
-        result = (1 << (height + 1));
+    public int getDataStartIndex(int dataCount) {
+        int result = 1;
+
+        while(result < dataCount) {
+            result <<= 1;
+        }
 
         return result;
-    }
-
-    public double logBottomTop(double bottom, double top) {
-        return Math.log(top) / Math.log(bottom);
     }
 }
 ```  
