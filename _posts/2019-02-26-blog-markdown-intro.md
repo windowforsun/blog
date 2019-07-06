@@ -393,6 +393,41 @@ _언더바(underscore)은 적용되지 않네요 ..
 
 각주가 안되네.. ㅠㅠ  
 
+## Expander control(접기/펼치기)
+
+```markdown
+<details>
+<summary>접기/펼치기</summary>
+<div markdown="1">
+
+## 제목
+- 여기에 이러쿵 저러쿵
+
+|type|value|
+|--|--|
+|1|1|
+|2|10|
+
+</div>
+</details>
+```  
+
+<details>
+<summary>접기/펼치기</summary>
+<div markdown="1">
+
+## 제목
+- 여기에 이러쿵 저러쿵
+
+|type|value|
+|--|--|
+|1|1|
+|2|10|
+
+</div>
+</details>
+
+
 ---
 ## Reference
 [존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
