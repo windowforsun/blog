@@ -4,7 +4,7 @@ classes: wide
 title: "[풀이] 백준 7578 공장"
 header:
   overlay_image: /img/algorithm-bg.jpg
-excerpt: '케이블이 교차하는 쌍의 개수를 구하자'
+excerpt: '교차간선의 개수를 구하자'
 author: "window_for_sun"
 header-style: text
 categories :
