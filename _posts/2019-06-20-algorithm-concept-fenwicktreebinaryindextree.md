@@ -118,6 +118,7 @@ this.updateValue(1, 2);
 - `update` 메서드에서 `index += (index & -index);` 부분을 다시 표현하면 아래와 같다.
 	- `index + (index & -index) = nextIndex`
 	- `11000 + 1000 = 100000`
+	- 11000의 음수 표현은 XOR(11000) 한 후에 1을 더해주면 된다.
 	
 - 펜윅 트리의 생성은 `update` 메서드를 통해 D배열의 값을 넣어 모두 호출해 주면 된다.
 
@@ -203,6 +204,7 @@ this.update(5, 8);
 - `sum` 메서드에서 `index -= (index & -index);` 를 다시 표현하면 아래와 같다.
 	- `index - (index & -index) = nextIndex`
 	- `1100 - 100 = 1000`
+	- 1100의 음수 표현은 XOR(1100) 한 후에 1을 더해주면 된다.
 
 - 전체 소스 코드
 
