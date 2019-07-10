@@ -55,10 +55,32 @@ tags:
 ![그림 5]({{site.baseurl}}/img/jetbrains/practice-springboot-5.png)
 
 - 프로젝트가 생성되면 아래와 같은 디렉토리와 파일로 구성된다.
+	- src/main/java : 자바 소스
+	- src/main/resource : 웹 정적, 동적 리소스
+		- /static : 웹 정적 리소스(image, css, javascript)
+		- /template : 웹 동적 리소스(Groovy, Thymleaf, Velocity, JSP)
+		- application.properties : Spring Boot 프로퍼티 값
+	- src/test/java : 단위 테스트 자바 소스
 	- 메인 클래스 : SpringbootStartApplication
-	- 프로퍼티 파일 : application.properties
 	- 의존성관리 : pom.xml
-	- 기본 Spring 의 디렉토리 구조와 동일하다.
+	
+- 메인 클래스(SpringbootStartApplication) 에 기본 패키지 경로 추가 등 설정을 해준다.
+
+```java
+@SpringBootApplication
+@ComponentScan(basePackages = "com")
+public class SpringbootStartApplication extends SpringBootServletInitializer {
+
+   public static void main(String[] args) {
+       SpringApplication.run(SpringbootStartApplication.class, args);
+   }
+
+   @Override
+   protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+       return builder.sources(SpringbootStartApplication.class);
+   }
+}
+```  
 
 ![그림 6]({{site.baseurl}}/img/jetbrains/practice-springboot-6.png)
 
