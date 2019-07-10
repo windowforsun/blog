@@ -20,7 +20,8 @@ tags:
 ## 환경
 - Intellij
 - Java 8
-- Spring Boot
+- Spring Boot 2.1.6
+- Tomcat 8.5
 
 ## Spring Boot 프로젝트 생성
 - File -> New -> Project...
@@ -42,7 +43,7 @@ tags:
 - 프로젝트에 필요한 의존성들을 선택해준다.
 	- Lombok
 	- Web
-	- Thymeleaf
+	- Thymeleaf (x)
 	- JPA
 	- H2
 
@@ -152,6 +153,7 @@ public class DeviceRepositoryTest {
 ![그림 8]({{site.baseurl}}/img/jetbrains/practice-springboot-8.png)
 
 - `+` -> Tomcat Server -> Local
+	- 로컬에 설치된 톰캣이 있어야 하고, Intellij 에 해당 톰캣을 추가한다.
 
 ![그림 9]({{site.baseurl}}/img/jetbrains/practice-springboot-9.png)
 
@@ -161,6 +163,116 @@ public class DeviceRepositoryTest {
 
 ![그림 11]({{site.baseurl}}/img/jetbrains/practice-springboot-11.png)
 
+- File -> Project Structure ... -> Facets 에서 Web Resource Directions 에 있는 경로에 맞게 webapp 디렉토리를 생성해준다.
+	- 이 부분은 외부 톰캣을 연결하고 `.jsp` 를 view로 사용하기 위한 절차이다.
+	
+![그림 12]({{site.baseurl}}/img/jetbrains/practice-springboot-12.png)
+
+- 하위 디렉토리와 테스트 용 `.jsp` 파일을 하나 만들어 준다.
+
+![그림 13]({{site.baseurl}}/img/jetbrains/practice-springboot-13.png)
+
+- hello.jsp 코드
+
+```html
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>Hello Spring Boot</title>
+</head>
+<body>
+<h3>Hello Spring Boot</h3>
+</body>
+</html>
+```  
+
+- 아래와 같이 파일을 구성한다.
+
+![그림 14]({{site.baseurl}}/img/jetbrains/practice-springboot-14.png)
+
+- `/WEB-INF/views/` 의 리소스 경로 매핑 설정 `AppConfiguration`
+	- 위 부분은 JavaConfig 를 사용하는 방법으로 JavaConfig 를 사용하지 않고 `application.properties` 에 아래 내용을 추가하여 매핑 가능하다.
+	
+		```properties
+		spring.mvc.view.prefix= /WEB-INF/views/
+        spring.mvc.view.suffix= .jsp
+        spring.thymeleaf.enabled=false	# 타임리프 의존성이 추가되어 있는경우 비활성화
+		```  
+
+```java
+package com.example.springbootstart;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.view.InternalResourceViewResolver;
+
+@Configuration
+public class AppConfiguration {
+    @Bean
+    public InternalResourceViewResolver internalResourceViewResolver() {
+        InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
+        viewResolver.setPrefix("/WEB-INF/views/");
+        viewResolver.setSuffix(".jsp");
+
+        return viewResolver;
+    }
+}
+```  
+
+- 테스트 뷰 파일인 `hello.jsp` 의 컨트롤러 `HelloController`
+
+```java
+package com.example.springbootstart.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HelloController {
+
+    @GetMapping("/hello")
+    public String hello() {
+        System.out.println("hello");
+        return "hello";
+    }
+}
+```  
+
+- 에코 기능만 있는 레스트 API `RestHelloController`
+
+```java
+package com.example.springbootstart.controller;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+public class RestHelloController {
+    @GetMapping("/echo/{path}")
+    public String getEcho(@PathVariable String path) {
+        return path;
+    }
+
+    @PostMapping("/echo")
+    public String postEcho(@RequestBody String request) {
+        return request;
+    }
+}
+```  
+
+- 서버를 구동 시키고 `http://localhost:<포트>` 로 접속하면 아래와 같다.
+
+![그림 15]({{site.baseurl}}/img/jetbrains/practice-springboot-15.png)
+
+- `http://localhost:<포트>/hello` 로 접속하면 `HelloController` 를 타고 `hello.jsp` 가 보이는 걸 확인 할 수 있다.
+
+![그림 16]({{site.baseurl}}/img/jetbrains/practice-springboot-16.png)
+
+- `http://localhost:<포트>/echo/<문자열>` 을 통해 `RestHelloController` 의 Get 방식 Echo 동작을 확인 할 수 있다.
+
+![그림 17]({{site.baseurl}}/img/jetbrains/practice-springboot-17.png)
+
+- 포스트 맨에서 `http://localhost:<포트>/echo` 을 통해 `RestHelloController` 의 Post 방식 Echo 동작을 확인 할 수 있다.
+
+![그림 18]({{site.baseurl}}/img/jetbrains/practice-springboot-18.png)
 
 
 
