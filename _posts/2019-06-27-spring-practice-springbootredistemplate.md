@@ -121,6 +121,22 @@ public class RedisConfiguration {
 	
 	- Redis 에 저장하는 값이 문자열만 있을 경우 값의 직렬화도 `StringRedisSerializer` 를 사용해도 무방하다. 하지만 키의 경우 `GenericJackson2JsonRedisSerializer` 를 사용하게 되면 예상과 다른 키 형식이 Redis 에 저장되므로 주의해야 한다.
 
+- Redis 에 저장할 객체인 `Device` 는 아래와 같다.
+
+```java
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
+@EqualsAndHashCode
+public class Device implements Serializable{
+    private String serial;
+    private String name;
+    private int price;
+}
+```  
+
 - Redis 에서 제공하는 자료구조 및 사용 방법에 대한 테스트 코드는 아래와 같다.
 
 ```java
