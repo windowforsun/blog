@@ -14,6 +14,7 @@ tags:
     - Practice
     - Redis
     - Spring Boot
+    - Spring Data Redis
 ---  
 
 # 목표
@@ -120,6 +121,24 @@ public class RedisConfiguration {
 		```  
 	
 	- Redis 에 저장하는 값이 문자열만 있을 경우 값의 직렬화도 `StringRedisSerializer` 를 사용해도 무방하다. 하지만 키의 경우 `GenericJackson2JsonRedisSerializer` 를 사용하게 되면 예상과 다른 키 형식이 Redis 에 저장되므로 주의해야 한다.
+
+- Spring Data Redis 에서는 아래와 같은 오퍼레이션을 제공한다.
+
+	Interface|Desc
+	---|---
+	GeoOperations|좌표 자료구조 데이터 관련 연산
+	HashOperations|해시 자료구조 데이터 관련 연산
+	HyperLogLogOperations|Redis 로그 자료구조 데이터  관련 연산
+	ListOperations|리스트 자료구조 데이터 관련 연산
+	SetOperations|집합 자료구조 데이터 관련 연산
+	ValueOperations|값 형태의 데이터 관련 연산
+	ZSetOperations|정렬된 집합 자료구조 데이터 관련 연산
+	BoundGeoOperations|설정된 키에 대한 좌표 자료구조 데이터 관련 연산
+	BoundHashOperations|설정된 키에 대한 해시 자료구조 데이터 관련 연산
+	BoundListOperations|설정된 키에 대한 리스트 자료구조 데이터 관련 연산
+	BoundSetOperations|설정된 키에 대한 집합 자료구조 데이터 관련 연산
+	BoundValueOperations|설정된 키에 대한 값 형태의 데이터 관련 연산
+	BoundZSetOperations|설정된 키에 대한 정렬된 집합 자료구조 데이터 관련 연산
 
 - Redis 에 저장할 객체인 `Device` 는 아래와 같다.
 
@@ -257,9 +276,37 @@ public class RedisOperationTest {
         Assert.assertTrue(set.contains("s2"));
         Assert.assertTrue(set.contains("s3"));
         Assert.assertTrue(set.contains("s4"));
+    }    
+
+    @Test
+    public void testRedisCallback() {
+        String key = "callback1";
+
+        this.redisTemplate.delete(key);
+
+        List<Object> list = this.redisTemplate.execute(new SessionCallback<List<Object>>() {
+            @Override
+            public List<Object> execute(RedisOperations redisOperations) throws DataAccessException {
+                redisOperations.multi();
+                redisOperations.opsForValue().increment(key);
+                redisOperations.opsForValue().increment(key);
+                redisOperations.opsForValue().increment(key);
+
+                return redisOperations.exec();
+            }
+        });
+
+        Assert.assertNotNull(list);
+
+        int count = Integer.parseInt(this.valueOperations.get(key) + "");
+        Assert.assertEquals(3, count);
     }
 }
 ```  
+
+- `testRedisCallback` 의 경우 `execute` 메서드의 인자값으로 `SessionCallback` 또는 `RedisCallback` 인터페이스를 사용해서 Redis Server 에 직접 명령어를 내릴 수 있다.
+	- 명렁어를 한번에 수행시키는 `multi` 연산시에 활용 할 수 있다.
+	- 한 Key 를 기준으로 값을 동기화를 시켜야 할때, Key 의 변경 여부를 확인하는 `watch` 연산에 활용할 수 있다.
 
 - Redis 의 메시지 Pub/Sub 을 테스트하기 위해 `RedisConfiguration` 파일에 아래 설정을 추가한다.
 
@@ -335,6 +382,7 @@ c.e.s.service.RedisMessageSubscriber     : receive message : "event 2"
 	
 ---
 ## Reference
+[Spring Data Redis](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/)
 [Redis설치 및 SpringBoot로 Redis 서버 접속 설정](https://imjehoon.github.io/redis_spring_config/)
 [spring-boot-starter-data-redis 사용기](https://jeong-pro.tistory.com/175)
 [[스프링부트] SpringBoot 개발환경 구성 #3 - Redis 설정](https://yonguri.tistory.com/entry/%EC%8A%A4%ED%94%84%EB%A7%81%EB%B6%80%ED%8A%B8-SpringBoot-%EA%B0%9C%EB%B0%9C%ED%99%98%EA%B2%BD-%EA%B5%AC%EC%84%B1-3-Redis-%EC%84%A4%EC%A0%95)

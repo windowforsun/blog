@@ -15,6 +15,7 @@ tags:
     - JPA
     - ORM
     - Spring Boot
+    - Spring Data JPA
 ---  
 
 # 목표
@@ -251,7 +252,7 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 	OrderBy|findByNameOrderByPriceDesc|where name = ?1 order by price desc
 	Not|findByNameNot|where name <> ?1
 	In|findByNameIn(Collections<> name)|where name in ?1
-	NotIn|findByNameNotIn|(Collectons<> name|where name not in ?1
+	NotIn|findByNameNotIn(Collectons<> name|where name not in ?1
 	True|findByIsOnTrue|where isOne = true
 	False|findByIsOnFalse|where isOne = false
 	IgnoreCase|findByNameIgnoreCase|where UPPER(name) = UPPER(?1)
@@ -259,6 +260,28 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
 ## 커스텀 동작(메서드) Test
 
 ```java
+    @Test
+    public void testFindByName() {
+        Device d1 = new Device("d1", 1);
+        d1 = this.deviceRepository.save(d1);
+
+        Device d2 = new Device("d2", 3);
+        d2 = this.deviceRepository.save(d2);
+
+        Device d3 = new Device("d3", 3);
+        d3 = this.deviceRepository.save(d3);
+
+        Device d4 = new Device("d3", 4);
+        d4 = this.deviceRepository.save(d4);
+
+        List<Device> deviceList = this.deviceRepository.findByName("d1");
+        Assert.assertEquals(1, deviceList.size());
+        Assert.assertTrue(deviceList.contains(d1));
+
+        deviceList = this.deviceRepository.findByName("d3");
+        Assert.assertEquals(2, deviceList.size());
+    }
+    
     @Test
     public void testFinByPriceGTE() {
         Device d1 = new Device("d1", 1);
