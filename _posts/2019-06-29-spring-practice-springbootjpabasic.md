@@ -162,6 +162,8 @@ public class DeviceRepositoryTest {
 
         Assert.assertEquals(d1, this.deviceRepository.findById(d1.getSerial()).get());
         Assert.assertEquals(d2, this.deviceRepository.findById(d2.getSerial()).get());
+        Assert.assertTrue(this.deviceRepository.findById(d1.getSerial()).isPresent());
+        Assert.assertFalse(this.deviceRepository.findById(111111111l).isPresent());
     }
 
     @Test
@@ -207,7 +209,7 @@ public class DeviceRepositoryTest {
 }
 ```  
 
-## Repository 에 케스텀 동작(메서드) 추가
+## Repository 에 커스텀 동작(메서드) 추가
 
 ```java
 @Repository
@@ -217,15 +219,120 @@ public interface DeviceRepository extends JpaRepository<Device, Long> {
     List<Device> findByPriceGreaterThanEqual(int price);
 
     List<Device> findByNameLike(String name);
+    
+    int countByName(String name);
+
+    Device getById(long id);
 }
 ```  
 
 - 커스텀 메서드를 작성할때 구조는 아래와 같다.
 	- `<동작>` + `<필드명>` + `<조건>` 으로 구성되어 있고 `<논리연산>` + `<필드명>` + `<조건>` 가 반복될 수 있다.
-- 동작 관련 리스트 추가하기
 
+	Keyword|Sample|SQL
+	---|---|---
+	And|findByNameAndPrice|where name = ?1 and price = ?2
+	Or|findByNameOrPrice|where ename = ?1 or price = ?2
+	Is,Equals|findByName,findByNameIs,findByNameEquals|where name = ?1
+	Between|findByPriceBetween|where price between ?1 and ?2
+	LessThan|findByPriceLessThan|where price < ?1
+	LessThanEqual|findByPriceLessThanEqual|where price <= ?1
+	GreaterThan|findByPriceGreaterThan|where price > ?1
+	GreaterThanEqual|findByPriceGreatherThanEqual|where price >= ?1
+	After|findByDateAfter|where date > ?1
+	Before|findByDateBefore|where date < ?1
+	IsNull|findByNameIsNull|where name is null
+	IsNotNull,NotNull|findByNameIsNotNull,findByNameNotNull|where name not null
+	Like|findByNameLike|where name like ?1
+	NotLike|findByNameNotLike|where name not like ?1
+	StartingWith|findByNameStartingWith|where name like ?1(str%)
+	EndingWith|findByNameEndingWith|where name like ?1(%str)
+	Containing|findByNameContaining|where name like ?1(%str%)
+	OrderBy|findByNameOrderByPriceDesc|where name = ?1 order by price desc
+	Not|findByNameNot|where name <> ?1
+	In|findByNameIn(Collections<> name)|where name in ?1
+	NotIn|findByNameNotIn|(Collectons<> name|where name not in ?1
+	True|findByIsOnTrue|where isOne = true
+	False|findByIsOnFalse|where isOne = false
+	IgnoreCase|findByNameIgnoreCase|where UPPER(name) = UPPER(?1)
+	
+## 커스텀 동작(메서드) Test
 
+```java
+    @Test
+    public void testFinByPriceGTE() {
+        Device d1 = new Device("d1", 1);
+        d1 = this.deviceRepository.save(d1);
 
+        Device d2 = new Device("d2", 2);
+        d2 = this.deviceRepository.save(d2);
+
+        Device d3 = new Device("d3", 3);
+        d3 = this.deviceRepository.save(d3);
+
+        Device d4 = new Device("d3", 4);
+        d4 = this.deviceRepository.save(d4);
+
+        List<Device> deviceList = this.deviceRepository.findByPriceGreaterThanEqual(1);
+        Assert.assertEquals(4, deviceList.size());
+
+        deviceList = this.deviceRepository.findByPriceGreaterThanEqual(2);
+        Assert.assertEquals(3, deviceList.size());
+
+        deviceList = this.deviceRepository.findByPriceGreaterThanEqual(3);
+        Assert.assertEquals(2, deviceList.size());
+
+        deviceList = this.deviceRepository.findByPriceGreaterThanEqual(4);
+        Assert.assertEquals(1, deviceList.size());
+    }
+
+    @Test
+    public void testFindByNameLike() {
+        Device d1 = new Device("d1", 1);
+        d1 = this.deviceRepository.save(d1);
+
+        Device d2 = new Device("d2", 2);
+        d2 = this.deviceRepository.save(d2);
+
+        Device d3 = new Device("c2", 3);
+        d3 = this.deviceRepository.save(d3);
+
+        Device d4 = new Device("e2", 4);
+        d4 = this.deviceRepository.save(d4);
+
+        List<Device> deviceList = this.deviceRepository.findByNameLike("d%");
+        Assert.assertEquals(2, deviceList.size());
+        Assert.assertTrue(deviceList.contains(d1));
+        Assert.assertTrue(deviceList.contains(d2));
+
+        deviceList = this.deviceRepository.findByNameLike("%2");
+        Assert.assertEquals(3, deviceList.size());
+        Assert.assertTrue(deviceList.contains(d2));
+        Assert.assertTrue(deviceList.contains(d3));
+        Assert.assertTrue(deviceList.contains(d4));
+    }
+
+    @Test
+    public void testCountByName() {
+        Device d1 = new Device("d1", 1);
+        d1 = this.deviceRepository.save(d1);
+
+        Device d2 = new Device("d2", 2);
+        d2 = this.deviceRepository.save(d2);
+
+        Device d3 = new Device("d2", 3);
+        d3 = this.deviceRepository.save(d3);
+
+        Device d4 = new Device("d3", 4);
+        d4 = this.deviceRepository.save(d4);
+
+        Assert.assertEquals(1, this.deviceRepository.countByName("d1"));
+        Assert.assertEquals(2, this.deviceRepository.countByName("d2"));
+        Assert.assertEquals(1, this.deviceRepository.countByName("d3"));
+    }
+```  
+
+- JPA 에서 Get/Find 차이 추가하기
 
 ---
 ## Reference
