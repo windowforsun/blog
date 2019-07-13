@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Boot Redis 기본 사용기"
+title: "[Spring 실습] Spring Boot Redis 사용기"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring Boot 에서 Redis 기본 사용 방법에 대해 알아보자'
@@ -304,7 +304,7 @@ public class RedisOperationTest {
 }
 ```  
 
-- `testRedisCallback` 의 경우 `execute` 메서드의 인자값으로 `SessionCallback` 또는 `RedisCallback` 인터페이스를 사용해서 Redis Server 에 직접 명령어를 내릴 수 있다.
+- `testRedisCallback` 의 경우 `execute` 메서드의 인자값으로 `SessionCallback` 또는 `RedisCallback` 인터페이스를 사용해서 Redis Server 에 직접 명령어를 내릴 수 있음을 보여주고 있다.
 	- 명렁어를 한번에 수행시키는 `multi` 연산시에 활용 할 수 있다.
 	- 한 Key 를 기준으로 값을 동기화를 시켜야 할때, Key 의 변경 여부를 확인하는 `watch` 연산에 활용할 수 있다.
 
@@ -382,7 +382,7 @@ c.e.s.service.RedisMessageSubscriber     : receive message : "event 2"
 	
 ---
 ## Reference
-[Spring Data Redis](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/)
-[Redis설치 및 SpringBoot로 Redis 서버 접속 설정](https://imjehoon.github.io/redis_spring_config/)
-[spring-boot-starter-data-redis 사용기](https://jeong-pro.tistory.com/175)
-[[스프링부트] SpringBoot 개발환경 구성 #3 - Redis 설정](https://yonguri.tistory.com/entry/%EC%8A%A4%ED%94%84%EB%A7%81%EB%B6%80%ED%8A%B8-SpringBoot-%EA%B0%9C%EB%B0%9C%ED%99%98%EA%B2%BD-%EA%B5%AC%EC%84%B1-3-Redis-%EC%84%A4%EC%A0%95)
+[Spring Data Redis](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/)  
+[Redis설치 및 SpringBoot로 Redis 서버 접속 설정](https://imjehoon.github.io/redis_spring_config/)  
+[spring-boot-starter-data-redis 사용기](https://jeong-pro.tistory.com/175)  
+[[스프링부트] SpringBoot 개발환경 구성 #3 - Redis 설정](https://yonguri.tistory.com/entry/%EC%8A%A4%ED%94%84%EB%A7%81%EB%B6%80%ED%8A%B8-SpringBoot-%EA%B0%9C%EB%B0%9C%ED%99%98%EA%B2%BD-%EA%B5%AC%EC%84%B1-3-Redis-%EC%84%A4%EC%A0%95)  
