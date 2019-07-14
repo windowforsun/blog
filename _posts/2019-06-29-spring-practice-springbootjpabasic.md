@@ -36,7 +36,7 @@ tags:
 ## 프로젝트 구조
 - 완성된 프로젝트의 구조는 아래와 같다.
 
-![그림 1]({{site.baseurl}}/img/practice-springbootjpabasic-1.png)
+![그림 1]({{site.baseurl}}/img/spring/practice-springbootjpabasic-1.png)
 
 
 ## pom.xml
