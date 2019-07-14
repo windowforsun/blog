@@ -25,4 +25,5 @@ tags:
 ---
 ## Reference
 [How to Use Profiles in Spring Boot](https://dzone.com/articles/spring-boot-profiles-1)  
+[how to use Spring Boot profiles](https://stackoverflow.com/questions/40060989/how-to-use-spring-boot-profiles)  
 [환경에 맞는 Spring Profile 설정하기](https://velog.io/@kingcjy/%ED%99%98%EA%B2%BD%EC%97%90-%EB%A7%9E%EB%8A%94-Spring-Profile-%EC%84%A4%EC%A0%95%ED%95%98%EA%B8%B0)  

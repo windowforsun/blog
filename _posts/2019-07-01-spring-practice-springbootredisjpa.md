@@ -24,5 +24,6 @@ tags:
 	
 ---
 ## Reference
+[Spring Data Redis](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/#redis.repositories)
 [[Spring Boot #27] 스프링 부트 레디스(Redis) 연동하기](https://engkimbs.tistory.com/796)
 [SpringBoot Data Redis 로컬/통합 테스트 환경 구축하기](https://jojoldu.tistory.com/297)
