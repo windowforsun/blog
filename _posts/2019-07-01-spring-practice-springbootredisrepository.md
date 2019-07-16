@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Boot Redis Repository"
+title: "[Spring 실습] Spring Boot Redis Repository 기본 사용기"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring Boot 에서 Redis Repository 사용 방법에 대해 알아보자'
@@ -141,6 +141,7 @@ public interface DeviceCrudRepository extends CrudRepository<Device, Long> {
 - `DeviceCrudRepository` 인터페이스는 `CrudRepository` 를 상속 받고, 데이터의 타입과 키의 타입(<Device, Long>)을 선언해 주었다.
 - 기본적으로 `findById`, `count`, `delete` 등의 메서드는 상속 받고 있어서 별도의 구현없이 사용할 수 있다.
 - 커스텀 메서드로 인덱스를 지정한 name 필드를 기준으로 찾는 `findByName` 을 추가하였다.
+- Redis Repository 쿼리에 대한 더 자세한 내용은 [Spring Data Redis #Query by Example](https://docs.spring.io/spring-data/redis/docs/current/reference/html/#query-by-example.execution) 에서 확인 가능하다.
 
 ## Redis Repository Test
 
@@ -274,7 +275,52 @@ public class DeviceCrudRepositoryTest {
 	`Device:<id>:idx`|Sets|Device 데이터에서 <id> 의 인덱스 키|Device 데이터에서 <id> 가 가지고 있는 <index-key> 저장|`Device:1:idx`
 	`Device:<id>`|hashes|Device 데이터에서 <id> 의 데이터 키|Device 데이터에서 <id> 의 데이터 정보를 저장|`Device:1`
 
-- `Device` 에 저장된 데이터는 아래와 같다.
+- `Device` 의 키에는 Device 데이터 의 `<id>` 가 저장된다.
+
+	```
+	127.0.0.1:6379> type Device
+	set
+	127.0.0.1:6379> smembers Device
+	1) "1"
+	2) "2"
+	3) "3"
+	4) "4"
+	```  
+
+- `Device:<index-field>:<fiend-value>` 의 키에는 해당 인덱스 필드 값이 `<field-value>` 인 `<id>` 가 저장된다.
+
+	```
+	127.0.0.1:6379> type Device:name:d1
+	set
+	127.0.0.1:6379> smembers Device:name:d1
+	1) "1"
+	2) "2"
+	```  
+	
+- `Device:<id>:idx` 의 키에는 `<id>` 의 데이터가 해당되는 인덱스의 키 값이 저장된다.
+
+	```
+	127.0.0.1:6379> type Device:1:idx
+	set
+	127.0.0.1:6379> smembers Device:1:idx
+	1) "Device:name:d1"
+	```  
+	
+- `Device:<id>` 의 키에는 `<id>` 의 데이터 정보가 저장된다.
+
+	```
+	127.0.0.1:6379> type Device:1
+	hash
+	127.0.0.1:6379> hgetall Device:1
+	1) "_class"
+	2) "com.example.demo.domain.Device"
+	3) "serial"
+	4) "1"
+	5) "name"
+	6) "d1"
+	7) "price"
+	8) "1"
+	```  
 	
 ---
 ## Reference
