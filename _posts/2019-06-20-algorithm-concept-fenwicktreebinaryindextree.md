@@ -13,6 +13,7 @@ tags:
   - Algorithm
   - Fenwick Tree
   - Binary Indexed Tree
+  - Segment Tree
   - BIT
 use_math : true
 ---  
