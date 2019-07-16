@@ -272,7 +272,7 @@ public class DeviceCrudRepositoryTest {
 	`Device`|Sets|Device 의 Redis 키|Device 키로 저장된 데이터들의 <id>를 저장|`Device`
 	`Device:<index-field>:<field-value>`|Sets|<index-field> 에서 값이 <field-value> 인 인덱스 키|index 로 지정된 <index-field> 가 <field-value> 인 Device 데이터의 키 저장|`Device:name:d1`
 	`Device:<id>:idx`|Sets|Device 데이터에서 <id> 의 인덱스 키|Device 데이터에서 <id> 가 가지고 있는 <index-key> 저장|`Device:1:idx`
-	`Device:<id>|hashes|Device 데이터에서 <id> 의 데이터 키|Device 데이터에서 <id> 의 데이터 정보를 저장|`Device:1`
+	`Device:<id>`|hashes|Device 데이터에서 <id> 의 데이터 키|Device 데이터에서 <id> 의 데이터 정보를 저장|`Device:1`
 
 - `Device` 에 저장된 데이터는 아래와 같다.
 	
