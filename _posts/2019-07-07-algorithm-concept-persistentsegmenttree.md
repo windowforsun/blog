@@ -85,7 +85,7 @@ Node root1 = new Node(0, null, null);
 this.init(root1, 0, this.dataArray.length - 1);
 ```  
 
-## 값 변경
+### 값 변경
 - 값을 변경하는 메서드는 아래와 같다.
 
 ```java
@@ -132,7 +132,7 @@ this.update(root1, root2, 0, this.dataArray.length, 0, 2);
 
 - 초기 상태인 `root1` 과 새로운 노드가 추가된 상태인 `root2` 를 인자 값으로 넣어주면 `root2` 에는 값이 실제로 변경되는 노드만 새로 만들어 연결하고 기존의 노드는 `root1` 의 노드들을 그래도 사용한다.
 
-## 쿼리 수행(구간 합)
+### 쿼리 수행(구간 합)
 - 구간 합을 구하는 메서드는 아래와 같다.
 
 ```java
