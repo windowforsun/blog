@@ -24,7 +24,7 @@ use_math : true
 	- 값 변경 : $O(\log_2 N)$
 	
 ## Persistent Segment Tree 의 원리
-- 세그먼트 트리는 1차원 배열을 통해 트리 구조를 구성했다면, Persistent Segment Tree 는 노드에 좌, 우측 
+- Persistent Segment Tree 는 각 노드의 레퍼런스를 이용해서 트리를 구성한다.
 - 특정 값을 변경할 때, 트리구조에서 값 변경이 필요한 노드만 새로만들고 다른 노드는 원래의 트리와 공유한다.
 
 ## 예시
