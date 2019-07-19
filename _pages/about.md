@@ -1,20 +1,49 @@
 --- 
-title: "About window for sun"
+title: "About"
 permalink: /about/
 author_profile: true
 toc: true
 ---  
 
 ## Language
+- Java
+- PHP
+- C#
+- C++
+- Go
 
-## Framework
-
-## OS
+## Server
+- Nginx
+- Tomcat
 
 ## DB
+- MySQL
+- Redis
+- Memcached
+- MariaDB
 
-## DevOps
+## Framework
+- Spring
+- Spring Boot
+
+## Environment
+- CentOS
+- GCP
+- Ubuntu
 
 ## Tool
+- Git
+- SourceTree
+- Vagrant
+- VirtualBox
+- Maven
+- Jenkins
+- Capistrano
+- Composer
 
-## Interested
+## Log
+- Scribed
+- Fluentd
+
+## Link
+- [Beakjoon](https://www.acmicpc.net/user/ckdtjssml)
