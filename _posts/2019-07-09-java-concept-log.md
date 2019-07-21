@@ -170,6 +170,7 @@ TRACE|경로 추적 메시지
 - RollingFileAppender 사용시에 자동적으로 오래된 로그를 지워주고, Rolling 백업을 처리한다.
 
 ### 3.4. Logback 로그 레벨
+
 Log Level|Desc
 ---|---
 ERROR|일반적인 에러
@@ -191,6 +192,9 @@ TRACE|경로 추적 메시지
 	1. 없다면 logback-test.xml 파일을 찾는다.
 	1. 없다면 logback.xml 파일을 찾는다.
 	1. 모두 없다면 기본 설정에 따른다.
+	
+
+## 4. Log4j2
 
 ---
 ## Reference
