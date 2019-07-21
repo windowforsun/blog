@@ -127,6 +127,7 @@ TRACE|경로 추적 메시지
 ## 3. Logback
 - Log4j 를 바탕으로 새롭게 구현된 Logging 라이브러리이다.
 - Log4j 를 바탕으로 구현되었기 때문에 많은 부분에서 비슷하고 개선되었다.
+- Spring Boot 의 기본 로그 객체이다.
 
 ### 3.1. Logback 기능
 #### 3.1.1. Prudent mode
@@ -192,6 +193,7 @@ TRACE|경로 추적 메시지
 	1. 없다면 logback-test.xml 파일을 찾는다.
 	1. 없다면 logback.xml 파일을 찾는다.
 	1. 모두 없다면 기본 설정에 따른다.
+- Spring Boot 에서 Logback 에 대한 설정을 할때 application.properties, application.yml 혹은 logback-spring.xml 을 사용한다.
 	
 
 ## 4. Log4j2
