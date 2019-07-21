@@ -391,3 +391,4 @@ tags:
 [jenkins tomcat 401 Unauthorized](http://jagdeesh1009.blogspot.com/2016/04/jenkins-tomcat-401-unauthorized-org.html)  
 [The username you provided is not allowed to use the text-based Tomcat Manager (error 403) when deploying on remote Tomcat8 using Jenkins](https://stackoverflow.com/questions/41675813/the-username-you-provided-is-not-allowed-to-use-the-text-based-tomcat-manager-e)  
 [13. Jenkins 와 gitlab 연동 및 Tomcat배포 자동화](https://wikidocs.net/16281)  
+[Jenkins 와 gitlab 연동 및 Tomcat배포 자동화](https://cionman.tistory.com/34)  
