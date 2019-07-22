@@ -292,9 +292,26 @@ public class CalculateTest {
 - Junit 테스트에서는 `@ActiveProfiles` 의 값에 `dev`, `qa`, `prod` 등을 넣어 각 환경에 따른 테스트를 수행할 수 있다.
 
 ## 빌드
-- Intellij 에서는 `Run -> Edit Configurations... -> Configuration -> VM Options` 의 항목에 아래 코드를 추가해준다.
-	- `-Dspring.profiles.active={profile}`
-- Jenkins 에서 빌드 및 배포시 ...
+- JVM Property 설정
+	- Intellij 에서는 `Run -> Edit Configurations... -> Configuration -> VM Options` 의 항목에 아래 코드를 추가해준다.
+		- `-Dspring.profiles.active=<profile>`
+	- Spring + Tomcat 프로젝트를 Jenkins 로 빌드 및 배포시에 Profile 설정 아래와 같다.
+		- `<tomcat-path>/bin/setenv.sh` 파일에 `export JAVA_OPTS="$JAVA_OPTS -Dspring.profiles.active=<profile>" 을 추가해준다.
+	- Java 로 직접 빌드할 때는 아래와 같다.
+		- `java jar -Dspring.profiles.active=<profile>`
+- web.xml 설정
+
+	```xml
+	<context-param>
+		<param-name>spring.profiles.active</param-name>
+		<param-value>production</param-value>
+	</context-param>
+	```  
+
+- catalina.properties 설정
+	- `{tomcat-path}/config/catalina.properties` 에 아래 내용을 추가한다.
+	- spring.profiles.active=<profile>
+- Spring + Tomcat 의 환경에서 web.xml 에 설정되었을 경우 Tomcat 환경설정에 값들은 무시된다.
 
 	
 ---
@@ -305,3 +322,6 @@ public class CalculateTest {
 [Spring Profiles or Maven Profiles?](https://dzone.com/articles/spring-profiles-or-maven)   
 [Spring boot 설정 파일 yaml 사용법 (설정 파일을 읽어서 bean으로 필요할 때 사용하는 방법)](https://jeong-pro.tistory.com/159)   
 [Spring Boot Profile 설정](https://dhsim86.github.io/web/2017/03/28/spring_boot_profile-post.html)   
+[[Spring Boot Test] How to run spring test with a dynamic profile (feat. jenkins)](https://okihouse.tistory.com/entry/Spring-Boot-Test-How-to-run-spring-test-with-a-dynamic-profile-feat-jenkins)   
+[스프링 프로파일 (Spring profile) 을 통해 환경별로 다른 설정을 해보자](https://ethank.tistory.com/entry/%EC%8A%A4%ED%94%84%EB%A7%81-%ED%94%84%EB%A1%9C%ED%8C%8C%EC%9D%BC-Spring-profile-%EC%9D%84-%ED%86%B5%ED%95%B4-%ED%99%98%EA%B2%BD%EB%B3%84%EB%A1%9C-%EB%8B%A4%EB%A5%B8-%EC%84%A4%EC%A0%95%EC%9D%84-%ED%95%B4%EB%B3%B4%EC%9E%90)   
+[SpringBoot Profile](http://jdm.kr/blog/200?source=post_page---------------------------)   
