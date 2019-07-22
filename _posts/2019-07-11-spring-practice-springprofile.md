@@ -31,7 +31,7 @@ tags:
 # 예제
 ## 프로젝트 구조
 
-![그림 1]({{site.baseurl}}/img/practice-springbootspringprofile-1.png)
+![그림 1]({{site.baseurl}}/img/spring/practice-springbootspringprofile-1.png)
 
 ## pom.xml
 
