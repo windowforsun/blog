@@ -15,6 +15,7 @@ tags:
     - Spring Boot
     - Spring Profile
     - Profile
+    - Jenkins
 ---  
 
 # 목표
@@ -30,7 +31,7 @@ tags:
 # 예제
 ## 프로젝트 구조
 
-![그림 1]({{site.baseurl}}/img/practice-practice-springbootspringprofile-1.png)
+![그림 1]({{site.baseurl}}/img/practice-springbootspringprofile-1.png)
 
 ## pom.xml
 
@@ -82,7 +83,7 @@ tags:
 - [Maven Profile]({{site.baseurl}}{% link _posts/2019-07-03-spring-practice-mvnprofilemanagment.md %}) 에서는 pom.xml 에 환경에 따라 리소스 경로를 다르게 설정하였지만 Spring Profile 에서는 좀 더 편하게 사용가능하다.
 
 ## Spring Profile 분리
-- Properties 를 사용할 경우 `application-<env>.profiles` 의 파일이름으로 각 환경 분리가 가능하다.
+- Properties 를 사용할 경우 `application-<env>.properties` 의 파일이름으로 각 환경 분리가 가능하다.
 	- `application.propereties`
 	
 		```properties
@@ -125,7 +126,7 @@ tags:
         property.result=12
 		```  
 		
-- YAML(YML) 을 사용할 경우에는 `application.properties` 의 파일에 모두 작성할 수 있다.
+- YAML(YML) 을 사용할 경우에는 `application.yaml` 의 파일에 모두 작성할 수 있다.
 
 	```yaml
 	spring:
@@ -168,7 +169,7 @@ tags:
 	- `---` 로 Profile 설정을 분리한다.
 	
 - 기본 Profile 설정은 모두 local 이다.
-- Properties 는 `application.properties`, YAML 은 맨 상단의 설정은 모든 Profile 에서 포함된다.
+- Properties 는 `application.properties`, YAML 은 맨 상단에 설정은 모든 Profile 에서 포함된다.
 
 ## 서비스 구현 코드
 - 간단한 서비스를 통해 분리된 환경에 따라 서비스 처리 또한 분리시켜 본다.
@@ -310,7 +311,7 @@ public class CalculateTest {
 
 - catalina.properties 설정
 	- `{tomcat-path}/config/catalina.properties` 에 아래 내용을 추가한다.
-	- spring.profiles.active=<profile>
+	- `spring.profiles.active=<profile>`
 - Spring + Tomcat 의 환경에서 web.xml 에 설정되었을 경우 Tomcat 환경설정에 값들은 무시된다.
 
 	
