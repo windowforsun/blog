@@ -29,7 +29,7 @@ tags:
 - `Logback`은 로그를 남겨주는 라이브러리 이다.
 - `SLF4J`는 `Logback` 과 같은 로그 라이브러리들을 공통적으로 사용할 수 있게끔 해주는 `Facade Pattern` 구조를 가진 라이브러리 이다.
 - Java 로그 관련 더 자세한 내용은 [Java Log 라이브러리]({{site.baseurl}}{% link _posts/2019-07-09-java-concept-log.md %})에서 확인 가능하다.
-- Spring Boot 에서 사용하고 있는 기본 로그 라이브러리가 `SlF4J` + `Logback` 이기 때문에 추가적인 의존성 추기는 필요없다.
+- Spring Boot 에서 사용하고 있는 기본 로그 라이브러리가 `SlF4J` + `Logback` 이기 때문에 추가적인 의존성 추가는 필요없다.
 
 # 예제
 ## 프로젝트 구조
@@ -386,7 +386,7 @@ public void testRolling_ERROR() {
 	![그림 4]({{site.baseurl}}/img/spring/practice-springbootslf4jlogback-4.png)
 	
 	```
-	2019-07-23 12:42:36.454[ERROR] : multiply is zero : 0*4=0
+	2019-07-13 12:42:36.454[ERROR] : multiply is zero : 0*4=0
 	```  
 	
 
@@ -436,7 +436,7 @@ public void testRolling_ERROR() {
 	![그림 5]({{site.baseurl}}/img/spring/practice-springbootslf4jlogback-5.png)
 
 	```
-	2019-07-23 12:39:44:3130][main] DEBUG c.e.demo.minus.MinusCalculateImpl - minus : 3-2=1
+	2019-07-13 12:39:44:3130][main] DEBUG c.e.demo.minus.MinusCalculateImpl - minus : 3-2=1
 	```  
 
 ---
