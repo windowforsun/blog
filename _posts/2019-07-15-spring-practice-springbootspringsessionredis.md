@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring boot Spring Session Redis"
+title: "[Spring 실습] Spring boot Spring Session"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Boot 에서 Spring Session 을 Redis 에 저장하고 관리하자'
+excerpt: 'Spring Boot 에서 Spring Session 을 저장하고 관리하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -24,6 +24,15 @@ tags:
 # 방법
 - Spring Boot 에서 Redis 를 사용하는 환경을 만들어준다.
 - Spring Session 의 저장소를 Redis 로 설정해준다.
+- Redis 를 Session 저장소로 사용할 경우 서버가 다운되더라도 세션 정보는 유지된다.
+
+## Spring Session
+- HttpSession
+	- 웹 컨테이너에 의존적이지 않으면서 헤더에 세션 아이디를 제공한다.
+- WebSocket
+	- WebSocket 메세지로 HttpSession 을 유지할 수 있다.
+- WebSession
+	- SpringWebFlux 의 WebSession 을 애플리케이션 컨테이터를 의존하지 않는 방법으로 제공한다.
 
 ## Spring Session Clustering
 - 웹서비스를 제공하는 기본적인 Client-Server 의 구조는 아래와 같다.
@@ -49,7 +58,7 @@ tags:
 # 예제
 ## 프로젝트 구조
 
-![그림 5]({{site.baseurl}}/img/spring/practice-springbootspringsessionredis-4.png)
+![그림 5]({{site.baseurl}}/img/spring/practice-springbootspringsessionredis-5.png)
 
 ## pom.xml
 ```xml
@@ -132,22 +141,41 @@ tags:
 
 	```yaml
 	spring:
-     redis:
-      host: localhost
-      port: 6379
-      # Spring Session Redis 설정
-    session:
-     store-type: redis
-     timeout: 
+	  # Redis 접속 설정
+      redis:
+        host: localhost
+        port: 6379
+        timeout: 1m
+      # Sping Session 설정
+      session:
+        store-type: redis
+        redis:
+          namespace: windowforsun:session
+    
+    # Session timeout 시간
+    server:
+      servlet:
+        session:
+          timeout: 20s
 	```  
 	
-## Spring Session Redis Controller
+- `spring.session.store-type` 으로 Spring Session 저장소 선택 가능하다.
+	- JDBC
+	- Redis
+	- Hazelcast
+	- MongoDB
+- `spring.session.redis.namespace` 를 통해 Redis 에 Session 이 저장될때 앞에 붙은 Prefix 와 같은 문자열을 설정할 수 있다.
+	- 기본값은 spring:session 이다.
+- `server.servlet.session.timeout` 으로 세션의 타임아웃 시간을 설정할 수 있다.
+	- s : 초
+	- m : 분
+	- h : 시
+	
+## Controller
 
 ```java
 @RestController
 public class SampleController {
-    @Value("${property.session.timeout}")
-    private int sessionTimeout;
     private HttpSession httpSession;
 
     @Autowired
@@ -157,26 +185,109 @@ public class SampleController {
 
     @GetMapping
     public String getUid() {
-        this.httpSession.setMaxInactiveInterval(this.sessionTimeout);
         return this.httpSession.getId();
-    }
-
-    @PostMapping
-    public boolean checkUid(@RequestBody String uid) {
-        boolean check = !this.httpSession.isNew();
-
-        if(check) {
-            check = this.httpSession.getId().equals(uid);
-        }
-
-        return check;
     }
 }
 ```  
 
+- `HttpSession` 객체는 객체 변수로 `@Autowired` 가능하고 아래 처럼 메서드의 매개변수로도 가능하다.
 
+	```java	
+    @GetMapping
+    public String getUid(@Autowired HttpSession httpSession) {
+        httpSession.setMaxInactiveInterval(this.sessionTimeout);
+        return this.httpSession.getId();
+    }
+	```  
 
+## 테스트 코드
 
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)	// TestRestTemplate
+public class SampleControllerTest_RestTemplate {
+    private String url = "http://localhost:8080/";
+    @Value("${server.servlet.session.timeout}")
+    private String sessionTimeout;
+
+    @Autowired
+    private TestRestTemplate restTemplate;
+
+    @Test
+    public void testGetSessionUid() {
+        URI uri = URI.create(this.url);
+        ResponseEntity<String> result = this.doRequest(restTemplate, uri);
+        String sessionUid = result.getBody();
+
+        Assert.assertTrue(sessionUid.length() > 0);
+    }
+
+    @Test
+    public void testGetSessionUid_Twice_SameSessionUid() {
+        URI uri = URI.create(this.url);
+        ResponseEntity<String> result = this.doRequest(restTemplate, uri);
+        String sessionUid1 = result.getBody();
+        String cookie = result.getHeaders().getFirst("Set-Cookie");
+
+        result = this.doRequest(restTemplate, uri, cookie);
+        String sessionUid2 = result.getBody();
+
+        Assert.assertTrue(sessionUid1.length() > 0);
+        Assert.assertTrue(sessionUid2.length() > 0);
+        Assert.assertEquals(sessionUid1, sessionUid2);
+    }
+
+    @Test
+    public void testGetSessionUid_Twice_NotSameSessionUid() {
+        URI uri = URI.create(this.url);
+        ResponseEntity<String> result = this.doRequest(restTemplate, uri);
+        String sessionUid1 = result.getBody();
+
+        result = this.doRequest(restTemplate, uri);
+        String sessionUid2 = result.getBody();
+
+        Assert.assertTrue(sessionUid1.length() > 0);
+        Assert.assertTrue(sessionUid2.length() > 0);
+        Assert.assertNotEquals(sessionUid1, sessionUid2);
+    }
+
+    @Test
+    public void testSessionTimeout_Reset() throws Exception{
+        URI uri = URI.create(this.url);
+        ResponseEntity<String> result = this.doRequest(restTemplate, uri);
+        String sessionUid1 = result.getBody();
+        String cookie = result.getHeaders().getFirst("Set-Cookie");
+
+        int timeout = Integer.parseInt(this.sessionTimeout.substring(0, this.sessionTimeout.length() - 1));
+        Thread.sleep(timeout * 1010l);
+
+        result = this.doRequest(restTemplate, uri, cookie);
+        String sessionUid2 = result.getBody();
+
+        Assert.assertTrue(sessionUid1.length() > 0);
+        Assert.assertTrue(sessionUid2.length() > 0);
+        Assert.assertNotEquals(sessionUid1, sessionUid2);
+    }
+
+    private ResponseEntity<String> doRequest(TestRestTemplate restTemplate, URI uri) {
+        HttpHeaders headers = new HttpHeaders();
+        RequestEntity<Object> request = new RequestEntity<>(headers, HttpMethod.GET, uri);
+
+        return restTemplate.exchange(request, String.class);
+    }
+
+    private ResponseEntity<String> doRequest(TestRestTemplate restTemplate, URI uri, String cookie) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Cookie", cookie);
+        RequestEntity<Object> request = new RequestEntity<>(headers, HttpMethod.GET, uri);
+
+        return restTemplate.exchange(request, String.class);
+    }
+}
+```  
+
+- 테스트를 위해 `TestRestTemplate` 를 사용했고, `exchange` 메서드에 쿠기정보를 담은 헤더를 넣어 요청을 수행하고 있다.
+- `exchange` 메서드를 사용하고 있기 때문에 테스트를 위해서는 `url` 에 해당되는 서버를 켜두어야 테스트가 가능하다.
 
 
 ---
