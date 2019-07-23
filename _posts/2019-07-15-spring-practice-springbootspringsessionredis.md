@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring boot Spring Session"
+title: "[Spring 실습] Spring Boot Spring Session"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring Boot 에서 Spring Session 을 저장하고 관리하자'
