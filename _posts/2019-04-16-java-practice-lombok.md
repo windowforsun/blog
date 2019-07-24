@@ -1,15 +1,16 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Lombok 을 사용해 보자"
+title: "[Java 실습] Lombok 을 사용해 보자"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/java-bg.jpg
 excerpt: 'Lombok 을 사용해서 유용한 Annotation 을 통해 생산성을 높이자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Spring
+  - Java
 tags:
+	- Java
     - Spring
     - Practice
     - Lombok
