@@ -11,7 +11,6 @@ categories :
   - Java
 tags:
 	- Java
-    - Spring
     - Practice
     - Lombok
 ---  

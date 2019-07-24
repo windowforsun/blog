@@ -50,7 +50,7 @@ tags:
 ## 예제
 - 다형성을 띄고 있는 트리 형태의 클래스 구조는 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/spring/practice-jackson-lombok-polymorphism-1.png)
+	![그림 1]({{site.baseurl}}/img/java/practice-jackson-lombok-polymorphism-1.png)
 
 - 위 구조를 소스코드로 구현하면 아래와 같다.
 
@@ -164,9 +164,24 @@ tags:
 	
 	- 하위 클래스들은 원활한 객체 생성을 위해 `@Builder` 를 이용했다.
 	
+- Id 가 `NAME` 인 경우 `Json` 예시는 아래와 같다.
+
+ ```json
+ {
+	"className" : "ChildA",
+	"parentInt" : 1,
+	"parentString" : "parent",
+ 	"childAInt" : 2,
+ 	"childAString" : "childA"
+ }
+ ```  
+	
 - 테스트 코드는 아래와 같다.
 
 	```java
+	import static org.junit.Assert.*;
+	import static org.hamcrest.Matchers.*;
+	
 	public class JacksonPolymorphismTest {
         private ObjectMapper objectMapper = new ObjectMapper();
     
@@ -270,10 +285,25 @@ tags:
 	
 	- `"@class":"<패키지경로>.ChildAByClass"`  의 필드가 있으면 `ChildA` 로 처리한다.
 	- `ChildAByClass`, `ClassBByClass` 는 `ParentByClass` 를 상속 받는 다는 점을 제외하면 `ChildA`, `ChildB` 와 같다.
-	
+		
+- Id 가 `ClASS` 인 경우 `Json` 예시는 아래와 같다.
+
+ ```json
+ {
+	"@class" : "com.example.demo.ChildAByClass",
+	"parentInt" : 1,
+	"parentString" : "parent",
+ 	"childAInt" : 2,
+ 	"childAString" : "childAByClass"
+ }
+ ```  
+ 
 - Id 가 `CLASS` 인 경우를 테스트하는 코드는 아래와 같다.
 
-	```java
+	```java	
+	import static org.junit.Assert.*;
+	import static org.hamcrest.Matchers.*;
+	
 	public class JacksonPolymorphismTest {
         private ObjectMapper objectMapper = new ObjectMapper();
         
