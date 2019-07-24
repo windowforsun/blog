@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] Jackson Polymorphic Deserialization"
+title: "[Java 실습] Jackson Polymorphic Serialize/Deserialize"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: 'Jackson 라이브러리로 다형성 클래스 Deserialization 하기'
+excerpt: 'Jackson 라이브러리로 다형성 클래스 Serialize/Deserialize 하기'
 author: "window_for_sun"
 header-style: text
 categories :
