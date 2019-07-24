@@ -239,6 +239,59 @@ Person person = Person.builder()
 	.hobbies("music");
 ```  
 
+- 상속 구조에서는 아래와 같은 방법으로 빌더를 사용할 수 있다.
+
+	```java
+	@Getter
+	@Setter
+	@AllArgsConstructor
+	public class Parent  {
+	    protected long parentLong;
+	    protected int parentInt;
+	    protected String parentString;
+	}
+	```  
+	
+	```java
+	@Getter
+	@Setter
+	public class Child  {
+	    protected long childLong;
+	    protected int childInt;
+	    protected String childString;
+	    
+	    @Builder
+	    public Child(long parentLong, int parentInt, String parentString, long childLong, int childInt, String childString) {
+	    	super(parentLong, parentInt, parentString);
+	    	this.childLong = childLong;
+	    	this.childInt = childInt;
+	    	this.childString = childString;
+	    }
+	}
+	```  
+	
+	```java
+	Parent p = Parent.builder()
+        .parentLong(1l)
+        .parentInt(1)
+        .parentString("parentString")
+        .build();
+	```  
+	
+	```java
+	Child p = Child.builder()
+        .parentLong(1l)
+        .parentInt(1)
+        .parentString("parentString")
+        .childLong(2l)
+        .childInt(2)
+        .childString("childString")
+        .build();
+	```  
+	
+	- `Jackson` 라이브러리를 사용해서 Json Serialize/Deserialze 를 할 경우 자식 클래스에 `@JsonDeserialize` Annotation 을 추가해 준다.
+	
+
 ### 로그 자동 생성
 - @Log Annotation 을 사용하면 자동으로 log 필드를 만들고, 해당 클래스의 이름으로 Logger 객체를 생성하여 할당한다.
 - @Log 뿐만 아니라, @Slf4j, @Log4j, @Log4j2 등 다양한 Logging Framework 에 대응하는 Annotation 을 제공한다.
