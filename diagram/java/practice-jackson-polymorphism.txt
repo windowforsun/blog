@@ -1,0 +1,28 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+abstract class Parent {
+    # int parentInt
+    # String parentString
+
+    + {abstract} String classInfo()
+}
+
+class ChildA {
+    # int childAInt
+    # String childAString
+
+    + String classInfo()
+}
+
+class ChildB {
+    # double childBDouble
+    # String childBString
+
+    + String classInfo()
+}
+
+Parent <|-- ChildA
+Parent <|-- ChildB
+@enduml
+
