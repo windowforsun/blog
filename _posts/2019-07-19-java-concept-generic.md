@@ -538,16 +538,16 @@ public class GenericMethodTest {
 
 	```java	
 	public class WildCardsProducerConsumer {
-	    public void listCopy(List<? extends InnerParent> src, List<? super InnerParent> desc) {
+	    public void listCopy(List<? extends InnerParent> src, List<? super InnerParent> dest) {
 	        for(InnerParent innerParent : src) {
-	            desc.add(innerParent);
+	            dest.add(innerParent);
 	        }
 	    }
 	    
 	    // compile error
-	    public void listCopyCompileError(List<? super InnerParent> src, List<? extends InnerParent> desc) {
+	    public void listCopyCompileError(List<? super InnerParent> src, List<? extends InnerParent> dest) {
 	        for(InnerParent innerParent : src) {
-	            desc.add(innerParent);
+	            dest.add(innerParent);
 	        }
 	    }
 	}
@@ -556,7 +556,7 @@ public class GenericMethodTest {
 	- Producer-extends 는 무언가를 제공하는, Consumer-super 는 무언가를 사용한다.
 	- `listCopy` 의 인자값으로 설명하면 아래와 같다.
 		- src : Producer-extends
-		- desc : Consumer-super
+		- dest : Consumer-super
 	- 바꿔 말하면, Producer-extends 는 In 의 개념, Consumer-super 는 Out 의 개념으로 사용할 수 있다.
 	- 생산인 In 의 개념일 경우 `<? extebds T>` 사용하고, 사용인 Out 의 개념일 경우 `<? super T>` 를 사용한다.
 	
