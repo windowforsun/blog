@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: ""
+title: "[Java 개념]"
 header:
   overlay_image: /img/java-bg.jpg
 excerpt: ''
