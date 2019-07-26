@@ -533,7 +533,7 @@ public class GenericMethodTest {
 	convariant(공변)|구체적인 방향으로 타입 변환을 허용 한다.(자신과 자식 객체)|<? extends T>
 	contravariant(반공변)|추상적인 방향으로 타입 변환을 허용한다.(자신과 부모 객체)|<? super T>
 	
-- `extends-bound`, `super-bound` 는 `PECS` 라는 개념으로 설정 하겠다.
+- `extends-bound`, `super-bound` 는 `PECS` 라는 개념으로 설명 하겠다.
 	- PECS : Procuder-extends, Consumer-super
 
 	```java	
