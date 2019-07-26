@@ -37,7 +37,7 @@ tags:
 	}
 	```  
 
-- 아래와 같은 `Device` 클래스가 있다.
+- 아래와 같은 `Parent` 클래스가 있다.
 
 	```java
 	public class Parent {
@@ -53,7 +53,7 @@ tags:
 	}
 	```  
 	
-	- 제조사에 대한 클래스를 `Object` 타입으로 가지고 있다.
+	- `parentObject` 에 대한 타입을 `Object` 로 가지고 있다.
 	- 이 경우 `parentObject` 를 사용하기 위해 계속해서 타입 변환을 해주어야 한다.
 	
 - 아래는 위 `Parent` 클래스에 제네릭을 적용한 `ParentG` 클래스 이다.
