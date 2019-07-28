@@ -79,6 +79,31 @@ spring.redis.host=localhost
 ```  
 
 ## Configuration
+- `it.ozimov.embedded-redis` 의 설정을 해준다.
+
+```java
+@Configuration
+public class EmbeddedRedisConfiguration {
+    private RedisServer redisServer;
+    @Value("${spring.redis.port}")
+    private int port;
+
+    @PostConstruct
+    public void startRedisServer() throws IOException {
+        this.redisServer = new RedisServer(this.port);
+        this.redisServer.start();
+    }
+
+    @PreDestroy
+    public void stopRedisServer() {
+        if(this.redisServer != null) {
+            this.redisServer.stop();
+        }
+    }
+}
+```  
+
+- `application.properties` 에 설정된 `spring.redis.port`, `spring.redis.hostname` 등의 값을 통해 Redis Server 와 연결을 설정한다.
 
 ```java
 @Configuration
@@ -105,7 +130,6 @@ public class RedisConfiguration {
 }
 ```  
 
-- `application.properties` 에 설정된 `spring.redis.port`, `spring.redis.hostname` 등의 값을 통해 Redis Server 와 연결을 설정한다.
 
 ## Domain
 
