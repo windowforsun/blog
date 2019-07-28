@@ -1,16 +1,16 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Lombok 을 사용해 보자"
+title: "[Java 실습] Lombok 을 사용해 보자"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/java-bg.jpg
 excerpt: 'Lombok 을 사용해서 유용한 Annotation 을 통해 생산성을 높이자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Spring
+  - Java
 tags:
-    - Spring
+	- Java
     - Practice
     - Lombok
 ---  
@@ -238,6 +238,59 @@ Person person = Person.builder()
 	.hobbies("movie")
 	.hobbies("music");
 ```  
+
+- 상속 구조에서는 아래와 같은 방법으로 빌더를 사용할 수 있다.
+
+	```java
+	@Getter
+	@Setter
+	@AllArgsConstructor
+	public class Parent  {
+	    protected long parentLong;
+	    protected int parentInt;
+	    protected String parentString;
+	}
+	```  
+	
+	```java
+	@Getter
+	@Setter
+	public class Child  {
+	    protected long childLong;
+	    protected int childInt;
+	    protected String childString;
+	    
+	    @Builder
+	    public Child(long parentLong, int parentInt, String parentString, long childLong, int childInt, String childString) {
+	    	super(parentLong, parentInt, parentString);
+	    	this.childLong = childLong;
+	    	this.childInt = childInt;
+	    	this.childString = childString;
+	    }
+	}
+	```  
+	
+	```java
+	Parent p = Parent.builder()
+        .parentLong(1l)
+        .parentInt(1)
+        .parentString("parentString")
+        .build();
+	```  
+	
+	```java
+	Child p = Child.builder()
+        .parentLong(1l)
+        .parentInt(1)
+        .parentString("parentString")
+        .childLong(2l)
+        .childInt(2)
+        .childString("childString")
+        .build();
+	```  
+	
+	- `Jackson` 라이브러리를 사용해서 Json Serialize/Deserialze 를 할 경우 자식 클래스에 `@JsonDeserialize` Annotation 을 추가해 준다.
+	
 
 ### 로그 자동 생성
 - @Log Annotation 을 사용하면 자동으로 log 필드를 만들고, 해당 클래스의 이름으로 Logger 객체를 생성하여 할당한다.

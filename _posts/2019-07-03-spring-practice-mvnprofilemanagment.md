@@ -124,28 +124,28 @@ src
 
 - `${environment}/application.properties` 파일은 아래와 같다.
 
-```
+```properties
 spring.profiles.active=dev
 property.a=6
 property.b=2
 property.result=4
 ```  
 
-```
+```properties
 spring.profiles.active=local
 property.a=6
 property.b=2
 property.result=8
 ```  
 
-```
+```properties
 spring.profiles.active=prod
 property.a=6
 property.b=2
 property.result=3
 ```  
 
-```
+```properties
 spring.profiles.active=qa
 property.a=6
 property.b=2
@@ -284,6 +284,10 @@ mvn clean package -P qa
 
 ## prod deploy
 mvn clean package -P prod
+
+
+## 다른 방법
+clean install -P { local / dev / qa / prod }
 ```  
 	
 ---

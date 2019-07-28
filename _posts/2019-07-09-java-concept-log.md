@@ -12,7 +12,7 @@ categories :
 tags:
     - Practice
     - Java
-    - LogBack
+    - Logback
     - Log4j
     - SLF4J
 ---  
