@@ -441,6 +441,7 @@ public void testRolling_ERROR() {
 
 ---
 ## Reference
+[Spring Boot Logging](https://docs.spring.io/spring-boot/docs/current/reference/html/boot-features-logging.html#boot-features-custom-log-configuration)  
 [The logback manual](https://logback.qos.ch/manual/index.html)   
 [강력한 자바 오픈소스 로깅 프레임워크, logback 사용법 with example(스프링 부트에서 logback 가이드, logback-spring.xml 설정하기)](https://jeong-pro.tistory.com/154)   
 [[Spring Boot #11] 스프링 부트 로깅( Spring Boot Logging )](https://engkimbs.tistory.com/767)   
