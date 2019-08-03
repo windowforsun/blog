@@ -205,10 +205,48 @@ tags:
 	- `/foo/**` 의 필터와 매칭 되기 전에 `/**` 필터와 먼저 매칭된다.
 	
 ## Filter Chains 만들고 커스텀 하기
+- Spring Boot 애플리케이션에서 기본으로 정의된 필터 체인은 미리 정의된 `SecurityProperties.BASIC_AUTH_ORDER` 에 의해 정렬된다.
+- `security.basic.enabled=false` 설정을 통해 기본설정을 해제 하거나, 이보다 더 낮은 정렬 기준으로 다른 룰(새로운 Filter)을 적용할 수 있다.
+- 새로운 `Filter` 를 적용하기 위해서는 `WebSecurityConfigurerAdapter` 또는 `WebSecurityConfigurer` 타입의 빈을 생성하고 `@Order` 어노테이션을 적용하면 된다.
 
+	```java
+	@Configuration
+    @Order(SecurityProperties.BASIC_AUTH_ORDER - 10)
+    public class ApplicationConfigurerAdapter extends WebSecurityConfigurerAdapter {
+      @Override
+      protected void configure(HttpSecurity http) throws Exception {
+        http.antMatcher("/foo/**")
+         ...;
+      }
+    }
+	```  
 	
-	
-	
+	- 새로추가된 위 `Filter` 는 Spring Boot 의 기본 필터보다 먼저 요청을 처리하게 된다.
+- UI와 API 를 모두 제공하는 애플리케이션에서 각 자원에 대한 접근 룰의 설정은 아래의 예시와 같이 다를 수 있다.
+	- UI 는 로그인 페이지를 사용하고, Cookie 를 기반으로 한 인증을 사용한다.
+	- API 는 토큰 기반 인증으로, 인증이 실패할 경우 401 응답을 내려주는 방식이다.
+- 한 애플리케이션에서 다른 방식의 인증을 사용할 때, 각 인증 방식이 설정된 `WebSecurityConfigurerAdapter` 의 고유한 정렬을 통해 요청을 해당 `Filter` 로 매칭 시킨다.
+- 다른 방식의 인증에서 매칭의 룰이 같을 경우, 정렬에서 앞단에 위치한 `Filter` 와 매칭된다.
+
+## 요청의 전달과 인가를 위한 Request Matching
+- 보안과 관련된 `Filter` 는 `Matcher` 를 통해 해당 HTTP 요청을 허용할지 결정한다.
+- 어느 한 `Filter` 에서 적용이 허용되면 하위 `Filter` 들에게는 해당 요청이 전달되지 않는다.
+- `HttpSecurity` 를 통해 한 `Filter` 내에서 다양하게 요청 인가와 관련된 설정을 수행 할 수 있다.
+
+	```java
+	@Configuration
+    @Order(SecurityProperties.BASIC_AUTH_ORDER - 10)
+    public class ApplicationConfigurerAdapter extends WebSecurityConfigurerAdapter {
+      @Override
+      protected void configure(HttpSecurity http) throws Exception {
+        http.antMatcher("/foo/**")
+          .authorizeRequests()
+            .antMatchers("/foo/bar").hasRole("BAR")
+            .antMatchers("/foo/spam").hasRole("SPAM")
+            .anyRequest().isAuthenticated();
+      }
+    }
+	```  
 	
 	
 	
