@@ -83,7 +83,7 @@ tags:
 
 	- 부모(Global 한)가 되는 `ProviderManager` 가 있고 그 하위 경로에 각각의 `ProviderManager` 와 각 인증관련 동작을 수행하는 `AuthenticationProvider` 로 구성 할 수 있다.
 	
-## AuthenticationManager 커스텀 하기
+### AuthenticationManager 커스텀 하기
 - `AuthenticationManagerBuilder` 를 사용하면 손쉽게 커스텀이 가능하다.
 - 커스텀을 할때 대표적으로 필요한 부분들은 유저정보를 저장할 저장소(DB, In-Memory), `UserDetailService` 의 구현체 등이 있다.
 - 아래 설정 코드는 Global(Parent) 한 설정의 예시이다.
@@ -128,7 +128,7 @@ tags:
 - Spring boot 에서는 기본으로 Global `AuthenticationManager` 를 제공한다.
 	- 추가적인 설정은 Local `AuthenticationManagerBuilder` 를 통해 설정해 주면된다.
 	
-## Authorization 과 Access Control
+### Authorization 과 Access Control
 - `AuthenticationManager` 를 통해 인증에 성공하게 되면 다음 단계는 `Authorization` 과 `AccessControler` 이다.
 - `AccessDecisionManager` 는 `Authorization`, `Accesscontroler` 의 핵심 인터페이스이다.
 
@@ -204,10 +204,10 @@ tags:
 	
 	- `/foo/**` 의 필터와 매칭 되기 전에 `/**` 필터와 먼저 매칭된다.
 	
-## Filter Chains 만들고 커스텀 하기
+### Filter Chains 만들고 커스텀 하기
 - Spring Boot 애플리케이션에서 기본으로 정의된 필터 체인은 미리 정의된 `SecurityProperties.BASIC_AUTH_ORDER` 에 의해 정렬된다.
 - `security.basic.enabled=false` 설정을 통해 기본설정을 해제 하거나, 이보다 더 낮은 정렬 기준으로 다른 룰(새로운 Filter)을 적용할 수 있다.
-- 새로운 `Filter` 를 적용하기 위해서는 `WebSecurityConfigurerAdapter` 또는 `WebSecurityConfigurer` 타입의 빈을 생성하고 `@Order` 어노테이션을 적용하면 된다.
+- 새로운 `Filter` 를 적용하기 위해서는 `WebSecurityConfigurerAdapter` 또는 `WebSecurityConfigurer` 타입의 빈을 생성하고 `@Order` Annotation 을 적용하면 된다.
 
 	```java
 	@Configuration
@@ -228,9 +228,9 @@ tags:
 - 한 애플리케이션에서 다른 방식의 인증을 사용할 때, 각 인증 방식이 설정된 `WebSecurityConfigurerAdapter` 의 고유한 정렬을 통해 요청을 해당 `Filter` 로 매칭 시킨다.
 - 다른 방식의 인증에서 매칭의 룰이 같을 경우, 정렬에서 앞단에 위치한 `Filter` 와 매칭된다.
 
-## 요청의 전달과 인가를 위한 Request Matching
+### 요청의 전달과 인가를 위한 Request Matching
 - 보안과 관련된 `Filter` 는 `Matcher` 를 통해 해당 HTTP 요청을 허용할지 결정한다.
-- 어느 한 `Filter` 에서 적용이 허용되면 하위 `Filter` 들에게는 해당 요청이 전달되지 않는다.
+- 어느 한 `Filter` 에서 접근이 허용되면 하위 `Filter` 들에게는 해당 요청이 전달되지 않는다.
 - `HttpSecurity` 를 통해 한 `Filter` 내에서 다양하게 요청 인가와 관련된 설정을 수행 할 수 있다.
 
 	```java
@@ -248,75 +248,47 @@ tags:
     }
 	```  
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
----
+	- `Matcher` 는 아래와 같은 2가지 설정을 해주어야 한다.
+		- `Filter` 전체에서 요청을 매칭시키는 설정
+		- 접근에 대한 룰(권한)에 대한 설정
+ 
+### Combining Application Security Rules with Actuator Rules
 
-- 모든 접근 주체(유저)에 대해 `Authentication` 을 생성한다.
+```java
+@Configuration
+@Order(ManagementServerProperties.BASIC_AUTH_ORDER + 1)
+public class ApplicationConfigurerAdapter extends WebSecurityConfigurerAdapter {
+  @Override
+  protected void configure(HttpSecurity http) throws Exception {
+    http.antMatcher("/foo/**")
+     ...;
+  }
+}
+```
+
+- `ManagementServerProperties.BASIC_AUTH_ORDER` 의 우선순위 값은 `SecurityProperties` 의 값보다 5가 작기(우선순이가 높다) 때문에, 전자의 기본 필터가 먼저 수행되고 후자 필터가 수행된다.
+- 위 설정처럼 정렬값을 설정하게되면, `SecurityProperties` 의 기본 필터보다 먼저 설정 코드의 필터들이 수행된다.
+
+## Method Security
+- Spring Security 는 요청에 대한 접근제어를 통한 보안 뿐만 아니라, Java Method 에 대한 접근제어를 통한 보안을 제공한다.
+- Java Method 에 대한 보안을 적용하기 위해서는 먼저 아래 설정와 같이 설정을 해주어야 한다.
 	
 	```java
-	public interface Authentication extends Principal, Serializable {
-        Collection<? extends GrantedAuthority> getAuthorities();
-    
-        Object getCredentials();
-    
-        Object getDetails();
-    
-        Object getPrincipal();
-    
-        boolean isAuthenticated();
-    
-        void setAuthenticated(boolean var1) throws IllegalArgumentException;
+	@SpringBootApplication
+    @EnableGlobalMethodSecurity(securedEnabled = true)
+    public class SampleSecureApplication {
     }
 	```  
 	
-- Authentication 은 `SecurityContext` 에 보관되고 사용된다.
+- Bean 으로 등록된 클래스의 메서드에 `@Secure` Annotation 을 통해 보안 설정을 하게 되면, 해당 매서드 실행 전에 Interceptor 에서 권한을 검사하고 권한이 없을 경우 `AccessDeinedException` 을 발생시킨다.
+- 메서드 보안을 강제하는 Annotation 으로는 `@PreAuthorize` 와 `@PostAuthorize` 가 있고, 메서드의 파라미터와 리턴값에 대한 표현식을 작성하여 적용할 수 있다.
+
+## Working with Threads
+
 	
-	```java
-	public interface SecurityContext extends Serializable {
-        Authentication getAuthentication();
-    
-        void setAuthentication(Authentication var1);
-    }
-	```  
 	
-- Authentication 은 Spring Security 의 `AuthenticationManager` 를 통해 처리된다.
-
-	```java
-	public interface AuthenticationManager {
-       Authentication authenticate(Authentication var1) throws AuthenticationException;
-   }
-	```  
-
-- `AuthenticationManager` 의 구현체로 `ProviderManager` 가 있는데, 인증 구현은 `AuthenticationProvider` 에 위임한다.
-	- `AuthenticationProvider` 를 커스텀마이징해서 인증을 구현할 수 있다.
 	
-	```java
-	public interface AuthenticationProvider {
-        Authentication authenticate(Authentication var1) throws AuthenticationException;
-    
-        boolean supports(Class<?> var1);
-    }
-	```  
-
-## Spring Security Filter 의 흐름
-
-![]()
+	
 
 ---
 ## Reference

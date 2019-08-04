@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Boot Spring Security"
+title: "[Spring 실습] Spring Boot Spring Security Form Login"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Boot 에서 Spring Security 로 로그인 및 권한을 관리하자'
+excerpt: 'Spring Boot 에서 Spring Security 로 Form 기반 로그인을 수행하고 권한을 관리하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -19,12 +19,10 @@ tags:
 
 # 목표
 - Spring Security 로 권한을 관리한다.
-- Spring Security 기반 로그인을 수행한다.
+- Spring Security 을 사용해서 Form 기반 로그인을 수행한다.
 
 # 방법
-- Spring Security 의 저장소는 Redis 를 사용한다.
-
-## Spring Security
+- Redis 를 Spring Security 에서 사용할 계정정보의 저장소로 사용한다.
 
 # 예제
 ## 프로젝트 구조
