@@ -296,3 +296,5 @@ public class ApplicationConfigurerAdapter extends WebSecurityConfigurerAdapter {
 [spring security 파헤치기 (구조, 인증과정, 설정, 핸들러 및 암호화 예제, @Secured, @AuthenticationPrincipal, taglib)](https://sjh836.tistory.com/165)   
 [Spring-security-구조](https://minwan1.github.io/2017/03/25/2017-03-25-spring-security-theory/)   
 [Spring Security 아키텍쳐](https://happyer16.tistory.com/entry/Spring-Security-%EC%95%84%ED%82%A4%ED%85%8D%EC%B3%90)   
+[초보가 이해하는 스프링 시큐리티](https://okky.kr/article/382738)   
+[Spring boot - Spring Security(스프링 시큐리티) 란? 완전 해결!](https://coding-start.tistory.com/153)   
