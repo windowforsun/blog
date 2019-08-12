@@ -113,6 +113,20 @@ windowforsun2@remoteserver's password: # 접속 서버 계정의 암호
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAsEc+lci3mHqjbY11nDAJFp+FP4aSRfj7c6NZ46RxiwWdDEtIMjg4cUkiapHVM9LipNxI0QNCUWzVYvP0tlOlvUXPa/yuW7CfLpH6SOYsZqhieK/3b6poKu+ZtmKiUbgC3xDH3E3ReUhrIP9EFXDfvATbI4vxLiyWW9LOHQ2oQv+t4m1SL6NJjGrHZSWQhA3Dy94LgtLW+1dnLwJCvB+bOUt0BIe62hNGwWgHv9EY8nTUtMb14Cs+PSvLIm4tvqlz+ptLH6PK/Aytfg9Z7oDA3mNQbR6nXqjE+tDoA1LblphStpPhnPBjzLuQzURK5AKeY0FXAZqfe5eRN1h7xKAtTw== windowforsun@localhost.localdomain
 ```  
 
+### ssh-copy-id 로 원격 서버에 SSH 키 등록하기
+
+- `ssh-copy-id <원격서버계정명>@<원격서버>` 를 통해 원격서버에 키를 등록한다. 
+
+```
+[windowforsun2@localhost ~]$ ssh-copy-id windowforsun@remoteserver
+windowforsun@remoteserver's password:
+Now try logging into the machine, with "ssh 'windowforsun@remoteserver'", and check in:
+
+  .ssh/authorized_keys
+
+to make sure we haven't added extra keys that you weren't expecting.
+```  
+
 ## 원격 접속 확인 하기
 
 - 등록된 원격 서버에 접속하고 키 생성시 입력했던 비밀번호가 있다면 입력해 준다.
@@ -121,9 +135,6 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAsEc+lci3mHqjbY11nDAJFp+FP4aSRfj7c6NZ46RxiwWd
 [windowforsun2@localhost ~]$ ssh windowforsun@remoteserver
 Enter passphrase for key '/home/windowforsun/.ssh/id_rsa':
 ```  
-
-## 참고
-- `ssh-copy-id userid@hostname`
 
 ---
 ## Reference
