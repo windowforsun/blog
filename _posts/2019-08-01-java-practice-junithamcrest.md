@@ -23,7 +23,7 @@ tags:
 ## Junit 이란
 - 단위 테스트(Unit Test) 도구이다.
 - TC(Test Case)를 작성해서 `System.out` 으로 디버깅 하지 않고, 더 효율적은 방법으로 테스트를 할 수 있도록 해준다.
-- 단정(`asseert*`) 문을 통해 테스트 케이스의 수해애 결과를 판별한다.
+- 단정(`asseert*`) 문을 통해 테스트 케이스의 수행 결과를 판별한다.
 - 다양한 Annotation 을 지원한다.
 - 각 테스트간 새로운 인스턴스를 생성하여 독립적인 테스트가 이루어지게 한다.
 
@@ -172,8 +172,30 @@ public class JunitTest {
 }
 ```  
 
-
 ## Hamcrest 란
+- 소프트웨어 테스트를 위한 Framework 이다.
+- Junit 과 Mockito 와 연계해서 사용가능하다.
+- `Matcher` 클래스를 통해 단위 테스트를 수행 결과를 판별한다.
+- `assertThat` 을 사용해서 검증을 수행한다.
+
+### hamcrest 패키지
+
+package|desc
+---|---
+org.hamcrest.core|Object 또는 Value 관련 기본적인 Matcher
+org.hamcrest.beans|Java Bean 과 프로퍼티 관련된 Matcher
+org.hamcrest.collection|Array 와 Collection 관련 Matcher
+org.hamcrest.number|숫자 관련 Matcher
+org.hamcrest.object|Object 와 Class 관련 Matcher
+org.hamcrest.text|문자열 관련 Matcher
+org.hamcrest.xml|XML 관련 Matcher
+
+### Core Matcher (org.hamcrest.core) 
+
+method|desc
+
+
+
 
 ---
 ## Reference
