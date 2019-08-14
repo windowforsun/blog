@@ -165,7 +165,7 @@ public interface DeviceCrudRepository extends CrudRepository<Device, Long> {
 - `DeviceCrudRepository` 인터페이스는 `CrudRepository` 를 상속 받고, 데이터의 타입과 키의 타입(<Device, Long>)을 선언해 주었다.
 - 기본적으로 `findById`, `count`, `delete` 등의 메서드는 상속 받고 있어서 별도의 구현없이 사용할 수 있다.
 - 커스텀 메서드로 인덱스를 지정한 name 필드를 기준으로 찾는 `findByName` 을 추가하였다.
-- Redis Repository 쿼리에 대한 더 자세한 내용은 [Spring Data Redis #Query by Example](https://docs.spring.io/spring-data/redis/docs/current/reference/html/#query-by-example.execution) 에서 확인 가능하다.
+- Redis Repository 쿼리에 대한 더 자세한 내용은 [Spring Data Redis #Query by Example](https://docs.spring.io/spring-data/redis/docs/current/reference/html/#query-by-example.execution), [8.10. Queries and Query Methods](https://docs.spring.io/spring-data/data-redis/docs/current/reference/html/#redis.repositories.queries) 에서 확인 가능하다.
 
 ## Redis Repository Test
 

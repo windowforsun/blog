@@ -197,11 +197,83 @@ method|desc
 
 
 
+
+
+
+
+
+
+# core
+anything : 어떤 오브젝트나 값이 사용되든 일치한다고 판별한다.
+describedAs : 테스트 실패 시 보여 줄 추가적인 메시지를 다양한 방법으로 표현 할 수 있다.
+is : 내부 적으론 equalTo와 동일하고, 가독적 증진용으로 사용된다.
+
+#logical
+allOf : 모든 Matcher 들을 만족해한다. &&
+anyOf : Matcher 중 하나만 만족하면 된다. ||
+not : Matcher 를 만족하지 않으면 만족한다.
+
+#object
+equalTo : 오브젝트가 동일할 경우 만족한다. (Object.equals)
+hasToString : 오브젝트의 문자열이 동일할 경우 만족한다.(Object.toString)
+instanceOf, isCompatitbleType : Type 이 동일할 경우 만족한다.
+notNullValue, nullValue : null 값이 아니거나, null 값일 경우 만족한다.
+sameInstance : 오브젝트의 인스턴스가 같을 경우 만족한다.
+
+#beans
+hasProperty : Java Bean 에서 Property 가 있거나, Property 의 값이 Matcher 에 만족한지 검사한다.
+samePropertyValuesAs : 두 Java Bean 이 같은 타입의 Bean 이면서 같은 Property 값을 가지면 만족한다.
+
+#collections
+array : 배열의 길이만큼 Matcher 가 만족한지 검사한다. 각 Matcher 는 인덱스에 해당하는 배열의 값과 매칭된다.
+hasEntry : map 에서 Matcher에 만족하는 Entry 가 있는 지 검사한다.
+hasKey : map 에서 Matcher 에 만족하는 Key 가 있는 지 검사한다.
+hasValue : map 에서 Matcher 에 만족하는 Value 가 있는 지 검사한다.
+hasItem : Iterable 에서 Matcher 에 만족하는 값이 있는 지 검사한다.
+hasItems : iterable 에서 Matcher 들에 만족하는 값이 있는 지 검사한다.
+hasItemInArray : 배열에서 Matcher 에 만족하는 값이 있는 지 검사한다.
+
+
+
+isOneOf : 오브젝트가 주어진 값 중 있는 지 검사한다.
+isIn : 오브젝트가 iterable 중에 있는 지 검사한다.
+everyItem : iterable 의 값들이 모두 Matcher 에 만족하는지 검사한다.
+hasSize : collection 의 크기가 Matcher 에 만족하는 지 검사한다.
+
+arrayContaining : 배열에서 각 값이 인덱스로 대응되는 Matcher 에 만족하는 지 검사한다.
+arrayContainingInAnyOrder : 배열에서 각 값이 Matcher 에 만족하는 지 검사한다.
+arrayWithSize : 배열의 크기가 Matcher 에 만족하는 지 검사한다.
+contains : iterable 에서 각 값이 인덱스로 대응되는 Matcher 에 만족하는 지 검사한다.
+containsInAnyOrder : iterable 에서 각 값이 Matcher 에 만족하는 지 검사한다.
+empty : collection 이 비었는 지 검사한다.
+emptyArray : 배열이 비었는 지 검사한다.
+emptyCollectionOf : collection 이 비었는 지와 타입을 검사한다.
+emptyIterable : iterable 이 비었는 지 검사한다.
+emptyIterableOf : iterable 이 비었는 지와 타입을 검사한다.
+iterableWithSize : iterable 의 크기가 Matcher 에 만족하는 지 검사한다.
+
+
+
+
+#number
+closeTo : Double, BigDecimal 의 값이 오차 범위를 포함해서 Matcher 에 만족하는 지 검사한다.
+greaterThan, greaterThanOrEqualTo, lessThan, lessThanOrEqualTo : 값 보다 크다, 같거나 크다, 작다, 같거나 작다 인지 검사한다.
+
+#text
+equalToIgnoringCase : 문자열을 대소문자 상관없이 비교 한다.
+qaualToIgnoreWithSpace : 문자열을 공백 상관없이 비교 한다.
+stringContainsInOrder : 문자열에서 부분 문자열이 순서대로 매칭 되는지 검사한다.
+containsString, endsWith, startsWith : 문자열 포함, 시작, 끝 나는지 검사한다.
+isEmptyOrNullString : 문자열이 null 이거나 빈 문자열인지 검사한다.
+isEmptyString : 문자열이 빈 문자열인지 검사한다.
+
+
 ---
 ## Reference
 [Class Assert](http://junit.sourceforge.net/javadoc/org/junit/Assert.html)  
 [Hamcrest Tutorial](http://hamcrest.org/JavaHamcrest/tutorial)  
 [Class Matchers](http://hamcrest.org/JavaHamcrest/javadoc/1.3/org/hamcrest/Matchers.html)  
+[Hamcrest matchers tutorial](https://www.javacodegeeks.com/2015/11/hamcrest-matchers-tutorial.html)  
 [Using Hamcrest for testing - Tutorial](https://www.vogella.com/tutorials/Hamcrest/article.html)  
 [hamcrest 라이브러리](http://blog.naver.com/PostView.nhn?blogId=simpolor&logNo=221289242597&categoryNo=166&parentCategoryNo=0&viewDate=&currentPage=1&postListTopCurrentPage=1&from=postView)  
 [hamcrest 로 가독성있는 jUnit Test Case 만들기](https://www.lesstif.com/pages/viewpage.action?pageId=18219426)  
