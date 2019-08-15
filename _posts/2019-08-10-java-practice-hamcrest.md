@@ -16,6 +16,7 @@ tags:
     - Hamcrest
     - TDD
     - Test
+toc: true
 ---  
 
 ## Hamcrest 란
@@ -171,7 +172,7 @@ public void object_Expected_Is() {
 
 ## Logical
 ### allOf()
-- 인자 값으로 사용된 모든 Matcher 를 만족하는지 검사한다. (&&)
+- 인자 값으로 사용된 모든 Matcher 를 만족하는지 검사한다. (`&&`)
 
 ```java
 @Test
@@ -203,7 +204,7 @@ public void object_Expected_AllOf_IterableMatcher() {
 
 
 ### anyOf()
-- 인자 값으로 사용 된 Matcher 중 하나를 만족하는지 검사한다. (||)
+- 인자 값으로 사용 된 Matcher 중 하나를 만족하는지 검사한다. (`||`)
 
 ```java
 // anyOf
