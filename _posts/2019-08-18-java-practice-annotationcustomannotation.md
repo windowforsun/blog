@@ -121,6 +121,7 @@ public class MyClass {
 - 한 개의 Method 만 가진 Interface 의 경우 Method 의 이름을 생략할 수 있다.
 
 ### @Target
+- Annotation 을 정의 할때 사용하는 Annotation 이다.
 - Annotation 이 적용되는 범위를 나타낸다.
 - `ElementType.TYPE` : class, interface, enum 에 적용된다.
 - `ElementType.FIELD` : 클래스 필드 변수 에 적용된다.
@@ -135,18 +136,22 @@ public class MyClass {
 - `ElementType.MODULE` : Java9 에 추가된 것으로, 모듈에 적용된다.
 
 ### @Retention
+- Annotation 을 정의 할때 사용하는 Annotation 이다.
 - Annotation 이 어떻게 저장되는지를 뜻한다.
 - `RetentionPolicy.SOURCE` : source level 이고, compiler 는 인식하지 않는다.
 - `RetentionPolicy.CLASS` : compiler 는 인식하지만, JVM 은 인식하지 않는다.
 - `RetentionPolicy.RUNTIME` : JVM 이 인식한다.
 
 ### @Document
+- Annotation 을 정의 할때 사용하는 Annotation 이다.
 - Annotation 이 선언되면 문서화 되어야 한다.
 
 ### @Inherited
+- Annotation 을 정의 할때 사용하는 Annotation 이다.
 - 상속관계에서 Annotation 은 상속되지 않지만, 해당 Annotation 을 사용하면 상위 클래스의 Annotation 도 상속받게 된다.
 
-### Repeatable
+### @Repeatable
+- Annotation 을 정의 할때 사용하는 Annotation 이다.
 - 선언된 Annotation 을 반복적으로 사용 가능하다.
 
 	```java
