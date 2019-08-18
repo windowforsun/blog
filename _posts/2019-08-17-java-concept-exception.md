@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] Java 예외 클래스와 예외 처리"
+title: "[Java 개념] Java 예외(Exception) 클래스와 예외 처리"
 header:
   overlay_image: /img/java-bg.jpg
 excerpt: 'Java Exception 의 개념과 종류 및 차이에 대해 알아보자'
@@ -58,9 +58,6 @@ tags:
 	
 
 ## 예외 처리
-
-![그림 1]({{site.baseurl}}/img/java/concept-exception-02.jpg)
-
 ### 예외 복구
 
 ```java
@@ -115,5 +112,5 @@ try {
 
 ---
 ## Reference
-[Exception, RuntimeException의 개념과 사용 용도](http://blog.naver.com/PostView.nhn?blogId=serverwizard&logNo=220789097495)  
 [Java 예외(Exception) 처리에 대한 작은 생각](http://www.nextree.co.kr/p3239/)  
+[Exception, RuntimeException의 개념과 사용 용도](http://blog.naver.com/PostView.nhn?blogId=serverwizard&logNo=220789097495)  
