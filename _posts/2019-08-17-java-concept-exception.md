@@ -19,7 +19,7 @@ tags:
 
 ## Java 예외 클래스의 구조
 
-![]()
+![그림 1]({{site.baseurl}}/img/java/concept-exception-01.png)
 
 - Java 의 모든 예외클래스는 Object 클래스의 자식인 Throwable 클래스를 상속받고 있다.
 - Throwable 클래스의 자식클래스로는 Error 와 Exception 이 있다.
@@ -34,17 +34,84 @@ tags:
 - Exception 은 크게 Checked Exception 과 Unchecked Exception 으로 나뉜다.
 - Unchecked Exception 은 RuntimeException 및 하위 클래스들을 뜻하고, 그 외 RuntimeException 을 상속받지 않는 Exception 클래스는 모두 Checked Exception 이다.
 
-### Checked Exception
+### Checked Exception (Exception)
 - 반드시 예외 처리를 해야한다.
 - `try/catch` 문을 통해 예외를 잡아내거나, `throw` 를 통해 메서드 밖으로 예외를 던져야 한다.
 - 컴파일 단계에서 명확하게 Exception 체크가 가능하다.
 - 트랜잭션 처리에서 Checked Exception 은 roll-back 을 하지 않는다.
-
-### Unchecked Exception
+- Exception 의 하위 클래스로는 아래와 같은 것들이 있다.
+	- IOException
+	- SQLException
+	- ClassNotFoundException
+	- InstantiationException
+	- CloneNotSupportException
+	
+### Unchecked Exception (RuntimeException)
 - 명시적인 예외 처리를 하지 않아도 무방하다.
 - 실행단계에서 예외 확인이 가능하기 때문에 로직에 개발자 로직에 대한 부분, 예상하지 못한 논리에 의해 발견된다.
 - 트랜잭션 처리에서 Unchecked Exception 은 roll-back 처리를 수행한다.
+- RuntimeException 의 하위 클래스로는 아래와 같은 것들이 있다.
+	- NullPointException
+	- IllegalArgumentException
+	- IndexOutOfBoundException
+	- SystemException
+	
 
+## 예외 처리
+
+![그림 1]({{site.baseurl}}/img/java/concept-exception-02.jpg)
+
+### 예외 복구
+
+```java
+int maxRetryCount = MAX_RETRY_COUNT;
+
+while(maxRetryCount-- > 0) {
+	try {
+		// 예외가 발생할 수 있는 로직
+		
+		// 예외가 발생하지 않았으면 리턴
+		return;
+	} catch(SomeException e) {
+		// 로그 및 대기 등 예외상황에 대한 처리
+	} finally {
+		// 리소스 반납 및 정리 작업
+	}
+}
+
+// 몇번의 시도에도 실패 한경우 예외 발생
+throw new RetryFailException();
+```  
+
+- 예외가 발생하더라도 애플리케이션은 정상적인 흐름으로 진행된다.
+- 네트워크와 같이 환경이 좋지 않을때 예외가 발생할 수 있는 부분에 적용 가능한 처리이다.
+- 재시도 횟수를 정해두고, 재시도 횟수에도 실패한 경우 실패로 간주하고 예외를 던진다.
+- 예외가 발생할 경우 예외 상황에 대한 처리 코드와 같은 다름 흐름을 타게해서 예외 처리도 가능하다.
+
+### 예외처리 회피
+
+```java
+public void someMethod() throws SomeExeption {
+	// ...
+}
+```  
+
+- 해당 블럭(메서드) 에서 예외를 처리하지 않고 `throws` 를 통해 발생할 수 있는 예외를 호출 한 쪽으로 던진다.
+- 간단하지만 해딩 메서드에서 예외를 던지는 것이 최선의 방법이라는 확신이 있을 경우에만 사용해야 한다.
+
+### 예외 전환
+
+```java
+try {
+	// ..
+} catch(SomeExeption e) {
+	throw OtherException();
+}
+```  
+
+- 예외가 발생하면 `try/catch` 문을 통해 예외를 잡아내고 이를 다른 예외로 던지는 방법이다.
+- 호출한 쪽에서 예외를 받아 보다 명확하게 인지하게 하기 위함이다.
+- Checked Exception 중 복구 불가능한 예외가 발생했을 때, 이를 Unchecked Exception 으로 전환해서 예외 선언이 필요 없도록 할 수도 있다.
 
 ---
 ## Reference
