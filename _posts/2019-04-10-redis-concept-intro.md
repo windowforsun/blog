@@ -170,4 +170,5 @@ Redis(5.0) 는 String 을 포함한 총 7개의 데이터 구조를 제공한다
 [Introduction to Redis](https://redis.io/topics/introduction)  
 [REDIS 연구노트](https://kerocat.tistory.com/1)  
 [FAQ – Redis](https://redis.io/topics/faq)  
+[Redis를 활용한 데이터 캐싱하기](https://nachwon.github.io/redis/)  
 
