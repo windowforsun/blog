@@ -425,7 +425,7 @@ public class AccountController {
 - `ExistId` 는 존재하는 아이디인지에 대한 유효성 검사 Annotation 이고, `NumberString` 은 문자열로 구성된 숫자인지에 대한 유효성 검사이다.
 - 두 Custom Annotation 은 `@Constraint` Annotation 에서 각 Annotation 의 제약조건을 검사할 클래스를 인자 값을 가지고 있다.
 	- `ExistIdValidator` : 존재하는 아이디인지 검사
-	- `NumberString` : 숫자로 구성된 문자열인지 검사
+	- `NumberStringValidator` : 숫자로 구성된 문자열인지 검사
 - 제약조건을 검사하는 클래스는 `ConstraintValidator` 인터페이스를 상속해서 구현한다.
 
 	```java
