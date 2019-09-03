@@ -1167,6 +1167,7 @@ https://www.baeldung.com/spring-mvc-custom-validator
 ---
 ## Reference
 [Spring Bean Validation](https://phoenixnap.com/kb/spring-boot-validation-for-rest-services)   
+[Cross field validation in Spring and JEE](http://dolszewski.com/java/multiple-field-validation/)   
 [All You Need To Know About Bean Validation With Spring Boot](https://reflectoring.io/bean-validation-with-spring-boot/)   
 [Spring Boot CRUD REST APIs Validation Example](https://www.javaguides.net/2018/09/spring-boot-crud-rest-apis-validation-example.html)   
 [Implementing Validation for RESTful Services with Spring Boot](https://www.springboottutorial.com/spring-boot-validation-for-rest-services)   

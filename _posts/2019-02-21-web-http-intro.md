@@ -151,6 +151,7 @@ tags:
 ## Reference
 [HTTP](https://developer.mozilla.org/ko/docs/Web/HTTP)  
 [HTTP](https://ko.wikipedia.org/wiki/HTTP)  
+[HTTP 상태 코드](https://ko.wikipedia.org/wiki/HTTP_%EC%83%81%ED%83%9C_%EC%BD%94%EB%93%9C)  
 [[웹기본개념] HTTP 그리고 REST API 다가가기](https://jinbroing.tistory.com/96)  
 [[HTTP]HTTP란? 특징 및 구성요소](https://ourcstory.tistory.com/71)  
 [HTTP (HyperText Transport Protocol)의 이해](http://wiki.gurubee.net/pages/viewpage.action?pageId=26739929)  
