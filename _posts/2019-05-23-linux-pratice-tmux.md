@@ -436,6 +436,7 @@ bind-key y set-window-option synchronize-panes
 
 ---
 ## Reference
+[Install tmux 2.8 on centos 7 · GitHub](https://gist.github.com/pokev25/4b9516d32f4021d945a140df09bf1fde)
 [CentOS 6 / CentOS 7에서 최신 tmux를 yum으로 넣은 tmux과 공존시킨 상태에서 설치](https://www.terabo.net/blog/install-latest-tmux-on-centos-6-and-7/)  
 [Install tmux on Centos release 6.5](https://gist.github.com/cdkamat/fdb136230f67c563c7b1)  
 [터미널 멀티플렉서 tmux를 배워보자](http://blog.b1ue.sh/2016/10/10/tmux-tutorial/)  
