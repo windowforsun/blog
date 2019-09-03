@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Docker 개념] Docker 설치 및 기본 명령어"
 header:
-  overlay_image: /img/docker-bg.jpg
+  overlay_image: /img/docker-bg-2.jpg
 excerpt: ''
 author: "window_for_sun"
 header-style: text
@@ -19,7 +19,7 @@ tags:
 
 
 ## Docker 설치하기
-- Docker 는 리눅스 기반이기 때문에 리눅스상에 설치를 한다.(Windows Mac OS 에도 가능하다.)
+- Docker 는 리눅스 기반이기 때문에 리눅스상에 설치를 한다.(Windows, Mac OS 에도 가능하다.)
 - 간편하고 빠른 설치를 위해 자동 설치 스크립트를 이용한다.
 - Docker 는 리눅스 Kernel 버전이 3.10.x 이상 일 경우에 설치 및 실행이 가능하다.(Centos 에서는 7 부터 해당된다.)
 - 설치는 `curl -fsSL https://get.docker.com/ | sh` 명령어를 통해 가능하다.
