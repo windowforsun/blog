@@ -26,5 +26,6 @@ tags:
 
 ---
 ## Reference
-[Spring Guide - Exception 전략](https://cheese10yun.github.io/spring-guide-exception/)   
-[Spring Handle Exception](https://jaehun2841.github.io/2018/08/30/2018-08-25-spring-mvc-handle-exception/)   
+[Dockerize a Spring Boot application](https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/)   
+[IntelliJ 에서 JAR 만들기](https://www.hyoyoung.net/100)   
+[[IntelliJ] 실행 가능한 Jar 파일 생성 시 'xxx.jar에 기본 Manifest 속성이 없습니다.' 오류증상](http://1004lucifer.blogspot.com/2016/01/intellij-jar-xxxjar-manifest.html)   
