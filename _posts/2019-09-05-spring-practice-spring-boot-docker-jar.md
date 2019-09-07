@@ -1,17 +1,19 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] 미 Spring "
+title: "[Docker 실습] Spring Boot Docker 환경 구성"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/docker-bg-2.jpg
 excerpt: 'Spring'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Spring
+  - Docker
 tags:
-    - Spring
+    - Docker
     - Practice
+    - Spring
+    - SpringBoot
 ---  
 
 # 목표
@@ -29,3 +31,4 @@ tags:
 [Dockerize a Spring Boot application](https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/)   
 [IntelliJ 에서 JAR 만들기](https://www.hyoyoung.net/100)   
 [[IntelliJ] 실행 가능한 Jar 파일 생성 시 'xxx.jar에 기본 Manifest 속성이 없습니다.' 오류증상](http://1004lucifer.blogspot.com/2016/01/intellij-jar-xxxjar-manifest.html)   
+[docker-compose - ADD failed: Forbidden path outside the build context](https://stackoverflow.com/questions/54287298/docker-compose-add-failed-forbidden-path-outside-the-build-context)   
