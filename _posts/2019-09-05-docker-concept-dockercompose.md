@@ -59,7 +59,7 @@ tags:
 
 ## docker-compose.yml
 - Docker Compose 는 `docker-compose.yml` 이라는 파일을 기반으로 실행된다.
-- `docker-compose.yml` 파일에 형식에 맞춰 자신이 구성하고 싶은 것과 환경을 작성해 주면 된다.
+- `docker-compose.yml` 파일에 형식에 맞춰 자신이 구성하고 싶은 환경을 작성해 주면 된다.
 - `docker-compose.yml` 에는 `version` 이 있는데, 버전에 따라 지원하는 기능과 구조가 다르다. [자세히](https://docs.docker.com/compose/compose-file/)
 - `docker-compose.yml` 에 대한 더더더더욱 자세한 설명은 [여기](https://docs.docker.com/compose/compose-file/)를 참고한다.
 
@@ -73,6 +73,14 @@ tags:
 
 ## services
 - `services` 는 `docker` 명령어를 사용해서 옵션 파라미터로 전달 했던 요소들을 각 서비스의 컨테이너에 맞게 정의할 수 있다.
+- 하나의 Docker Container 에 하나 이상의 Docker 이미지를 정의해 환경을 구성 할 수 있다.
+- `Dockerfile` 에서 하나의 컨테이너에 각각 정의하던 `CMD`, `EXPOSE`, `VOLUMES` 등을 `docker-compose.yml` 파일에서는 좀 더 효율정으로 정의할 수 있다.
+- 쉘에 등록되어 있는 환경변수를 `docker-compose.yml` 파일에 사용 가능하다.
+
+## networks
+- ``
+
+
 
 ### build
 - Docker 서비스를 빌드
