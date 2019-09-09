@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[PHP 실습]"
+title: "[PHP 실습] Docker Compose + Nginx + PHP Composer + PHPUnit"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Docker Compose 를 사용해서 Nginx + PHP Compose + PHPUnit 실행 및 디버깅 환경을 구성하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,12 @@ categories :
 tags:
     - Practice
     - PHP
+    - Docker
+    - PHPUnit
+    - PHPComposer
+    - DockerCompose
+    - Nginx
+  	- Jetbrains
 ---  
 
 ## 환경
