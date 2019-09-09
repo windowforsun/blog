@@ -31,6 +31,7 @@ container 에서 설정관련은 dockerfile 에서 하는게 좋을 듯
 
 ---
 ## Reference
+[Spring Boot: Run and Build in Docker](https://dzone.com/articles/spring-boot-run-and-build-in-docker)   
 [Dockerize a Spring Boot application](https://thepracticaldeveloper.com/2017/12/11/dockerize-spring-boot/)   
 [IntelliJ 에서 JAR 만들기](https://www.hyoyoung.net/100)   
 [[IntelliJ] 실행 가능한 Jar 파일 생성 시 'xxx.jar에 기본 Manifest 속성이 없습니다.' 오류증상](http://1004lucifer.blogspot.com/2016/01/intellij-jar-xxxjar-manifest.html)   
