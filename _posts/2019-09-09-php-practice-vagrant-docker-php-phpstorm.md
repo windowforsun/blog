@@ -21,6 +21,8 @@ tags:
 - Vagrant
 - PHP 7
 - Nginx
+- PHPUnit
+- PHP Composer
 
 ## Vagrant(VM) 에 Docker 설치
 
@@ -186,7 +188,7 @@ tags:
 - Docker Remote API 는 Third-Party 애플리케이션에서 Docker 의 명령어를 사용할 있게 지원해주는 API 이다.
 
 #### Docker Remote API 사용 설정
-- `vi vi /usr/lib/systemd/system/docker.service` 파일 내용은 아래와 같다.
+- `vi /usr/lib/systemd/system/docker.service` 파일 내용은 아래와 같다.
 
 	```
 	[Unit]
@@ -249,8 +251,8 @@ tags:
 	![그림 7]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-7.png)
 	
 	- `Engine API URL` 에서 `tcp:localhost:2385` 는 현재 vagrant 를 통해 포트포워딩 설정이 되어 있는 상태이다.
-	- `/vagrant/server` 경로와 `C:\vm_share\centos7\server` 를 매핑 Docker 경로로 매핑 시켰다.
-	- 하단의 출력 처럼 `Connection successful` 이라는 메시지가 출력되어야 한다.
+	- `C:\vm_share\centos7\server` 경로를 `/vagrant/server` VM(Vagrant) 경로로 매핑 시켰다.
+	- 하단의 출력 처럼 `Connection successful` 메시지가 출력되어야 한다.
 	
 ### PhpStorm 에서 PHP 실행하기
 - File -> Settings -> Language & Frameworks -> PHP 에서 `CLI Interpreter` 를 추가해준다.
@@ -434,8 +436,114 @@ tags:
 - `http://<서버IP>:<서버Port>` 요청 결과는 아래와 같다.
 
 	![그림 18]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-18.png)
+	
+## PHPUnit 적용하기
+### 프로젝트 구조
+
+![그림 19]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-19.png)
+
+### PHPUnit 설정하기
+- `Docker + PHP Composer` 프로젝트의 `composer.json` 에서 `require-dev` 를 통해 `phpunit` 의 의존성을 추가해 주었다.
+- File -> Settings -> Language & Frameworks -> PHP -> Test Frameworks 에서 `+` 를 누르고 `PHPUnit By Remote Interpreter` 을 누른다.
+
+	![그림 20]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-20.png)
+	
+- `Interpreter` 에서 Docker PHP Image 를 선택한다.
+
+	![그림 21]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-21.png)
+	
+- PHPUnit Library -> Path to script 에 현재 프로젝트의 `autoload.php` 경로를 입력하고, Refresh 버튼을 누른다.
+
+	![그림 22]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-22.png)
+	
+### PHP Composer 수정하기
+- `composer.json` 을 아래와 같이 수정한다.
+
+	```json
+	{
+	  "name" : "test2",
+	  "autoload" : {
+	    "psr-4" : {
+	      "Src\\" : "src/"
+	    }
+	  },
+	  "autoload-dev": {
+	    "psr-4": {
+	      "Test\\" : "tests/"
+	    }
+	  },
+	  "require-dev" : {
+	    "phpunit/phpunit": "^7"
+	  }
+	}
+	```  
+	
+### Unit Test 코드 작성하기
+- 프로젝트 루트에서 `tests` 디렉토리를 생성한다.
+- `tests/service` 디렉토리 구조를 만들고 `TestCalculate` 테스트 클래스를 생성한다.
+
+	```php
+	namespace Test\service;
+	
+	use PHPUnit\Framework\TestCase;
+	use Src\service\Calculate;
+	
+	class TestCalculate extends TestCase
+	{
+	    private $calculate;
+	
+	    /**
+	     * @before
+	     */
+	    public function setUp() {
+	        $this->calculate = new Calculate();
+	    }
+	
+	    /**
+	     * @test
+	     */
+	    public function plus_1_2_Expected_3() {
+	        // when
+	        $actual = $this->calculate->plus(1, 2);
+	
+	        // then
+	        $this->assertEquals(3, $actual);
+	    }
+	
+	    /**
+	     * @test
+	     */
+	    public function minus_3_1_Expected_2() {
+	        // when
+	        $actual = $this->calculate->minus(3, 1);
+	
+	        // then
+	        $this->assertEquals(2, $actual);
+	    }
+	
+	    /**
+	     * @test
+	     */
+	    public function multiply_3_2_Expected_6() {
+	        // when
+	        $actual = $this->calculate->multiply(3, 2);
+	
+	        // then
+	        $this->assertEquals(6, $actual);
+	    }
+	}
+	```  
+	
+- Unit Test 를 실행시키면 아래와 같은 결과를 확인 할 수 있다.
+
+	![그림 23]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-23.png)
+
+- 아래 처럼 디버깅도 가능하다.
+
+	![그림 24]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-24.png)
 
 
 ---
 ## Reference
-[]()  
+[PHPUnit "use Composer autoloader" could not parse PHPUnit version output.](https://intellij-support.jetbrains.com/hc/en-us/community/posts/115000455850-PHPUnit-use-Composer-autoloader-could-not-parse-PHPUnit-version-output-)  
+[How to choose a PHP project directory structure?](https://docs.php.earth/faq/misc/structure/)  
