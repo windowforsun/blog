@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring "
+title: "[Spring 실습] 미 Spring "
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring'
