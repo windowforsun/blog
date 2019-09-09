@@ -17,7 +17,7 @@ tags:
     - PHPComposer
     - DockerCompose
     - Nginx
-  	- Jetbrains
+    - Jetbrains
 ---  
 
 ## 환경
