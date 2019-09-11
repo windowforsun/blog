@@ -267,21 +267,18 @@ tags:
 
 - 추가된 Docker Remote API 에서 현재 프로젝트에서 사용하는 PHP 이미지를 선택한다.
 
-	![그림 9]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-9.png)
+	![그림 9]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-9_2.png)
+	![그림 9]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-9_3.png)
 	
 	- Docker Compose 로 생성된 이미지는 `services` 의 이름을 기반으로 생성된다.
 
 - 아래는 `CLI Interpreters` 가 추가된 화면이다.
 
-	![그림 10]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-10.png)
+	![그림 10]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-10_2.png)
 	
 - PHP 의 Docker Container 경로의 Host Path 를 아래와 같이 수정하기를 눌러 프로젝트 경로로 설정해 준다.
 
-	![그림 11]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-11.png)
-	
-- PHP 의 `Path mappings` 에 Host 경로와 Docker Container 의 경로를 매핑 시켜준다.
-
-	![그림 12]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-12.png)
+	![그림 11]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-12_2.png)
 	
 - PhpStorm 에서 스크립트를 실행할 수 있다.
 
@@ -293,8 +290,9 @@ tags:
 
 
 ## Docker + PHP Composer
-### 프로젝트 구조
 - Docker + PHP 프로젝트에 PHP Composer 를 적용한 프로젝트이다.
+
+### 프로젝트 구조
 
 ![그림 14]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-14.png)
 
@@ -323,11 +321,11 @@ tags:
 	
 - `CLI Interpreter` 설정 
 
-	![그림 16]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-16.png)
+	![그림 16]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-16_2.png)
 	
 - Synchronize IDE 설정
 
-	![그림 17]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-17.png)
+	![그림 17]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-17_2.png)
 	
 ### Docker Composer 에 PHP Composer 추가
 - `docker-compose.yml` 파일 내용
@@ -454,13 +452,13 @@ tags:
 
 	![그림 20]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-20.png)
 	
-- `Interpreter` 에서 Docker PHP Image 를 선택한다.
+- `Interpreter` 에서 Docker PHP Container 를 선택한다.
 
-	![그림 21]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-21.png)
+	![그림 21]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-21_2.png)
 	
 - PHPUnit Library -> Path to script 에 현재 프로젝트의 `autoload.php` 경로를 입력하고, Refresh 버튼을 누른다.
 
-	![그림 22]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-22.png)
+	![그림 22]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-22_2.png)
 	
 ### PHP Composer 수정하기
 - `composer.json` 을 아래와 같이 수정한다.
@@ -548,6 +546,924 @@ tags:
 
 	![그림 24]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-24.png)
 
+
+## MySQL 연동하기
+- 기존 프로젝트에 MySQL 을 연동하고 간단한 테스트 코드를 작성한다.
+
+### 프로젝트 구조
+
+![그림 25]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-25.png)
+
+### MySQL Container 설정
+- `docker-compose.yml` 에 아래 내용을 추가한다.
+	
+	```yaml
+	version: '3.7'
+
+	services:
+	  test2nginx:
+	  	# 생략
+	    networks:
+	      # 생략
+	      - php-my	# php-mysql 네트워크 추가
+	  test2composer:
+	  	# 생략
+	  test2mysql:
+	    build:
+	      context: ./mysql
+	    ports:
+	      - "3306:3306"		# mysql 포트
+	    env_file:
+	      - .env			# 환경변수(초기 비밀번호 등)
+	    volumes:
+	      - ./mysql/conf:/etc/mysql/conf.d/source		# 커스텀 설정
+	      - ./mysql/sql:/docker-entrypoint-initdb.d		# 초기 테이블 설정
+	      - ./mysql-data:/var/lib/mysql					# mysql 데이터 호스트에 마운트
+	    command:
+	      - --default-authentication-plugin=mysql_native_password	# 비밀번호 인증 설정
+	    networks:
+	      - php-my		# php-mysql 네트워크 설정
+	
+	networks:
+	  # 생략
+	  php-my:		# php-mysql 네트워크 선언
+	```  
+	
+- `docker/mysql/Dockerfile` MySQL 컨테이너 빌드 설정
+
+	```
+	FROM mysql:8.0.17   # mysql container 에서 사용할 이미지
+	```  
+
+- `docker/mysql/custom.cnf` MySQL 커스텀 설정
+
+	```
+	bind-address=0.0.0.0    # 모든 아이피에 대해서 접속 허용
+	```  
+	
+- `docker/sql/test_table.sql` 초기 테이블 설정
+
+	```sql
+	use m_test
+
+	CREATE TABLE IF NOT EXISTS `test_table` (
+	  `id` int(10) DEFAULT 0,
+	  `value` varchar(10) DEFAULT NULL,
+	  PRIMARY KEY (`id`)
+	) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8
+	```  
+	
+- `docker/.env` MySQL 환경 변수 설정
+
+	```
+	# MYSQL
+	MYSQL_DATABASE=m_test
+	MYSQL_USER=hello
+	MYSQL_PASSWORD=hello
+	MYSQL_ROOT_PASSWORD=root
+	```  
+	
+- `docker-compose.yml` 에서 `./mysql-data:/var/lib/mysql` 마운트 시켰기 때문에 호스트 `./mysql-data` 디렉토리에 MySQL 의 데이터 파일이 저장된다.
+	
+### PHP Container 추가 설정
+- `docker/php-fpm/Dockerfile` 내용을 아래와 같이 수정한다.
+
+	```
+	FROM php:7.3-fpm
+
+	# xdebug
+	RUN pecl install xdebug \
+	  && docker-php-ext-enable xdebug
+	  
+	# pdo_mysql
+	RUN apt-get update
+	RUN docker-php-ext-install pdo_mysql
+	
+	COPY conf.d/ /usr/local/etc/php/conf.d/
+	```  
+	
+### PHP Composer 추가 설정
+- `compser.yml` 파일을 아래와 같이 수정한다.
+
+	```json
+	{
+	  "name" : "test2",
+	  "autoload" : {
+	    "psr-4" : {
+	      "Src\\" : "src/"
+	    }
+	  },
+	  "autoload-dev": {
+	    "psr-4": {
+	      "Test\\" : "tests/"
+	    }
+	  },
+	  "require-dev" : {
+	    "phpunit/phpunit": "^7"
+	  },
+	  "require": {
+	    "ext-pdo": "*",
+	    "ext-pdo_mysql": "*"
+	  }
+	}
+	```  
+	
+### 소스코드
+
+![그림 26]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-26.png)
+
+- `Value`
+
+	```php
+	namespace Src\obj;
+
+	class Value
+	{
+	    /** @var int id */
+	    private $id;
+	    /** @var string $value */
+	    private $value;
+	
+	    /**
+	     * @return int
+	     */
+	    public function getId(): int
+	    {
+	        return $this->id;
+	    }
+	
+	    /**
+	     * @param int $id
+	     */
+	    public function setId(int $id): void
+	    {
+	        $this->id = $id;
+	    }
+	
+	    /**
+	     * @return string
+	     */
+	    public function getValue(): string
+	    {
+	        return $this->value;
+	    }
+	
+	    /**
+	     * @param string $value
+	     */
+	    public function setValue(string $value): void
+	    {
+	        $this->value = $value;
+	    }
+	}
+	```  
+	
+- `DBConnectionFactory`
+
+	```php
+	namespace Src\lib;
+
+	class DBConnectionFactory
+	{
+	    /** @var \PDO $pdo */
+	    private $pdo;
+	    /** @var \PDOStatement $statement */
+	    private $statement;
+	
+	    private function __construct()
+	    {
+	    }
+	
+	    private function connect() {
+	        $this->pdo = new \PDO('mysql:host=test2mysql;port=3306;dbname=m_test','root', 'root');
+	    }
+	
+	    public static function getInstance() {
+	        static $instance = null;
+	
+	        if($instance == null) {
+	            $instance = new DBConnectionFactory();
+	        }
+	
+	        return $instance;
+	    }
+	
+	    public function prepareStatement($query) {
+	        $this->connect();
+	        $this->statement = $this->pdo->prepare($query);
+	    }
+	
+	    public function bindParam($name, $value) {
+	        $this->statement->bindParam($name, $value);
+	    }
+	
+	    public function execute() {
+	        return $this->statement->execute(null);
+	    }
+	
+	    public function fetchArray() {
+	        return $this->statement->fetch(\PDO::FETCH_ASSOC);
+	    }
+	
+	    public function affectedRows() {
+	        return $this->statement->rowCount();
+	    }
+	}
+	```  
+	
+	- PHP 에서 MySQL 에 접속할때 `hostname` 은 MySQL Container 이름인 `test2mysql` 이다.
+	
+- `ValueData`
+
+	```php
+	namespace Src\data;
+	
+	class ValueData
+	{
+	    /** @var DBConnectionFactory $db */
+	    private $db;
+	
+	    /**
+	     * ValueData constructor.
+	     */
+	    public function __construct()
+	    {
+	        $this->db = DBConnectionFactory::getInstance();
+	    }
+	
+	
+	    public function insert(Value $value) {
+	        $query = <<<SQL
+	        INSERT INTO test_table
+	        (
+	            id,
+	            value
+	        )
+	        VALUES
+	        (
+	            :id,
+	            :value
+	        )
+	SQL;
+	        $this->db->prepareStatement($query);
+	        $this->db->bindParam(':id', $value->getId());
+	        $this->db->bindParam(':value', $value->getValue());
+	        $this->db->execute();
+	        $result = $this->db->affectedRows();
+	
+	        return $result;
+	    }
+	
+	    public function selectById($id) {
+	        $query = <<<SQL
+	        SELECT
+	            id,
+	            value
+	        FROM
+	            test_table
+	        WHERE
+	            id = :id
+	SQL;
+	        $this->db->prepareStatement($query);
+	        $this->db->bindParam(':id', $id);
+	        $result = $this->db->execute();
+	        $row = $this->db->fetchArray();
+	
+	        $obj = false;
+	        if($result === true && $row !== false) {
+	            $obj = new Value();
+	            $obj->setId($row['id']);
+	            $obj->setValue($row['value']);
+	        }
+	
+	        return $obj;
+	    }
+	
+	    public function deleteByIds(array $idArray) {
+	        $query = <<<SQL
+	        DELETE FROM
+	            test_table
+	        WHERE
+	            id in (:ids)
+	SQL;
+	        $this->db->prepareStatement($query);
+	        $this->db->bindParam(':ids', implode(',', $idArray));
+	        $this->db->execute();
+	        $result = $this->db->affectedRows();
+	
+	        return $result;
+	    }
+	}
+	```  
+	
+### Unit Test 
+	
+```php
+namespace Test\data;
+
+class TestValueData extends TestCase
+{
+    private $valueData;
+    private $deleteIdArray;
+
+    /**
+     * @before
+     */
+    public function setUp() {
+        $this->valueData = new ValueData();
+        $this->deleteIdArray = [];
+    }
+
+    /**
+     * @after
+     */
+    public function after()
+    {
+        $this->valueData->deleteByIds($this->deleteIdArray);
+    }
+
+    /**
+     * @test
+     */
+    public function insert_NotExistIdValue_Expected_Return1() {
+        // given
+        $id = 11122222;
+        $value = 'v11122222';
+        $obj = new Value();
+        $this->deleteIdArray[] = $id;
+        $obj->setId($id);
+        $obj->setValue($value);
+
+        // when
+        $actual = $this->valueData->insert($obj);
+
+        // then
+        $this->assertEquals(1, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function insert_ExistIdValue_Expected_Return0() {
+        // given
+        $id = 2;
+        $value = 'v2';
+        $this->deleteIdArray[] = $id;
+        $obj = new Value();
+        $obj->setId($id);
+        $obj->setValue($value);
+        $this->valueData->insert($obj);
+
+        // when
+        $actual = $this->valueData->insert($obj);
+
+        // then
+        $this->assertEquals(0, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function selectById_ExistId_Expected_ReturnValue() {
+        // given
+        $id = 2;
+        $value = 'v2';
+        $this->deleteIdArray[] = $id;
+        $expected = new Value();
+        $expected->setId($id);
+        $expected->setValue($value);
+        $this->valueData->insert($expected);
+
+        // when
+        $actual = $this->valueData->selectById($id);
+
+        // then
+        $this->assertInstanceOf(Value::class, $actual);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function selectById_NotExistId_Expected_ReturnFalse() {
+        // given
+        $id = 11232323232;
+
+        // when
+        $actual = $this->valueData->selectById($id);
+
+        // then
+        $this->assertFalse($actual);
+    }
+}
+```  
+	
+- UnitTest 결과는 아래와 같다.
+
+	![그림 27]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-27.png)
+	
+
+## Memcached 연동하기
+- 기존 프로젝트에 Memcached 를 연동하고 간단한 테스트 코드를 작성한다.
+	
+### Memcached Container 설정
+- `docker-compose.yml` 파일에 아래 내용을 추가한다.
+
+	```yml
+	version: '3.7'
+
+	services:
+	  test2nginx:
+	  	# 생략
+	  test2php:
+	  	# 생략
+	  	networks:
+	      - php-mem		# php-memcached 네트워크 추가
+	  test2composer:
+	  	# 생략
+	  test2memcached:
+	    image: memcached:latest		# memcached container image
+	    networks:
+	      - php-mem			# php-memcached 네트워크 설정
+	    command:
+	      - '-m 256'		# memcached 메모리 설정
+	  test2mysql:
+	  	# 생략
+	
+	networks:
+	  # 생략
+	  php-mem:			# php-memcached 네트워크 선언
+	```  
+	
+### PHP Container 추가 설정
+- `docker/php-fpm/Dockerfile` 내용을 아래와 같이 수정한다.
+
+	```
+	FROM php:7.3-fpm
+
+	# xdebug
+	RUN pecl install xdebug \
+	  && docker-php-ext-enable xdebug
+	  
+	# pdo_mysql
+	RUN apt-get update
+	RUN docker-php-ext-install pdo_mysql
+	
+	# memcached
+	RUN apt-get install -y libmemcached-dev zlib1g-dev \
+	    && pecl install memcached \
+	    && docker-php-ext-enable memcached
+	
+	COPY conf.d/ /usr/local/etc/php/conf.d/
+	```  
+	
+	
+### PHP Composer 추가 설정
+- `compser.yml` 파일을 아래와 같이 수정한다.
+
+	```json
+	{
+	  "name" : "test2",
+	  "autoload" : {
+	    "psr-4" : {
+	      "Src\\" : "src/"
+	    }
+	  },
+	  "autoload-dev": {
+	    "psr-4": {
+	      "Test\\" : "tests/"
+	    }
+	  },
+	  "require-dev" : {
+	    "phpunit/phpunit": "^7"
+	  },
+	  "require": {
+	    "ext-pdo": "*",
+	    "ext-pdo_mysql": "*",
+    	"ext-memcached": "*"
+	  }
+	}
+	```  
+	
+### 소스코드
+- `MemcachedConnectionFactory`
+
+	```php
+	namespace Src\lib;	
+
+	class MemcachedConnectionFactory
+	{
+	    /** @var \Memcached $memcached */
+	    protected $memcached;
+	
+	    private function __construct()
+	    {
+	        $this->memcached = new \Memcached('docker-test');
+	        $this->memcached->addServer('test2memcached', 11211);
+	    }
+	
+	    public static function getInstance()
+	    {
+	        static $instance = null;
+	
+	        if ($instance === null) {
+	            $instance = new MemcachedConnectionFactory();
+	        }
+	
+	        return $instance;
+	    }
+	
+	    public function get($key)
+	    {
+	        return $this->memcached->get($key);
+	    }
+	
+	    public function set($key, $value)
+	    {
+	        return $this->memcached->set($key, $value);
+	    }
+	
+	    public function delete($key) {
+	        return $this->memcached->delete($key);
+	    }
+	
+	    public function deletes(array $keys) {
+	        return $this->memcached->deleteMulti($keys);
+	    }
+	}
+	```  
+	
+	- PHP 에서 Memcached 에 접속할때 `hostname` 은 Memcached Container 이름인 `test2memcached` 이다.
+	
+- `ValueDao`
+
+	```php
+	namespace Src\dao;
+	
+	class ValueDao
+	{
+	    public function set($key, $value)
+	    {
+	        // nothing, just set data
+	        return MemcachedConnectionFactory::getInstance()->set($key, $value);
+	    }
+	
+	    public function get($key)
+	    {
+	        // nothing, just get data
+	        return MemcachedConnectionFactory::getInstance()->get($key);
+	    }
+	}
+	```  
+	
+### Unit Test
+
+```php
+namespace Test\dao;
+
+class TestValueDao extends TestCase
+{
+    private $valueDao;
+    private $deleteIdArray;
+
+    /**
+     * @before
+     */
+    public function setUp() {
+        $this->valueDao = new ValueDao();
+        $this->deleteIdArray = [];
+    }
+
+    /**
+     * @after
+     */
+    public function after() {
+        MemcachedConnectionFactory::getInstance()->deletes($this->deleteIdArray);
+    }
+
+    /**
+     * @test
+     */
+    public function set_Expected_ReturnTrue() {
+        // given
+        $obj = new Value();
+        $obj->setId(1);
+        $this->deleteIdArray[] = 1;
+        $obj->setValue('v1');
+
+        // when
+        $actual = $this->valueDao->set(1, $obj);
+
+        // then
+        $this->assertTrue($actual);
+    }
+
+    /**
+     * @test
+     */
+    public function get_ExistId_Expected_ReturnValue() {
+        // given
+        $id = 1;
+        $this->deleteIdArray[] = $id;
+        $expected = new Value();
+        $expected->setId($id);
+        $expected->setValue('v1');
+        $this->valueDao->set($id, $expected);
+
+        // when
+        $actual = $this->valueDao->get($id);
+
+        // then
+        $this->assertInstanceOf(Value::class, $actual);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function get_NotExistId_Expected_ReturnFalse() {
+        // given
+        $id = 1;
+
+        // when
+        $actual = $this->valueDao->get($id);
+
+        // then
+        $this->assertFalse($actual);
+    }
+}
+```  
+
+- UnitTest 결과는 아래와 같다.
+
+	![그림 28]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-28.png)
+	
+
+## Redis 연동하기
+
+- 기존 프로젝트에 Redis 를 연동하고 간단한 테스트 코드를 작성한다.
+	
+### 프로젝트 구조
+
+![그림 29]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-29.png)
+
+### Redis Container 설정
+- `docker-compose.yml` 파일에 아래 내용을 추가한다.
+
+	```yml
+	version: '3.7'
+
+	services:
+	  test2nginx:
+	  	# 생략
+	  test2php:
+	  	# 생략
+	  	networks:
+	      - php-redis		# php-redis 네트워크 추가
+	  test2composer:
+	  	# 생략
+	  test2memcached:
+	  	# 생략
+	  test2mysql:
+	  	# 생략
+	  test2redis:
+	    build:
+	      context: .			# redis container 빌드
+	      dockerfile: redis/Dockerfile
+	    ports:
+	      - "6377:6377"		# redis 포트
+	    networks:
+	      - php-redis		# php-redis 네트워크 설정
+	    volumes:
+	      - ./redis-data:/data		# redis 데이터 파일 호스트에 마운트
+	
+	networks:
+	  # 생략
+	  php-redis:			# php-redis 네트워크 선언
+	```  
+	
+- `docker/redis/Dockerfile` Redis 컨테이너 빌드 설정
+
+	```
+	FROM redis:latest
+
+	COPY ./redis/redis.conf /usr/local/etc/redis/redis.conf     # 설정파일 복사
+	CMD ["redis-server", "/usr/local/etc/redis/redis.conf"]     # redis server start
+	```  
+	
+- `docker/redis/redis.conf` Redis Server 커스텀 설정
+
+	```conf
+	# 생략
+	bind 0.0.0.0
+	port 6377
+	# 생략
+	```  
+	
+	- [redis.conf](http://download.redis.io/redis-stable/redis.conf) 를 다운 받고 수정해서 사용한다.
+	
+- `docker-compose.yml` 에서 `./redis-data:/data` 마운트 시켰기 때문에 호스트 `./redis-data` 디렉토리에 Redis 의 데이터 파일이 저장된다.
+	
+	
+### PHP Container 추가 설정
+- `docker/php-fpm/Dockerfile` 내용을 아래와 같이 수정한다.
+
+	```FROM php:7.3-fpm
+
+	# xdebug
+	RUN pecl install xdebug \
+	  && docker-php-ext-enable xdebug
+	
+	# pdo_mysql
+	RUN apt-get update
+	RUN docker-php-ext-install pdo_mysql
+	
+	# redis, memcached
+	RUN pecl install redis \
+	    && docker-php-ext-enable redis \
+	    && :\
+	    && apt-get install -y libmemcached-dev zlib1g-dev \
+	    && pecl install memcached \
+	    && docker-php-ext-enable memcached
+	
+	COPY conf.d/ /usr/local/etc/php/conf.d/
+	```  
+	
+	
+### PHP Composer 추가 설정
+- `compser.yml` 파일을 아래와 같이 수정한다.
+
+	```json
+	{
+	  "name" : "test2",
+	  "autoload" : {
+	    "psr-4" : {
+	      "Src\\" : "src/"
+	    }
+	  },
+	  "autoload-dev": {
+	    "psr-4": {
+	      "Test\\" : "tests/"
+	    }
+	  },
+	  "require-dev" : {
+	    "phpunit/phpunit": "^7"
+	  },
+	  "require": {
+	    "ext-pdo": "*",
+	    "ext-pdo_mysql": "*",
+	    "ext-memcached": "*",
+	    "ext-redis": "*"
+	  }
+	}
+	```  
+	
+### 소스코드
+- `RedisConnectionFactory`
+
+	```php
+	namespace Src\lib;	
+	
+	class RedisConnectionFactory
+	{
+	    /** @var \Redis $redis */
+	    private $redis;
+	
+	    private function __construct()
+	    {
+	        $this->redis = new \Redis();
+	        $this->redis->pconnect('test2redis', 6377);
+	        $this->redis->setOption(\Redis::OPT_SERIALIZER, \Redis::SERIALIZER_PHP);
+	    }
+	
+	    public static function getInstance() {
+	        static $instance = null;
+	
+	        if($instance === null) {
+	            $instance = new RedisConnectionFactory();
+	        }
+	
+	        return $instance;
+	    }
+	
+	    public function set($id, $value) {
+	        return $this->redis->set($id, $value);
+	    }
+	
+	    public function get($id){
+	        return $this->redis->get($id);
+	    }
+	
+	    public function deletes(array $ids) {
+	        return $this->redis->delete($ids);
+	    }
+	}
+	```  
+	
+	- PHP 에서 Redis 에 접속할때 `hostname` 은 Redis Container 이름인 `test2redis` 이다.
+	
+- `ValueRedisDao`
+
+	```php
+	namespace Src\dao;
+	
+	class ValueRedisDao
+	{
+	    public function set(int $id, Value $value) {
+	        return RedisConnectionFactory::getInstance()->set($id, $value);
+	    }
+	
+	    public function get(int $id) {
+	        return RedisConnectionFactory::getInstance()->get($id);
+	    }
+	}
+	```  
+	
+### Unit Test
+
+```php
+namespace Test\dao;
+
+class TestValueRedisDao extends TestCase
+{
+    private $valueRedisDao;
+    private $deleteIdArray;
+
+    /**
+     * @before
+     */
+    public function setUp() {
+        $this->valueRedisDao = new ValueRedisDao();
+        $this->deleteIdArray = [];
+    }
+
+    /**
+     * @after
+     */
+    public function after() {
+        RedisConnectionFactory::getInstance()->deletes($this->deleteIdArray);
+    }
+
+    /**
+     * @test
+     */
+    public function set_Expected_ReturnTrue() {
+        // given
+        $obj = new Value();
+        $obj->setId(1);
+        $this->deleteIdArray[] = 1;
+        $obj->setValue('v1');
+
+        // when
+        $actual = $this->valueRedisDao->set(1, $obj);
+
+        // then
+        $this->assertTrue($actual);
+    }
+
+    /**
+     * @test
+     */
+    public function get_ExistId_Expected_ReturnValue() {
+        // given
+        $id = 1;
+        $this->deleteIdArray[] = $id;
+        $expected = new Value();
+        $expected->setId($id);
+        $expected->setValue('v1');
+        $this->valueRedisDao->set($id, $expected);
+
+        // when
+        $actual = $this->valueRedisDao->get($id);
+
+        // then
+        $this->assertInstanceOf(Value::class, $actual);
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @test
+     */
+    public function get_NotExistId_Expected_ReturnFalse() {
+        // given
+        $id = 1;
+
+        // when
+        $actual = $this->valueRedisDao->get($id);
+
+        // then
+        $this->assertFalse($actual);
+    }
+}
+```  
+
+- UnitTest 결과는 아래와 같다.
+
+	![그림 30]({{site.baseurl}}/img/php/practice-vagrant-docker-php-phpstorm-30.png)
+	
+	
+	
+		
 
 ---
 ## Reference
