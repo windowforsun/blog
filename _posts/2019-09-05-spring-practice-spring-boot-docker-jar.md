@@ -36,12 +36,12 @@ tags:
 # 예제
 - 예제의 전체 디렉토리 구조는 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-2.png)
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-2.jpg)
 
 ## 간단한 Spring Boot 프로젝트 만들기
 ### 프로젝트 구조
 
-![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-1.png)
+![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-1.jpg)
 
 ### pom.xml
 
@@ -242,7 +242,7 @@ public class DataController {
 
 ## Docker Container 구성하기
 
-![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-2.png)
+![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-2.jpg)
 
 - `docker/redis` 디렉토리는 Redis 관련 Docker Container 구성 및 Redis 설정 파일이 있다.
 - `docker/web` 디렉토리는 Maven 기반 Spring Boot 프로젝트 빌드 및 실행하는 Container 구성 파일이 있다.
@@ -435,9 +435,9 @@ networks:
 
 - 실행 결과는 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-4.png)
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-4.jpg)
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-5.png)
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-5.jpg)
 
 
 
