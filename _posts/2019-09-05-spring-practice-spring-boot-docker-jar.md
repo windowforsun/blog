@@ -36,7 +36,7 @@ tags:
 # 예제
 - 예제의 전체 디렉토리 구조는 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-2.jpg)
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-jar-3.jpg)
 
 ## 간단한 Spring Boot 프로젝트 만들기
 ### 프로젝트 구조
