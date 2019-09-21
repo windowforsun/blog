@@ -369,6 +369,9 @@ ubuntu              16.04               5e13f8dd4c1a        5 weeks ago         
 ```  	
 	
 	
+	
+- docker stats
+	
 
 ---
 ## Reference
