@@ -285,8 +285,8 @@ networks:
 
 - Docker Compose 에 대한 자세한 내용은 [여기](https://docs.docker.com/compose/compose-file/)에서 확인 가능하다.
 - `deploy` 는 배포 명령어에서만 동작한다.
-	- `replicas` 로 service 를 몇개로 분산 시킬지 정의 할 수 있다.
-	- `resources` 를 통해 분산된 서비스 중 하나가 사용할 리소스를 제한 시킬 수 있다.
+	- `replicas` 로 service 를 몇개의 `Task` 로 분산 시킬지 정의 할 수 있다.
+	- `resources` 를 통해 service 에서 하나의 `Task` 가 사용할 리소스를 제한 시킬 수 있다.
 
 
 ### Service 실행
