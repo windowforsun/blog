@@ -307,6 +307,13 @@ networks:
 	```  
 	
 - `docker service ls` 로 현재 실행 중인 서비스 목록을 확인 할 수 있다.
+	
+	```
+	$ docker service ls
+    ID                  NAME                MODE                REPLICAS            IMAGE                        PORTS
+    yrcynumo2b8m        ex-deploy_web       replicated          5/5                 windowforsun/ex-web:latest   *:8810->8080/tcp
+	```  
+
 - `docker stack services` 명령어로 현재 애플리케이션에서 실행 중인 서비스를 확인 할 수 있다.
 
 	```
@@ -315,33 +322,86 @@ networks:
     c9k7hext7ibp        ex-deploy_web       replicated          5/5                 windowforsun/ex-web:latest   *:4400->8080/tcp
 	```  
 	
-- `docker service ps` 명령어로 현재 하나의 서비스에서 실행 중인 컨테이너 목록을 확인 할 수 있다.
+- `docker service ps` 명령어로 현재 하나의 서비스에서 실행 중인 `Task` 목록을 확인 할 수 있다.
+	- `Task` 는 하나의 Service 를 `replicas` 로 분산한 구조에서 하나의 수행 단위를 뜻한다.
 
 	```
 	$ docker service ps ex-deploy_web
-    ID                  NAME                  IMAGE                        NODE                DESIRED STATE       CURRENT STATE                ERROR                         PORTS
-    j9p2ubfw99h8        ex-deploy_web.1       windowforsun/ex-web:latest   docker-desktop      Running             Running about a minute ago
-    c1qsqibg8tbc         \_ ex-deploy_web.1   windowforsun/ex-web:latest   docker-desktop      Shutdown            Failed about a minute ago    "task: non-zero exit (137)"
-    j9dxzoe0w013        ex-deploy_web.2       windowforsun/ex-web:latest   docker-desktop      Running             Running about a minute ago
-    3abuhewqgynv         \_ ex-deploy_web.2   windowforsun/ex-web:latest   docker-desktop      Shutdown            Failed about a minute ago    "task: non-zero exit (137)"
-    vbly4csg2bms        ex-deploy_web.3       windowforsun/ex-web:latest   docker-desktop      Running             Running about a minute ago
-    38i5bumbtxvv         \_ ex-deploy_web.3   windowforsun/ex-web:latest   docker-desktop      Shutdown            Failed about a minute ago    "task: non-zero exit (137)"
-    i8k4vou2ywnp        ex-deploy_web.4       windowforsun/ex-web:latest   docker-desktop      Running             Running about a minute ago
-    ujaohry312tp         \_ ex-deploy_web.4   windowforsun/ex-web:latest   docker-desktop      Shutdown            Failed about a minute ago    "task: non-zero exit (137)"
-    qhoxs5r7f55z        ex-deploy_web.5       windowforsun/ex-web:latest   docker-desktop      Running             Running about a minute ago
-    ea6yhtruvg1h         \_ ex-deploy_web.5   windowforsun/ex-web:latest   docker-desktop      Shutdown            Failed about a minute ago    "task: non-zero exit (137)"
+    ID                  NAME                IMAGE                        NODE                DESIRED STATE       CURRENT STATE            ERROR               PORTS
+    uuk9mhhdofk7        ex-deploy_web.1     windowforsun/ex-web:latest   docker-desktop      Running             Running 10 minutes ago   
+    npnrmp72df4t        ex-deploy_web.2     windowforsun/ex-web:latest   docker-desktop      Running             Running 10 minutes ago   
+    x3chsdti01n4        ex-deploy_web.3     windowforsun/ex-web:latest   docker-desktop      Running             Running 10 minutes ago   
+    v9qswkfgkoes        ex-deploy_web.4     windowforsun/ex-web:latest   docker-desktop      Running             Running 10 minutes ago   
+    imnadoaodftk        ex-deploy_web.5     windowforsun/ex-web:latest   docker-desktop      Running             Running 10 minutes ago   
+	```  
+	
+- `docker stack ps` 명령어로 현재 `stack` 을 구성하고 있는 `Task` 의 목록을 확인 할 수 있다.
+
+	```
+	$ docker stack ps ex-deploy
+    ID                  NAME                IMAGE                        NODE                DESIRED STATE       CURRENT STATE            ERROR               PORTS
+    uuk9mhhdofk7        ex-deploy_web.1     windowforsun/ex-web:latest   docker-desktop      Running             Running 15 minutes ago   
+    npnrmp72df4t        ex-deploy_web.2     windowforsun/ex-web:latest   docker-desktop      Running             Running 15 minutes ago   
+    x3chsdti01n4        ex-deploy_web.3     windowforsun/ex-web:latest   docker-desktop      Running             Running 15 minutes ago   
+    v9qswkfgkoes        ex-deploy_web.4     windowforsun/ex-web:latest   docker-desktop      Running             Running 15 minutes ago   
+    imnadoaodftk        ex-deploy_web.5     windowforsun/ex-web:latest   docker-desktop      Running             Running 15 minutes ago   
 	```  
 	
 - `docker container ls -q` 명령어는 현재 실행 중인 컨테이너 들의 ID 만 출력한다.
 
 	```
 	$ docker container ls -q
-    e5bb2bd96129
-    a31a494df3c3
-    5dc97a9b6ddb
-    bea7111d1aab
-    f14794c190c4
+    0f2ea8b4053f
+    2ba63e188525
+    02ace9cbe6c9
+    d2372a72224e
+    de4fa5729670
 	```  
+	
+- `curl -4 http://localhost:8810` 으로 테스트를 수행하거나 웹브라우저에서 접속 테스트를 하면 요청을 수행할 때마다 다른 컨테이너의 아이디를 출력하는 것을 알 수 있다.
+
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-swarm-deploy-3.png)
+
+	![그림 1]({{site.baseurl}}/img/docker/practice-spring-boot-docker-swarm-deploy-4.png)
+
+- 스케일을 조정하는 방법은 `docker-compose.yml` 파일에서 `replicas` 항목을 수정해서 스케일을 다시 조정하고, `docker stack deploy -c docker-compose.yml ex-deploy` 를 통해 다시 배포 하면 된다.
+	
+	```
+	$ docker stack deploy -c docker-compose.yml ex-deploy
+    Updating service ex-deploy_web (id: yrcynumo2b8m)
+	```  
+	
+	```
+	$ docker service ls
+    ID                  NAME                MODE                REPLICAS            IMAGE                        PORTS
+    yrcynumo2b8m        ex-deploy_web       replicated          3/3                 windowforsun/ex-web:latest   *:8810->8080/tcp
+	```  
+
+- `docker stack rm` 을 통해 배포된 `stack` 을 내릴 수 있다.
+
+	```
+	$ docker stack rm ex-deploy
+    Removing service ex-deploy_web
+    Removing network ex-deploy_webnet
+	```  
+	
+- `docker swarm leave --force` 로 설정했던 `swarm` 을 내릴 수 있다.
+
+	```
+	$ docker swarm leave --force
+    Node left the swarm.
+	```  
+	
+## Swarm 으로 분산환경 구성하기
+- Service 를 통해 단일 호스트에서 분산환경을 구성을 한것과 달리 여러 머신에 Service 의 분산환경을 구성한다.
+- Swarm 은 여러 머신의 그룹으로 Docker 를 통해 구성되는 하나의 클러스터 단위이다.
+- Swarm 은 Swarm Manager 와 Worker 로 구분된다.
+- Docker 의 Swarm 명령어는 Manager 머신에서 실행하게 되면 구성된 머신들에 모두 적용 된다.
+- Swarm 으로 구성된 각 머신들을 Node 라고 한다.
+
+### Swarm 구성하기
+- Docker Get Started 페이지에서는 Docker Machine 을 통해 내부에 여러 머신을 띄워 Swarm 으로 연결하는 예제를 보여주고 있는 것과 달리, 클라우드 머신을 이용해서 이를 구성한다. ???????????????
+
 
 ---
 ## Reference
