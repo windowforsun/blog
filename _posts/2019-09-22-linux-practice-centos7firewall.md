@@ -44,7 +44,7 @@ tags:
 - `firewall-cmd --zone=public --list-all` 명령어를 통해 오픈된 모든 포트를 확인 할 수 있다.
 
 	```
-	[root@dontrise2 windowforsun_surface]# firewall-cmd --zone=public --list-all
+	[root@windowforsun]# firewall-cmd --zone=public --list-all
 	public
 	  target: default
 	  icmp-block-inversion: no
@@ -58,6 +58,47 @@ tags:
 	  source-ports:
 	  icmp-blocks:
 	  rich rules:
+	```  
+
+## 등록된 존 목록 출력
+- `firewall-cmd --get-zones` 명령어로 방화벽에 등록되어 있는 존 목록을 출력할 수 있다.
+
+	```
+	[root@windowforsun]# firewall-cmd --get-zones
+    block dmz drop external home internal public trusted work
+	```  
+
+- `firewall-cmd --list-all-zones` 명령어를 통해 존 목록을 보다 더 상세하게 출력할 수 있다.
+
+## 기본 존 출력
+- `firewall-cmd --get-default-zone` 명령어로 default 로 설정된 존을 출력할 수 있다.
+
+	```
+	[root@windowforsun]# firewall-cmd --get-default-zone
+    trusted
+	```  
+	
+## 활성화된 존 출력
+- `firewall-cmd --get-active-zone` 명령어로 현재 활성화 되어 있는 존을 출력할 수 있다.
+
+	```
+	[root@windowforsun]# firewall-cmd --get-active-zone
+    trusted
+      interfaces: eth0
+	```  
+	
+## 새로운 존 추가
+- `firewall-cmd --permanent --new-zone=<ZONE_NAME>` 을 통해 새로운 존을 추가할 수 있다.
+
+	```
+	firewall-cmd --permanent --new-zone=web
+	```  
+	
+## 존 삭제
+- `firewall-cmd --permanent --delete-zone=<ZONE_NAME>` 을 통해 등록된 존을 삭제할 수 있다.
+
+	```
+	firewall-cmd --permanent --delete-zone=web
 	```  
 
 ---
