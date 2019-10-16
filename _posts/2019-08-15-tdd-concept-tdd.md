@@ -72,4 +72,11 @@ TDD 를 적용해 프로젝트를 진행하다 보면, 테스트하기 어려운
 
 ---
 ## Reference
-[]()  
+[(1) TDD의 소개 - TDD의 장단점](http://www.hoons.net/Lecture/View/644)  
+[Test-Driven Development(TDD)란 무엇인가?](https://medium.com/@dog156987/test-driven-development-tdd-%EB%9E%80-%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80-59b7b4a65c4)  
+[TDD란?](https://m.blog.naver.com/PostView.nhn?blogId=suresofttech&logNo=221039173819&proxyReferer=https%3A%2F%2Fwww.google.com%2F)  
+[[Agile] TDD(테스트 주도 개발)란](https://gmlwjd9405.github.io/2018/06/03/agile-tdd.html)  
+[테스트 주도 개발에 대하여 TTD와 BDD 그리고 DDD](https://asfirstalways.tistory.com/296)  
+[TDD(Test-Driven Development) 알아보기](https://blog.leop0ld.org/posts/test-driven-development/)  
+[TDD란?](https://velog.io/@essri/TDD%EB%9E%80)  
+[테스트 주도 개발방법론 TDD(Test-driven Development)이란?](https://nesoy.github.io/articles/2017-01/TDD)  
