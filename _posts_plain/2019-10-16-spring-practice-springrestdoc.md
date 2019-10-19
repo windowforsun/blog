@@ -26,6 +26,9 @@ tags:
 [Spring Rest Docs 적용](http://woowabros.github.io/experience/2018/12/28/spring-rest-docs.html)  
 [Spring REST Docs를 사용한 API 문서 자동화](https://velog.io/@kingcjy/Spring-REST-Docs%EB%A5%BC-%EC%82%AC%EC%9A%A9%ED%95%9C-API-%EB%AC%B8%EC%84%9C-%EC%9E%90%EB%8F%99%ED%99%94)  
 [Spring REST Docs API 문서를 자동화 해보자](https://www.popit.kr/spring-rest-docs/)  
+[Generating documentation for your REST API with Spring REST Docs](https://dimitr.im/spring-rest-docs)  
+[Introduction to Spring REST Docs](https://www.baeldung.com/spring-rest-docs)  
+[[spring] REST DOcs 사용중 'urlTemplate not found. If you are using MockMvc did you use RestDocumentationRequestBuilders to build the request?' 발생시](https://java.ihoney.pe.kr/517)  
 
 
 
