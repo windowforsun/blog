@@ -32,6 +32,9 @@ tags:
 [Generating documentation for your REST API with Spring REST Docs](https://dimitr.im/spring-rest-docs)  
 [Introduction to Spring REST Docs](https://www.baeldung.com/spring-rest-docs)  
 [[spring] REST DOcs 사용중 'urlTemplate not found. If you are using MockMvc did you use RestDocumentationRequestBuilders to build the request?' 발생시](https://java.ihoney.pe.kr/517)  
+[refer1](https://jojoldu.tistory.com/294)  
+[refer2](http://wonwoo.ml/index.php/post/476)  
+[refer3](https://blog.naver.com/PostView.nhn?blogId=varkiry05&logNo=221388209806&categoryNo=107&parentCategoryNo=0&viewDate=&currentPage=1&postListTopCurrentPage=1&from=search&userTopListOpen=true&userTopListCount=5&userTopListManageOpen=false&userTopListCurrentPage=1)  
 
 
 
