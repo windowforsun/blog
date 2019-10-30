@@ -638,7 +638,7 @@ public class MemberControllerTest {
     include::{snippets}/member-controller-test/update/response-body.adoc[]
 	```  
 	
-- `mvn install`, `mvn spring-boot:run` 을 통해 빌드 및 애플리케이션을 실한다.
+- `mvn install`, `mvn spring-boot:run` 을 통해 빌드 및 애플리케이션을 실행한다.
 - `http://<server-ip>:<server-port>/docs/index.html` 에 접속하면 아래와 같은 결과 화면을 확인 할 수 있다.
 	
 	![그림 3]({{site.baseurl}}/img/spring/practice-springrestdoc-3.png)
