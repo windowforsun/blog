@@ -14,17 +14,634 @@ tags:
     - Practice
     - SpringBoot
     - RestDocs
+    - Asciidoc
 ---  
 
+# 목표
+- Spring Rest Docs 에 대해 알아본다.
+- Spring Rest Docs 을 사용해서 API 문서 자동화를 수행한다.
 
-spring rest api 문서 작성
-Junit + mockmvc + ascii
+# 방법
+## Spring Rest Docs 이란
+- Spring Rest Docs 은 테스트 코드 기반으로 RESTful 문서생성을 돕는 도구이다.
+- 기본적으로 AsciiDoc 을 사용해서 HTML 를 생성한다.
+- Spring Test Framework 로 생성된 Snippet 을 사용해서 문서와 API 의 정확성을 보장한다.
+- Junit, TestNG 등 다양한 테스트 프레임워크를 지원한다.
+- MockMvc, WebTestClient, RestAssured 등 다양한 방식을 사용해서 Controller 에 대한 테스트를 진행 할 수 있다.
 
-json path,
+# 예제
+## 프로젝트 구조
+
+![그림 1]({{site.baseurl}}/img/spring/practice-springrestdoc-1.png)
+
+## pom.xml
+
+```xml
+<!-- 생략 -->
+	<dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Spring Rest Docs -->
+        <dependency>
+            <groupId>org.springframework.restdocs</groupId>
+            <artifactId>spring-restdocs-mockmvc</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Embedded Redis -->
+        <dependency>
+            <groupId>it.ozimov</groupId>
+            <artifactId>embedded-redis</artifactId>
+            <version>0.7.2</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <!-- AsciiDocs 플러그인 -->
+                <groupId>org.asciidoctor</groupId>
+                <artifactId>asciidoctor-maven-plugin</artifactId>
+                <version>1.5.3</version>
+                <executions>
+                    <execution>
+                        <id>generate-docs</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>process-asciidoc</goal>
+                        </goals>
+                        <configuration>
+                            <backend>html</backend>
+                            <doctype>book</doctype>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <!-- Spring Rest Docs AsciiDoctor 의존성 추가 (Snippets 구성) -->
+                    <dependency>
+                        <groupId>org.springframework.restdocs</groupId>
+                        <artifactId>spring-restdocs-asciidoctor</artifactId>
+                        <version>2.0.2.RELEASE</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+            <plugin>
+                <!-- AsciiDoctor 플러그인 설정 -->
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <!-- 문서가 출력되는 경로 설정 -->
+                            <outputDirectory>
+                                ${project.build.outputDirectory}/static/docs
+                            </outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>
+                                        ${project.build.directory}/generated-docs
+                                    </directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+    <!-- 생략 -->
+    </build>
+<!-- 생략 -->
+```  
+
+## Config
+- RedisConfig 설정 클래스에 Embedded Redis 설정을 작성한다.
+
+	```java
+	@Configuration
+    public class RedisConfig {
+        private RedisServer redisServer;
+        @Value("${spring.redis.port}")
+        private int port;
+    
+        @PostConstruct
+        public void startRedisServer() throws IOException {
+            this.redisServer = new RedisServer(this.port);
+            this.redisServer.start();
+        }
+    
+        @PreDestroy
+        public void stopRedisServer() {
+            if(this.redisServer != null) {
+                this.redisServer.stop();
+            }
+        }
+    
+        @Bean
+        public RedisConnectionFactory redisConnectionFactory() {
+            RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
+            redisStandaloneConfiguration.setPort(this.port);
+    
+            LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory(redisStandaloneConfiguration);
+            return lettuceConnectionFactory;
+        }
+    
+        @Bean
+        public RedisTemplate<String, Object> redisTemplate() {
+            RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+            redisTemplate.setConnectionFactory(this.redisConnectionFactory());
+            redisTemplate.setDefaultSerializer(new StringRedisSerializer());
+            redisTemplate.setKeySerializer(new StringRedisSerializer());
+            redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+    
+            return redisTemplate;
+        }
+    }
+	```  
+	
+## application.yml
+
+```yaml
+spring:
+  redis:
+    port: 61133 # Embedded Redis 에서 사용할 포트
+```  
+
+## 구현내용
+- Member 클래스에 Redis에 저장할 도메인을 정의한다.
+
+	```java
+	@Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @EqualsAndHashCode
+    @RedisHash("Member")
+    public class Member {
+        @Id
+        private long id;
+        private String name;
+        private String email;
+        private int age;
+    }
+	```  
+	
+- MemberRepository 클래스를 통해 Redis 에 저장할 수있도록 인터페이스를 구현해준다.
+
+	```java
+	@Repository
+    public interface MemberRepository extends CrudRepository<Member, Long> {
+    }
+	```  
+	
+- MemberController 클래스에 Member 도메인에 대한 RESTful API 를 구현한다.
+
+	```java
+	@RestController
+    @RequestMapping("/member")
+    public class MemberController {
+        private MemberRepository memberRepository;
+    
+        @GetMapping
+        public Map readAll() {
+            List<Member> memberList = new LinkedList<>();
+            Iterable<Member> iter = this.memberRepository.findAll();
+            iter.forEach(memberList::add);
+    
+            Map<String, Object> map = new HashMap<>();
+            map.put("members", memberList);
+    
+            return map;
+        }
+    
+        @GetMapping("/{id}")
+        public Member readById(@PathVariable long id) {
+            return this.memberRepository.findById(id).orElse(null);
+        }
+    
+        @PostMapping
+        public Member create(@RequestBody Member member) {
+            return this.memberRepository.save(member);
+        }
+    
+        @PutMapping("/{id}")
+        public Member update(@PathVariable long id, @RequestBody Member member) {
+            member.setId(id);
+            return this.memberRepository.save(member);
+        }
+    
+        @DeleteMapping("/{id}")
+        public Member deleteMember(@PathVariable long id) {
+            Member member = this.memberRepository.findById(id).orElse(null);
+    
+            if(member instanceof Member) {
+                this.memberRepository.deleteById(id);
+            }
+    
+            return member;
+        }
+    
+        @Autowired
+        public void setMemberRepository(MemberRepository memberRepository) {
+            this.memberRepository = memberRepository;
+        }
+    }
+	```  
+	
+## 테스트 코드
+
+```java
+import static org.hamcrest.Matchers.*;
+import static org.hamcrest.core.IsNull.notNullValue;
+import static org.hamcrest.core.IsNull.nullValue;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
+import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
+import static org.springframework.restdocs.payload.PayloadDocumentation.*;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.restdocs.request.RequestDocumentation.pathParameters;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
+
+@SpringBootTest
+@RunWith(SpringRunner.class)
+public class MemberControllerTest {
+    /**
+     * Junit 테스트 프레임워크를 사용할 경우 JUnitRestDocumentation 객체가 필요하다.
+     */
+    @Rule
+    public JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation();
+
+    /**
+     * 구현된 Application 의 Context 객체이다.
+     */
+    @Autowired
+    private WebApplicationContext context;
+    private RestDocumentationResultHandler document;
+    private MockMvc mockMvc;
+
+    private ObjectMapper objectMapper;
+    @Autowired
+    private MemberRepository memberRepository;
+
+        @Before
+    public void setUp() {
+        this.objectMapper = new ObjectMapper();
 
 
+        // <TestClassName>/<TestMethodName> 의 디렉토리 경로로 snippets 을 생성한다.
+        this.document = document(
+                "{class-name}/{method-name}",
+                // 요청 문서 출력이 이쁘게 출력된다.
+                preprocessRequest(prettyPrint()),
+                // 응답 문서 출력이 이쁘게 출력된다.
+                preprocessResponse(prettyPrint())
+        );
+        this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
+                .apply(documentationConfiguration(this.restDocumentation))
+                // 모든 테스트에 대해서 snippets 을 생성한다.
+                .alwaysDo(this.document)
+                .build();
+    }
 
+    @Test
+    public void readById() throws Exception {
+        Member member = Member.builder()
+                .id(1)
+                .name("name")
+                .email("abc@abc.com")
+                .age(13)
+                .build();
+        this.memberRepository.save(member);
 
+        this.mockMvc
+                .perform(get("/member/{id}", 1l)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(this.document.document(
+                        // Path Parameter 에 대한 정의를 작성한다.
+                        pathParameters(
+                                parameterWithName("id").description("Member's id")
+                        ),
+                        // Response Body 에 대한 정의를 작성한다.
+                        responseFields(
+                                fieldWithPath("id").description("Member's id"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        )
+                ))
+                // 응답 값을 검증한다.
+                .andExpect(jsonPath("$.name", is(notNullValue())))
+                .andExpect(jsonPath("$.email", is(notNullValue())))
+                .andExpect(jsonPath("$.age", is(notNullValue())))
+                .andExpect(jsonPath("$.id", is(notNullValue())))
+        ;
+    }
+
+    @Test
+    public void create() throws Exception {
+        Member member = Member.builder()
+                .id(1)
+                .name("name")
+                .email("wwww@abc.com")
+                .age(20)
+                .build();
+
+        this.mockMvc
+                .perform(post("/member")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(this.objectMapper.writeValueAsString(member)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(this.document.document(
+                        requestFields(
+                                fieldWithPath("id").description("Member's id"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        ),
+                        responseFields(
+                                fieldWithPath("id").description("Member's id"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        )
+                ))
+                .andExpect(jsonPath("$.id", is(notNullValue())))
+                .andExpect(jsonPath("$.name", is(notNullValue())))
+                .andExpect(jsonPath("$.email", is(notNullValue())))
+                .andExpect(jsonPath("age", is(notNullValue())))
+        ;
+    }
+
+    @Test
+    public void readAll() throws Exception {
+        Member member = Member.builder()
+                .id(1)
+                .name("name")
+                .email("wwww@abc.com")
+                .age(20)
+                .build();
+        this.memberRepository.save(member);
+
+        this.mockMvc
+                .perform(get("/member")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(this.document.document(
+                        responseFields(
+                                fieldWithPath("members").description("Member's array"),
+                                fieldWithPath("members[].id").description("Member's id"),
+                                fieldWithPath("members[].name").description("Member's name"),
+                                fieldWithPath("members[].email").description("Member's email"),
+                                fieldWithPath("members[].age").description("Member's age")
+                        )
+                ))
+                .andExpect(jsonPath("$.members", not(emptyArray())))
+                .andExpect(jsonPath("$.members[0].name", is(notNullValue())))
+                .andExpect(jsonPath("$.members[0].id", is(notNullValue())))
+                .andExpect(jsonPath("$.members[0].age", is(notNullValue())))
+                .andExpect(jsonPath("$.members[0].email", is(notNullValue())))
+        ;
+    }
+
+    @Test
+    public void update() throws Exception {
+        Member member = Member.builder()
+                .id(1)
+                .name("name")
+                .email("wwww@abc.com")
+                .age(20)
+                .build();
+        this.memberRepository.save(member);
+        member.setAge(22);
+        member.setEmail("aaaa@addddd.com");
+
+        this.mockMvc
+                .perform(put("/member/{id}", 1l)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(this.objectMapper.writeValueAsString(member)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(this.document.document(
+                        pathParameters(
+                                parameterWithName("id").description("Member's id")
+                        ),
+                        // Request Body 에 대한 정의를 작성한다.
+                        requestFields(
+                                fieldWithPath("id").description("This field not use"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        ),
+                        responseFields(
+                                fieldWithPath("id").description("Member's id"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        )
+                ))
+                .andExpect(jsonPath("$.id", is(notNullValue())))
+                .andExpect(jsonPath("$.name", is(notNullValue())))
+                .andExpect(jsonPath("$.email", is(notNullValue())))
+                .andExpect(jsonPath("$.age", is(notNullValue())))
+        ;
+    }
+
+    @Test
+    public void deleteMember() throws Exception {
+        Member member = Member.builder()
+                .id(1)
+                .name("name")
+                .email("wwww@abc.com")
+                .age(20)
+                .build();
+        this.memberRepository.save(member);
+
+        this.mockMvc
+                .perform(delete("/member/{id}", 1l))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andDo(this.document.document(
+                        pathParameters(
+                                parameterWithName("id").description("Member's id")
+                        ),
+                        responseFields(
+                                fieldWithPath("id").description("Member's id"),
+                                fieldWithPath("name").description("Member's name"),
+                                fieldWithPath("email").description("Member's email"),
+                                fieldWithPath("age").description("Member's age")
+                        )
+
+                ))
+                .andExpect(jsonPath("$.id", is(notNullValue())))
+                .andExpect(jsonPath("$.name", is(notNullValue())))
+                .andExpect(jsonPath("$.email", is(notNullValue())))
+                .andExpect(jsonPath("$.age", is(notNullValue())))
+        ;
+    }
+}
+```  
+
+## API 문서 작성하기
+- 작성된 테스트가 성공하면 `<build-path>/genterated-snippets/<test-classname>/<test-methodname>` 의 하위에 관련 `adoc` 문서가 생성된다.
+
+	![그림 2]({{site.baseurl}}/img/spring/practice-springrestdoc-2.png)
+	
+- 생성된 `adoc` 파일을 통해 문서를 작성하기 위해서는 뼈대를 구성해야 한다.
+- `src/main/asciidoc/` 경로에 `api-guide.adoc` 혹은 `index.adoc` 파일만들고 아래와 같이 틀을 구성해준다.
+
+	```adoc
+	= RESTful Notes API Guide
+    windowforsun;
+    :doctype: book
+    :icons: font
+    :source-highlighter: highlightjs
+    :toc: left
+    :toclevels: 4
+    :sectlinks:
+    :site-url: /build/asciidoc/html5/
+    
+    [[overview]]
+    = Overview
+    
+    [[overview-http-verbs]]
+    == HTTP verbs
+    
+    RESTful notes tries to adhere as closely as possible to standard HTTP and REST conventions in its
+    use of HTTP verbs.
+    
+    |===
+    | Verb | Usage
+    
+    | `GET`
+    | Used to retrieve a resource
+    
+    | `POST`
+    | Used to create a new resource
+    
+    | `PUT`
+    | Used to update an existing resource, including partial updates
+    
+    | `DELETE`
+    | Used to delete an existing resource
+    |===
+    
+    [[overview-http-status-codes]]
+    == HTTP status codes
+    
+    RESTful notes tries to adhere as closely as possible to standard HTTP and REST conventions in its
+    use of HTTP status codes.
+    
+    |===
+    | Status code | Usage
+    
+    | `200 OK`
+    | The request completed successfully
+    
+    | `201 Created`
+    | A new resource has been created successfully. The resource's URI is available from the response's
+    `Location` header
+    
+    | `204 No Content`
+    | An update to an existing resource has been applied successfully
+    
+    | `400 Bad Request`
+    | The request was malformed. The response body will include an error providing further information
+    
+    | `404 Not Found`
+    | The requested resource did not exist
+    |===
+    
+    = Member
+    == Member 전체 조회
+    === Request
+    include::{snippets}/member-controller-test/read-all/path-parameters.adoc[]
+    include::{snippets}/member-controller-test/read-all/http-request.adoc[]
+    === Response
+    include::{snippets}/member-controller-test/read-all/http-response.adoc[]
+    include::{snippets}/member-controller-test/read-all/response-fields.adoc[]
+    include::{snippets}/member-controller-test/read-all/response-body.adoc[]
+    
+    
+    == Member 조회
+    === Request
+    include::{snippets}/member-controller-test/read-by-id/path-parameters.adoc[]
+    include::{snippets}/member-controller-test/read-by-id/http-request.adoc[]
+    === Response
+    include::{snippets}/member-controller-test/read-by-id/http-response.adoc[]
+    include::{snippets}/member-controller-test/read-by-id/response-fields.adoc[]
+    
+    == Member 생성
+    === Request
+    include::{snippets}/member-controller-test/create/http-request.adoc[]
+    include::{snippets}/member-controller-test/create/request-fields.adoc[]
+    === Response
+    include::{snippets}/member-controller-test/create/http-response.adoc[]
+    include::{snippets}/member-controller-test/create/response-fields.adoc[]
+    include::{snippets}/member-controller-test/create/response-body.adoc[]
+    
+    == Member 갱신
+    === Request
+    include::{snippets}/member-controller-test/update/path-parameters.adoc[]
+    include::{snippets}/member-controller-test/update/http-request.adoc[]
+    include::{snippets}/member-controller-test/update/request-fields.adoc[]
+    === Response
+    include::{snippets}/member-controller-test/update/http-response.adoc[]
+    include::{snippets}/member-controller-test/update/response-fields.adoc[]
+    include::{snippets}/member-controller-test/update/response-body.adoc[]
+    
+    == Member 삭제
+    === Request
+    include::{snippets}/member-controller-test/update/path-parameters.adoc[]
+    include::{snippets}/member-controller-test/update/http-request.adoc[]
+    include::{snippets}/member-controller-test/update/request-fields.adoc[]
+    === Response
+    include::{snippets}/member-controller-test/update/http-response.adoc[]
+    include::{snippets}/member-controller-test/update/response-fields.adoc[]
+    include::{snippets}/member-controller-test/update/response-body.adoc[]
+	```  
+	
+- `mvn install`, `mvn spring-boot:run` 을 통해 빌드 및 애플리케이션을 실한다.
+- `http://<server-ip>:<server-port>/docs/index.html` 에 접속하면 아래와 같은 결과 화면을 확인 할 수 있다.
+	
+	![그림 3]({{site.baseurl}}/img/spring/practice-springrestdoc-3.png)
 
 
 ## Reference
@@ -41,375 +658,3 @@ json path,
 [refer1](https://jojoldu.tistory.com/294)  
 [refer2](http://wonwoo.ml/index.php/post/476)  
 [refer3](https://blog.naver.com/PostView.nhn?blogId=varkiry05&logNo=221388209806&categoryNo=107&parentCategoryNo=0&viewDate=&currentPage=1&postListTopCurrentPage=1&from=search&userTopListOpen=true&userTopListCount=5&userTopListManageOpen=false&userTopListCurrentPage=1)  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# MySQL8 알아보기
-### SQL
-- New Window function
-- Common Table Expression
-- NOWAIT and SKIP LOCKED
-- Descending Indexes
-- Grouping
-- Regular Expressions
-- Character Sets
-- Cost Model
-- Histograms
-
-### Json
-- Extended syntax
-- New function sorting
-- Partial updates
-
-
-## SQL
-### Window Functions
-- MySQL 8 은 그룹 함수와 매우 비숫한 SQL Window functions 를 제공한다.
-- window functions 은 한개의 row에 대해서 계산(COUNT, SUM)과 같은 연산에 사용된다.
-- 그룹 함수에서 row 드을 그룹지어 단일 row 로 반환하는 것과 달리, window functions 는 모든 row 에 대해서 함수 적용해 수행한다.
-- window functions 로 사용할 수 있는 일반 그룹함수 리스트는 아래와 같다.
-	- COUNT
-	- SUM
-	- AVG
-	- MIN
-	- MAX
-	- BIG_OR
-	- BIT_XOR
-	- STDDEV_POP
-	- STDDEV_SAMP
-	- VAR_POP
-	- VAR_SAMP
-- window functions 에서만 제공하는 함수 리스트는 아래와 같다.
-	- RANK
-	- DENSE_RANK
-	- PERCENT_RANK
-	- CUME_DIST
-	- NTILE
-	- ROW_NUMBER
-	- FIRST_VALUE
-	- LAST_VALUE
-	- NTH_VALUE
-	- LEAD
-	- LAG
-
-#### SUM 예시 1
-	
-```sql
-CREATE TABLE t(i INT);	# Table
-INSERT INTO t VALUES (1),(2),(3),(4);		# Default data
-```  
-	
-- 일반적인 그룹 함수를 사용할 경우 아래와 같다.
-
-	```sql
-	SELECT SUM(i) AS SUM FROM t;
-	
-	sum     
-	--------
-	10      
-	```  
-	
-- 그룹함수는 하나의 row를 반환하는데 모든 row에 대해서 그룹 함수를 적용 하고 싶을 때 window functions 를 사용하지 않으면 아래와 같다.
-
-	```sql
-	SELECT i, (SELECT SUM(i) FROM t) FROM t;
-	
-	     i  (SELECT SUM(i) FROM t)  
-	------  ------------------------
-	     1  10                      
-	     2  10                      
-	     3  10                      
-	     4  10  
-	```  
-	
-- window functions 를 사용하면 아래와 같이 사용할 수 있다.
-
-	```sql
-	SELECT i, SUM(i) OVER () AS SUM FROM t;
-	
-	     i  sum     
-	------  --------
-	     1  10      
-	     2  10      
-	     3  10      
-	     4  10  
-	```  
-	
-- 그룹 함수와 결정적인 차이는 `OVER()` 의 유무이다.
-	- `OVER()` 는 window functions 의 키워드 역할을 한다.
-	- `OVER` 의 괄호안에는 그룹에 대한 추가적인 문구가 필요하고, 위 예시에서는 비어있기 때문에 전체애 대해서 그룹함수를 적용한다.
-	
-#### PARTITION 예시
-- `PARTITION` 키워드를 통해 그룹 지을 컬럼을 명시하고, window functions 의 결과를 그룹에 따라 적용한다.
-
-```sql
-CREATE TABLE sales(employee VARCHAR(50), `date` DATE, sale INT);
- 
-INSERT INTO sales VALUES ('odin', '2017-03-01', 200),
-                         ('odin', '2017-04-01', 300),
-                         ('odin', '2017-05-01', 400),
-                         ('thor', '2017-03-01', 400),
-                         ('thor', '2017-04-01', 300),
-                         ('thor', '2017-05-01', 500);
-```  
-
-- `employee` 컬럼에 그룹 함수를 적용하면 아래와 같다.
-
-	```sql
-	SELECT employee, SUM(sale) FROM sales GROUP BY employee;
-	
-	employee  SUM(sale)  
-	--------  -----------
-	odin      900        
-	thor      1200       
-	```  
-	
-- `PARTITION` window functions 를 사용하면 아래와 같이 출력 결과를 얻을 수 있다.
-
-	```sql
-	SELECT employee, DATE, sale, SUM(sale) OVER (PARTITION BY employee) AS SUM FROM sales;
-	
-	employee  date          sale  sum     
-	--------  ----------  ------  --------
-	odin      2017-03-01     200  900     
-	odin      2017-04-01     300  900     
-	odin      2017-05-01     400  900     
-	thor      2017-03-01     400  1200    
-	thor      2017-04-01     300  1200    
-	thor      2017-05-01     500  1200   
-	```  
-	
-- 아래와 같은 방식으로도 `PARTITION` 을 사용할 수 있다.
-
-	```sql
-	SELECT employee, MONTHNAME(DATE), sale, SUM(sale) OVER (PARTITION BY MONTH(DATE)) AS SUM FROM sales;
-	
-	employee  MONTHNAME(date)    sale  sum     
-	--------  ---------------  ------  --------
-	odin      March               200  600     
-	thor      March               400  600     
-	odin      April               300  600     
-	thor      April               300  600     
-	odin      May                 400  900     
-	thor      May                 500  900   
-	```  
-	
-#### ORDER BY 예시
-- 미
-```sql
-SELECT employee, sale, date, SUM(sale) OVER (PARTITION by employee ORDER BY date) AS cum_sales FROM sales;
-
-employee    sale  date        cum_sales  
---------  ------  ----------  -----------
-odin         200  2017-03-01  200        
-odin         300  2017-04-01  500        
-odin         400  2017-05-01  900        
-thor         400  2017-03-01  400        
-thor         300  2017-04-01  700        
-thor         500  2017-05-01  1200       
-```  
-	
-#### Ranking 예시
-
-```sql
-CREATE TABLE people (NAME VARCHAR(100), birthdate DATE, sex CHAR(1),
-                     citizenship CHAR(2));
- 
-INSERT INTO people VALUES
-("Jimmy Hendrix", "19421127", "M", "US"),
-("Herbert G Wells", "18660921", "M", "UK"),
-("Angela Merkel", "19540717", "F", "DE"),
-("Rigoberta Menchu", "19590109", "F", "GT"),
-("Georges Danton", "17591026", "M", "FR"),
-("Tracy Chapman", "19640330", "F", "US");
-```  
-
-- `ROW_NUMBER()` window function 을 통해 랭킹을 조회할 수 있다. 아래는 생일 오름차순 랭킹이다.
-
-	```sql
-	SELECT ROW_NUMBER() OVER (ORDER BY birthdate) AS num,
-	       NAME, birthdate
-	FROM people;
-	
-	   num  name              birthdate   
-	------  ----------------  ------------
-	     1  Georges Danton    1759-10-26  
-	     2  Herbert G Wells   1866-09-21  
-	     3  Jimmy Hendrix     1942-11-27  
-	     4  Angela Merkel     1954-07-17  
-	     5  Rigoberta Menchu  1959-01-09  
-	     6  Tracy Chapman     1964-03-30  
-	```  
-	
-- 성별을 그룹으로 지정하고, 그룹마다 랭킹을 조회할 수도 있다.
-
-	```sql
-	SELECT ROW_NUMBER() OVER (PARTITION BY sex ORDER BY birthdate) AS num,
-	sex, name, birthdate
-	FROM people;
-	
-	   num  sex     name              birthdate   
-	------  ------  ----------------  ------------
-	     1  F       Angela Merkel     1954-07-17  
-	     2  F       Rigoberta Menchu  1959-01-09  
-	     3  F       Tracy Chapman     1964-03-30  
-	     1  M       Georges Danton    1759-10-26  
-	     2  M       Herbert G Wells   1866-09-21  
-	     3  M       Jimmy Hendrix     1942-11-27  
-	```  
-	
-### Common Table Expression
-- 주로 서브쿼리로 쓰이는 파생 테이블과 비슷한 개념인 Common Table Expression 을 제공한다. 줄여서 CTE 라고 부른다.
-- 기존 View 의 개념과 비슷하지만, 별도의 권한과 정의 없이 사용 가능하다.
-- 복잡한 쿼리를 그룹핑해서 가독성과 재사용성을 향상 시킬 수있다.
-- Recursive 특성으로 재귀 방식이나, 트리 구조로 활용 가능하다.
-
-#### Recursive CTE 예시 1
-- n 이 10 까지 1을 더하는 CTE 예시는 아래와 같다.
-
-	```sql
-	WITH RECURSIVE my_cte AS
-	(
-	  SELECT 1 AS n
-	  UNION ALL
-	  SELECT 1+n FROM my_cte WHERE n<10  # <- recursive SELECT
-	)
-	SELECT * FROM my_cte;
-	
-	     n  
-	--------
-	       1
-	       2
-	       3
-	       4
-	       5
-	       6
-	       7
-	       8
-	       9
-	      10
-	```  
-	
-- 피보나치의 현재 수와 다음 수를 구하는데, 현재 수가 500 보다 작을 때까지 구하는 CTE 예시는 아래와 같다.
-
-	```sql
-	WITH RECURSIVE my_cte AS
-	(
-	  SELECT 1 as f, 1 as next_f
-	  UNION ALL
-	  SELECT next_f, f+next_f FROM my_cte WHERE f < 500
-	)
-	SELECT * FROM my_cte;
-	
-	     f  next_f  
-	------  --------
-	     1         1
-	     1         2
-	     2         3
-	     3         5
-	     5         8
-	     8        13
-	    13        21
-	    21        34
-	    34        55
-	    55        89
-	    89       144
-	   144       233
-	   233       377
-	   377       610
-	   610       987
-	```  
-	
-### NOWAIT and SKIP LOCKED
-
-### Descending Indexes
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
----
-## Reference
-[]()   
