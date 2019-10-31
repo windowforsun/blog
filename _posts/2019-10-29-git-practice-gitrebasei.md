@@ -242,7 +242,8 @@ tags:
 ---
  
 ## Reference
-
+[git rebase -i 사용하기](https://jupiny.com/2018/05/07/git-rebase-i-option/)  
+[Git how to rollback a rebase](https://stackoverflow.com/questions/41049711/git-how-to-rollback-a-rebase/41049867)  
 
 
 
