@@ -376,7 +376,7 @@ public class MemberController {
 	
 	![그림 4]({{site.baseurl}}/img/docker/practice-efklogging-4.png)
 	
-- 구현된 API 로 요청을 보내게되면 아래와 같이 `@log_name` 필드가 로그 레벨로 구분되어 모이터링이 가능하다.
+- 구현된 API 로 요청을 보내게되면 아래와 같이 `@log_name` 필드가 로그 레벨로 구분되어 모니터링이 가능하다.
 
 	![그림 5]({{site.baseurl}}/img/docker/practice-efklogging-5.png)
 
