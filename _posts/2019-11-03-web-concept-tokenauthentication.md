@@ -28,7 +28,7 @@ tags:
 	1. 클라이언트 - 로그인 요청 -> 서버
 	1. 서버 - 인증처리 - 세션 생성 및 저장 - 고유 ID 응답 -> 클라이언트
 	1. 클라이언트 - 고유 ID를 담아 요청 -> 서버
-	1. 서버 -> 고유 ID 검증 - 상태 업데이트 - 요청 응답 -> 클라이언트
+	1. 서버 - 고유 ID 검증 - 상태 업데이트 - 요청 응답 -> 클라이언트
 - 클라이언트는 이후 요청 부터는 고유 아이디를 사용한다.
 - 서버 기반 인증은 서버가 사용자의 상태를 가지고 있으므로 `Stateful` 하다.
 
@@ -55,6 +55,19 @@ tags:
 	1. 서버 - 인증처리 - 토큰 발급 -> 클라이언트
 	1. 클라이언트 - 토큰을 담아 요청 -> 서버
 	1. 서버 - 토큰 검증 - 요청 응답 -> 클라이언트
+	
+### 특징
+#### Stateless(무상태) 과 Scalability(확장성)
+- 무상태성은 토큰 기반 인증에서 중요한 속성이다.
+- 서버는 토큰을 발급만 해주고 저장은 클라이언트에 하기 때문에, 서버 확장에도 용이하다.
+
+#### 플랫폼간 공유(Extensibility)
+- 대표적으로 OAuth 가 있다.
+- 구글, 페이스북 등 계정을 통해 다른 웹서비스에서 로그인할 수 있다.
+
+#### 보안성
+- 클라이언트가 더 이상 쿠키를 보낼 필요가 없어지기 때문에, 쿠키를 사용하며 발생했었던 보안 이슈들을 해결할 수 있다.
+	- 토큰을 사용하며 발생하는 보안 이슈에 대해서는 추후에 기술한다.
 
 
 
@@ -64,8 +77,8 @@ tags:
 
 ---
 ## Reference
-[[JWT] 토큰(Token) 기반 인증에 대한 소개](https://velopert.com/2350)
-[[[JWT] JSON Web Token 소개 및 구조](https://velopert.com/2389)
-[토큰 기반 인증 간단 정리 Token based Authentication](https://blog.msalt.net/251)
-[서버 기반 인증, 토큰 기반 인증 (Session, Cookie / JSON Web Token)](https://dooopark.tistory.com/6)
-[세션 기반 인증 방식과 토큰 기반 인증(JWT)](https://yonghyunlee.gitlab.io/node/jwt/)
+[[JWT] 토큰(Token) 기반 인증에 대한 소개](https://velopert.com/2350)  
+[서버 기반 인증, 토큰 기반 인증 (Session, Cookie / JSON Web Token)](https://dooopark.tistory.com/6)  
+[[[JWT] JSON Web Token 소개 및 구조](https://velopert.com/2389)  
+[토큰 기반 인증 간단 정리 Token based Authentication](https://blog.msalt.net/251)  
+[세션 기반 인증 방식과 토큰 기반 인증(JWT)](https://yonghyunlee.gitlab.io/node/jwt/)  
