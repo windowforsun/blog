@@ -130,7 +130,7 @@ tags:
 - [JWT](https://jwt.io/#debugger) 에서 위에서 작성했던 것들을 바탕으로 JWT 을 생성한다.
 
 ![그림 1]({{site.baseurl}}/img/web/concept-jwt-1.png)
-
+ 
 ---
 ## Reference
 [Introduction to JSON Web Tokens](https://jwt.io/introduction/)

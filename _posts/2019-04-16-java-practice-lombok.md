@@ -10,9 +10,9 @@ header-style: text
 categories :
   - Java
 tags:
-	- Java
-    - Practice
-    - Lombok
+  - Java
+  - Practice
+  - Lombok
 ---  
 
 # 목표
