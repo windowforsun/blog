@@ -126,10 +126,17 @@ tags:
     )
 	```  
 
-## JWT 토큰 만들기
+## JWT 만들기
 - [JWT](https://jwt.io/#debugger) 에서 위에서 작성했던 것들을 바탕으로 JWT 을 생성한다.
 
 ![그림 1]({{site.baseurl}}/img/web/concept-jwt-1.png)
+ 
+
+## JWT 프로세스 
+### Access Token 사용
+1. 클라이언트 - 로그인 요청 -> 서버
+1. 서버 - 인증 - 
+
  
 ---
 ## Reference
