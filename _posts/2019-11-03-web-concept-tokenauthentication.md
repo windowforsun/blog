@@ -68,17 +68,33 @@ tags:
 #### 보안성
 - 클라이언트가 더 이상 쿠키를 보낼 필요가 없어지기 때문에, 쿠키를 사용하며 발생했었던 보안 이슈들을 해결할 수 있다.
 	- 토큰을 사용하며 발생하는 보안 이슈에 대해서는 추후에 기술한다.
+	
+#### 모바일 애플리케이션
+- 서버 기반 인증을 사용할때 쿠키 매니저를 이용해서 관리를 해야한다.
+- 토큰 기반 인증을 사용하면 웹 요청 API 헤더에 토큰을 넣어 사용하면 되기 때문에 쿠키를 사용할 필요가 없어, 모바일 애플리케이션에 적합하다.
 
+#### CSRF (Cross-Site Request Factory) 사이트 간 요청 위조 방지
+- 쿠키는 클라이언트 사이드에 저장되기 때문에 노출되기 쉽다.
+- 노출된 쿠키를 통해 비밀번호 변경, 회원 탈퇴 등을 수행하면, 서버는 노출된 쿠키는 유효하기 때문에 요청을 수행할 수있다.
+- 토큰 기반인증은 헤더에 토큰이 포함되기 때문에 CSRF 를 방지할 수 있다.
 
+#### CORS (Cross-Origin Resource Sharing)
+- 쿠키는 기본적으로 단일 도메인, 서브 도메인에서 동작하기 때문에, 여러 도메인을 사용할 경우 관리가 어렵다.
+- 토큰 기반 인증은 유효한 토큰이라면 어느 도메인이든지 사용할 수 있다.
 
+#### 토큰 인증 방식의 문제
+- 발급된 토큰은 만료시킬 수 없기 때문에 토큰을 이용해서 서버에 무한정 요청을 할 수 있다.
+- 이런 문제점을 해결하기 위해 Access Token 을 발급할 때 Refresh Token 을 함께 발급한다.
+- 주기가 짧은 Access Token 이 만료되게 되면, 비교적 주기가 간 Refresh Token 을 통해 새로운 토큰을 발급 받도록 한다.
 
-
+#### 토큰 저장에 따른 문제점
+- 클라이언트가 토큰을 받게 되면 localStorage, sessionStorage 에 저장하게된다.
+- 이러한 저장소는 비교적 쉽게 노출 될 수 있다.
 
 
 ---
 ## Reference
 [[JWT] 토큰(Token) 기반 인증에 대한 소개](https://velopert.com/2350)  
 [서버 기반 인증, 토큰 기반 인증 (Session, Cookie / JSON Web Token)](https://dooopark.tistory.com/6)  
-[[[JWT] JSON Web Token 소개 및 구조](https://velopert.com/2389)  
 [토큰 기반 인증 간단 정리 Token based Authentication](https://blog.msalt.net/251)  
 [세션 기반 인증 방식과 토큰 기반 인증(JWT)](https://yonghyunlee.gitlab.io/node/jwt/)  
