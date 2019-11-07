@@ -133,15 +133,33 @@ tags:
  
 
 ## JWT 프로세스 
-### Access Token 사용
-1. 클라이언트 - 로그인 요청 -> 서버
-1. 서버 - 인증 - 
+### 클라이언트 인증
+1. 클라이언트 로그인 요청
+1. 클라이언트 검증, 고유 ID 값 부여, 기타 정보 Payload 작성, `secret key` 를 통해 토큰 발급(Access Token, Refresh Token)
+1. 클라이언트는 이후 요청 부터는 Authorization header 에 Access Token 을 담아 요청
+1. 서버는 Access Token 의 Signature 를 `secret key` 를 사용해서 복호화 후 검증, Payload 를 디코딩 해서 사용자 정보 확인 후, 요청 수행 및 응답
+
+### JWT 토큰 관리
+1. 클라이언트 로그인 요청시 Access Token, Refresh Token 을 발급한다.
+1. Access Token 은 요청을 보낼 때 사용하고, Refresh Token 은 안전한 저장소에 저장한다.
+1. 이후 Access Token 을 요청에 담아 요청 시, Access Token 이 만료 되었다면 해당하는 응답을 내려준다.
+1. 클라이언트는 Access Token 만료 응답을 받으면, Access Token + Refresh Token 을 함께 요청에 담아 보낸다.
+1. 서버는 Refresh Token 을 통해 새로운 Access Token 을 발급해 준다.
+1. 클라이언트는 새로 받은 Access Token 을 통해 다시 요청을 진행한다.
+
+> Access Token 이 만료 되었을 때, 갱신을 위해 몇번의 요청과 응답을 수행해야 한다.
+이는 서버-클라이언트 에게 큰 부담이 될 수 있다. 이를 위해 클라이언트는 요청 전 미리 현재 Access Token 의 만료 시점을 알수 있기 때문에 검사한다.
+만료가 되지 않았다면 기존과 같이 요청을 수행하고, 만료가 되었다면 Access Token 재발급 요청을 수행한다.
 
  
 ---
 ## Reference
-[Introduction to JSON Web Tokens](https://jwt.io/introduction/)
+[Introduction to JSON Web Tokens](https://jwt.io/introduction/)  
 [서버 기반 인증, 토큰 기반 인증 (Session, Cookie / JSON Web Token)](https://dooopark.tistory.com/6)  
+[JWT를 구현하면서 마주치게 되는 고민들](https://swalloow.github.io/implement-jwt)  
+[쉡게 알아보는 서버 인증 1편(세션/쿠키, JWT)](https://tansfil.tistory.com/58)  
+[쉡게 알아보는 서버 인증 2편(Access Token + Refresh Token)](https://tansfil.tistory.com/59?category=255594)  
 [[[JWT] JSON Web Token 소개 및 구조](https://velopert.com/2389)  
 [토큰 기반 인증 간단 정리 Token based Authentication](https://blog.msalt.net/251)  
 [세션 기반 인증 방식과 토큰 기반 인증(JWT)](https://yonghyunlee.gitlab.io/node/jwt/)  
+[Refresh Token과 Sliding Sessions를 활용한 JWT의 보안 전략](https://blog.ull.im/engineering/2019/02/07/jwt-strategy.html)  
