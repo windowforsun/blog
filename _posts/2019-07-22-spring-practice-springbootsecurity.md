@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Boot Spring Security Form Login"
+title: "[Spring 실습] Spring Boot Security Form Login"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring Boot 에서 Spring Security 로 Form 기반 로그인을 수행하고 권한을 관리하자'
