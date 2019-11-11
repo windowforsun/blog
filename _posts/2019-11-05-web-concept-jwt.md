@@ -46,6 +46,7 @@ tags:
 ## JWT 의 구조
 - JWT 는 `.` 을 구분자로 3가지 문자열로 구성된다.
 - `xxxxx.yyyyy.zzzzz` 와 같이 구성되고 순서대로, `header`, `payload`, `signature` 이다.
+- JWT 는 JWS(JSON Web Signature) 를 통해 구성하거나, JWS + JWE(JSON Web Encryption) 을 통해 구성할 수 있다.
 
 ## JWT Header(헤더)
 - 헤더는 아래와 같은 두가지 정보를 포함하고 있다.
@@ -114,8 +115,11 @@ tags:
 
 - 2개의 등록된 클레임, 공개 클레임 1개, 비공개 클레임 2개로 구성되어 있다.
 
-## JWT Signature(서명)
+## JWT Signature(서명) - JWS(JSON Web Signature)
 - 서명은 `헤더 부분의 인코딩 값` + `정보 부분의 인코딩 값` 입력한 비밀키를 통해 해싱 한 값이다.
+- JWS 는 JWT 를 검증하기 위한 것이다.
+- JWS 를 통해 JWT 를 구성하고 있는 데이터가 변조 되었는지 확인 가능하다.
+- JWS 는 단순 서명이기 때문에, 제 3자가 데이터를 읽는 것을 막을 순 없다.
 - 서명부분은 아래와 같이 생성할 수 있다.
 	
 	```
@@ -125,6 +129,11 @@ tags:
     <your-256-bit-secret>
     )
 	```  
+	
+## JWT Encryption(암호화) - JWE(JSON Web Encryption)
+- JWE 는 제 3자로 부터 데이터를 읽지 못하게 하는 것이다.
+- JWE 는 암호화를 통해 데이터 기밀성을 보장한다.
+
 
 ## JWT 만들기
 - [JWT](https://jwt.io/#debugger) 에서 위에서 작성했던 것들을 바탕으로 JWT 을 생성한다.
@@ -163,3 +172,5 @@ tags:
 [토큰 기반 인증 간단 정리 Token based Authentication](https://blog.msalt.net/251)  
 [세션 기반 인증 방식과 토큰 기반 인증(JWT)](https://yonghyunlee.gitlab.io/node/jwt/)  
 [Refresh Token과 Sliding Sessions를 활용한 JWT의 보안 전략](https://blog.ull.im/engineering/2019/02/07/jwt-strategy.html)  
+[JSON Web Token(JWT) 정리](https://medium.com/@mjkim111/json-web-token-jwt-%EC%A0%95%EB%A6%AC-abbc80570301)  
+[spring jjwt 설명 및 예제](https://idlecomputer.tistory.com/242)  

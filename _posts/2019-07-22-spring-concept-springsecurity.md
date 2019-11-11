@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 개념] Spring Spring Security"
+title: "[Spring 개념] Spring Security"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'Spring Security 에 대해 알아보자'
