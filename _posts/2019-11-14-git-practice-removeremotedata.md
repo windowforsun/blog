@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Git] git ssh"
+title: "[Git] Remote 에 올라간 파일 삭제햐기"
 header:
   overlay_image: /img/git-bg.jpg
-excerpt: 'git '
+excerpt: 'Git Remote Repository 에 잘못 올라간 파일을 삭제해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,16 @@ categories :
 tags:
     - Git
 ---  
+
+## 원격 저장소
+
+![그림 1]({{site.baseurl}}/img/git/practice-removeremotedata-1.png)
+
+- 위 그림과 같이 현재 `gitignore` 에 등록해 로컬에서만 사용해려 했던 파일들이 원격 저장소로 올라간 상황이다.
+	- `git-test` repository
+
+
+
 
 
 
