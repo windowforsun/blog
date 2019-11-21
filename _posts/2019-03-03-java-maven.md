@@ -156,6 +156,10 @@ Tools | ant, antruna, archetpye, assembly, dependency, pdf, plugin, repository |
 	 - ex) 1.0-SNAPSHOT
 - `<name>` : 애플리케이션 명칭
 - `<packaging>` : 패키지 유형 (jar, war 등)
+	- jar : 
+	- war :
+	- pom : 
+- `<modules>` : 
 - `<distributionManagement>` : artifact 가 배포 될 저장소 정보와 설정
 - `<parent>` : 프로젝트의 계층 정보
 - `<dependencies>` : 의존성 정의 영역
@@ -181,6 +185,8 @@ Tools | ant, antruna, archetpye, assembly, dependency, pdf, plugin, repository |
 <modelVersion>5.1.5</modelVersion>
 
 <!-- 기본 설정 -->
+<parent></parent>
+<modules></modules>
 <groupId></groupId>
 <artifactId></artifactId>
 <version></version>
