@@ -827,7 +827,7 @@ tags:
 	
 - `mysql/sql/init.sql`
 
-	```
+	```sql
 	create table account (
       id bigint not null auto_increment,
       name varchar(255),
