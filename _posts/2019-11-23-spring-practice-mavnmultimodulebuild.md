@@ -812,7 +812,7 @@ tags:
 	
 - `mysql/Dockerfile`
 
-	```
+	```dockerfile
 	FROM mysql:8.0.17
     
     RUN apt-get update
