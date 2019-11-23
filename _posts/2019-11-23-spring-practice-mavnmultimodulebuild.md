@@ -39,7 +39,7 @@ tags:
 	- `firstapp` : `core` 모듈을 사용한 Web Application 으로 Get 관련 API 를 제공한다.
 	- `secondapp` : `core` 모듈을 사용한 Web Application 으로 Create, Update 관련 API 를 제공한다.
 	
-## root
+## root 프로젝트
 - `root` 프로젝트의 하위에 모듈을 구성하기 전에 프로젝트를 생성한다.
 - `File -> New -> Profject...` 를 눌러 Maven 프로젝트를 만든다.
 
@@ -49,11 +49,12 @@ tags:
 	
 	![그림 4]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-4.png)
 	
-- `pom.xml` 에 하위 모듈들에서 공통으로 사용하는 의존성을 추가해준다.
+- `root` 프로젝트의 `pom.xml` 에 하위 모듈들에서 공통으로 사용하는 의존성을 추가해준다.
 
 	```xml	
-	<!-- 생략 -->
-	
+	<!-- 생략 -->	
+    <modelVersion>4.0.0</modelVersion>
+    
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -86,25 +87,590 @@ tags:
 	
 	- 프로젝트의 `packaging` 은 `pom` 이다.
 	
-## core
+## core 모듈
 - 프로젝트에서 오른쪽 클릭을 한 후 `core` 모듈을 추가해준다.
-
-	
-## firstapp
-- 프로젝트에서 오른쪽 클릭을 한 후 `firstapp` 모듈을 추가해준다.
 
 	![그림 5]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-5.png)
 	
 	![그림 6]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-6.png)
 	
-	여기 아래부터 `core` 모듈로 다시 찍어서 `core` 모듈 추가하는 방법으로 올리고 `firstapp, secondapp` 은 생략하기
 	![그림 7]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-7.png)
 	
 	![그림 8]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-8.png)
 	
-- 아래처럼 `root` 프로젝트 하위에 `firstapp` 모듈이 추가 된것을 확인 할 수 있다.
+- 아래처럼 `root` 프로젝트 하위에 `core` 모듈이 추가 된것을 확인 할 수 있다.
 
 	![그림 9]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-9.png)
+
+- `root` 프로젝트의 `pom.xml` 에는 아래와 같이 `core` 모듈이 추가 된것을 확인 할 수 있다.
+
+	```xml
+    <modules>
+        <module>core</module>
+    </modules>
+	```  
+
+- `core` 모듈은 Model 과 Repository 의 구현체가 포함된 공통 모듈이기 때문에 관련 의존성과 빌드관련 설정을 `pom.xml` 에 추가한다.
+
+	```xml
+	<!-- 생략 -->
+    <parent>
+        <artifactId>root</artifactId>
+        <groupId>com.windowforsun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>core</artifactId>
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <classifier>exec</classifier>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+	```  
+	
+- 완성된 `core` 모듈은 아래와 같다.
+
+	![그림 10]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-10.png)
+	
+- `com.windowforsun.domain.Account` 
+
+	```java
+	@Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Entity
+    public class Account {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private long id;
+        private String name;
+        private int age;
+    }
+	```  
+	
+- `com.windowforsun.repository.AccountRepository`
+
+	```java
+	@Repository
+    public interface AccountRepository extends JpaRepository<Account, Long> {
+    }
+	```  
+	
+- `com.windowforsun.CoreApplication`
+
+	```java
+	@SpringBootApplication
+    public class CoreApplication {
+        public static void main(String[] args) {
+            SpringApplication.run(CoreApplication.class, args);
+        }
+    }
+	```  
+	
+## firstapp 모듈
+- `core` 모듈을 추가한 것과 같이 `firstapp` 이름의 모듈을 추가해준다.
+
+	![그림 11]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-11.png)
+
+- `root` 프로젝트의 `pom.xml` 에는 아래와 같이 `firstapp` 모듈이 추가 된것을 확인 할 수 있다.
+
+	```xml
+    <modules>
+        <module>core</module>
+        <module>firstapp</module>
+    </modules>
+	```  
+	
+- `firstapp` 모듈은 `core` 모듈을 사용해서 Controller 를 제공하기 때문에 관련 의존성과 빌드 설정을 `pom.xml` 에 해준다.
+
+	```xml
+    <parent>
+        <artifactId>root</artifactId>
+        <groupId>com.windowforsun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>firstapp</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+		<!-- core 모듈 의존성 -->
+        <dependency>
+            <groupId>com.windowforsun</groupId>
+            <artifactId>core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+	```  
+	
+- 완성된 `firstapp` 모듈은 아래와 같다.
+
+	![그림 12]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-12.png)
+	
+- `com.windowforsun.controller.AccountController`
+
+	```java
+	@RestController
+    @RequiredArgsConstructor
+    @RequestMapping("/account")
+    public class AccountController {
+        private final AccountRepository accountRepository;
+    
+        @GetMapping("/{id}")
+        public Account readById(@PathVariable long id) {
+            return this.accountRepository.findById(id).orElse(null);
+        }
+    
+        @GetMapping
+        public List<Account> readAll() {
+            return this.accountRepository.findAll();
+        }
+    }
+	```  
+	
+- `com.windowforsun.FirstAppApplication`
+
+	```java
+	@SpringBootApplication
+    public class FirstAppApplication {
+        public static void main(String[] args) {
+            SpringApplication.run(FirstAppApplication.class, args);
+        }
+    }
+	```  
+	
+- `application.yml`
+
+	```yaml
+	# 로컬 구동시 환경 설정
+	server:
+      port: 8080
+    
+    # 로컬 구동시 h2 DB를 사용한다.
+    
+    ---
+    # 도커로 구동시 환경 설정
+    server:
+      port: 8080
+      
+    spring:
+      profiles: docker
+    
+      datasource:
+        hikari:
+          jdbc-url: jdbc:mysql://module-mysql:3306/test
+          username: root
+          password: root
+          driver-class-name: com.mysql.cj.jdbc.Driver
+	```  
+	
+- `http/readById.http`
+
+	```http request
+	GET http://localhost:80/account/1
+	```  
+	
+- `http/readAll.http`
+
+	```http request
+	GET http://localhost:80/account
+	```  
+	
+- `com.windowforsun.controller.TestAccountController`
+
+	```java
+	@RunWith(SpringRunner.class)
+    @SpringBootTest(classes = {FirstAppApplication.class})
+    @AutoConfigureMockMvc
+    public class TestAccountController {
+        @Autowired
+        private MockMvc mockMvc;
+        @Autowired
+        private AccountRepository accountRepository;
+        private ObjectMapper objectMapper = new ObjectMapper();
+    
+        @Before
+        public void setUp() {
+            this.accountRepository.deleteAll();
+        }
+    
+        @Test
+        public void readById_존재하는아이디는_해당Account를응답한다() throws Exception {
+            // given
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            account = this.accountRepository.save(account);
+            long id = account.getId();
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(get("/account/{id}", id)
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            Account actual = this.objectMapper.readValue(result.getResponse().getContentAsString(), Account.class);
+            assertThat(actual.getAge(), is(account.getAge()));
+            assertThat(actual.getName(), is(account.getName()));
+        }
+    
+        @Test
+        public void readById_존재하지않는아이디는_Null을응답한다() throws Exception{
+            // given
+            long id = 123123;
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(get("/account/{id}", id)
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            assertThat(result.getResponse().getContentAsString(), is(emptyString()));
+        }
+    
+        @Test
+        public void readAll_전체Account정보를_배열로응답한다() throws Exception{
+            // given
+            Account account1 = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            this.accountRepository.save(account1);
+            Account account2 = Account.builder()
+                    .age(2)
+                    .name("name2")
+                    .build();
+            this.accountRepository.save(account2);
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(get("/account")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            List<Account> actual = this.objectMapper.readValue(result.getResponse().getContentAsString(), List.class);
+            System.out.println(Arrays.toString(actual.toArray()));
+            assertThat(actual, hasSize(2));
+        }
+    
+        @Test
+        public void readAll_정보가없으면_빈배열을응답한다() throws Exception{
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(get("/account")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            List<Account> actual = this.objectMapper.readValue(result.getResponse().getContentAsString(), List.class);
+            assertThat(actual, empty());
+        }
+    }
+	```  
+	
+## secondapp 모듈
+- `core` 모듈을 추가한 것과 같이 `secondapp` 이름의 모듈을 추가해준다.
+
+	![그림 13]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-13.png)
+
+- `root` 프로젝트의 `pom.xml` 에는 아래와 같이 `secondapp` 모듈이 추가 된것을 확인 할 수 있다.
+
+	```xml
+    <modules>
+        <module>core</module>
+        <module>firstapp</module>
+        <module>secondapp</module>
+    </modules>
+	```  
+	
+- `secondapp` 모듈은 `core` 모듈을 사용해서 Controller 를 제공하기 때문에 관련 의존성과 빌드 설정을 `pom.xml` 에 해준다.
+	- `firstapp` 모듈과 `secondapp` 모듈은 같은 Controller 에서 제공하는 메서드만 다르기 때문에 대부분의 설정이 비슷하다.
+
+	```xml
+    <parent>
+        <artifactId>root</artifactId>
+        <groupId>com.windowforsun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>secondapp</artifactId>
+    <packaging>jar</packaging>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+		<!-- core 모듈 의존성 -->
+        <dependency>
+            <groupId>com.windowforsun</groupId>
+            <artifactId>core</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+	```  
+	
+- 완성된 `secondapp` 모듈은 아래와 같다.
+
+	![그림 14]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-14.png)
+	
+- `com.windowforsun.controller.AccountController`
+
+	```java
+	@RestController
+    @RequiredArgsConstructor
+    @RequestMapping("/account")
+    public class AccountController {
+        private final AccountRepository accountRepository;
+    
+        @PostMapping
+        public Account create(@RequestBody Account account) {
+            return this.accountRepository.save(account);
+        }
+    
+        @PutMapping("/{id}")
+        public Account updateById(@PathVariable long id, @RequestBody Account account) {
+            Account result = null;
+    
+            if(this.accountRepository.existsById(id)) {
+                result = this.accountRepository.save(account);
+            }
+    
+            return result;
+        }
+    }
+	```  
+	
+- `com.windowforsun.SecondAppApplication`
+
+	```java
+	@SpringBootApplication
+    public class SecondAppApplication {
+        public static void main(String[] args) {
+            SpringApplication.run(SecondAppApplication.class, args);
+        }
+    }
+	```  
+	
+- `application.yml`
+
+	```yaml
+	server:
+      port: 8081
+        
+    ---
+    server:
+      port: 8080
+      
+    spring:
+      profiles: docker
+    
+      datasource:
+        hikari:
+          jdbc-url: jdbc:mysql://module-mysql:3306/test
+          username: root
+          password: root
+          driver-class-name: com.mysql.cj.jdbc.Driver
+	```  
+	
+- `http/create.http`
+
+	```http request
+	POST http://localhost:81/account
+    Content-Type: application/json
+    
+    {
+      "name": "name1",
+      "age": 1
+    }
+	```  
+	
+- `http/updateById.http`
+
+	```http request
+	PUT http://localhost:81/account/1
+    Content-Type: application/json
+    
+    {
+      "name": "name11",
+      "age": 11
+    }
+	```  
+	
+- `com.windowforsun.controller.TestAccountController`
+
+	```java
+	@RunWith(SpringRunner.class)
+    @SpringBootTest(classes = {SecondAppApplication.class})
+    @AutoConfigureMockMvc
+    public class TestAccountController {
+        @Autowired
+        private MockMvc mockMvc;
+        @Autowired
+        private AccountRepository accountRepository;
+        private ObjectMapper objectMapper = new ObjectMapper();
+    
+        @Before
+        public void setUp() {
+            this.accountRepository.deleteAll();
+        }
+    
+        @Test
+        public void create_생성된_Account를응답한다() throws Exception {
+            // given
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            String jsonStr = this.objectMapper.writeValueAsString(account);
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(post("/account")
+                            .content(jsonStr)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            Account actual = this.objectMapper.readValue(result.getResponse().getContentAsString(), Account.class);
+            assertThat(actual.getAge(), is(account.getAge()));
+            assertThat(actual.getName(), is(account.getName()));
+        }
+    
+        @Test
+        public void updateById_존재하는아이디_업데이트된Account를응답한다() throws Exception {
+            // given
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            this.accountRepository.save(account);
+            long id = account.getId();
+            account.setAge(11);
+            account.setName("name11");
+            String jsonStr = this.objectMapper.writeValueAsString(account);
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(put("/account/{id}", id)
+                            .content(jsonStr)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            Account actual = this.objectMapper.readValue(result.getResponse().getContentAsString(), Account.class);
+            assertThat(actual.getAge(), is(account.getAge()));
+            assertThat(actual.getName(), is(account.getName()));
+        }
+    
+        @Test
+        public void updateById_존재하지않는아이디_Null을반환한다() throws Exception {
+            // given
+            long id = 12312312;
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            String jsonStr = this.objectMapper.writeValueAsString(account);
+    
+            // when
+            MvcResult result = this.mockMvc
+                    .perform(put("/account/{id}", id)
+                            .content(jsonStr)
+                            .accept(MediaType.APPLICATION_JSON)
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andReturn();
+    
+            // then
+            assertThat(result.getResponse().getContentAsString(), is(emptyString()));
+        }
+    }
+	```  
+	
 
 
 	
