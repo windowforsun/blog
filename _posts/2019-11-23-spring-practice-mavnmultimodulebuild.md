@@ -921,4 +921,8 @@ tags:
 	
 ---
 ## Reference
-[]()
+[메이븐 다중 모듈 프로젝트에 대해](https://windwolf.tistory.com/18)  
+[멀티모듈 설계 이야기 with Spring, Gradle](http://woowabros.github.io/study/2019/07/01/multi-module.html)  
+[maven 멀티 모듈](http://wonwoo.ml/index.php/post/601)  
+[Multi-Module Project With Spring Boot](https://www.baeldung.com/spring-boot-multiple-modules)  
+[Could not find artifact in a multi-module project](https://stackoverflow.com/questions/41105954/could-not-find-artifact-in-a-multi-module-project?rq=1)
