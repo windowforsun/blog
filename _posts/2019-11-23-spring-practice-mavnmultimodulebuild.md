@@ -509,7 +509,8 @@ tags:
             Account result = null;
     
             if(this.accountRepository.existsById(id)) {
-                result = this.accountRepository.save(account);
+	            account.setId(id);
+	            result = this.accountRepository.save(account);
             }
     
             return result;
@@ -531,10 +532,14 @@ tags:
 - `application.yml`
 
 	```yaml
+	# 로컬 구동시 환경 설정
 	server:
       port: 8081
-        
-    ---
+    
+    # 로컬 구동시 h2 DB를 사용한다.
+    
+    ---    
+  	# 도커로 구동시 환경 설정    
     server:
       port: 8080
       
@@ -551,7 +556,7 @@ tags:
 	
 - `http/create.http`
 
-	```http request
+	```http request	
 	POST http://localhost:81/account
     Content-Type: application/json
     
@@ -564,6 +569,7 @@ tags:
 - `http/updateById.http`
 
 	```http request
+	
 	PUT http://localhost:81/account/1
     Content-Type: application/json
     
@@ -671,10 +677,247 @@ tags:
     }
 	```  
 	
+## Docker 구성 및 빌드
+- Docker 를 구성하는 파일은 아래와 같다.
 
-
+	![그림 15]({{site.baseurl}}/img/spring/practice-mavenmultimodulebuild-15.png)
 	
+- `docker-compose.yml
 
+	```yaml
+	version: '3.7'
+    
+    services:
+      firstapp:
+        build:
+          context: ./../
+          dockerfile: docker/firstapp/Dockerfile
+        ports:
+          - "80:8080"
+        networks:
+          - module-net
+        depends_on:
+          - module-mysql
+          
+      secondapp:
+        build:
+          context: ./../
+          dockerfile: docker/secondapp/Dockerfile
+        ports:
+          - "81:8080"
+        networks:
+          - module-net
+        depends_on:
+          - module-mysql
+    
+      module-mysql:
+        build:
+          context: mysql
+        ports:
+          - "3306:3306"
+        env_file:
+          - .env
+        volumes:
+          - ./mysql/conf:/etc/mysql/conf.d/source
+          - ./mysql/sql:/docker-entrypoint-initdb.d
+          - ./mysql-data:/var/lib/mysql
+        command:
+          - --default-authentication-plugin=mysql_native_password
+        networks:
+          - module-net
+    
+    networks:
+      module-net:
+	```  
+	
+	- `firstapp` 은 80 포트, `secondapp` 은 81 포트를 사용한다.
+	
+- `firstapp/Dockerfile`
+
+	```
+	### BUILD image
+	FROM maven:3-jdk-11 as builder
+	# create app folder for sources
+	RUN mkdir -p /build
+	WORKDIR /build
+	#COPY pom.xml /build
+	COPY pom.xml /build
+	#Copy source code
+	COPY ./core /build/core
+	COPY ./firstapp /build/firstapp
+	COPY ./secondapp /build/secondapp
+	#packaging project
+	RUN mvn package
+	
+	FROM openjdk:11-slim as runtime
+	# define application name
+	ENV APP_NAME firstapp
+	#Set app home folder
+	ENV APP_HOME /app
+	#Possibility to set JVM options (https://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html)
+	ENV JAVA_OPTS=""
+	#Create base app folder
+	RUN mkdir $APP_HOME
+	#Create folder to save configuration files
+	RUN mkdir $APP_HOME/config
+	#Create folder with application logs
+	RUN mkdir $APP_HOME/log
+	VOLUME $APP_HOME/log
+	VOLUME $APP_HOME/config
+	WORKDIR $APP_HOME
+	#Copy executable jar file from the builder image
+	COPY --from=builder /build/$APP_NAME/target/*.jar app.jar
+    #Execute app docker profile
+	ENTRYPOINT exec java $JAVA_OPTS -Dspring.profiles.active=docker -jar app.jar $0 $@
+	```  
+	
+- `secondapp/Dockerfile`
+
+	```
+	### BUILD image
+    FROM maven:3-jdk-11 as builder
+    # create app folder for sources
+    RUN mkdir -p /build
+    WORKDIR /build
+    #COPY pom.xml /build
+    COPY pom.xml /build
+    #Copy source code
+    COPY ./core /build/core
+    COPY ./firstapp /build/firstapp
+    COPY ./secondapp /build/secondapp
+    #packaging project
+    RUN mvn package
+    
+    FROM openjdk:11-slim as runtime
+    # define application name
+    ENV APP_NAME secondapp
+    #Set app home folder
+    ENV APP_HOME /app
+    #Possibility to set JVM options (https://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html)
+    ENV JAVA_OPTS=""
+    #Create base app folder
+    RUN mkdir $APP_HOME
+    #Create folder to save configuration files
+    RUN mkdir $APP_HOME/config
+    #Create folder with application logs
+    RUN mkdir $APP_HOME/log
+    VOLUME $APP_HOME/log
+    VOLUME $APP_HOME/config
+    WORKDIR $APP_HOME
+    #Copy executable jar file from the builder image
+    COPY --from=builder /build/$APP_NAME/target/*.jar app.jar
+    #Execute app docker profile
+    ENTRYPOINT exec java $JAVA_OPTS -Dspring.profiles.active=docker -jar app.jar $0 $@
+	```  
+	
+- `mysql/Dockerfile`
+
+	```
+	FROM mysql:8.0.17
+    
+    RUN apt-get update
+    RUN apt-get install -y libevent-dev
+	```  
+	
+- `mysql/config/custom.cnf`
+
+	```
+	bind-address=0.0.0.0
+	```  
+	
+- `mysql/sql/init.sql`
+
+	```
+	create table account (
+      id bigint not null auto_increment,
+      name varchar(255),
+      age bigint,
+      primary key (id)
+    ) engine = InnoDB;
+	```  
+	
+- `.env`
+
+	```
+	MYSQL_DATABASE=test
+    MYSQL_USER=hello
+    MYSQL_PASSWORD=hello
+    MYSQL_ROOT_PASSWORD=root
+	```  
+	
+- `docker-compose up --build` 를 통해 빌드를 한다.
+
+## 테스트
+- 각 모듈에 있는 `http` 를 통해 테스트를 진행한다.
+- `secondapp` 의 `create.http`
+	
+	```
+	POST http://localhost:81/account
+    
+    HTTP/1.1 200 
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+    Date: Sat, 23 Nov 2019 18:55:37 GMT
+    
+    {
+      "id": 1,
+      "name": "name1",
+      "age": 1
+    }
+	```  
+	
+- `firstapp` 의 `readById.http`
+
+	```
+	GET http://localhost:80/account/1
+    
+    HTTP/1.1 200 
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+    Date: Sat, 23 Nov 2019 18:56:25 GMT
+    
+    {
+      "id": 1,
+      "name": "name1",
+      "age": 1
+    }
+	```  
+	
+- `firstapp` 의 `readAll.http`
+
+	```
+	GET http://localhost:80/account
+    
+    HTTP/1.1 200 
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+    Date: Sat, 23 Nov 2019 18:57:03 GMT
+    
+    [
+      {
+        "id": 1,
+        "name": "name1",
+        "age": 1
+      }
+    ]
+	```  
+	
+- `secondapp` 의 `updateById.http`
+
+	```
+	PUT http://localhost:81/account/1
+    
+    HTTP/1.1 200 
+    Content-Type: application/json
+    Transfer-Encoding: chunked
+    Date: Sat, 23 Nov 2019 18:57:42 GMT
+    
+    {
+      "id": 1,
+      "name": "name11",
+      "age": 11
+    }
+	```  
 	
 ---
 ## Reference
