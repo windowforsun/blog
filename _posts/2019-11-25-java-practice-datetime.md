@@ -37,7 +37,7 @@ tags:
 - `Duration` : `Instant` 를 사용해서 두 시간 사이(일, 시, 분, 초)의 기간을 표현한다.
 
 ### 기타
-- `ChronoUnit` : 년, 월, 일, 시, 분, 초 등의 한 가지 단위를 표현하기 위한 클래스이다.
+- `ChronoUnit` : 년, 월, 일, 시, 분, 초 등의 한 가지 단위로 길이를 표현하기 위한 클래스이다.
 - `DayOfWeek` : 요일을 표현하는 Enum 이다.
 - `Month` : 월을 표현하는 Enum 이다.
 
@@ -53,11 +53,9 @@ public class JavaTimeClassTest {
         assertThat(Instant.ofEpochSecond(0).toString(), is(containsString("1970-01-01")));
 
         // 초기값 + 2,000,000,000 초는 2033-05-18T03:33:20Z
-        System.out.println(Instant.ofEpochSecond(2_000_000_000).toString());
         assertThat(Instant.ofEpochSecond(2_000_000_000).toString(), is(containsString("2033-05-18")));
 
         // 초기값 - 2,000,000,000 초는 1906-08-16T20:26:40Z
-        System.out.println(Instant.ofEpochSecond(-2_000_000_000).toString());
         assertThat(Instant.ofEpochSecond(-2_000_000_000).toString(), is(containsString("1906-08-16")));
 
         // 현재 시간
@@ -80,7 +78,7 @@ public class JavaTimeClassTest {
     @Test
     public void LocalDate_Test() {
         LocalDate today = LocalDate.now();
-        assertThat(today.toString(), is("2019-11-26"));
+        assertThat(today.toString(), is("2019-11-25"));
 
         LocalDate parseDay = LocalDate.parse("2019-10-01");
         assertThat(parseDay.toString(), is("2019-10-01"));
@@ -161,17 +159,135 @@ public class JavaTimeClassTest {
 
     @Test
     public void ZonedDateTime_Test() {
+        ZonedDateTime nowKr = ZonedDateTime.now();
+        assertThat(nowKr.toString(), is(allOf(
+                containsString("2019-11-25"),
+                containsString("Asia/Seoul")
+        )));
 
+        ZonedDateTime nowLa = ZonedDateTime.now(ZoneId.of("America/Los_Angeles"));
+        assertThat(nowLa.toString(), is(allOf(
+                containsString("2019-11-25"),
+                containsString("America/Los_Angeles")
+        )));
+
+        ZonedDateTime somePlaceDateTime = ZonedDateTime.of(
+                1992, 10, 1,
+                11,11,11,0,
+                ZoneId.of("Asia/Seoul"));
+        assertThat(somePlaceDateTime.toString(), is(allOf(
+                containsString("1992-10-01"),
+                containsString("11:11:11"),
+                containsString("Asia/Seoul")
+        )));
+
+        LocalDate date = LocalDate.of(1992, 10, 1);
+        LocalTime time = LocalTime.of(11, 11, 11);
+        LocalDateTime dateTime = LocalDateTime.of(date, time);
+        ZonedDateTime zonedDateTime = ZonedDateTime.of(dateTime, ZoneId.of("Asia/Seoul"));
+        assertThat(zonedDateTime.toLocalDate().toString(), is("1992-10-01"));
+        assertThat(zonedDateTime.toLocalTime().toString(), is("11:11:11"));
+
+        // UTC 기준 한국과 시간차는 +9시간
+        ZoneOffset seoulZoneOffset = ZoneOffset.of("+09:00");
+        ZonedDateTime nowKr2 = ZonedDateTime.now().withZoneSameInstant(ZoneId.of("Asia/Seoul"));
+        assertThat(nowKr2.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), is(ZonedDateTime.now(seoulZoneOffset).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+
+        ZonedDateTime seoul = Year.of(1992).atMonth(10).atDay(1).atTime(11, 11, 11).atZone(ZoneId.of("Asia/Seoul"));
+        ZonedDateTime utc = seoul.withZoneSameInstant(ZoneOffset.UTC);
+        assertThat(utc.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), is(seoul.minusHours(9).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+
+        ZonedDateTime shanghai = seoul.withZoneSameInstant(ZoneId.of("Asia/Shanghai"));
+        assertThat(shanghai.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), is(seoul.minusHours(1).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+
+        String isoDateTimePattern = somePlaceDateTime.format(DateTimeFormatter.ISO_DATE_TIME);
+        assertThat(isoDateTimePattern, is("1992-10-01T11:11:11+09:00[Asia/Seoul]"));
+        String customPattern = somePlaceDateTime.format(DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss z"));
+        assertThat(customPattern, is("1992/10/01 11:11:11 KST"));
+        String krPattern = somePlaceDateTime.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL));
+        assertThat(krPattern, is("1992년 10월 1일 목요일 오전 11시 11분 11초 KST"));
+        String usPattern = somePlaceDateTime.format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withLocale(Locale.US));
+        assertThat(usPattern, is("Thursday, October 1, 1992 11:11:11 AM KST"));
+
+        ZonedDateTime isoDateTime = ZonedDateTime.parse(isoDateTimePattern);
+        assertThat(isoDateTime, is(somePlaceDateTime));
+        ZonedDateTime customDateTime = ZonedDateTime.parse(customPattern, DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss z"));
+        assertThat(customDateTime, is(somePlaceDateTime));
+        ZonedDateTime krDateTime = ZonedDateTime.parse(krPattern, DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL));
+        assertThat(krDateTime, is(somePlaceDateTime));
+        ZonedDateTime usDateTime = ZonedDateTime.parse(usPattern, DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL).withLocale(Locale.US));
+        assertThat(usDateTime, is(somePlaceDateTime));
+    }
+
+
+    @Test
+    public void Duration_Test() {
+        LocalTime start = LocalTime.of(11, 11, 11, 0);
+        LocalTime end = LocalTime.of(11, 12, 11, 11);
+        Duration duration = Duration.between(start, end);
+        assertThat(duration.getSeconds(), is(60l));
+        assertThat(duration.getNano(), is(11));
+
+        Duration oneMinutes = Duration.ofMinutes(1);
+        assertThat(oneMinutes.getSeconds(), is(60l));
+        Duration oneHours = Duration.ofHours(1);
+        assertThat(oneHours.getSeconds(), is(3600l));
+        Duration oneDays = Duration.ofDays(1);
+        assertThat(oneDays.getSeconds(), is(3600l * 24));
+
+        Duration parseDuration = Duration.parse("PT10H36M50.008S");
+        assertThat(parseDuration.getSeconds(), is(38210l));
+        assertThat(parseDuration.getNano(), is(8000000));
     }
 
     @Test
     public void Period_Test() {
+        LocalDate start = LocalDate.of(1992, 10, 1);
+        LocalDate end1 = LocalDate.of(2019, 1, 1);
+        Period period1 = Period.between(start, end1);
+        assertThat(period1.getYears(), is(26));
+        assertThat(period1.getMonths(), is(3));
+        assertThat(period1.getDays(), is(0));
 
+        LocalDate end2 = LocalDate.of(2019, 11, 25);
+        Period period2 = Period.between(start, end2);
+        assertThat(period2.getYears(), is(27));
+        assertThat(period2.getMonths(), is(1));
+        assertThat(period2.getDays(), is(24));
+
+        Period custom = Period.of(11, 11, 11);
+        assertThat(custom.getYears(), is(11));
+        assertThat(custom.getMonths(), is(11));
+        assertThat(custom.getDays(), is(11));
+
+        Period parse = Period.parse("P1Y2M3D");
+        assertThat(parse.getYears(), is(1));
+        assertThat(parse.getMonths(), is(2));
+        assertThat(parse.getDays(), is(3));
     }
 
     @Test
-    public void Duration_Test() {
-        
+    public void ChronoUnit_Test() {
+        LocalDate startDate = LocalDate.of(1992, 10, 1);
+        LocalDate endDate = LocalDate.of(2019, 1, 1);
+        long years = ChronoUnit.YEARS.between(startDate, endDate);
+        long months = ChronoUnit.MONTHS.between(startDate, endDate);
+        long weeks = ChronoUnit.WEEKS.between(startDate, endDate);
+        long days = ChronoUnit.DAYS.between(startDate, endDate);
+        assertThat(years, is(26l));
+        assertThat(months, is(315l));
+        assertThat(weeks, is(1369l));
+        assertThat(days, is(9588l));
+
+
+        LocalTime startTime = LocalTime.of(11, 11, 11, 0);
+        LocalTime endTime = LocalTime.of(12, 13, 14, 15);
+        long hours = ChronoUnit.HOURS.between(startTime, endTime);
+        long minutes = ChronoUnit.MINUTES.between(startTime, endTime);
+        long seconds = ChronoUnit.SECONDS.between(startTime, endTime);
+        assertThat(hours, is(1l));
+        assertThat(minutes, is(62l));
+        assertThat(seconds, is(3723l));
     }
 }
 ```  
