@@ -53,11 +53,9 @@ public class JavaTimeClassTest {
         assertThat(Instant.ofEpochSecond(0).toString(), is(containsString("1970-01-01")));
 
         // 초기값 + 2,000,000,000 초는 2033-05-18T03:33:20Z
-        System.out.println(Instant.ofEpochSecond(2_000_000_000).toString());
         assertThat(Instant.ofEpochSecond(2_000_000_000).toString(), is(containsString("2033-05-18")));
 
         // 초기값 - 2,000,000,000 초는 1906-08-16T20:26:40Z
-        System.out.println(Instant.ofEpochSecond(-2_000_000_000).toString());
         assertThat(Instant.ofEpochSecond(-2_000_000_000).toString(), is(containsString("1906-08-16")));
 
         // 현재 시간
