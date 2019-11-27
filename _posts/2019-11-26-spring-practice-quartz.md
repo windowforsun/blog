@@ -227,6 +227,8 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 
 ## Spring Boot Quartz 사용하기
 - Quartz 관련 설정은 `application.properties`, `application.yml` 파일을 통해 할 수 있다.
+	- [설정 참조](http://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigMain.html)
+	- `spring.quartz.properties.` 프리픽스를 붙여 설정에 사용한다. (`spring.quartz.properties.org.quartz.threadPool.threadCount=1`)
 - 예제에서는 아무 설정도 하지 않았을 때 기본 설정으로 사용법에 대해 알아본다.
 	- `JobStore` 은 `RANJobStore`
 	- 10 개의 쓰레드 사용
