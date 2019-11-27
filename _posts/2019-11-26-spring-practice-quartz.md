@@ -312,6 +312,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	        TriggerKey cronJobTriggerKey = new TriggerKey("QuartzCronJobTrigger", "Quartz");
 	        Trigger cronTrigger = TriggerBuilder
 	                .newTrigger()
+	                // 매초 마다 실행
 	                .withSchedule(CronScheduleBuilder.cronSchedule("* * * * * ? *"))
 	                .withIdentity(cronJobTriggerKey)
 	                .build();
@@ -327,6 +328,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	        TriggerKey simpleJobTriggerKey = new TriggerKey("QuartzSimpleJobTrigger", "Quartz");
 	        Trigger simpleTrigger = TriggerBuilder
 	                .newTrigger()
+	                // 매초 마다 실행
 	                .withSchedule(SimpleScheduleBuilder
 	                        .repeatSecondlyForever(1))
 	                .withIdentity(simpleJobTriggerKey)
@@ -479,55 +481,26 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	    }
     }
 	```  
+	
+- 구현된 애플리케이션을 빌드 및 실행 시키면 아래와 같은 로그를 확인 할 수 있다.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	```
+	2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.QuartzTriggerListener          : triggerFired : Quartz.QuartzCronJob
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.QuartzJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzCronJob, TriggerKey : Quartz.QuartzCronJobTrigger, FireTime : Wed Nov 27 23:29:56 KST 2019, JobData : 2019-11-27T23:29:54.614
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.QuartzJobListener     : jobWasExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.QuartzTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
+    2019-11-27 23:29:56.621  INFO 12620 --- [eduler_Worker-6] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzSimpleJob, TriggerKey : Quartz.QuartzSimpleJobTrigger, FireTime : Wed Nov 27 23:29:56 KST 2019, JobData : 2019-11-27T23:29:54.614
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.QuartzTriggerListener          : triggerFired : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.QuartzJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzCronJob, TriggerKey : Quartz.QuartzCronJobTrigger, FireTime : Wed Nov 27 23:29:57 KST 2019, JobData : 2019-11-27T23:29:54.614
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.QuartzJobListener     : jobWasExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.QuartzTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
+    2019-11-27 23:29:57.622  INFO 12620 --- [eduler_Worker-8] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzSimpleJob, TriggerKey : Quartz.QuartzSimpleJobTrigger, FireTime : Wed Nov 27 23:29:57 KST 2019, JobData : 2019-11-27T23:29:54.614
+	```  
+	
+	- `CronJob` 의 경우 `TriggerListener` 와 `JobListener` 가 등록되어 있기 때문에 `Job` 이 실행될 떄 마다 5개의 로그가 출력된다.
+	- `SimpleJob` 의 경우 `Job` 실행 마다 출력하는 로그는 1개이다.
 
 
 
