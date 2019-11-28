@@ -280,11 +280,78 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	                jobDataMap.getString("registerTime"));
 	    }
 	}
+	```  	
+		
+- `SampleTriggerListener`
+
+	```java
+	@Component
+	@Slf4j
+	public class SampleTriggerListener implements TriggerListener {
+	    @Override
+	    public String getName() {
+	        return this.getClass().getName();
+	    }
+	
+	    @Override
+	    public void triggerFired(Trigger trigger, JobExecutionContext jobExecutionContext) {
+	        log.info("triggerFired : {}", trigger.getJobKey());
+	    }
+	
+	    @Override
+	    public boolean vetoJobExecution(Trigger trigger, JobExecutionContext jobExecutionContext) {
+	        /*
+	        현재 Trigger 를 veto(거부, 금지) 할지 결정하는 메서드이다.
+	        true 이면 veto 로 Job 이 실행 되지 않는다.
+	        false 이면 Job 이 정상적으로 실행된다.
+	         */
+	        return false;
+	    }
+	
+	    @Override
+	    public void triggerMisfired(Trigger trigger) {
+	        log.info("triggerMisfired : {}", trigger.getJobKey());
+	    }
+	
+	    @Override
+	    public void triggerComplete(Trigger trigger, JobExecutionContext jobExecutionContext, Trigger.CompletedExecutionInstruction completedExecutionInstruction) {
+	        log.info("triggerComplete : {} start {} end {}", trigger.getJobKey(), trigger.getStartTime(), trigger.getEndTime());
+	    }
+	}
+	```  
+	
+- `SampleJobListener`
+
+	```java
+	@Component
+	@Slf4j
+	public class SampleJobListener implements JobListener {
+	    @Override
+	    public String getName() {
+	        return this.getClass().getName();
+	    }
+	
+	    @Override
+	    public void jobToBeExecuted(JobExecutionContext jobExecutionContext) {
+	        log.info("jobToBeExecuted : {}", jobExecutionContext.getJobDetail().getKey());
+	    }
+	
+	    @Override
+	    public void jobExecutionVetoed(JobExecutionContext jobExecutionContext) {
+	        log.info("jobExecutionVoted : {}", jobExecutionContext.getJobDetail().getKey());
+	    }
+	
+	    @Override
+	    public void jobWasExecuted(JobExecutionContext jobExecutionContext, JobExecutionException e) {
+	        log.info("jobWasExecuted : {}", jobExecutionContext.getJobDetail().getKey());
+	    }
+	}
 	```  
 
-### Quartz 라이브러리를 이용한 Schedule 구성
+### Quartz 방식을 이용한 Schedule 구성
 - `QuartzSchedule`
-	- Quartz 라이브러리를 이용해서 스케쥴러를 구성한 클래스
+	- Quartz 방식을 이용해서 스케쥴러를 구성한 클래스
+	- `QuartzSchedule` 빈이 컨네이너에 올라갈때 `@PostConstruct` 를 통해 한번 `SchJedule` 에 `ob` 을 등록하고 실행한다.
 	
 	```java
 	@Component
@@ -347,76 +414,15 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	//        scheduler.getListenerManager().addJobListener(this.sampleJobListener, GroupMatcher.jobGroupContains("Quartz"));
 	        // CronJob 에만 리스터 등록
 	        scheduler.getListenerManager().addJobListener(this.quartzJobListener, KeyMatcher.keyEquals(cronJobKey));
-	
+	        
 	        // Job 등록
-	        scheduler.scheduleJob(cronJobDetail, cronTrigger);
-	        scheduler.scheduleJob(simpleJobDetail, simpleTrigger);
-	    }
-	}
-	```  
+	        if (!scheduler.checkExists(cronJobKey)) {
+	            scheduler.scheduleJob(cronJobDetail, cronTrigger);
+	        }
 	
-- `QuartzTriggerListener`
-
-	```java
-	@Component
-	@Slf4j
-	public class QuartzTriggerListener implements TriggerListener {
-	    @Override
-	    public String getName() {
-	        return this.getClass().getName();
-	    }
-	
-	    @Override
-	    public void triggerFired(Trigger trigger, JobExecutionContext jobExecutionContext) {
-	        log.info("triggerFired : {}", trigger.getJobKey());
-	    }
-	
-	    @Override
-	    public boolean vetoJobExecution(Trigger trigger, JobExecutionContext jobExecutionContext) {
-	        /*
-	        현재 Trigger 를 veto(거부, 금지) 할지 결정하는 메서드이다.
-	        true 이면 veto 로 Job 이 실행 되지 않는다.
-	        false 이면 Job 이 정상적으로 실행된다.
-	         */
-	        return false;
-	    }
-	
-	    @Override
-	    public void triggerMisfired(Trigger trigger) {
-	        log.info("triggerMisfired : {}", trigger.getJobKey());
-	    }
-	
-	    @Override
-	    public void triggerComplete(Trigger trigger, JobExecutionContext jobExecutionContext, Trigger.CompletedExecutionInstruction completedExecutionInstruction) {
-	        log.info("triggerComplete : {} start {} end {}", trigger.getJobKey(), trigger.getStartTime(), trigger.getEndTime());
-	    }
-	}
-	```  
-	
-- `QuartzJobListener`
-
-	```java
-	@Component
-	@Slf4j
-	public class QuartzJobListener implements JobListener {
-	    @Override
-	    public String getName() {
-	        return this.getClass().getName();
-	    }
-	
-	    @Override
-	    public void jobToBeExecuted(JobExecutionContext jobExecutionContext) {
-	        log.info("jobToBeExecuted : {}", jobExecutionContext.getJobDetail().getKey());
-	    }
-	
-	    @Override
-	    public void jobExecutionVetoed(JobExecutionContext jobExecutionContext) {
-	        log.info("jobExecutionVoted : {}", jobExecutionContext.getJobDetail().getKey());
-	    }
-	
-	    @Override
-	    public void jobWasExecuted(JobExecutionContext jobExecutionContext, JobExecutionException e) {
-	        log.info("jobWasExecuted : {}", jobExecutionContext.getJobDetail().getKey());
+	        if (!scheduler.checkExists(simpleJobKey)) {
+	            scheduler.scheduleJob(simpleJobDetail, simpleTrigger);
+	        }
 	    }
 	}
 	```  
@@ -430,6 +436,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	    @Test
 	    public void cronJob() throws Exception {
 	        // given
+	        CronJob.count = 0;
 	        JobDataMap jobDataMap = new JobDataMap();
 	        jobDataMap.put("registerTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 	        JobDetail jobDetail = JobBuilder
@@ -448,6 +455,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	        defaultScheduler.start();
 	        defaultScheduler.scheduleJob(jobDetail, trigger);
 	        Thread.sleep(3 * 1000);
+	        defaultScheduler.deleteJob(jobDetail.getKey());
 	        defaultScheduler.shutdown(true);
 	
 	        // then
@@ -457,6 +465,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	    @Test
 	    public void simpleJob() throws Exception {
 	        // given
+	        SimpleJob.count = 0;
 	        JobDataMap jobDataMap = new JobDataMap();
 	        jobDataMap.put("registerTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
 	        JobDetail jobDetail = JobBuilder
@@ -476,6 +485,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 	        defaultScheduler.start();
 	        defaultScheduler.scheduleJob(jobDetail, trigger);
 	        Thread.sleep(3 * 1000);
+	        defaultScheduler.deleteJob(jobDetail.getKey());
 	        defaultScheduler.shutdown(true);
 	
 	        // then
@@ -484,26 +494,209 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
     }
 	```  
 	
-- 구현된 애플리케이션을 빌드 및 실행 시키면 아래와 같은 로그를 확인 할 수 있다.
+- 구현된 애플리케이션을 빌드 및 실행 시키면 아래와 같은 로그를 확인 할 수 있다. (2초 동안 로그)
 
 	```
-	2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.QuartzTriggerListener          : triggerFired : Quartz.QuartzCronJob
-    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.QuartzJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
+	2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.SampleTriggerListener          : triggerFired : Quartz.QuartzCronJob
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.SampleJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
     2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzCronJob, TriggerKey : Quartz.QuartzCronJobTrigger, FireTime : Wed Nov 27 23:29:56 KST 2019, JobData : 2019-11-27T23:29:54.614
-    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.QuartzJobListener     : jobWasExecuted : Quartz.QuartzCronJob
-    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.QuartzTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.onlyquartz.SampleJobListener     : jobWasExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:56.001  INFO 12620 --- [eduler_Worker-5] c.e.s.b.o.SampleTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
     2019-11-27 23:29:56.621  INFO 12620 --- [eduler_Worker-6] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzSimpleJob, TriggerKey : Quartz.QuartzSimpleJobTrigger, FireTime : Wed Nov 27 23:29:56 KST 2019, JobData : 2019-11-27T23:29:54.614
-    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.QuartzTriggerListener          : triggerFired : Quartz.QuartzCronJob
-    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.QuartzJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.SampleTriggerListener          : triggerFired : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.SampleJobListener     : jobToBeExecuted : Quartz.QuartzCronJob
     2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzCronJob, TriggerKey : Quartz.QuartzCronJobTrigger, FireTime : Wed Nov 27 23:29:57 KST 2019, JobData : 2019-11-27T23:29:54.614
-    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.QuartzJobListener     : jobWasExecuted : Quartz.QuartzCronJob
-    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.QuartzTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.onlyquartz.SampleJobListener     : jobWasExecuted : Quartz.QuartzCronJob
+    2019-11-27 23:29:57.001  INFO 12620 --- [eduler_Worker-7] c.e.s.b.o.SampleTriggerListener          : triggerComplete : Quartz.QuartzCronJob start Wed Nov 27 23:29:54 KST 2019 end null
     2019-11-27 23:29:57.622  INFO 12620 --- [eduler_Worker-8] c.e.s.baeldung.Util                      : JobKey : Quartz.QuartzSimpleJob, TriggerKey : Quartz.QuartzSimpleJobTrigger, FireTime : Wed Nov 27 23:29:57 KST 2019, JobData : 2019-11-27T23:29:54.614
 	```  
 	
 	- `CronJob` 의 경우 `TriggerListener` 와 `JobListener` 가 등록되어 있기 때문에 `Job` 이 실행될 떄 마다 5개의 로그가 출력된다.
 	- `SimpleJob` 의 경우 `Job` 실행 마다 출력하는 로그는 1개이다.
 
+### Spring 방식을 이용한 Schedule 구성
+- `SpringSchedule`
+	- Srping 방식을 이용해서 스케쥴러를 구성한 클래스
+
+	```
+	@Configuration
+	@RequiredArgsConstructor
+	@Profile("!test")
+	public class SpringSchedule {
+	    private final SchedulerFactoryBean schedulerFactoryBean;
+	    private final DataSource dataSource;
+	    private final SampleJobListener sampleJobListener;
+	    private final SampleTriggerListener sampleTriggerListener;
+	
+	    @PostConstruct
+	    public void start() throws Exception {
+	        this.schedulerFactoryBean.setDataSource(this.dataSource);
+	        Scheduler scheduler = this.schedulerFactoryBean.getScheduler();
+	        scheduler.start();
+	
+	        // Job 에서 사용할 데이터
+	        JobDataMap jobDataMap = new JobDataMap();
+	        jobDataMap.put("registerTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+	
+	        // CronTrigger 를 사용하는 CronJob 생성 및 구성
+	        JobDetailFactoryBean cronJobDetailBean = new JobDetailFactoryBean();
+	        cronJobDetailBean.setJobClass(CronJob.class);
+	        cronJobDetailBean.setDescription("SpringCronJob");
+	        cronJobDetailBean.setName("SpringCronJob");
+	        cronJobDetailBean.setDescription("SpringCronJob");
+	        cronJobDetailBean.setGroup("Spring");
+	        cronJobDetailBean.setJobDataMap(jobDataMap);
+	        cronJobDetailBean.afterPropertiesSet();
+	        JobDetail cronJobDetail = cronJobDetailBean.getObject();
+	        CronTriggerFactoryBean cronTriggerBean = new CronTriggerFactoryBean();
+	        cronTriggerBean.setGroup("Spring");
+	        cronTriggerBean.setName("SpringCronJobTrigger");
+	        cronTriggerBean.setCronExpression("* * * * * ? *");
+	        cronTriggerBean.afterPropertiesSet();
+	        Trigger cronTrigger = cronTriggerBean.getObject();
+	
+	        // SimpleTrigger 를 사용하는 SimpleJob 생성 및 구성
+	        JobDetailFactoryBean simpleJobDetailBean = new JobDetailFactoryBean();
+	        simpleJobDetailBean.setJobClass(SimpleJob.class);
+	        simpleJobDetailBean.setDescription("SpringSimpleJob");
+	        simpleJobDetailBean.setName("SpringSimpleJob");
+	        simpleJobDetailBean.setGroup("Spring");
+	        simpleJobDetailBean.setJobDataMap(jobDataMap);
+	        simpleJobDetailBean.afterPropertiesSet();
+	        JobDetail simpleJobDetail = simpleJobDetailBean.getObject();
+	        SimpleTriggerFactoryBean simpleTriggerBean = new SimpleTriggerFactoryBean();
+	        simpleTriggerBean.setName("SpringSimpleTrigger");
+	        simpleTriggerBean.setDescription("SpringSimpleTrigger");
+	        simpleTriggerBean.setGroup("Spring");
+	        simpleTriggerBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
+	        simpleTriggerBean.setRepeatInterval(1000);
+	        simpleTriggerBean.afterPropertiesSet();
+	        Trigger simpleTrigger = simpleTriggerBean.getObject();
+	
+	        // TriggerListener 등록
+	        // 그룹으로 지정 가능
+	//        scheduler.getListenerManager().addTriggerListener(this.sampleTriggerListener, GroupMatcher.triggerGroupContains("Quartz"));
+	        // CronTrigger 에만 리스너 등록
+	        scheduler.getListenerManager().addTriggerListener(this.sampleTriggerListener, KeyMatcher.keyEquals(cronTrigger.getKey()));
+	
+	        // JobListener 등록
+	        // 그룹으로 지정 가능
+	//        scheduler.getListenerManager().addJobListener(this.sampleJobListener, GroupMatcher.jobGroupContains("Quartz"));
+	        // CronJob 에만 리스터 등록
+	        scheduler.getListenerManager().addJobListener(this.sampleJobListener, KeyMatcher.keyEquals(cronJobDetail.getKey()));
+	
+	
+	        // Job 등록
+	        if (!scheduler.checkExists(cronJobDetail.getKey())) {
+	            scheduler.scheduleJob(cronJobDetail, cronTrigger);
+	        }
+	
+	        if (!scheduler.checkExists(simpleJobDetail.getKey())) {
+	            scheduler.scheduleJob(simpleJobDetail, simpleTrigger);
+	        }
+	    }
+	}
+	```  
+	
+- UnitTest 코드
+
+	```java
+	@RunWith(SpringRunner.class)
+	@SpringBootTest
+	@ActiveProfiles("test")
+	public class SpringJobTest {
+	    @Autowired
+	    private SchedulerFactoryBean schedulerFactoryBean;
+	
+	    @Test
+	    public void cronJob() throws Exception {
+	        // given
+	        CronJob.count = 0;
+	        JobDataMap jobDataMap = new JobDataMap();
+	        jobDataMap.put("registerTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+	        JobDetailFactoryBean cronJobDetailBean = new JobDetailFactoryBean();
+	        cronJobDetailBean.setJobClass(CronJob.class);
+	        cronJobDetailBean.setDescription("SpringCronJob");
+	        cronJobDetailBean.setName("SpringCronJob");
+	        cronJobDetailBean.setDescription("SpringCronJob");
+	        cronJobDetailBean.setGroup("Spring");
+	        cronJobDetailBean.setJobDataMap(jobDataMap);
+	        cronJobDetailBean.afterPropertiesSet();
+	        JobDetail jobDetail = cronJobDetailBean.getObject();
+	        CronTriggerFactoryBean cronTriggerBean = new CronTriggerFactoryBean();
+	        cronTriggerBean.setGroup("Spring");
+	        cronTriggerBean.setName("SpringCronJobTrigger");
+	        cronTriggerBean.setCronExpression("* * * * * ? *");
+	        cronTriggerBean.afterPropertiesSet();
+	        Trigger trigger = cronTriggerBean.getObject();
+	
+	        // when
+	        Scheduler scheduler = this.schedulerFactoryBean.getScheduler();
+	        scheduler.start();
+	        scheduler.scheduleJob(jobDetail, trigger);
+	        Thread.sleep(3 * 1000);
+	        scheduler.deleteJob(jobDetail.getKey());
+	//        scheduler.shutdown(true);
+	//        scheduler.interrupt(jobDetail.getKey());
+	
+	        // then
+	        assertThat(CronJob.count, is(4));
+	    }
+	
+	    @Test
+	    public void simpleJob() throws Exception {
+	        // given
+	        SimpleJob.count = 0;
+	        JobDataMap jobDataMap = new JobDataMap();
+	        jobDataMap.put("registerTime", LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+	        JobDetailFactoryBean simpleJobDetailBean = new JobDetailFactoryBean();
+	        simpleJobDetailBean.setJobClass(SimpleJob.class);
+	        simpleJobDetailBean.setDescription("SpringSimpleJob");
+	        simpleJobDetailBean.setName("SpringSimpleJob");
+	        simpleJobDetailBean.setGroup("Spring");
+	        simpleJobDetailBean.setJobDataMap(jobDataMap);
+	        simpleJobDetailBean.afterPropertiesSet();
+	        JobDetail jobDetail = simpleJobDetailBean.getObject();
+	        SimpleTriggerFactoryBean simpleTriggerBean = new SimpleTriggerFactoryBean();
+	        simpleTriggerBean.setName("SpringSimpleTrigger");
+	        simpleTriggerBean.setDescription("SpringSimpleTrigger");
+	        simpleTriggerBean.setGroup("Spring");
+	        simpleTriggerBean.setRepeatCount(SimpleTrigger.REPEAT_INDEFINITELY);
+	        simpleTriggerBean.setRepeatInterval(1000);
+	        simpleTriggerBean.afterPropertiesSet();
+	        Trigger trigger = simpleTriggerBean.getObject();
+	
+	        // when
+	        Scheduler scheduler = this.schedulerFactoryBean.getScheduler();
+	        scheduler.start();
+	        scheduler.scheduleJob(jobDetail, trigger);
+	        Thread.sleep(3 * 1000);
+	        scheduler.deleteJob(jobDetail.getKey());
+	//        scheduler.shutdown(true);
+	//        scheduler.interrupt(jobDetail.getKey());
+	
+	        // then
+	        assertThat(SimpleJob.count, is(4));
+	    }
+	}
+	```  
+
+- 구현된 애플리케이션을 빌드 및 실행 시키면 아래와 같은 로그를 확인 할 수 있다. (2초 동안 로그)
+
+	```
+	2019-11-28 19:21:19.001  INFO 43664 --- [eduler_Worker-3] c.e.s.baeldung.SampleTriggerListener     : triggerFired : Spring.SpringCronJob
+	2019-11-28 19:21:19.002  INFO 43664 --- [eduler_Worker-3] c.e.s.baeldung.SampleJobListener         : jobToBeExecuted : Spring.SpringCronJob
+	2019-11-28 19:21:19.002  INFO 43664 --- [eduler_Worker-3] c.e.s.baeldung.Util                      : JobKey : Spring.SpringCronJob, TriggerKey : Spring.SpringCronJobTrigger, FireTime : Thu Nov 28 19:21:19 KST 2019, JobData : 2019-11-28T19:21:18.06
+	2019-11-28 19:21:19.002  INFO 43664 --- [eduler_Worker-3] c.e.s.baeldung.SampleJobListener         : jobWasExecuted : Spring.SpringCronJob
+	2019-11-28 19:21:19.002  INFO 43664 --- [eduler_Worker-3] c.e.s.baeldung.SampleTriggerListener     : triggerComplete : Spring.SpringCronJob start Thu Nov 28 19:21:18 KST 2019 end null
+	2019-11-28 19:21:19.073  INFO 43664 --- [eduler_Worker-4] c.e.s.baeldung.Util                      : JobKey : Spring.SpringSimpleJob, TriggerKey : Spring.SpringSimpleTrigger, FireTime : Thu Nov 28 19:21:19 KST 2019, JobData : 2019-11-28T19:21:18.06
+	2019-11-28 19:21:20.002  INFO 43664 --- [eduler_Worker-5] c.e.s.baeldung.SampleTriggerListener     : triggerFired : Spring.SpringCronJob
+	2019-11-28 19:21:20.003  INFO 43664 --- [eduler_Worker-5] c.e.s.baeldung.SampleJobListener         : jobToBeExecuted : Spring.SpringCronJob
+	2019-11-28 19:21:20.003  INFO 43664 --- [eduler_Worker-5] c.e.s.baeldung.Util                      : JobKey : Spring.SpringCronJob, TriggerKey : Spring.SpringCronJobTrigger, FireTime : Thu Nov 28 19:21:20 KST 2019, JobData : 2019-11-28T19:21:18.06
+	2019-11-28 19:21:20.004  INFO 43664 --- [eduler_Worker-5] c.e.s.baeldung.SampleJobListener         : jobWasExecuted : Spring.SpringCronJob
+	2019-11-28 19:21:20.004  INFO 43664 --- [eduler_Worker-5] c.e.s.baeldung.SampleTriggerListener     : triggerComplete : Spring.SpringCronJob start Thu Nov 28 19:21:18 KST 2019 end null
+	2019-11-28 19:21:20.081  INFO 43664 --- [eduler_Worker-6] c.e.s.baeldung.Util                      : JobKey : Spring.SpringSimpleJob, TriggerKey : Spring.SpringSimpleTrigger, FireTime : Thu Nov 28 19:21:20 KST 2019, JobData : 2019-11-28T19:21:18.06                : JobKey : Quartz.QuartzSimpleJob, TriggerKey : Quartz.QuartzSimpleJobTrigger, FireTime : Wed Nov 27 23:29:57 KST 2019, JobData : 2019-11-27T23:29:54.614
+	```  
 
 
 ---
