@@ -919,6 +919,37 @@ tags:
     }
 	```  
 	
+## 모듈 `src/test` 에 있는 클래스 사용하기
+- 사용할 클래스가 있는 모듈 `pom.xml` 에 아래 내용을 추가한다.
+
+	```xml
+	<plugin>
+	  <groupId>org.apache.maven.plugins</groupId>
+	  <artifactId>maven-jar-plugin</artifactId>
+	  <version>2.2</version>
+	  <executions>
+	    <execution>
+	      <goals>
+	        <goal>test-jar</goal>
+	      </goals>
+	    </execution>
+	  </executions>
+	</plugin>
+	```  
+	
+- 사용하는 모듈 `pom.xml` 에 아래 의존성을 추가한다.
+
+	```xml
+	<dependency>
+	  <groupId>com.windowforsun</groupId>
+	  <artifactId>core</artifactId>
+	  <version>1.0</version>
+	  <type>test-jar</type>
+	  <scope>test</scope>
+	</dependency>
+	```  
+
+	
 ---
 ## Reference
 [메이븐 다중 모듈 프로젝트에 대해](https://windwolf.tistory.com/18)  
