@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[MySQL 개념] Transaction 과 Isolation Level"
+title: "[MySQL 개념] Transaction 과 Isolation Levels"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'MySQL 의 Transaction 과 Isolation Level 에 대해 알아보자'
+excerpt: 'MySQL 의 Transaction 과 Isolation Levels 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
