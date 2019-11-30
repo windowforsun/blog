@@ -19,46 +19,12 @@ tags:
 - MySQL 8.0
 - InnoDB
 
-## Isolation Levels 에서 발생할 수 있는 문제점
-### Dirty Read
-- 한 트랜잭션에서 `COMMIT` 하지 않은 데이터를 다른 트랜잭션에서 읽어올 수 있다.
-- T1 에서 A 값을 B 로 수정하고 아직 커밋하지 않은 상태이다.
-- T2 에서 테이블을 조회 했을 때 B 라는 결과가 조회 될때, T1 이 `ROLLBACK` 을 한다면 데이터에 문제가 생긴다.
-
-### Non-Repeatable Read
-- 한 트랜잭션에서 동일한 `SELECT` 문의 결과가 다를 수 있다.
-- T1 이 한 쿼리로 데이터를 조회하고 있다.
-- T2 가 데이터를 수정 및 삭제 하고 `COMMIT` 을 한다.
-- T1 이 동일한 쿼리로 데이터를 조회를 할 경우 첫번째 쿼리 결과와 데이터가 다를 수 있다.
-
-### Phantom Read
-- 이전 `SELECT` 쿼리 결과에 없던 `ROW` 가 조회 될 수 있다.
-- T1 이 특정 조건으로 데이터를 조회 한 결과를 얻었다.
-- T2 는 T1 과 같은 조건에 해당하는 데이터를 추가 및 삭제 하고 `COMMIT` 을 하지 않았다.
-- T1 이 한번 더 같은 조건으로 데이터를 조회하게 되면 데이터가 추가/누락 된다.
-- T2 가 `ROLLBACK` 을 할 경우 T1 의 데이터에 문제가 생기게 된다.
-
-## 테이블 및 데이터
-
-```sql
-create table info (
-  id         bigint not null auto_increment,
-  name     varchar(255),
-  primary key (id)
-) engine = InnoDB;
-
-insert into info(name) values('name1');
-insert into info(name) values('name2');
-insert into info(name) values('name3');
-insert into info(name) values('name4');
-```  
-
 ## 트랜잭션(Transaction)
 - 논리적인 작업셋을 모두 완벽하게 처리하는 기능이다.
 - 논리적인 작업셋을 모두 처리하지 못할 경우 원 상태로 복구해서 작업 일부만 적용되는 현상(Partial update)이 발생하지 않게 한다.
 <!--- 트랜잭션은 `ACID` 중 데이터의 정합성인 `Atomicity` 를 보장하기 위한 기능이다.-->
 - 트랜잭션은 주로 데이터의 정합성을 보장하기 위한 기능이다.
-- 트랜 잭션의 주요 특징인 `ACID` 는 아래와 같다.
+- 트랜잭션의 주요 특징인 `ACID` 는 아래와 같다.
 	- Atomicity(원자성) : 트랜잭션은 더 이상 분해가 불가능한 작업의 최소단위므로, 전부 처리되거나 아예 처리되지 않아야 한다.
 	- Consistency(일관성) : 일관된 상태의 데이터베이스에서 하나의 트랜잭션을 성공적으로 완료하고 나면 그 데이터베이스는 여전히 일관된 상태여야 한다. 즉, 트랜잭션 실행의 결과로 데이터베이스 상태가 모순되지 않아야 한다.
 	- Isolation(격리성) : 실행 중인 트랜잭션 중간결과를 다른 트랜잭션이 접근할 수 없어야 한다.
@@ -68,6 +34,46 @@ insert into info(name) values('name4');
 	- READ COMMITTED
 	- REPEATABLE READ
 	- SERIALIZABLE	
+- 테이블 및 데이터
+
+	```sql
+	create table info (
+	  id         bigint not null auto_increment,
+	  name     varchar(255),
+	  primary key (id)
+	) engine = InnoDB;
+	
+	insert into info(name) values('name1');
+	insert into info(name) values('name2');
+	insert into info(name) values('name3');
+	insert into info(name) values('name4');
+	```  
+	
+- Docker 를 사용한다면 아래 명령어를 통해 간단하게 테스트 환경을 구성할 수 있다.
+
+	```
+	$ docker run --name mysql-test -e MYSQL_ROOT_PASSWORD=root -d mysql:8.0     # MySQL 8.0 컨테이너 구동
+	$ docker exec -it mysql-test mysql -uroot -p    # 구동중인 MySQL 8.0 컨테이너(mysql-test) 에 접속, 비밀번호는 root
+	```  
+
+### Isolation Levels 에서 발생할 수 있는 문제점
+#### Dirty Read
+- 한 트랜잭션에서 `COMMIT` 하지 않은 데이터를 다른 트랜잭션에서 읽어올 수 있다.
+- T1 에서 A 값을 B 로 수정하고 아직 커밋하지 않은 상태이다.
+- T2 에서 테이블을 조회 했을 때 B 라는 결과가 조회 될때, T1 이 `ROLLBACK` 을 한다면 데이터에 문제가 생긴다.
+
+#### Non-Repeatable Read
+- 한 트랜잭션에서 동일한 `SELECT` 문의 결과가 다를 수 있다.
+- T1 이 한 쿼리로 데이터를 조회하고 있다.
+- T2 가 데이터를 수정 및 삭제 하고 `COMMIT` 을 한다.
+- T1 이 동일한 쿼리로 데이터를 조회를 할 경우 첫번째 쿼리 결과와 데이터가 다를 수 있다.
+
+#### Phantom Read
+- 이전 `SELECT` 쿼리 결과에 없던 `ROW` 가 조회 될 수 있다.
+- T1 이 특정 조건으로 데이터를 조회 한 결과를 얻었다.
+- T2 는 T1 과 같은 조건에 해당하는 데이터를 추가 및 삭제 하고 `COMMIT` 을 하지 않았다.
+- T1 이 한번 더 같은 조건으로 데이터를 조회하게 되면 데이터가 추가/누락 된다.
+- T2 가 `ROLLBACK` 을 할 경우 T1 의 데이터에 문제가 생기게 된다.
 	
 ### READ UNCOMMITTED
 - 다른 트랜잭션에서 `COMMIT` 되지 않은 데이터들을 읽어 올수 있는 level 이다.

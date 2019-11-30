@@ -61,7 +61,7 @@ tags:
 		
 		```sql
 		SELECT ... LOCK IN SHARE MODE
-		SELECT ... FOR SHARE
+		SELECT ... FOR SHARE 	# MySQL 8.0 부터
 		```  
 		
 	- `Exclusive Lock`
