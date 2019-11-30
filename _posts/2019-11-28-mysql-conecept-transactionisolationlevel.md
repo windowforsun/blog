@@ -56,7 +56,13 @@ insert into info(name) values('name4');
 ## 트랜잭션(Transaction)
 - 논리적인 작업셋을 모두 완벽하게 처리하는 기능이다.
 - 논리적인 작업셋을 모두 처리하지 못할 경우 원 상태로 복구해서 작업 일부만 적용되는 현상(Partial update)이 발생하지 않게 한다.
-- 트랜잭션은 `ACID` 중 데이터의 정합성인 `Atomicity` 를 보장하기 위한 기능이다.
+<!--- 트랜잭션은 `ACID` 중 데이터의 정합성인 `Atomicity` 를 보장하기 위한 기능이다.-->
+- 트랜잭션은 주로 데이터의 정합성을 보장하기 위한 기능이다.
+- 트랜 잭션의 주요 특징인 `ACID` 는 아래와 같다.
+	- Atomicity(원자성) : 트랜잭션은 더 이상 분해가 불가능한 작업의 최소단위므로, 전부 처리되거나 아예 처리되지 않아야 한다.
+	- Consistency(일관성) : 일관된 상태의 데이터베이스에서 하나의 트랜잭션을 성공적으로 완료하고 나면 그 데이터베이스는 여전히 일관된 상태여야 한다. 즉, 트랜잭션 실행의 결과로 데이터베이스 상태가 모순되지 않아야 한다.
+	- Isolation(격리성) : 실행 중인 트랜잭션 중간결과를 다른 트랜잭션이 접근할 수 없어야 한다.
+	- Durability(영속성) : 트랜잭션이 일단 그 실행을 성공적으로 완료하면 그 결과는 데이터베이스에 영속적으로 저장되어야 한다.
 - 트랜잭선에는 레벨이 있는데 이를 `Transaction Isolation Levels` 이라고 하고 아래와 같은 레벨이 있다.
 	- READ UNCOMMITTED
 	- READ COMMITTED
@@ -399,6 +405,4 @@ SERIALIZABLE|X|X|X
 ## Reference
 [MySQL의 Transaction Isolation Levels](https://jupiny.com/2018/11/30/mysql-transaction-isolation-levels/)   
 [MySQL 트랜잭션과 잠금 1](https://idea-sketch.tistory.com/45)   
-[MySQL 트랜잭션과 잠금 2](https://idea-sketch.tistory.com/47?category=547413)   
-[MySQL lock & deadlock 이해하기](https://www.letmecompile.com/mysql-innodb-lock-deadlock/)   
-[동시성 문제를 해결하기 위한 MySQL 잠금 두가지](https://sangheon.com/%EB%8F%99%EC%8B%9C%EC%84%B1-%EB%AC%B8%EC%A0%9C%EB%A5%BC-%ED%95%B4%EA%B2%B0%ED%95%98%EA%B8%B0-%EC%9C%84%ED%95%9C-mysql-%EC%9E%A0%EA%B8%88-%EB%91%90%EA%B0%80%EC%A7%80/)   
+[트랜잭션](http://www.dbguide.net/db.db?cmd=view&boardUid=148216&boardConfigUid=9&categoryUid=216&boardIdx=138&boardStep=1)   
