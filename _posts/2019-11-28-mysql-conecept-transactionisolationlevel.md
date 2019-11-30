@@ -382,6 +382,15 @@ insert into info(name) values('name4');
 	- `dirty read` 발생하지 않음
 	- `non-repeatable read` 발생하지 않음
 	- `phantom read` 발생하지 않음
+	
+## Isolation Level 에 따른 발생 문제 정리
+
+-|Dirty Read|Non-Repeatable Read|Phantom Read
+---|---|---|---
+READ UNCOMMITTED|O|O|O
+READ COMMITTED|X|O|O
+REPEATABLE READ|X|X|O(MySQL 에서는(X))
+SERIALIZABLE|X|X|X
 
 
 ---
