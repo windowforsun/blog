@@ -19,21 +19,6 @@ tags:
 - MySQL 8.0
 - InnoDB
 
-## 테이블 및 데이터
-
-```sql
-create table info (
-  id         bigint not null auto_increment,
-  name     varchar(255),
-  primary key (id)
-) engine = InnoDB;
-
-insert into info(name) values('name1');
-insert into info(name) values('name2');
-insert into info(name) values('name3');
-insert into info(name) values('name4');
-```  
-
 ## Isolation Level 에서 발생할 수 있는 문제점
 ### Dirty Read
 - 한 트랜잭션에서 `COMMIT` 하지 않은 데이터를 다른 트랜잭션에서 읽어올 수 있다.
@@ -61,7 +46,22 @@ insert into info(name) values('name4');
 	- READ UNCOMMITTED
 	- READ COMMITTED
 	- REPEATABLE READ
-	- SERIALIZABLE
+	- SERIALIZABLE	
+
+## 테이블 및 데이터
+
+```sql
+create table info (
+  id         bigint not null auto_increment,
+  name     varchar(255),
+  primary key (id)
+) engine = InnoDB;
+
+insert into info(name) values('name1');
+insert into info(name) values('name2');
+insert into info(name) values('name3');
+insert into info(name) values('name4');
+```  
 	
 ### READ UNCOMMITTED
 - 다른 트랜잭션에서 `COMMIT` 되지 않은 데이터들을 읽어 올수 있는 level 이다.
@@ -209,7 +209,7 @@ insert into info(name) values('name4');
 - MySQL InnoDB 의 기본 Isolation Level 이다.
 - 기본 Isolation Level 로 사용되는 만큼 동시성과 안전성을 잘 갖춘 level 이다.
 - 개념적으로 봤을 때 `REPEATABLE READ` 는 `READ COMMITED` 에서 `non-repeatable read` 문제점을 해결한 level 이다.
-- MySQL InnoDB 의 `REPEATABLE READ` 의 경우 약간 다른 점이 있기 때문에 예제를 통해 확인해 본다.
+<!--- MySQL InnoDB 의 `REPEATABLE READ` 의 경우 약간 다른 점이 있기 때문에 예제를 통해 확인해 본다.-->
 
 1. `transaction1`
 
@@ -286,7 +286,7 @@ insert into info(name) values('name4');
 	```  
 	
 	- 한 트랜잭션에서 동일한 `SELECT` 쿼리의 결과가 같으므로 `non-repeatable read` 도 발생하지 않는다.
-	- 이전 `SELECT` 쿼리 결과에 없던 `ROW` 가 생기지 않았으므로 `phantom read` 도 발생하지 않는다.
+	- 이전 `SELECT` 쿼리 결과에 없던 `ROW` 가 생기지 않았으므로 `phantom read` 도 발생하지 않는것 같다.
 	
 - [MySQL Reference](https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html#isolevel_repeatable-read) 를 참고해 보면 아래와 같이 설명 되어있다.
 	- `READ COMMITTED`
@@ -298,7 +298,7 @@ insert into info(name) values('name4');
 - MySQL 에서 `REPEATABLE READ` 와 `READ COMMITTED` level 에서 `SELECT` 쿼리로 데이터를 조회 할때 lock 을 걸지 않고, snapshot 을 만들어 데이터를 조회한다.
 - `READ COMMITED` 는 쿼리 시점의 최신의 snapshot 으로 데이터를 조회하기 때문에, 한 트랜잭션에서 `SELECT` 쿼리의 결과 다른 것을 확인 할 수 있었다.
 - `REPEATABLE READ` 는 한 트랜잭션에서 처음으로 데이터를 조회할 때의 snapshot 에서 계속 해서 데이터를 조회 하기때문에, 한 트랜잭션에서 `SELECT` 쿼리 결과가 같았고, `phantom read` 도 발생하지 않았다.
-- 위 와 같은 상황에서는 `SELECT` 쿼리 겨로가가 항상 동일하지만, 다른 트랜잭션에서 변경한(UPDATE, DELETE, INSERT) 데이터를 동일하게 변경할 경우 `SELECT` 결과가 달라질 수 있다.
+- 위 와 같은 상황에서는 `SELECT` 쿼리 결과가 항상 동일하지만, 다른 트랜잭션에서 변경한(UPDATE, DELETE, INSERT) 데이터를 동일하게 변경할 경우 `SELECT` 결과가 달라질 수 있다.
 
 1. `transaction1`
 
@@ -320,7 +320,8 @@ insert into info(name) values('name4');
     5 rows in set (0.00 sec)
 	```  
 	
-	- `transaction1` 에서 조회 되지 않았던 `id = 5` 데이터가 조회 되는 것을 확인 할 수 있다.
+	- `transaction2` 에서 `INSERT` 한 `name5` 를 `transaction1` 에서 `name5updated` 로 변경하자, `transaction1` 에서 조회 되지 않았던 `id = 5` 데이터가 조회 되는 것을 확인 할 수 있다.
+		- 위 상황을 통해 `phantom read` 가 발행하는 것을 확인할 수 있다.
 	
 ### SERIALIZABLE
 - 동시성의 상당 부분을 포기하고 안전성에 큰 비중을 둔 Isolation Level 이다.
@@ -377,6 +378,7 @@ insert into info(name) values('name4');
 
 	- 위와 같이 `transaction1` 에서 조회한, 즉 `Share Lock` 이 걸린 `ROW` 를 변경하려 하면 아무런 동작이 되지 않고 대기 상태에 빠지게 된다.
 	- 대기 상태는 `transaction1` 이 `COMMIT` 을 수행하게 되면 쿼리가 변경 쿼리가 수행되며 빠져나올 수 있고, timeout 시간이 자니면 에러와 함께 데이터는 변경되지 않고 빠져나오게 된다.
+	
 - 이렇게 `SERIALIZABLE` 은 조회하는 데이터에 모두 `Share Lock` 걸어 수정, 추가, 삭제가 불가능하다.
 - Isolation Level 중에서 가장 안전성이 강한 Level 이기 때문에 3가지 문제점 모두 발생하지 않는다.
 	- `dirty read` 발생하지 않음
@@ -389,7 +391,7 @@ insert into info(name) values('name4');
 ---|---|---|---
 READ UNCOMMITTED|O|O|O
 READ COMMITTED|X|O|O
-REPEATABLE READ|X|X|O(MySQL 에서는(X))
+REPEATABLE READ|X|X|O
 SERIALIZABLE|X|X|X
 
 
