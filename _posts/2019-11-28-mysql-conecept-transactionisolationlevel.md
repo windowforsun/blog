@@ -385,7 +385,7 @@ insert into info(name) values('name4');
 	
 ## Isolation Level 에 따른 발생 문제 정리
 
--|Dirty Read|Non-Repeatable Read|Phantom Read
+. |Dirty Read|Non-Repeatable Read|Phantom Read
 ---|---|---|---
 READ UNCOMMITTED|O|O|O
 READ COMMITTED|X|O|O
