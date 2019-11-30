@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[MySQL 개념] Lock 과 Dead Lock"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/mysql-bg.png
 excerpt: 'MySQL 의 '
 author: "window_for_sun"
 header-style: text
