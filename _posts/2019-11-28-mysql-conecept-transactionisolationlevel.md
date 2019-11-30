@@ -19,7 +19,7 @@ tags:
 - MySQL 8.0
 - InnoDB
 
-## Isolation Level 에서 발생할 수 있는 문제점
+## Isolation Levels 에서 발생할 수 있는 문제점
 ### Dirty Read
 - 한 트랜잭션에서 `COMMIT` 하지 않은 데이터를 다른 트랜잭션에서 읽어올 수 있다.
 - T1 에서 A 값을 B 로 수정하고 아직 커밋하지 않은 상태이다.
@@ -38,16 +38,6 @@ tags:
 - T1 이 한번 더 같은 조건으로 데이터를 조회하게 되면 데이터가 추가/누락 된다.
 - T2 가 `ROLLBACK` 을 할 경우 T1 의 데이터에 문제가 생기게 된다.
 
-## 트랜잭션(Transaction)
-- 논리적인 작업셋을 모두 완벽하게 처리하는 기능이다.
-- 논리적인 작업셋을 모두 처리하지 못할 경우 원 상태로 복구해서 작업 일부만 적용되는 현상(Partial update)이 발생하지 않게 한다.
-- 트랜잭션은 `ACID` 중 데이터의 정합성인 `Atomicity` 를 보장하기 위한 기능이다.
-- 트랜잭선에는 레벨이 있는데 이를 `Transaction Isolation Levels` 이라고 하고 아래와 같은 레벨이 있다.
-	- READ UNCOMMITTED
-	- READ COMMITTED
-	- REPEATABLE READ
-	- SERIALIZABLE	
-
 ## 테이블 및 데이터
 
 ```sql
@@ -62,6 +52,16 @@ insert into info(name) values('name2');
 insert into info(name) values('name3');
 insert into info(name) values('name4');
 ```  
+
+## 트랜잭션(Transaction)
+- 논리적인 작업셋을 모두 완벽하게 처리하는 기능이다.
+- 논리적인 작업셋을 모두 처리하지 못할 경우 원 상태로 복구해서 작업 일부만 적용되는 현상(Partial update)이 발생하지 않게 한다.
+- 트랜잭션은 `ACID` 중 데이터의 정합성인 `Atomicity` 를 보장하기 위한 기능이다.
+- 트랜잭선에는 레벨이 있는데 이를 `Transaction Isolation Levels` 이라고 하고 아래와 같은 레벨이 있다.
+	- READ UNCOMMITTED
+	- READ COMMITTED
+	- REPEATABLE READ
+	- SERIALIZABLE	
 	
 ### READ UNCOMMITTED
 - 다른 트랜잭션에서 `COMMIT` 되지 않은 데이터들을 읽어 올수 있는 level 이다.
