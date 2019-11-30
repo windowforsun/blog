@@ -67,6 +67,7 @@ insert into info(name) values('name4');
 - 다른 트랜잭션에서 `COMMIT` 되지 않은 데이터들을 읽어 올수 있는 level 이다.
 - `COMMIT` 되지 않은 데이터를 읽일 수 있기 때문에 `ROLLBACK` 이 될 경우 문제가 될 수 있다.
 	- 이렇게 존재해서는 안 될 데이터를 읽어오는 것을 `dirty read` 라고 한다.
+	
 1. `transaction1`
 	
 	```
@@ -123,6 +124,7 @@ insert into info(name) values('name4');
 
 ### READ COMMITTED
 - 다른 트랜잭션에서 `COMMIT` 된 데이터만 읽을 수 있는 level 이다.
+
 1. `transaction1`
 
 	```
@@ -208,6 +210,7 @@ insert into info(name) values('name4');
 - 기본 Isolation Level 로 사용되는 만큼 동시성과 안전성을 잘 갖춘 level 이다.
 - 개념적으로 봤을 때 `REPEATABLE READ` 는 `READ COMMITED` 에서 `non-repeatable read` 문제점을 해결한 level 이다.
 - MySQL InnoDB 의 `REPEATABLE READ` 의 경우 약간 다른 점이 있기 때문에 예제를 통해 확인해 본다.
+
 1. `transaction1`
 
 	```
@@ -323,6 +326,7 @@ insert into info(name) values('name4');
 - 동시성의 상당 부분을 포기하고 안전성에 큰 비중을 둔 Isolation Level 이다.
 - 한 트랜잭션에서 `SELECT` 쿼리를 사용 할때 항상 `SELECT ... FOR SHARE` 로 변경된다.
 - `SERIALIZABLE` 에서는 모든 `ROW` 에 `Share Lock(Read Lock)` 을 걸게 된다.
+
 1. `transaction1`
 
 	```
