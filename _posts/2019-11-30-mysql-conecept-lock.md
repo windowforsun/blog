@@ -83,13 +83,22 @@ tags:
 
 ### Intention Lock
 - Table-level Lock
-- 테이블 안의 `ROW` 에 대해 어떤 Row-level Lock 을 걸지에 대해 알려주는 용도로, 미리 Table-level Lock 을 거는 것을 뜻한다.
+- 테이블에 포함된 `ROW` 에 대해 어떤 Row-level Lock 을 걸지에 대해 알려주는 용도로, 미리 Table-level Lock 을 걸어 테이블에 대한 동시성을 제어한다.
+- `Intetion Lock` 은 아래와 같이 2가지로 구분된다.
+	- `Intention Shared Lock`
+	- `Intention Exclusive Lock`
+	
+#### Intention SharedLock(IS)
 - `SELECT ... FOR SHARE` 실행 될 때 아래와 같은 흐름으로 `Lock` 이 걸리게 된다.
 	1. Intention Shared Lock(IS) 이 Table-level 에 걸리게 된다.
 	1. 이후 `S` 가 Row-Level 에 걸리게 된다.
+	
+#### Intention Exclusive Lock(IX)
 - `SELECT ... FOR UPDATE` 실행 될 때 아래와 같은 흐름으로 `Lock` 이 걸린다.
 	1. Intention Exclusive Lock(IX) 이 Table-level 에 걸린다.
 	1. 이후 `X` 가 Row-level 에 걸린다.
+	
+#### IS, IX 의 동시성 
 - `IS`, `IX` 는 여러 트랜잭션에서 동시에 접근 가능하다.
 - `IS` 이 걸린 테이블에서 `S` 는 접근 가능하지만, `X`는 접근 할 수 없다.
 - `IX` 이 걸린 테이블에서 `S`, `X` 모두 접근 할 수 없다.
@@ -106,12 +115,21 @@ Shared Lock(S)|Conflict|Conflict|Compatible|Compatible
 Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 
 
-## 추가하기~~~~
+### Record Lock
+
+### Gap Lock(Range Lock)
+
+### Next-Key Lock
+
+### Insert Intention Lock
+
+### AUTO-INC Lock
+
+## MySQL Dead Lock
 
 
 ---
 ## Reference
-[MySQL의 Transaction Isolation Levels](https://jupiny.com/2018/11/30/mysql-transaction-isolation-levels/)   
 [MySQL 트랜잭션과 잠금 2](https://idea-sketch.tistory.com/47?category=547413)   
 [MySQL lock & deadlock 이해하기](https://www.letmecompile.com/mysql-innodb-lock-deadlock/)   
 [동시성 문제를 해결하기 위한 MySQL 잠금 두가지](https://sangheon.com/%EB%8F%99%EC%8B%9C%EC%84%B1-%EB%AC%B8%EC%A0%9C%EB%A5%BC-%ED%95%B4%EA%B2%B0%ED%95%98%EA%B8%B0-%EC%9C%84%ED%95%9C-mysql-%EC%9E%A0%EA%B8%88-%EB%91%90%EA%B0%80%EC%A7%80/)   
