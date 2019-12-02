@@ -72,7 +72,7 @@ tags:
 
 ### Shared Lock(S)
 - Row-level Lock
-- SELECT 을 위한 Read Lock
+- SELECT, INSERT 을 위한 Read Lock
 - `S` 이 걸려 있는 동안 다른 트랜잭션에서 `Exclusive Lock` 은 획득 할 수 없지만, 다른 `S` 은 획득 가능하다.
 - 한 `ROW` 에 대해 여러 `S` 락 획득이 가능하다.
 
@@ -116,8 +116,74 @@ Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 
 
 ### Record Lock
+- `primary key`, `unique index` 로 조회할 때, 걸리는 Row-level Lock 이다.
+- Row-level Lock 이란 인덱스 레코드에 락을 수행하는 것을 뜻한다.
 
 ### Gap Lock(Range Lock)
+- `Record Lock` 과 비슷하지만, `WHERE` 범위가 명시되었을 때 해당 범위에 속하는 모든 `ROW` 에 대해 락을 수행한다.
+- `negative infinity`(최초 레코드 이전), `positive infinity`(마지막 레코드 이후) 의 개념을 사용해서 범위에 대해 `Lock` 을 수행한다.
+- Isolation Levels 가 `READ COMMITTED` 일 경우 `UPDATE`, `DELETE` 에도 락이 수행된다.
+- `Gap Lock` 을 통해 `Phantom read` 를 방지한다.
+- `Record Lock` 과 `Gap Lock` 의 상황 분류
+	- `unique index` 가 걸려있는 컬럼 조건으로 조회할 경우 `Record Lock` 이 수행된다.
+	- Index 가 걸려 있지만 `unique index` 가 아니면 조건 범위에 대해 `Gap Lock` 이 수행된다.
+	- Index 가 걸려 있지 않다면, 전체 테이블을 스캔해야 하므로 모든 `ROW` 에 대해 `Lock` 이 수행된다.
+	
+## Next-Key Lock
+- `Gap Lock` 과 비슷하고, `REPEATABLE READ` 에서 `Phantom read` 를 방지하기 위해 사용 되는 `Lock` 이다.
+- `UPDATE`, `DELETE` 에서 모두 사용 된다.
+- `num` 이라는 컬럼에 값이 `5, 10, 15, 20, 25, 30` 과 같이 있다고 가정했을 때 잠금 범위는 아래와 같다.
+	- (negative infinity, 5] / (5, 10] / (10, 15] / (15, 20] / (20, 25] / (25, 30] / (30, positive infinity)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Next-Key Lock
 
