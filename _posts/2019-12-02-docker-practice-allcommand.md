@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Docker 실습] 전체 삭제 및 중단"
+title: "[Docker 실습] 전체 수행 명령어"
 header:
   overlay_image: /img/docker-bg-2.jpg
 excerpt: 'Docker 에서 쌓인 것들을 정리해 보자'
