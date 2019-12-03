@@ -72,13 +72,14 @@ tags:
 
 ### Shared Lock(S)
 - Row-level Lock
-- SELECT, INSERT 을 위한 Read Lock
+<!--- SELECT, INSERT 을 위한 Read Lock-->
+- SELECT 을 위한 Read Lock
 - `S` 이 걸려 있는 동안 다른 트랜잭션에서 `Exclusive Lock` 은 획득 할 수 없지만, 다른 `S` 은 획득 가능하다.
 - 한 `ROW` 에 대해 여러 `S` 락 획득이 가능하다.
 
 ### Exclusive Lock(x)
 - Row-level Lock
-- UPDATE, DELETE 를 위한 Write Lock
+- UPDATE, DELETE, INSERT 를 위한 Write Lock
 - `X` 이 걸려 있으면, 다른 트랜잭션에서 해당 `ROW` 에 대해 `S`, `X` 모두 획득하지 못하고 대기 상태에 빠진다.
 
 ### Intention Lock
@@ -129,67 +130,76 @@ Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 	- Index 가 걸려 있지만 `unique index` 가 아니면 조건 범위에 대해 `Gap Lock` 이 수행된다.
 	- Index 가 걸려 있지 않다면, 전체 테이블을 스캔해야 하므로 모든 `ROW` 에 대해 `Lock` 이 수행된다.
 	
-## Next-Key Lock
+### Next-Key Lock
 - `Gap Lock` 과 비슷하고, `REPEATABLE READ` 에서 `Phantom read` 를 방지하기 위해 사용 되는 `Lock` 이다.
 - `UPDATE`, `DELETE` 에서 모두 사용 된다.
 - `num` 이라는 컬럼에 값이 `5, 10, 15, 20, 25, 30` 과 같이 있다고 가정했을 때 잠금 범위는 아래와 같다.
 	- (negative infinity, 5] / (5, 10] / (10, 15] / (15, 20] / (20, 25] / (25, 30] / (30, positive infinity)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Next-Key Lock
+	- 테이블 정보
+	
+		```sql		
+		create table info (
+		  id         bigint not null auto_increment,
+		  num        bigint,
+		  name     varchar(255),
+		  primary key (id),
+		  unique key(num)
+		) engine = InnoDB;	
+		
+		insert into info(num, name) values(5,'str');
+		insert into info(num, name) values(10,'str');
+		insert into info(num, name) values(15,'str');
+		insert into info(num, name) values(20,'str');
+		insert into info(num, name) values(25,'str');
+		insert into info(num, name) values(30,'str');		
+		```  
+	- `transaction1`
+	
+		```
+		mysql> set session transaction isolation level repeatable read;
+        Query OK, 0 rows affected (0.00 sec)
+        
+        mysql> start transaction;
+        Query OK, 0 rows affected (0.00 sec)
+        
+        # (10, 15] / (15, 20] / (20, 25] 범위에 대해 모두 Lock 이 걸린다.
+        mysql> select * from info where num between 13 and 21 for update;
+        +----+------+------+
+        | id | num  | name |
+        +----+------+------+
+        |  3 |   15 | str  |
+        |  4 |   20 | str  |
+        +----+------+------+
+        2 rows in set (0.00 sec)
+		```  
+		
+	- `transaction2`
+	
+		```
+		mysql> start transaction;
+        Query OK, 0 rows affected (0.00 sec)
+        
+        # transaction1에서 (20, 25] 범위에 X 을 걸었기 때문에 대기 한다.
+        mysql> update info set name = 'nameupdated' where num = 25;
+        ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
+        
+        # transaction1에서 (10, 15] 범위에 X 을 걸었기 때문에 대기 한다.
+        mysql> insert into info(num, name) values(12, 'nameinserted');
+        ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
+		```  
 
 ### Insert Intention Lock
+- `INSERT` 를 수행할 때, `Gap lock`, `Next-key Lock` 이 걸려있는 동안 해당 구간에 데이터를 추가할 수 없고 대기해야 한다.
+	- 3 ~ 10 에 `Lock` 이 걸려있고, 기존에 없는 9라는 데이터를 추가해야 하는 경우
+- 여러 트랜잭션에서 `Gap Lock` 과 `Next-key Lock` 구간의 다른 위치에 `INSERT` 를 할때 `unique index` 에 해당하는 키만 잠궈, 대기할 필요가 없도록 하는 역할을 수행한다.
+- `Insert Intention Lock` 간의 충돌은 일어나지 않는다.
+- `INSERT` 될 `ROW` 에 대해서 `X` 를 걸기 전에 먼저 `Insert Intention Lock`을 수행한다.
 
 ### AUTO-INC Lock
+- `InnoDB` 에서 여러 트랜잭션이 동시에 수행될 때, `AUTO_INCREMENT` 값을 일관성 있게 증가 시키기 위한 `Lock` 이다.
+- `AUTO_INCREMENT` 는 트랜잭션 단위로 값으 생성하는 것이 아니기 때문에, 트랜잭션과는 무관하다.
+- `INSERT` 수행 시 트랜잭션과 무관하게 값이 부여되고, 트랜잭션이 실패하더라도, 증가한 값은 리셋되지 않는다.
+- [MySQL – InnoDB Auto Increment 성능 최적화](https://www.letmecompile.com/mysql-innodb-auto-increment-%EC%84%B1%EB%8A%A5-%EC%B5%9C%EC%A0%81%ED%99%94/)
 
 ## MySQL Dead Lock
 
@@ -198,5 +208,6 @@ Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 ## Reference
 [MySQL 트랜잭션과 잠금 2](https://idea-sketch.tistory.com/47?category=547413)   
 [MySQL lock & deadlock 이해하기](https://www.letmecompile.com/mysql-innodb-lock-deadlock/)   
+[MySQL Innodb Locks](https://cecil1018.wordpress.com/2016/06/18/mysql-innodb-locks/)   
 [동시성 문제를 해결하기 위한 MySQL 잠금 두가지](https://sangheon.com/%EB%8F%99%EC%8B%9C%EC%84%B1-%EB%AC%B8%EC%A0%9C%EB%A5%BC-%ED%95%B4%EA%B2%B0%ED%95%98%EA%B8%B0-%EC%9C%84%ED%95%9C-mysql-%EC%9E%A0%EA%B8%88-%EB%91%90%EA%B0%80%EC%A7%80/)   
 [Lock](http://www.dbguide.net/db.db?cmd=view&boardUid=148215&boardConfigUid=9&categoryUid=216&boardIdx=138&boardStep=1)   
