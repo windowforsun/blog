@@ -518,7 +518,7 @@ void resumeJobs(GroupMatcher<JobKey> var1) throws SchedulerException;
 - `SpringSchedule`
 	- Srping 방식을 이용해서 스케쥴러를 구성한 클래스
 
-	```
+	```java
 	@Configuration
 	@RequiredArgsConstructor
 	@Profile("!test")
