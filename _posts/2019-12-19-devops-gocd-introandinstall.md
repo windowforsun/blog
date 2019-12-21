@@ -20,10 +20,11 @@ tags:
 
 ![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-1.png)
 
+- 이름에서 나와 있는 것과 같이 CD(Continuous Delivery / Continuous Deploy) 역할을 해주는 솔루션이다.
 - GoCD 는 크게 `Server` 와 `Agent` 로 구성된다.
 - `Server` 는 Web UI 인터페이스를 제공하고, `Agent` 에게 명령을 내려 모든것을 컨트롤하는 역할을 수행한다.
 - `Agent` 는 `Server` 의 명령을 받아 실질적으로 명령어를 실행해 작업을 하는 역할을 수행한다.
-- `Server` 는 `CD` 관련 역할을 수행하지 않고, `CD` 관련 역할을 `Agent` 가 수행한다.
+- `Server` 는 `CD` 관련 역할을 수행하지 않고, `CD` 관련 역할은 `Agent` 가 수행한다.
 - GoCD 의 작업흐름을 구성하는 요소는 `Pipeline`, `Stage`, `Job`, `Task` 가 있다.
 - 현존하는 다양한 `CI/CD` 솔루션(Jenkins ..)들이 있지만 현재까지 GoCD 의 인지도는 그렇제 높지 않는 듯하다.
 - 더 자세한 설명은 [여기](https://www.gocd.org/help/)에서 확인 가능하다.
@@ -135,53 +136,20 @@ tags:
 
 ### Task
 - 하나의 Job 에서 무언가를 설정 및 수행하는 명령어 라인 하나 하나를 뜻한다.
+- 플러그인도 사용 가능하다.
 
 ### Job
+- Job 은 Task 의 집합이다.
 - Job 은 포함된 Task 를 순서대로 실행하는 역할을 수행한다.
-- Job 은 하나 이상의 Task 로 구성된다.
+- Stage 에 포함된 Job 들은 비동기로 실행된다.
+- 하나의 Job 은 하나의 Agent 에서 담당해서 수행한다.
+- 기본설정에서는 Task 중간에 실패가 발생하면, Job 은 실패한다.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### Stage
+- Stage 는 Job 의 집합이다.
+- Job 부분에서 언급한 것과 같이, 동일한 Stage 에 포함된 여러 Job 은 순서대로 실행되지 않고, 비동기로 실행된다.
+- 순서대로 실행되는 Job 의 Task 들과 비동기로 실행되는 Stage 의 Job 들을 어떻게 잘 설계하느냐가 GoCD 에서는 중요하다.
+- Stage 에 포함된 여러 Job 들은 각기다른 Agent 에서 실행 가능하다.
 
 ## Pipeline 만들기
 - 간단한 Pipeline 을 만들기 위해 GoCD 에서 예제용으로 제공하는 Git Repository 를 사용한다.
@@ -215,6 +183,9 @@ tags:
 	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-12.png)
 	
 	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-13.png)
+	
+
+## Pipeline Chaining 하기
 	
 	
 	
