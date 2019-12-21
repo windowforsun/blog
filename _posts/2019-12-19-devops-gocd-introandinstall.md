@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[DevOps] GoCD 설치 및 기본 사용"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/gocd-bg.png
 excerpt: 'Spring '
 author: "window_for_sun"
 header-style: text
