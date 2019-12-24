@@ -15,7 +15,6 @@ tags:
   - CD
 ---  
 
-
 ## GoCD
 
 ![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-1.png)
@@ -185,21 +184,97 @@ tags:
 	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-13.png)
 	
 
-## Pipeline Chaining 하기
-	
-	
-	
-	
-	
-	
-	
+## Pipeline 의존성
+
+![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-14.png)
+
+- Pipeline 의존성은 Pipeline 의 Material 에 Pipeline 을 설정해 함께 동작할 수 있도록 설정 하는 것을 뜻한다.
+- Pipeline 이 다른 Pipeline 의 Trigger 역할을 하게 된다.
+- A Pipeline 의 Material 에 B Pipeline 을 설정하면, A Pipeline 을 `Upstream Pipeline` 이라 하고, B Pipeline 을 `Downstream Pipeline` 이라고 한다.
+- Pipeline 의존성은 Pipeline 의 Stage 기준으로 설정할 수 있다.
+- A Pipeline 의 1번 Stage 에 B Pipeline 을 설정하고, A Pipeline 2번 Stage 에 C Pipeline 을 설정하게 되면 A Pipeline 1번 Stage 가 완료되면 B Pipeline 이 시작하게 되고, A Pipeline 2번 Stage 가 완료되면 C Pipeline 이 시작한다. 
+
+## Pipeline Artifact
+- Artifact 란 Product 만들기 위한 Pipeline 의 실행 결과로 파일이나, 디렉토리가 될 수 있다.
+	- Test Reports
+	- Coverage Reports
+	- Installers
+	- Documentation
+	- Meta Data
+- Pipeline Artifact 는 `Fetch Artifact` 라는 Task 를 통해 생성할 수 있다.
+- Pipeline 에서 실행되는 하나의 Job 중 Task 가 Artifact 를 만들수 있고, 이는 Agent 에서 Server 혹은 다른 저장소로 옮겨 사용할 수 있다.
+- 한 Pipeline 의 Artifact 는 의존성이 있는 Pipeline(Downstream Pipeline) 에서 가져다가 사용할 수 있다.
+
+![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-15.png)
+
+- 하나의 Pipeline 에서는 하나의 Artifact 를 만들 수 있다.
+- 의존성으로 연결된 Pipeline 에서 부모 Pipeline 의 Artifact 뿐만 아니라, 조상의 Artifact 도 가져다가 사용 할 수있다.
+	- MyFifthPipeline 에서 MyFirstPipeline 의 Artifact 를 가져다 쓰는 것도 가능하다.
+
+## 커스텀 탭
+- GoCD 에서는 Job 단위 레벨로, Artifact 을 보여주는 Custom tab 을 만들 수 있다.
+- 이미지, HTML 등 다양하게 표현할 수 있다.
+
+## Pipeline 의존성 구성하기
+- `Admin` -> `Pipeline` 을 눌러 Pipeline 설정 페이지로 들어간다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-16.png)
 	
+- 새로운 Pipeline 설정을 한다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-17.png)
 	
+- `Material Type` 은 `Another Pipeline`, `Upstream Pipeline` 은 `MyFirstPipeline` 으로 설정한다. 
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-18.png)
+
+- 아래와 같은 이름과 설정한다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-19.png)
 	
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-20.png)
 	
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-21.png)
+
+- MyFirstPipeline 을 실행 시키고 완료되면, MySecondPipeline 이 실행되는 것을 확인 할 수 있다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-22.png)
 	
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-23.png)
+
+- MyFirstPipeline 설정으로 들어가서 Artifact 설정을 해준다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-24.png)
+
+- MyFirstPipeline 을 실행시키면 `my-artifact.html` 이 생성되는 것을 확인 할 수 있다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-25.png)
 	
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-26.png)
+
+- MySecondPipeline 설정에서 Upstream Pipeline 인 MyFirstPipeline 의 Artifact 를 가져오는 설정을 해준다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-27.png)
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-28.png)
+
+- 가져온 Artifact 를 출력하는 Task 를 추가한다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-29.png)
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-30.png)
+
+- MyFirstPipeline 을 실행시키고 완료되면, MySecondPipeline 이 실행되고, 완료되면 아래와 같은 결과를 확인 할 수 있다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-31.png)
+
+- MyFirstPipeline 설정에서 Artifact 에 대한 Custom Tabs 설정을 아래와 같이 할 수 있다.
+
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-32.png)
+
+- 실행 결과는 아래와 같다.
 	
+	![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-33.png)
 	
 	
 	
@@ -207,6 +282,9 @@ tags:
 	
 	
 	
+## VSM
+- GoCD 에서 VSM 이란 Value Stream Map 을 뜻한다.
+- 
 	
 	
 	
@@ -258,114 +336,10 @@ tags:
 	
 	
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	
-
 	
 	
 	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	
 ---
 ## Reference
