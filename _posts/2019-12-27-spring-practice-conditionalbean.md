@@ -10,10 +10,10 @@ header-style: text
 categories :
   - Spring
 tags:
-    - Spring
-    - Practice
-   	- Bean
-   	- Conditional
+  - Spring
+  - Practice
+  - Bean
+  - Conditional
 ---  
 
 ## Conditional Annotation

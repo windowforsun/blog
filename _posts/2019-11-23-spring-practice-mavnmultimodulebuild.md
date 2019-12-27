@@ -10,11 +10,11 @@ header-style: text
 categories :
   - Spring
 tags:
-    - Spring
-    - Practice
-    - Spring Boot
-    - Maven
-    - Docker
+  - Spring
+  - Practice
+  - Spring Boot
+  - Maven
+  - Docker
 ---  
 
 # 목표
