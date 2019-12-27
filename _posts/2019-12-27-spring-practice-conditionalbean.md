@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] 조건부 빈"
+title: "[Spring 실습] 조건부 빈(Conditional Bean)"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: '특정 조건에 따라 빈을 생성해 보자'
