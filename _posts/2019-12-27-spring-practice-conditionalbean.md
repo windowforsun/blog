@@ -751,7 +751,7 @@ public class ConditionalOnExpressionConfig {
 	```  
 	
 - web 모듈에서 테스트
-	- 실패 ... 
+	- 실패 확인 필요
 	
 	```java
 	@RunWith(SpringRunner.class)
