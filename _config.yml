@@ -16,7 +16,7 @@ minimal_mistakes_skin    : "default" # "air", "aqua", "contrast", "dark", "dirt"
 
 # Site Settings
 locale                   : "ko-KR"
-title                    : "WiFoSun"
+title                    : "Wios"
 title_separator          : "-"
 name                     : "window_for_sun"
 description              : "This is my first site"
