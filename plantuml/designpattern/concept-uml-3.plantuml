@@ -1,0 +1,15 @@
+@startuml
+class Lens {
+}
+
+class Camera {
+	lens
+}
+
+class Phone {
+	cameras
+}
+
+Lens <--o Camera
+Camera <--o Phone
+@enduml

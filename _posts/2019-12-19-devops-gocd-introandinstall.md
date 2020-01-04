@@ -4,7 +4,7 @@ classes: wide
 title: "[DevOps] GoCD 설치 및 기본 사용"
 header:
   overlay_image: /img/gocd-bg.png
-excerpt: 'Spring '
+excerpt: 'GoCD 환경 구성과 개념 그리고 기본 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :

@@ -1,0 +1,20 @@
+@startuml
+People -> Phone : usePhone
+activate People
+activate Phone
+
+Phone -> Camera : doPicture
+activate Camera
+Camera --> Phone
+deactivate Camera
+
+Phone --> People
+deactivate Phone
+
+People --> Phone : savePicture
+activate Phone
+
+Phone --> People
+deactivate Phone
+deactivate People
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class People {
+}
+class Device {
+}
+class Factory {
+}
+class Subject {
+}
+class Observer {
+}
+
+Device <-- People : Uses <
+Device <-- Factory : Creates <
+Observer <-- Subject : Notifies <
+@enduml

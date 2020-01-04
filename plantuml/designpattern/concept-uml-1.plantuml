@@ -1,0 +1,16 @@
+@startuml
+abstract class AbstractParent {
+	generalField
+	{static} staticField
+
+	{abstract} abstractMethod()
+	method()
+}
+
+class Child {
+	abstractMethod()
+	{static} staticMethod()
+}
+
+AbstractParent <|-- Child
+@enduml

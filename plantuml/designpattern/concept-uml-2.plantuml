@@ -1,0 +1,11 @@
+@startuml
+interface Able {
+	{abstract} is()
+}
+
+class DoAble {
+	is()
+}
+
+Able <|... DoAble
+@enduml
