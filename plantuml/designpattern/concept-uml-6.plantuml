@@ -1,6 +1,8 @@
 @startuml
-People -> Phone : usePhone
+[-> People : usePhone
 activate People
+
+People -> Phone : useCamera
 activate Phone
 
 Phone -> Camera : doPicture
@@ -16,5 +18,7 @@ activate Phone
 
 Phone --> People
 deactivate Phone
+
+[<- People
 deactivate People
 @enduml
