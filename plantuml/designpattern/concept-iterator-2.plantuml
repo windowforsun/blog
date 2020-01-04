@@ -1,0 +1,45 @@
+@startuml
+interface Iterator {
+	{abstract} hasNext()
+	{abstract} next()
+}
+
+interface Aggregate {
+	{abstract} iterator()
+}
+
+class PhoneBookIterator {
+	PhoneBook phoneBook
+	PhoneBookIterator(PhoneBook phoneBook)
+	boolean hasNext()
+	Object next()
+}
+
+class PhoneBook {
+	Phone[] phones
+	int lastIndex
+	int maxSize
+	PhoneBook()
+	Iterator iterator()
+	Phone getById(int index)
+	void addPhone(Phone phone)
+	int getLastIndex()
+}
+
+class Phone {
+	String name
+	String phoneNumber
+
+	void setName()
+	void setPhoneNumber()
+	String getName()
+	String getPhoneNumber()
+}
+
+Aggregate <|.down. PhoneBook
+Iterator <|.down. PhoneBookIterator
+Iterator <-right- Aggregate : Creates <
+PhoneBook <-left-o PhoneBookIterator
+Phone <-down-o PhoneBook
+
+@enduml
