@@ -4,7 +4,7 @@ classes: wide
 title: "[DesignPattern 개념] UML"
 header:
   overlay_image: /img/designpattern-bg.jpg
-excerpt: ''
+excerpt: '디자인 패턴을 표현하고 이해하는 데에 도움이 되는 UML 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
