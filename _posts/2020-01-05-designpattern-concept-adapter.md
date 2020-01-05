@@ -4,7 +4,7 @@ classes: wide
 title: "[DesignPattern 개념] Adapter Pattern"
 header:
   overlay_image: /img/designpattern-bg.jpg
-excerpt: '반복자 역할을 하는 Iterator 패턴에 대해 알아보자'
+excerpt: '서로 다른 두 기능을 연결해서 사용할 수 있도록 해주는 Adapter 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
