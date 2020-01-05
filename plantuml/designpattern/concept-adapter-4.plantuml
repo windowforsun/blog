@@ -1,0 +1,27 @@
+@startuml
+abstract class Calculator {
+	{abstract} int calculateSnack()
+	{abstract} int calculateCoffee()
+}
+
+class CalculatorSalePrice {
+	Price price
+
+	CalculatorSalePrice(int snackPrice, int coffeePrice)
+	int calculateSnack()
+	int calculateCoffee()
+}
+
+class Price {
+	int snackPrice
+	int coffeePrice
+
+	Price(int snackPrice, int coffeePrice)
+	int getSnackPrice()
+	int getCoffeePrice()
+}
+
+Calculator <|-- CalculatorSalePrice
+Price <--o CalculatorSalePrice
+
+@enduml

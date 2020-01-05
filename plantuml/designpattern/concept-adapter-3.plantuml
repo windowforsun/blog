@@ -1,0 +1,25 @@
+@startuml
+interface Calculator {
+	{abstract} int calculateSnack()
+	{abstract} int calculateCoffee()
+}
+
+class CalculatorSalePrice {
+	CalculatorSalePrice(int snackPrice, coffeePrice)
+	calculateSnack()
+	calculateCoffee()
+}
+
+class Price {
+	int snackPrice
+	int coffeePrice
+
+	Price(int snackPrice, int coffeePrice)
+	int getSnackPrice()
+	int getCoffeePrice()
+}
+
+Calculator <|.. CalculatorSalePrice
+Price <|-- CalculatorSalePrice
+
+@enduml
