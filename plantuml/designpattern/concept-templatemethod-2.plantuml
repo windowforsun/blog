@@ -1,0 +1,24 @@
+@startuml
+abstract class AbstractStringMaker {
+	{abstract} String prefix()
+	{abstract} String suffix()
+	{abstract} String token()
+	String make()
+}
+
+class NumberStringMaker {
+	String prefix()
+	String suffix()
+	String token()
+}
+
+class AlphabetStringMaker {
+	String prefix()
+	String suffix()
+	String token()
+}
+
+AbstractStringMaker <|-- NumberStringMaker
+AbstractStringMaker <|-- AlphabetStringMaker
+
+@enduml
