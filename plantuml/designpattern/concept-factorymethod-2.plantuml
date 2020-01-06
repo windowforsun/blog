@@ -1,0 +1,76 @@
+@startuml
+package framework <<Folder>> {
+	abstract class CalculatorFactory {
+		Calculator create(String id, String type)
+		{abstract} Calculator createCalculator(String id, String type)
+		{abstract} void registerCalculator(Calculator calculator)
+	}
+
+	abstract class Calculator {
+		String id
+		String manufacturer
+		String type
+
+		Calculator(String manufacturer, String id, String type)
+		{abstract} int calculator(int a, int b)
+		String getUid()
+	}
+}
+
+package excellentcalculator <<Folder>> {
+	class ExcellentCalculatorFactory {
+		List<String> calculatorUids
+
+		Calculator createCalculator(String id, String type)
+		void registerCalculator(Calculator calculator)
+		List<String> getCalculatorUids()
+	}
+
+	class MinusExcellentCalculator {
+		MinusExcellentCalculator(String id, String type)
+
+		int calculator(int a, int b)
+	}
+
+	class PlusExcellentCalculator {
+		PlusExcellentCalculator(String id, String type)
+
+		int calculator(int a, int b)
+	}
+}
+
+package goodcalculator <<Folder>> {
+	class GoodCalculatorFactory {
+		List<String> calculatorUids
+
+		Calculator createCalculator(String id, String type)
+		void registerCalculator(Calculator calculator)
+		List<String> getCalculatorUids()
+	}
+
+	class MultiplyGoodCalculator {
+		MultiplyGoodCalculator(String id, String type)
+
+		int calculator(int a, int b)
+	}
+
+	class PlusGoodCalculator {
+		PlusGoodCalculator(String id, String type)
+
+		int calculator(int a, int b)
+	}
+}
+
+Calculator <-- CalculatorFactory : Creates <
+MinusExcellentCalculator <-- ExcellentCalculatorFactory : Creates <
+PlusExcellentCalculator <-- ExcellentCalculatorFactory : Creates <
+MultiplyGoodCalculator <-- GoodCalculatorFactory : Creates <
+PlusGoodCalculator <-- GoodCalculatorFactory : Creates <
+Calculator <|-- MinusExcellentCalculator
+Calculator <|-- PlusExcellentCalculator
+Calculator <|-- MultiplyGoodCalculator
+Calculator <|-- PlusGoodCalculator
+CalculatorFactory <|-- ExcellentCalculatorFactory
+CalculatorFactory <|-- GoodCalculatorFactory
+
+@enduml
