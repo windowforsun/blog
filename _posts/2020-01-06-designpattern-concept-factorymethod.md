@@ -269,7 +269,7 @@ public abstract class CalculatorFactory {
 - `createCalculator()` 메서드에서는 인자 값으로 받은 타입값에 따라 브랜드에 해당하는 인스턴스를 생성하는 구현내용 이다.
 - `registerCalculator()` 메서드에서는 생성된 인스턴스를 각 브랜드에 따라 등록에 대한 구현 내용이다.
 
-## 테스트
+### 테스트
 - `goodcalculator` 테스트
 
 	```java

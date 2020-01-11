@@ -15,12 +15,10 @@ tags:
 ---  
 
 ## Singleton 패턴이란
-- 하나의 프로그램이 실행될 때, 수 많은 인스턴스가 생성된다.
-- Java 언어에서는 `new` 키워드를 통해 인스턴스를 생성한다.
-- 프로그램을 구현하다 보면, 프로그램에서 하나의 인스턴스만 존재해야 하는 경우가 있다. 
+- 하나의 프로그램이 실행될 때 수 많은 인스턴스가 생성되는데, 프로그램에서 하나의 인스턴스만 존재해야 하는 경우가 있다. 
 	- 게임을 구현한다면 게임 전체를 관리하는 `GameManager` 의 인스턴스는 단 하나만 존재해야 한다.
 	- 서버를 구현한다면 서버의 설정, 상태를 관리하는 인스턴스는 단 하나만 존재해야 한다.
-- `Singleton` 패턴은 하나의 프로그램(메모리를 공유하는 프로스세)에서 인스턴스가 단 1개만 존재하는 것을 보장해주는 패턴이다.
+- `Singleton` 패턴은 하나의 프로그램(메모리를 공유하는 프로세스)에서 인스턴스가 단 1개만 존재하는 것을 보장해주는 패턴이다.
 
 
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_singleton_1.png)
@@ -60,6 +58,25 @@ public class Singleton {
 - `getInstance()` 은 `public` 접근제어자로 외부에서 `Singleton` 의 인스턴스가 필요할 때 호출 하는 메서드이다.
 	- `instance` 필드가 `null` 일 경우 즉, 아직 인스턴스가 생성되지 않았을 때만 인스턴스를 생성한다.
 	- 이미 인스턴스가 생성된 경우에는 그 인스턴스를 리턴한다.
+
+### 테스트
+
+```java
+public class SingletonTest {
+    @Test
+    public void getInstance() {
+        // given
+        Singleton singleton1 = Singleton.getInstance();
+        Singleton singleton2 = Singleton.getInstance();
+
+        // when
+        boolean actual = singleton1.hashCode() == singleton2.hashCode();
+
+        // then
+        assertThat(actual, is(true));
+    }
+}
+```  
 
 ## Multi Thread 인 상황에서 인스턴스가 단 1개인 클래스 만들기
 - 현재 `Singleton` 클래스는 Multi Thread 의 환경에서 인스턴스의 유일성을 보장하지 못한다.(Thread-Safe 하지 못하다.)
