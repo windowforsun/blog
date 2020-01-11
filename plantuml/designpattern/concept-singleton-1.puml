@@ -1,0 +1,11 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Singleton {
+	- {static} instance
+
+	- Singleton()
+	+ {static} getInstance()
+}
+
+@enduml
