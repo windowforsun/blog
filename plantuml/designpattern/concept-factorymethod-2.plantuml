@@ -19,11 +19,11 @@ package framework <<Folder>> {
 
 package excellentcalculator <<Folder>> {
 	class ExcellentCalculatorFactory {
-		List<String> calculatorUids
+		Map<String, Calculator> calculatorMap
 
 		Calculator createCalculator(String id, String type)
 		void registerCalculator(Calculator calculator)
-		List<String> getCalculatorUids()
+		Map<String, Calculator> getCalculatorMap()
 	}
 
 	class MinusExcellentCalculator {
