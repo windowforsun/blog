@@ -142,7 +142,7 @@ $ ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 
 ## Linux 에서 SSH 를 이용해서 접근 확인하기
-- 등록된 공개키가 있는 Linux 에서 수행해야 한다.
+- 등록된 공개키에 해당하는 비밀키가 있는 Linux 에서 수행해야 한다.
 - 다시 `git clone <저장소URL>` 을 통해 저장소를 클론 받아 본다.
 
 	```
