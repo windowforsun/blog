@@ -95,7 +95,7 @@ tags:
 	   c46ffae..d062ac2  master -> master
 	```  
 	
-# 한번에 여러개 저장소에 Push 하기
+## 한번에 여러개 저장소에 Push 하기
 - `git config -e` 을 통해 기존 Git 설정 정보를 확인한다.
 
 	```

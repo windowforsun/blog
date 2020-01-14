@@ -136,7 +136,7 @@ $ ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 	![그림 1]({{site.baseurl}}/img/git/practice-ssh-4.png)
 
-- 이제 SSH 를 사용해서 저장소 접근을 할때는 `https://github.com/<계정명>/<저장소명>` 형식의 URL 을 사용하지 않고, 아래와 같은 URL을 사용한다.
+- 이제 SSH 를 사용해서 저장소 접근을 할때는 `https://github.com/<계정명>/<저장소명>` 형식의 URL 을 사용하지 않고, `git@github.com:<계정명>/저장소명` 과 같은 URL을 사용한다.
 	
 	![그림 1]({{site.baseurl}}/img/git/practice-ssh-5.png)
 

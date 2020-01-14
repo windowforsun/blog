@@ -20,6 +20,12 @@ tags:
 ![그림 1]({{site.baseurl}}/img/devops/gocd-introandinstall-1.png)
 
 - 이름에서 나와 있는 것과 같이 CD(Continuous Delivery / Continuous Deploy) 역할을 해주는 솔루션이다.
+- CD 는 아래와 같은 2가지로 구분될 수 있다.
+	- 지속적인 제공(Continuous Delivery)
+		- 개발자들이 적용한 변경 사항이 CI 과정을 거쳐 저장소에 자동으로 업로드 되는 것
+		- 운영팀이 저장소에서 결과물을 실 서버 환경으로 배포할 수 있게 하는 것
+	- 지속적인 배포(Continuous Deploy)
+		- 개발자의 변경 사항을 저장소에서 고객이 사용 가능한 실 서버 환경까지 자동으로 배포하는 것
 - GoCD 는 크게 `Server` 와 `Agent` 로 구성된다.
 - `Server` 는 Web UI 인터페이스를 제공하고, `Agent` 에게 명령을 내려 모든것을 컨트롤하는 역할을 수행한다.
 - `Agent` 는 `Server` 의 명령을 받아 실질적으로 명령어를 실행해 작업을 하는 역할을 수행한다.
