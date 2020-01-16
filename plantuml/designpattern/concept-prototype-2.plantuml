@@ -1,0 +1,37 @@
+@startuml
+
+class Manager {
+	Map<String, Figure> figureMap
+
+	void register(String name, Figure figure)
+	Figure create(String name)
+}
+
+interface Figure {
+	{abstract} int getArea()
+	{abstract} int getPerimeter()
+	{abstract} Figure createClone()
+}
+
+class Circle {
+	int radius
+	Circle(int radius)
+	int getArea()
+	int getPerimeter()
+	Figure createClone()
+}
+
+class Rectangle {
+	int width
+	int height
+	Rectangle(int width, int height)
+	int getArea()
+	int getPerimeter()
+	Figure createClone()
+}
+
+Figure <-- Manager : Uses <
+Figure <|... Circle
+Figure <|... Rectangle
+
+@enduml
