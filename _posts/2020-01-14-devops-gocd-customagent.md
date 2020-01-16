@@ -170,7 +170,7 @@ tags:
 	
 	
 ### Docker Agent 에서 Docker 빌드 Pipleline 구성하기
-- Docker 로 빌드할 이미지는 Spring 프로젝트로 [여기]({{site.baseurl}}{% link _posts/2019-09-05-docker-practice-spring-boot-docker-jar %}) 와 동일한 프로젝트이다.
+- Docker 로 빌드할 이미지는 Spring 프로젝트로 [여기]({{site.baseurl}}{% link _posts/2019-09-05-docker-practice-spring-boot-docker-jar.md %}) 와 동일한 프로젝트이다.
 - 새로운 Pipeline 를 위해 먼저 Material 설정에서 프로젝트의 소스코드가 있는 Git 주소를 업력하고 `Test Connection` 으로 연결 테스트를 진행한다.
 
 	![그림 1]({{site.baseurl}}/img/devops/gocd-customagent-9.png)
