@@ -8,9 +8,9 @@ excerpt: '인스턴스가 단 1개만 생성되는 것을 보장하는 Singleton
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - Singleton
 ---  
 

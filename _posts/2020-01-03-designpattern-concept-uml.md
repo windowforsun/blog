@@ -8,9 +8,9 @@ excerpt: '디자인 패턴을 표현하고 이해하는 데에 도움이 되는 
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - UML
 ---  
 

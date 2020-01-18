@@ -8,9 +8,9 @@ excerpt: '로직을 공통화 시키면서, 구체화 시킬 수 있는 Template
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - Template Method
 ---  
 

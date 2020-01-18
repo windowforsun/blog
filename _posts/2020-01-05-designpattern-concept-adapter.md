@@ -8,9 +8,9 @@ excerpt: '서로 다른 두 기능을 연결해서 사용할 수 있도록 해�
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - Adapter
 ---  
 

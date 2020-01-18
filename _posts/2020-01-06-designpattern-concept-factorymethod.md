@@ -8,9 +8,9 @@ excerpt: 'Template Method 패턴을 활용해서 인스턴스를 생성하는 Fa
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - Factory Method
 ---  
 

@@ -8,9 +8,9 @@ excerpt: '반복자 역할을 하는 Iterator 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - DesignPattern
+  - Design Pattern
 tags:
-  - DesignPattern
+  - Design Pattern
   - Iterator
 ---  
 
