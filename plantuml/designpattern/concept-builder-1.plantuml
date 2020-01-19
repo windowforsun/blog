@@ -1,0 +1,25 @@
+@startuml
+
+class Director {
+	builder
+	construct()
+}
+
+abstract class Builder {
+	{abstract} buildPart1()
+	{abstract} buildPart2()
+	{abstract} buildPart3()
+}
+
+class ConcreteBuilder {
+	buildPart1()
+	buildPart2()
+	buildPart3()
+	getResult()
+}
+
+Builder <--o Director
+Builder <|-- ConcreteBuilder
+
+
+@enduml

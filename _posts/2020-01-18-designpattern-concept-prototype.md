@@ -40,10 +40,7 @@ tags:
 	- 위 특징을 통해 OOP 의 목표중 하나인 부품으로써 재사용이라는 점을 실현 할 수 있다.
 	- 클래스 안에 어떤 클래스의 이름이 있다는 것은 강한 의존성을 가지고 있다는 의미로, 분리해서 재사용하기가 힘들어 진다.
 
-## 여러 크기의 도형을 나타내는 인스턴스 만들기
-- `Prototype` 패턴을 사용해서 여러가지 도형과 크기가 각 다른 도형을 만들어본다.
-
-### java.lang.Cloneable
+## java.lang.Cloneable
 - 앞서 설명한 것과 같이 `Prototype` 패턴에서는 `new` 키워드를 통해 인스턴스를 생성하지 않고, 만들어진 인스턴스를 복사하는데 복사할 때 Java 의 `Cloneable` 인스터스을 통해 이를 구현한다.
 - 인스턴스를 복사하는 `Cloneable` 인터페이스는 `java.lang.Cloneable` 로 기본으로 Java 에서 기본으로 포함된 인터페이스이다.
 - 인스턴스의 복사는 `java.lang.Object` 에 있는 `clone()` 메소드를 사용한다.
@@ -51,6 +48,10 @@ tags:
 - `Cloneable` 인터페이스에는 어떤 메소드도 선언돼 있지 않은데, 이는 `clone()` 메소드에 의해 복사 될 수 있다 라는 것을 명시하는 용도로 쓰이는 인터페이스이고, 이런 인터페이스를 `Maker interface` 라고 부른다.
 - `clone()` 메소드는 기본으로 얕은 복사(shallow copy) 를 수행하는 메소드이다.
 - `clone()` 메소드로 깊은 복사(deep copy) 를 수행하기 위해서는 직접 Override 해서 구현해야 한다.
+
+
+## 여러 크기의 도형을 나타내는 인스턴스 만들기
+- `Prototype` 패턴을 사용해서 여러가지 도형과 크기가 각 다른 도형을 만들어본다.
 
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_prototype_2.png)
 

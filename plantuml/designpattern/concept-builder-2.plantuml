@@ -1,0 +1,31 @@
+@startuml
+participant Director
+participant ConcreteBuilder
+
+create ConcreteBuilder
+-> ConcreteBuilder : new
+[-> Director : construct
+activate Director
+
+Director -> ConcreteBuilder : buildPart1
+activate ConcreteBuilder
+ConcreteBuilder -> Director
+deactivate ConcreteBuilder
+Director -> ConcreteBuilder : buildPart2
+activate ConcreteBuilder
+ConcreteBuilder -> Director
+deactivate ConcreteBuilder
+Director -> ConcreteBuilder : buildPart3
+activate ConcreteBuilder
+ConcreteBuilder -> Director
+deactivate ConcreteBuilder
+
+[<- Director
+deactivate Director
+
+[-> ConcreteBuilder : getResult
+activate ConcreteBuilder
+[<- ConcreteBuilder
+deactivate ConcreteBuilder
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+
+class ComputerEngineer {
+	ComputerBuilder builder
+
+	ComputerEngineer(ComputerBuilder builder)
+	void construct()
+}
+
+abstract class ComputerBuilder {
+	Computer computer
+
+	{abstract} void buildCpu()
+	{abstract} void buildRam()
+	{abstract} void buildSsd()
+	{abstract} void buildHdd()
+	Computer getComputer()
+}
+
+class Computer {
+    float coreClock
+    int coreCount
+    int ramSize
+    int ramCount
+    int ssdSize
+    int ssdCount
+    int hddSize
+    int hddCount
+}
+
+class PersonalComputerBuilder {
+	PersonalComputerBuilder()
+	void buildCpu()
+	void buildRam()
+	void buildSsd()
+	void buildHdd()
+}
+
+class SuperComputerBuilder {
+	SuperComputerBuilder()
+	void buildCpu()
+	void buildRam()
+	void buildSsd()
+	void buildHdd()
+}
+
+Computer <--o ComputerBuilder
+ComputerBuilder <--o ComputerEngineer
+ComputerBuilder <|-- PersonalComputerBuilder
+ComputerBuilder <|-- SuperComputerBuilder
+
+
+@enduml
