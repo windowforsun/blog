@@ -48,6 +48,8 @@ Computer <--o ComputerBuilder
 ComputerBuilder <--o ComputerEngineer
 ComputerBuilder <|-- PersonalComputerBuilder
 ComputerBuilder <|-- SuperComputerBuilder
+Computer <-- PersonalComputerBuilder : Create <
+Computer <-- SuperComputerBuilder : Create <
 
 
 @enduml

@@ -18,8 +18,11 @@ class ConcreteBuilder {
 	getResult()
 }
 
+class Product {
+}
+
 Builder <--o Director
 Builder <|-- ConcreteBuilder
-
+Product <-- ConcreteBuilder : Creates <
 
 @enduml
