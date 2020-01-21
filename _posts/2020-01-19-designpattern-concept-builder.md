@@ -39,6 +39,7 @@ tags:
 
 ## 컴퓨터 조립하기
 - 먼저 소개할 예제는 GoF 에서 설명하는 방식의 `Builder` 패턴의 예제이다.
+- GoF 의 `Builder` 패턴은 복잡한 객체를 생성하는 방법과 표현하는 방법을 분리하여 서로 다른 표현이라도 동일한 공정에서 생성할 수 있도록 제공하는 패턴이다.
 - 컴퓨터 엔지니어가 컴퓨터의 부품들을 사용해서 컴퓨터를 조립하는 것을 `Builder` 패턴으로 구성한다.
 - 컴퓨터 엔지니어는 컴퓨터 조립에 필요한 부품들만 알고 있고, 부품들을 이용해서 컴퓨터를 조립만 수행한다.
 - 조립하는 컴퓨터의 종류는 PC 와 슈퍼컴퓨터가 있다.
@@ -235,6 +236,235 @@ public class GoFBuilderTest {
 ```  
 
 ## 유연하게 인스턴스 생성하기
+- Effective Java 에서 소개하는 `Builder` 패턴은 객체 생성을 깜끔하고 유연하게 하기 위한 패턴이다.
+- GoF 에서 사용한 `Computer` 클래스의 인스턴스를 생성하기 위해 아래와 같이 생성자를 만들 수 있다.
+
+	```java
+	public class Computer {
+	    protected float coreClock;
+	    protected int coreCount;
+	    protected int ramSize;
+	    protected int ramCount;
+	    protected int ssdSize;
+	    protected int ssdCount;
+	    protected int hddSize;
+	    protected int hddCount;
+		
+	    // 필수 생성자
+	    public Computer(float coreClock, int coreCount) {
+	    	this.coreClock = coreClock;
+	    	this.coreCount = coreCount;
+	    }
+	    
+	    // 추가 인자를 받는 생성자
+	    public Computer(float coreClock, int coreCount, int ramSize, int ramCount) {
+	    	this(coreClock, coreCount);
+	    	this.ramSize = ramSize;
+	    	this.ramCount = ramCount;
+	    }
+	    
+	    // 추가 인자를 받는 생성자
+	    public Computer(float coreClock, int coreCount, int ramSize, int ramCount, int ssdSize, int ssdCount) {
+	    	this(coreClock, coreCount, ramSize, ramCount);
+	    	this.ssdSize = ssdSize;
+	    	this.ssdCount = ssdCount;
+	    }
+	    
+	    // 모든 인자를 받는 생성자
+	    public Computer(float coreClock, int coreCount, int ramSize, int ramCount, int ssdSize, int ssdCount, int hddSize, int hddCount) {
+	    	this(coreClock, coreCount, ramSize, ramCount, ssdSize, ssdCount);
+	    	this.hddSize = hddSize;
+	    	this.hddCount = hddCount;
+	    }
+	    
+	    // getter, setter
+	}
+	```  
+	
+	
+	```java
+	Computer personalComputer1 = new Computer(3.2f, 1);
+	Computer personalComputer2 = new Computer(3.2f, 1, 8, 1);
+	Computer personalComputer3 = new Computer(3.2f, 1, 8, 1, 128, 1);
+	Computer personalComputer4 = new Computer(3.2f, 1, 8, 1, 128, 1, 1000, 1);
+	```  
+	
+- `Computer` 의 인스턴스를 생성하기 위해 다양한 인자의 조합을 받는 생성자가 정의 되었다.
+- 다른 생성자를 호출하는 생성자가 많고, 인자가 추가되는 일이 발생할 경우 코드 수정에 어려움이 있을 수 있다.
+- 생성자의 인자가 많기 때문에, 인자 하나하나의 의미를 알기가 어렵다.
+
+### Effective Java Builder Pattern
+- 위의 `Computer` 객체의 인스턴스를 깔끔하고 유연하게 생성하기 위해 패턴을 적용하면 아래와 같은 구조가 된다.
+
+	```java
+	public class Computer {
+	    private float coreClock;
+	    private int coreCount;
+	    private int ramSize;
+	    private int ramCount;
+	    private int ssdSize;
+	    private int ssdCount;
+	    private int hddSize;
+	    private int hddCount;
+	
+	    public static class Builder {
+	        private float coreClock;
+	        private int coreCount;
+	        private int ramSize;
+	        private int ramCount;
+	        private int ssdSize;
+	        private int ssdCount;
+	        private int hddSize;
+	        private int hddCount;
+	
+	        public Builder coreClock(float coreClock) {
+	            this.coreClock = coreClock;
+	
+	            return this;
+	        }
+	
+	        public Builder coreCount(int coreCount) {
+	            this.coreCount = coreCount;
+	
+	            return this;
+	        }
+	
+	        public Builder ramSize(int ramSize) {
+	            this.ramSize = ramSize;
+	
+	            return this;
+	        }
+	
+	        public Builder ramCount(int ramCount) {
+	            this.ramCount = ramCount;
+	
+	            return this;
+	        }
+	
+	        public Builder ssdSize(int ssdSize) {
+	            this.ssdSize = ssdSize;
+	
+	            return this;
+	        }
+	
+	        public Builder ssdCount(int ssdCount) {
+	            this.ssdCount = ssdCount;
+	
+	            return this;
+	        }
+	
+	        public Builder hddSize(int hddSize) {
+	            this.hddSize = hddSize;
+	
+	            return this;
+	        }
+	
+	        public Builder hddCount(int hddCount) {
+	            this.hddCount = hddCount;
+	
+	            return this;
+	        }
+	
+	        public Computer build() {
+	            return new Computer(this);
+	        }
+	    }
+	
+	    public Computer(Builder builder) {
+	        this.coreClock = builder.coreClock;
+	        this.coreCount = builder.coreCount;
+	        this.ramSize = builder.ramSize;
+	        this.ramCount = builder.ramCount;
+	        this.ssdSize = builder.ssdSize;
+	        this.ssdCount = builder.ssdCount;
+	        this.hddSize = builder.hddSize;
+	        this.hddCount = builder.hddCount;
+	    }
+	
+	    // getter
+	}
+	```  
+
+- 적용한 `Builder` 패턴으로 인스턴스를 생성하는 예제는 아래와 같다.
+
+	```java
+	public class JavaBuilderTest {
+	    @Test
+	    public void personalComputer() {
+	        // given
+	        float coreClock = 3.4f;
+	        int coreCount = 4;
+	        int ramSize = 4;
+	        int ramCount = 2;
+	        int ssdSize = 128;
+	        int ssdCount = 1;
+	        int hddSize = 512;
+	        int hddCount = 1;
+	
+	        // when
+	        Computer actual = new Computer.Builder()
+	                .coreClock(coreClock)
+	                .coreCount(coreCount)
+	                .ramSize(ramSize)
+	                .ramCount(ramCount)
+	                .ssdSize(ssdSize)
+	                .ssdCount(ssdCount)
+	                .hddSize(hddSize)
+	                .hddCount(hddCount)
+	                .build();
+	
+	        // then
+	        assertThat(actual.getCoreClock(), is(coreClock));
+	        assertThat(actual.getCoreCount(), is(coreCount));
+	        assertThat(actual.getRamSize(), is(ramSize));
+	        assertThat(actual.getRamCount(), is(ramCount));
+	        assertThat(actual.getSsdSize(), is(ssdSize));
+	        assertThat(actual.getSsdCount(), is(ssdCount));
+	        assertThat(actual.getHddSize(), is(hddSize));
+	        assertThat(actual.getHddCount(), is(hddCount));
+	    }
+	
+	    @Test
+	    public void superComputer() {
+	        // given
+	        float coreClock = 4;
+	        int coreCount = 64;
+	        int ramSize = 16;
+	        int ramCount = 32;
+	        int ssdSize = 1000;
+	        int ssdCount = 8;
+	        int hddSize = 10000;
+	        int hddCount = 16;
+	
+	        // when
+	        Computer actual = new Computer.Builder()
+	                .coreClock(coreClock)
+	                .coreCount(coreCount)
+	                .ramSize(ramSize)
+	                .ramCount(ramCount)
+	                .ssdSize(ssdSize)
+	                .ssdCount(ssdCount)
+	                .hddSize(hddSize)
+	                .hddCount(hddCount)
+	                .build();
+	
+	        // then
+	        assertThat(actual.getCoreClock(), is(coreClock));
+	        assertThat(actual.getCoreCount(), is(coreCount));
+	        assertThat(actual.getRamSize(), is(ramSize));
+	        assertThat(actual.getRamCount(), is(ramCount));
+	        assertThat(actual.getSsdSize(), is(ssdSize));
+	        assertThat(actual.getSsdCount(), is(ssdCount));
+	        assertThat(actual.getHddSize(), is(hddSize));
+	        assertThat(actual.getHddCount(), is(hddCount));
+	    }
+	}
+	```  
+	
+- 인스턴스 생성을 할때 인자값의 의미를 파악하기 쉽다.
+- 한 번에 객체를 생성하기 때문에 객체 일관성이 깨지지 않는다.
+- `build()` 메소드에서 객체 생성전에 속성 값에 대한 검증을 추가할 수 있다.
+
 
 ---
 ## Reference
