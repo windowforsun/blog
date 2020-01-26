@@ -1,0 +1,43 @@
+@startuml
+
+package factory <<folder>> {
+	abstract class AbstractFactory{
+		{abstract} createProduct1()
+		{abstract} createProduct2()
+	}
+
+	abstract class AbstractProduct1 {
+		{abstract} doSomethingProduct1()
+	}
+
+	abstract class AbstractProduct2 {
+		{abstract} doSomethingProduct2()
+	}
+}
+
+package concretefactory <<folder>> {
+	class ConcreteFactory {
+		createProduct1()
+		createProduct2()
+	}
+
+	class ConcreteProduct1 {
+		doSomethingProduct1()
+	}
+
+	class ConcreteProduct2 {
+		doSomethingProduct2()
+	}
+}
+
+AbstractFactory <|-- ConcreteFactory
+AbstractProduct1 <|-- ConcreteProduct1
+AbstractProduct2 <|-- ConcreteProduct2
+
+AbstractProduct1 <-left- AbstractFactory : < Creates
+AbstractProduct2 <-right- AbstractFactory : < Creates
+
+ConcreteProduct1 <-left- ConcreteFactory : < Creates
+ConcreteProduct2 <-right- ConcreteFactory : < Creates
+
+@enduml

@@ -1,0 +1,78 @@
+@startuml
+
+package factory <<Folder>> {
+	abstract class Part {
+		String name
+
+		{abstract} Part makePart(String name)
+	}
+
+	abstract class Cpu {
+		float coreClock
+		int coreCount
+
+		{abstract} Part makePart(String name)
+	}
+
+	abstract class Ram {
+		int size
+		int count
+
+		{abstract} Part makePart(String name)
+	}
+
+	abstract class Computer {
+		String name
+		Part cpu
+		Part ram
+
+		{abstract} Computer makeComputer(String name)
+	}
+
+	abstract class Factory {
+		{static} getFactory(Class factoryClass)
+
+		{abstract} Computer createComputer(String name)
+		{abstract} Cpu createCpu(String name)
+		{abstract} Ram createRam(String name)
+	}
+}
+
+package good <<folder>> {
+	class GoodCpu {
+		Part makePart(String name)
+	}
+
+	class GoodRam {
+		Part makeRam(String name)
+	}
+
+	class GoodComputer {
+		Computer makeComputer(String name)
+	}
+
+	class GoodFactory {
+		Computer createComputer(String name)
+		Cpu createCpu(String name)
+		Ram createRam(String name)
+	}
+}
+
+Factory <|-- GoodFactory
+Part <|-down- Cpu
+Part <|-down- Ram
+Cpu <|-- GoodCpu
+Ram <|-- GoodRam
+Computer <|-down- GoodComputer
+
+Cpu <-down- Factory : < Creates
+Ram <-down- Factory : < Creates
+Computer <-down- Factory : < Creates
+
+GoodCpu <-- GoodFactory : < Creates
+GoodRam <-- GoodFactory : < Creates
+GoodComputer <-- GoodFactory : < Creates
+
+
+
+@enduml
