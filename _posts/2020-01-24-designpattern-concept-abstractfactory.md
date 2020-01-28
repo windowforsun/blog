@@ -282,11 +282,9 @@ public class GoodComputerTest {
 ```  
 
 ## Excellent 컴퓨터 공장 라인 신설하기
-- Good 컴퓨터 보다 더 성능적으로 좋은 Excellent 컴퓨터를 만들기 위해 기존 `factory` 패키지를 사용해서 `excellent` 패키지를 추가해 본다.
+- Good 컴퓨터 보다 더 성능적으로 좋은 Excellent 컴퓨터를 만들기 위해 기존 `factory` 패키지를 사용해서 `excellent` 패키지 추가로 새로운 부품 및 제품을 만든다.
 
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_abstractfactory_3.png)
-
-
 
 ### excellent.ExcellentFactory
 
@@ -384,7 +382,7 @@ public class ExcellentComputerTest {
         assertThat(actual.getCpu().getCoreCount(), is(2));
         assertThat(actual.getRam().size(), is(2));
         assertThat(actual.getRam().get(0).getSize(), is(16));
-        assertThat(actual.getRam().get(0).getSize(), is(16));
+        assertThat(actual.getRam().get(1).getSize(), is(16));
         assertThat(actual.calculateSpec(), is(3.4f * 2 + 16 + 16));
     }
 }
