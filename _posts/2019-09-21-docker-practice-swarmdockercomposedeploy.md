@@ -35,7 +35,7 @@ tags:
 
 # 예제
 ## Container 구성하기
-- Container 는 Image 가 실해애되어 메모리에 올라간 상태를 뜻한다.
+- Container 는 Image 가 실행돼 메모리에 올라간 상태를 뜻한다.
 - Container 는 하나의 프로세스와 같은 의미를 같는다.
 - Dockerfile 을 통해 하나의 Container 를 정의 할 수 있다.
 
@@ -254,7 +254,8 @@ tags:
 	```  
 	
 ## Service 구성하기
-- 여러 애플리케이션으로 구성된 구조에서 하나의 애플리케이션을 Service 라고 한다.
+- 기본적인 배포 단위로, 하나의 서비스는 하나의 이미지를 기반으로 생성하고 동일한 컨테이너를 한개 이상 실행 할 수 있다.
+- 여러 애플리케이션으로 구성된 구조에서 하나의 애플리케이션을 Service 라고 할 수 있다.
 - 하나의 애플리케이션을 뜻하는 Service 는 여러 머신이나 여러개로 분산되어 질 수 있다.
 - Service 는 Dockerfile 로 만들어진 이미지를 사용해 Docker Compose 파일로 정의한다.
 
@@ -393,14 +394,70 @@ networks:
 	```  
 	
 ## Swarm 으로 분산환경 구성하기
-- Service 를 통해 단일 호스트에서 분산환경을 구성을 한것과 달리 여러 머신에 Service 의 분산환경을 구성한다.
+- Service 를 통해 단일 호스트에서 분산환경을 구성을 한것과 달리 여러 머신에 분산환경을 구성한다.
 - Swarm 은 여러 머신의 그룹으로 Docker 를 통해 구성되는 하나의 클러스터 단위이다.
-- Swarm 은 Swarm Manager 와 Worker 로 구분된다.
+- 직역하면 떼, 군중이라는 의미를 가진 것처럼 Docker 에서 지원하는 클러스터링 기능이다.
+- Swarm 은 manager node 와 worker node 로 구분된다.
+	- manager node : Swarm 클러스터 상태를 관리하는 노드로, manager node 는 worker node 도 될 수 있다.
+	- worker node : manager node 의 명령을 받아 Container 를 생성하고 상태를 체크 한다.
 - Docker 의 Swarm 명령어는 Manager 머신에서 실행하게 되면 구성된 머신들에 모두 적용 된다.
 - Swarm 으로 구성된 각 머신들을 Node 라고 한다.
 
 ### Swarm 구성하기
 - Docker Get Started 페이지에서는 Docker Machine 을 통해 내부에 여러 머신을 띄워 Swarm 으로 연결하는 예제를 보여주고 있는 것과 달리, 클라우드 머신을 이용해서 이를 구성한다. ???????????????
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
