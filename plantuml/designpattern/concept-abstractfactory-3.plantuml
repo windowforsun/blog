@@ -39,40 +39,40 @@ package factory <<Folder>> {
 	}
 }
 
-package good <<folder>> {
-	class GoodCpu {
+package excellent <<folder>> {
+	class ExcellentCpu {
 		Part makePart()
 	}
 
-	class GoodRam {
+	class ExcellentRam {
 		Part makeRam()
 	}
 
-	class GoodComputer {
+	class ExcellentComputer {
 		Computer makeComputer(Cpu cpu, Ram ram)
 	}
 
-	class GoodFactory {
+	class ExcellentFactory {
 		Computer createComputer()
 		Cpu createCpu()
 		Ram createRam()
 	}
 }
 
-Factory <|-- GoodFactory
+Factory <|-- ExcellentFactory
 Part <|-down- Cpu
 Part <|-down- Ram
-Cpu <|-- GoodCpu
-Ram <|-- GoodRam
-Computer <|-down- GoodComputer
+Cpu <|-- ExcellentCpu
+Ram <|-- ExcellentRam
+Computer <|-down- ExcellentComputer
 
 Cpu <-down- Factory : < Creates
 Ram <-down- Factory : < Creates
 Computer <-down- Factory : < Creates
 
-GoodCpu <-- GoodFactory : < Creates
-GoodRam <-- GoodFactory : < Creates
-GoodComputer <-- GoodFactory : < Creates
+ExcellentCpu <-- ExcellentFactory : < Creates
+ExcellentRam <-- ExcellentFactory : < Creates
+ExcellentComputer <-- ExcellentFactory : < Creates
 
 
 
