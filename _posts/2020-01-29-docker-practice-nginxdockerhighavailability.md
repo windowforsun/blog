@@ -128,7 +128,10 @@ tags:
 	    networks:
 	      - nginxdocker-net
 	    deploy:
-	      replicas: 2
+	      replicas: 3
+	      update_config:
+	        parallelism: 1
+	        delay: 10s
 	
 	
 	networks:
@@ -137,6 +140,7 @@ tags:
 	```  
 	
 	- `hostname` 을 이름 + 클러스터링된 번호로 설정한다.
+	- 서비스 업데이트를 할때 `update_config` 설정으로 컨테이너 1개씩 10초 딜레이를 주고 수행하도록 설정을 했다.
 	
 - `docker-compose-app-backup.yml`
 
@@ -212,12 +216,20 @@ tags:
 	```  
 
 - 웹 브라우저에서 `http://localhost:80` 으로 요청을 하면 `app-real-*` 호스트에만 접속이 되는것을 확인 할 수 있다.
+	- `curl http://127.0.0.1` 명령어를 사용해서 CLI 로도 확인 가능하다.
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-3.png)
-	
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-4.png)
+	```
+	$ curl http://127.0.0.1
+	app-real-1, current time : 1580289821697
+	$ curl http://127.0.0.1
+	app-real-2, current time : 1580289823212
+	$ curl http://127.0.0.1
+	app-real-1, current time : 1580289829814
+	```  
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-3.png)-->
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-4.png)-->
 
-- `webapp-real` 서비스를 강제로 중지 시키고 다시 브라우저로 요청을 하면 `app-backup-*` 호스트만 출력된다.
+- `webapp-real` 서비스를 강제로 중지 시키면 `app-backup-*` 호스트만 출력된다.
 
 	```
 	$ docker service ls
@@ -233,9 +245,16 @@ tags:
 	nginxdocker_webapp-real
 	```  
 
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-5.png)
-	
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-6.png)
+	```
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580290926999
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580290929123
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580290931923
+	```  
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-5.png)-->
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-6.png)-->
 	
 - 다시 `webapp-real` 서비스를 올리고 Nginx 을 reload 시키면 다시 `app-real-*` 호스트만 출력되는 것을 확인 할 수 있다.
 
@@ -262,12 +281,65 @@ tags:
 	2/3: running
 	3/3: running
 	verify: Service converged
+	```  	
+
+	```
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580294327124
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580294328932
+	$ curl http://127.0.0.1
+	app-real-1, current time : 1580294329910
+	$ curl http://127.0.0.1
+	app-real-2, current time : 1580294330563
+	```  
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-7.png)-->	
+	<!--![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-8.png)-->
+	
+- `webapp-real` 서비스를 `windowforsun/test-web:v1` 이미지로 업데이트를 할때 상황에 대한 테스트는 아래와 같다.
+	- 이미지 업데이트를 위해 `docker service update --image windowforsun/test-web:v1` 명령어를 수행해준다.
+	
+	```
+	$ docker service update --image windowforsun/test-web:v1 nginxdocker_webapp-real
+	nginxdocker_webapp-real
+	overall progress: 2 out of 2 tasks
+	1/2: running
+	2/2: running
 	```  
 	
-
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-7.png)
+	- 업데이트가 수행되는 동안 요청을 보내면 아래와같이 나온다.
 	
-	![그림 1]({{site.baseurl}}/img/docker/practice-nginxdockerhighavailability-8.png)
+	```
+	$ curl http://127.0.0.1
+	app-real-2, current time : 1580359841841
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580359842376
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580359842907
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580359843480
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580359843962
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580359844481
+	$ curl http://127.0.0.1
+	app-real-2, current time : 1580359845009
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580359845558
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580359846110
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580359846678
+	$ curl http://127.0.0.1
+	app-backup-1, current time : 1580359847212
+	$ curl http://127.0.0.1
+	app-backup-2, current time : 1580359847741
+	$ curl http://127.0.0.1
+	app-real-2, current time : 1580359848294
+	$ curl http://127.0.0.1
+	app-real-1, current time : 1580359848988
+	$ curl http://127.0.0.1
+	```  
 	
 
 ---
