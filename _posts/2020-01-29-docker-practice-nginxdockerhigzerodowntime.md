@@ -15,6 +15,7 @@ tags:
   - Nginx
   - Docker
   - Spring
+  - Zero-Downtime
 ---  
 
 ## Web Application
@@ -113,7 +114,8 @@ tags:
 	
 	networks:
 	  nginxdocker-net:
-	    external: true
+	    driver: overlay
+	    attachable: true
 	```  
 	
 - `docker-compose-app-real.yml`
@@ -135,8 +137,9 @@ tags:
 	
 	
 	networks:
-	  nginxdocker-net:
-	    external: true
+	  nginxdocker-net:	    
+	    driver: overlay
+	    attachable: true
 	```  
 	
 	- `hostname` 을 이름 + 클러스터링된 번호로 설정한다.
@@ -158,12 +161,13 @@ tags:
 	
 	networks:
 	  nginxdocker-net:
-	    external: true
+	    driver: overlay
+	    attachable: true
 	```  
 	
 	- `hostname` 을 이름 + 클러스터링된 번호로 설정한다.
 	
-- 3개의 `docker-compose` 파일에서 `network` 는 모두 동일하게 `nginxdocker-net` 에 `external: true` 를 사용하기 때문에 실행전 `nginxdocker-net` 네트워크를 생성해 주어야 한다.
+- 3개의 `docker-compose` 파일에서 `network` 는 모두 동일하게 `nginxdocker-net` 에 `external: true` 를 사용한다면, 따로 `nginxdocker-net` 네트워크를 생성해 주어야 한다.
 
 	```
 	$ docker network create --driver=overlay --attachable nginxdocker-net
@@ -307,7 +311,10 @@ tags:
 	2/2: running
 	```  
 	
-	- 업데이트가 수행되는 동안 요청을 보내면 아래와같이 나온다.
+	- 업데이트가 수행되는 동안 요청을 보내면 아래와 같은 결과가 나온다.
+		1. 먼저 업데이트를 수행하는 `app-real-1` 은 요청을 받지않고 `app-real-2` 만 요청을 받아 수행한다.
+		1. `app-real-2` 까지 업데이트를 수행하면, `app-backup-*` 에서 요청을 받아 수행한다.
+		1. `app-real-*` 업데이트가 모두 완료되면, `app-real-*` 에서 요청을 받아 수행한다.
 	
 	```
 	$ curl http://127.0.0.1
@@ -338,7 +345,6 @@ tags:
 	app-real-2, current time : 1580359848294
 	$ curl http://127.0.0.1
 	app-real-1, current time : 1580359848988
-	$ curl http://127.0.0.1
 	```  
 	
 
