@@ -352,6 +352,7 @@ public class RoundCalculatorImpl extends CalculatorImpl{
 - `RoundCalculatorImpl` 은 `CalculatorImpl` 의 기능(계산기의 기능)을 실제로 구현하는 클래스이다.
 - `Bridge` 패턴에서 `ConcreteImplementor` 역할을 수행한다.
 - `구현의 클래스 계층` 에서 `CalculatorImpl` 에 대한 새로운 구현을 추가 했다.
+- `Math.round()` 메소드를 사용해서 결과 값을 올림 처리해서 반환한다.
 
 ### 테스트
 
