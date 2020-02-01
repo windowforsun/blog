@@ -4,7 +4,7 @@ classes: wide
 title: "[DesignPattern 개념] Bridge Pattern"
 header:
   overlay_image: /img/designpattern-bg.jpg
-excerpt: '서로 다른(분리된) 클래스 계층에 다리 역할을 하는 Bridge 패턴에 대해 알아보자'
+excerpt: '서로 다른(분리된) 클래스 계층을 이어주는 Bridge 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
