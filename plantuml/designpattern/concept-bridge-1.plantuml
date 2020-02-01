@@ -1,0 +1,30 @@
+@startuml
+
+class Abstraction {
+	impl
+
+	method1()
+	method2()
+	method3()
+}
+
+abstract class Implementor {
+	{abstract} implMethodA()
+	{abstract} implMethodB()
+}
+
+class RefineAbstraction {
+	refineMethodA()
+	refineMethodB()
+}
+
+class ConcreteImplementor {
+	implMethodA();
+	implMethodB();
+}
+
+Implementor <--o Abstraction
+Abstraction <|-- RefineAbstraction
+Implementor <|-- ConcreteImplementor
+
+@enduml

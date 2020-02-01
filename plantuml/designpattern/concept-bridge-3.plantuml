@@ -1,0 +1,50 @@
+@startuml
+
+abstract class CalculatorImpl {
+	{abstract} double plus(double a, double b)
+	{abstract} double minus(double a, double b)
+	{abstract} double multiply(double a, double b)
+}
+
+class Calculator {
+	CalculatorImpl impl
+
+	Calculator(CalculatorImpl impl)
+	double plus(double a, double b)
+	double minus(double a, double b)
+	double multiply(double a, double b)
+}
+
+class AdvancedCalculator {
+	AdvancedCalculator(CalculatorImpl impl)
+	double advancedPlus(double a, double b, double c)
+	double advancedMinus(double a, double b, double c)
+	double advancedMultiply(double a, double b, double c)
+}
+
+class MoreAdvancedCalculator {
+	MoreAdvancedCalculator(CalculatorImpl impl)
+	double moreAdvancedPlus(double a, double b, double c, double d)
+	double moreAdvancedMinus(double a, double b, double c, double d)
+	double moreAdvancedMultiply(double a, double b, double c, double d)
+}
+
+class SimpleCalculatorImpl {
+	double plus(double a, double b)
+	double minus(double a, double b)
+	double multiply(double a, double b)
+}
+
+class RoundCalculatorImpl {
+	double plus(double a, double b)
+	double minus(double a, double b)
+	double multiply(double a, double b)
+}
+
+CalculatorImpl <--o Calculator
+Calculator <|-- AdvancedCalculator
+AdvancedCalculator <|-- MoreAdvancedCalculator
+CalculatorImpl <|-- SimpleCalculatorImpl
+CalculatorImpl <|-- RoundCalculatorImpl
+
+@enduml
