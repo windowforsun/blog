@@ -1,0 +1,29 @@
+@startuml
+
+class SavingCalculator {
+	int initPrice
+	int month
+	double interestRate
+	Strategy strategy
+
+	SavingCalculator(int initPrice, int month, double interestRate, Strategy strategy)
+	double calculatePrice()
+}
+
+interface Strategy {
+	{abstract} double calculateMaturityPrice(int initPrice, int month, double interestRate)
+}
+
+class SimpleRateStrategy {
+	double calculateMaturityPrice(int initPrice, int month, double interestRate)
+}
+
+class CompoundRateStrategy {
+	double calculateMaturityPrice(int initPrice, int month, double interestRate)
+}
+
+Strategy <--o SavingCalculator
+Strategy <|.. SimpleRateStrategy
+Strategy <|.. CompoundRateStrategy
+
+@enduml
