@@ -1,0 +1,18 @@
+@startuml
+
+abstract class AbstractClass {
+	{abstract} methodA()
+}
+
+class ConcreteClass {
+	methodA()
+}
+
+class AnotherConcreteClass {
+	methodA()
+}
+
+AbstractClass <|-- ConcreteClass
+AbstractClass <|-- AnotherConcreteClass
+
+@enduml

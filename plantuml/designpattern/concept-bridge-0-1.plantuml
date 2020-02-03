@@ -1,0 +1,13 @@
+@startuml
+
+class Base {
+	methodA();
+}
+
+class BaseGood {
+	methodGoodA();
+}
+
+Base <|-- BaseGood
+
+@enduml
