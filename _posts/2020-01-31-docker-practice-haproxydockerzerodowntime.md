@@ -112,6 +112,7 @@ tags:
 	```  
 	
 	- `webapp` 서비스에서 `SERVICE_PORTS` 환경 변수는 쉼표를 구분자로 여러개 설정도 가능하다.
+	- `webapp` 서비스의 hostname 은 `app-{{.Task.Slot}}` 으로 이름과 클러스터링 번호로 구성한다.
 	- `haproxy` 서비스에서 `BALANCE` 환경 변수의 기본 값은 `roundrobin` 이다.
 - `docker swarm` 사용을 위해 `docker swarm init` 명령어로 활성화 시켜준다.
 

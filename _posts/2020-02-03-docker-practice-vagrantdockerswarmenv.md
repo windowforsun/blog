@@ -19,7 +19,7 @@ tags:
 - Host : Windows 10
 
 ## Docker Swarm 환경
-- `Docker Swarm` 은 단일 호스트 환경보다는 가진 의미처럼 많은 호스트들이 떼를 이루고 있는(분산) 구조에 적용하기 좋다.
+- `Docker Swarm` 은 단일 호스트 환경보다는 가진 의미처럼 많은 호스트들이 떼를 이루고 있는(분산) 구조에 적합하다.
 - 이런 `Docker Swarm` 을 사용하면서 익숙해 지기 위해서는 단일 환경에서 하는 테스트 만으론 부족할 수 있다.
 - 로컬 머신에서 분산환경을 구축하기 위해 `Vagrant` 와 `VirtualBox` 를 사용하고, `Docker Swarm` 을 테스트해 본다.
 - `Vagrant` 가 `VirtualBox` 를 사용해서 가상 머신을 띄우기 때문에 두가지 모두 설치 해야 한다.
@@ -38,6 +38,7 @@ tags:
 - [Vagrant](https://www.vagrantup.com/downloads.html) 에서 설치 파일을 통해 설치를 할 수 있다.
 
 ## Vagrant 구성하기
+- 지금부터 모든 명령어는 Windows 명령 프롬프트 또는 Windows PowerShell, Git Bash 에서 실행한다.
 - `Vagrant` 는 스크립트를 통해 VM 환경을 구성할 수 있기 때문에, `Docker Swarm` 환경 구성에 사용할 스크립트는 아래와 같이 다운 받아 사용한다.
 
 	```
