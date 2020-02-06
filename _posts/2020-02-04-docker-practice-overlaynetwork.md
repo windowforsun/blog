@@ -15,24 +15,40 @@ tags:
 ---  
 
 
-## Docker Swarm 의 기본 네트워크
-- `Swarm` 을 통해 서비스를 구성하고 배포하면 `ingress`, `docker_gwbridge` 라는 네트워크가 자동으로 생성된다.
-
-### ingress
-- overlay 네트워크 드라이버이다.
-- `Swarm` 에 구성된 서비스들의 네트워크 트래픽을 통제한다.
-- `Swarm` 을 구성하는 기본 네트워크 드라이버이고, 서비스 생성시 별도로 네트워크 정보를 지정하지 않으면 자동으로 `ingress` 네트워크에 연결된다.
-
-### docker_gwbridge
-- `bridge` 네트워크 드라이버로 `Swarm` 에 참여한 `Docker Demon` 을 연결해주는 역할을 한다.
-	- `Swarm` 에 참여한 호스트(node) 를 연결하는 역할
-	
 
 ## Overlay Network 란
 - Overlay Network 는 도커 데몬 호스트들 간의 분산 네트워크를 구성해 준다.
 - 호스트 네트워크의 앞단에 있어, 각 호스트에 있는 컨테이너 간 통신과 안전한 통신이 가능하도록 한다.
 - 일반적인 `bridge` 네트워크 처럼 `overlay` 또한 사용자 정의를 통해 네트워크를 생성할 수 있다.
 - `overlay` 를 사용하면 서비스, 스택에 구성된 컨테이너 외에 독립형으로 실행된 컨테이너와도 통신이 가능하다.
+
+## Docker Swarm 의 기본 네트워크
+- `Swarm` 을 통해 서비스를 구성하고 배포하면 `ingress`, `docker_gwbridge` 라는 네트워크가 자동으로 생성된다.
+
+### Ingress Network
+- `Service` 의 `Node` 들간에 Load Balancing 을 하는 Overlay Network 이다.
+- Docker Swarm 에 속한 `Node` 가 노출된 포트로 요청을 받게 되면, 해당 요청을 IPVS 라는 모듈로 전달하고, 모듈이 Service 에 참여한 모든 IP 주소를 추적해서 그중 하나에게 요청을 Routing 한다.
+- Ingress Network 는 Docker Swarm 을 Init 하거나 Join 할때 자동으로 생성된다.
+- `Swarm` 에 구성된 서비스들의 네트워크 트래픽을 통제한다.
+- `Swarm` 을 구성하는 기본 네트워크 드라이버이고, 서비스 생성시 별도로 네트워크 정보를 지정하지 않으면 자동으로 `ingress` 네트워크에 연결된다.
+
+### docker_gwbridge
+- Overlay Network 에 속한 개별 Docker Daemon 의 물리적 네트워크에 여결하는 Bridge Network 이다.
+- `Service` 에 속한 컨테이너 들은 로컬 Docker Daemon Host 의 docker_gwbridge Network 에 연결된다.
+- docker_gwbridge Network 또한 Docker Swarm 을 Init, Join 할때 자동으로 생성된다.
+- `bridge` 네트워크 드라이버로 `Swarm` 에 참여한 `Docker Demon` 을 연결해주는 역할을 한다.
+	- `Swarm` 에 참여한 호스트(node) 를 연결하는 역할
+
+> ## Service Discovery
+> - 같은 네트워크에 있는 서비스들 끼리 이름을 통해 통신하는, Service Discovery 기능의 통신 방식은 아래와 같다.
+>   - 각 Host 에는 포함된 Container 의 위치를 제공하는 내부 DNS Server 를 가지고 있다.
+>   - 각 Container(Docker Swarm Task) 의 DNS Resolver 가, DNS 쿼리를 Docker Engine(DNS Server 역할) 로 전달한다.
+>   - Docker Engine 은 DNS 쿼리가 Network 에 포함된 Container 에 대한 요청인지 확인한다.
+>   - Docker Engine 은 key-value 저장소에서 Container, Task, Service 이름과 일치하는 IP 주소를 조회하고 이를(IP, Service Virtual IP) 요청자에게 반환한다.
+> - Service Discovery 기능에 대한 동작은 같은 Network 일 떄만 가능하고, 같은 Network 에 위치하지 않다면 Container/Task 끼리는 주소를 확인할 수 없다.
+>   - 동일한 Network 에 있는 Container/Task 들만 내장 DNS 기능을 사용할 수 있다.
+> - 동일한 Network 에 속하지 않았다면 Docker Engine 은 기본 DNS Server 로 DNS 쿼리를 전달한다.
+> - 
 
 ## Overlay Network 테스트
 - 서비스와 독립형 컨테이너를 각각 띄우고, `overlay` 를 통해 네트워크가 가능한지 테스트 해본다.
