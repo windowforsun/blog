@@ -138,7 +138,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	
 	
 	Last login: Thu Feb  6 04:58:06 2020 from 10.0.2.2
-	$ sudo docker swarm init --advertise 192.168.100.10
+	vagrant@manager:~$ sudo docker swarm init --advertise 192.168.100.10
 	unknown flag: --advertise
 	See 'docker swarm init --help'.
 	vagrant@manager:~$ sudo docker swarm init --advertise-addr 192.168.100.10
@@ -157,7 +157,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 - `docker info` 를 통해 현재 Docker Engine 의 상태를 확인 할 수 있는데, Manager Node 에서 결과는 아래와 같다.
 	
 	```
-	$ sudo docker info
+	vagrant@manager:~$ sudo docker info
 	
 	.. 생략 ..
 	
@@ -193,7 +193,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 - `docker node ls` 를 통해 현재 Swarm Cluster 로 구성된 Node 를 조회하면 아래와 같다.
 
 	```
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VER	SION
 	yenkumtb6whjug68c32babba9 *   manager             Ready               Active              Leader              19.03.5
 	```  
@@ -205,19 +205,19 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 
 	```
 	Worker Node 를 추가할 때 사용하는 token 조회
-	$ sudo docker swarm join-token worker
+	vagrant@manager:~$ sudo docker swarm join-token worker
 	To add a worker to this swarm, run the following command:
 	
 	    docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642g6edu6j2eqrgdvr9 192.168.100.10:2377
 	
 	Manager Node 추가할 때 사용하는 token 조회
-	$ sudo docker swarm join-token manager
+	vagrant@manager:~$ sudo docker swarm join-token manager
 	To add a manager to this swarm, run the following command:
 	
 	    docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8wxl64or7q4s5hykgs8b3eakd 192.168.100.10:2377
 	
 	-q 옵션을 사용하면 token 자체만 조회 할 수 있다.
-	$ sudo docker swarm join-token worker -q
+	vagrant@manager:~$ sudo docker swarm join-token worker -q
 	SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642g6edu6j2eqrgdvr
 	```  
 	
@@ -242,7 +242,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	
 	
 	Last login: Mon Feb  3 07:09:30 2020 from 10.0.2.2
-	$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
+	vagrant@worker1:~$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
 	g6edu6j2eqrgdvr9 192.168.100.10:2377
 	        This node joined a swarm as a worker.
 	vagrant@worker1:~$ exit
@@ -267,7 +267,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	
 	
 	Last login: Mon Feb  3 07:09:56 2020 from 10.0.2.2
-	$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
+	vagrant@worker2:~$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
 	g6edu6j2eqrgdvr9 192.168.100.10:2377
 	        This node joined a swarm as a worker.
 	```  
@@ -276,7 +276,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 
 	```
 	Worker Node 1
-	$ sudo docker info
+	vagrant@worker1r:~$ sudo docker info
 	
 	.. 생략 ..
 	
@@ -290,7 +290,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	.. 생략 ..
 	
 	Worker Node 2
-	$ sudo docker info
+	vagrant@worker2:~$ sudo docker info
 	
 	.. 생략 .. 
 	
@@ -307,7 +307,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 - Manager Node 에서 `docker node ls` 를 통해 현재 Swarm Cluster 의 구성을 조회하면 아래와 같다.
 
 	```
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VER	SION
 	yenkumtb6whjug68c32babba9 *   manager             Ready               Active              Leader              19.03.5
 	no6ck7n6btli6vzcbs5csmoj8     worker1             Ready               Active                                  19.03.5
@@ -321,9 +321,9 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 
 	```
 	Worker Node 1
-	$ sudo docker swarm leave
+	vagrant@worker1:~$ sudo docker swarm leave
 	Node left the swarm.
-	$ sudo docker info
+	vagrant@worker1:~$ sudo docker info
 	
 	.. 생략 ..
 	
@@ -332,9 +332,9 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	.. 생략 ..
 	
 	Worker Node 2
-	$ sudo docker swarm leave
+	vagrant@worker2:~$ sudo docker swarm leave
 	Node left the swarm.
-	$ sudo docker info
+	vagrant@worker2:~$ sudo docker info
 	
 	.. 생략 ..
 	
@@ -343,12 +343,12 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	.. 생략 ..
 	
 	Manager Node
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VER	SION
 	yenkumtb6whjug68c32babba9 *   manager             Ready               Active              Leader              19.03.5
 	no6ck7n6btli6vzcbs5csmoj8     worker1             Down                Active                                  19.03.5
 	pysqwwd8wf59n56lxi10vr55m     worker2             Down                Active                                  19.03.5
-	$ sudo docker swarm leave -f
+	vagrant@manager:~$ sudo docker swarm leave -f
 	Node left the swarm.
 	
 	.. 생략 ..

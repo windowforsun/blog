@@ -24,7 +24,7 @@ tags:
 - Service 를 생성하는 방법은 `docker service create <image>` 로 가능하다.
 
 	```
-	$ sudo docker service create --name swarmservice-nginx -p 80:80 nginx
+	vagrant@manager:~$ sudo docker service create --name swarmservice-nginx -p 80:80 nginx
 	5ha1lb0qoph0ip5dx27ljp1l2
 	overall progress: 1 out of 1 tasks
 	1/1: running   [==================================================>]
@@ -36,7 +36,7 @@ tags:
 - 현재 Swarm 에서 구성된 Service 의 조회는 `docker service ls` 로 가능하다.
 
 	```
-	$ sudo docker service ls
+	vagrant@manager:~$ sudo docker service ls
 	ID                  NAME                 MODE                REPLICAS            IMAGE               PORTS
 	5ha1lb0qoph0        swarmservice-nginx   replicated          1/1                 nginx:latest
 	```  
@@ -44,7 +44,7 @@ tags:
 - `docker container ls` 혹은 `docker ps` 를 통해 현재 Host 에서 구동중인 컨테이너를 조회하면 아래와 같다.
 
 	```
-	$ sudo docker ps
+	vagrant@manager:~$ sudo docker ps
 	CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS	     NAMES
 	56899f20e13b        nginx:latest        "nginx -g 'daemon of…"   32 seconds ago      Up 31 seconds       80/tcp	 swarmservice-nginx.1.drwgvd16xeq9xenzls6tp8ay9
 	```  
@@ -54,7 +54,7 @@ tags:
 - Service 하나에서 구동중인 Task 의 확인은 `docker service ps <서비스이름>` 이다.
 
 	```
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                   IMAGE               NODE                DESIRED STATE       CURRENT STATE	        ERROR               PORTS
 	drwgvd16xeq9        swarmservice-nginx.1   nginx:latest        manager             Running             Running 18 minutes ago
 	```  
@@ -62,7 +62,7 @@ tags:
 - `curl` 명령어를 통해 띄워진 Nginx 서비스에 요청을 보내면 아래처럼 Nginx 기본 페이지 결과를 응답해 준다.
 
 	```
-	$ curl http://localhost
+	vagrant@manager:~$ curl http://localhost
 	<!DOCTYPE html>
 	<html>
 	<head>
@@ -94,12 +94,12 @@ tags:
 - 현재 생성된(구동 중인) Service 를 삭제(중지)하는 방법은 `docker service rm <서비스이름또는아이디>` 로 가능하다.
 
 	```
-	$ sudo docker service ls
+	vagrant@manager:~$ sudo docker service ls
 	ID                  NAME                 MODE                REPLICAS            IMAGE               PORTS
 	zkesjxt37vo8        swarmservice-nginx   replicated          1/1                 nginx:latest        *:80->80/tcp
 	
 	# docker service rm zkesj 아이디로도 삭제 가능하다.
-	$ sudo docker service rm swarmservice-nginx
+	vagrant@manager:~$ sudo docker service rm swarmservice-nginx
 	swarmservice-nginx	
 	$ sudo docker service ls
 	ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
@@ -113,7 +113,7 @@ tags:
 - Docker 관련 구성 요소들에는 대부분 `inspect` 을 통해 구성 요소의 자세한 정보를 볼 수 있는 것처럼, Service 도 동일하다.
 
 	```
-	$ sudo docker service inspect --pretty swarmservice-nginx
+	vagrant@manager:~$ sudo docker service inspect --pretty swarmservice-nginx
 	
 	ID:             s2paxecw7ylfvvvoseweohp45
 	Name:           swarmservice-nginx
@@ -152,15 +152,15 @@ tags:
 
 	```
 	.. scale 조정 전 확인 ..
-	$ sudo docker service ls
+	vagrant@manager:~$ sudo docker service ls
 	ID                  NAME                 MODE                REPLICAS            IMAGE               PORTS
 	s2paxecw7ylf        swarmservice-nginx   replicated          1/1                 nginx:latest        *:80->80/tcp
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                   IMAGE               NODE                DESIRED STATE       CURRENT STATE	        ERROR               PORTS
 	drwgvd16xeq9        swarmservice-nginx.1   nginx:latest        manager             Running             Running 20 minutes ago
 	
 	.. scale 5개로 확장 ..
-	$ sudo docker service scale swarmservice-nginx=5
+	vagrant@manager:~$ sudo docker service scale swarmservice-nginx=5
 	swarmservice-nginx scaled to 5
 	overall progress: 5 out of 5 tasks
 	1/5: running   [==================================================>]
@@ -171,10 +171,10 @@ tags:
 	verify: Service converged
 	
 	.. scale 확장 후 확인 ..
-	$ sudo docker service ls
+	vagrant@manager:~$ sudo docker service ls
 	ID                  NAME                 MODE                REPLICAS            IMAGE               PORTS
 	s2paxecw7ylf        swarmservice-nginx   replicated          5/5                 nginx:latest        *:80->80/tcp
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                   IMAGE               NODE                DESIRED STATE       CURRENT STATE	        ERROR               PORTS
 	drwgvd16xeq9        swarmservice-nginx.1   nginx:latest        manager             Running             Running 21 minutes ago
 	xdwf8vkk2n5y        swarmservice-nginx.2   nginx:latest        manager             Running             Running 24 seconds ago
@@ -189,7 +189,7 @@ tags:
 - 한 Service 에 구성된 Task(Container) 에서 발생하는 로그를 확인하는 방법은 `logs` 를 사용하면 된다.
 
 	```
-	$ sudo docker service logs swarmservice-nginx
+	vagrant@manager:~$ sudo docker service logs swarmservice-nginx
 	swarmservice-nginx.1.drwgvd16xeq9@manager    | 10.0.0.2 - - [06/Feb/2020:07:44:05 +0900] "GET / HTTP/1.1" 200 612 "-" "curl/7.47.0" "-"
 	swarmservice-nginx.1.drwgvd16xeq9@manager    | 10.0.0.2 - - [06/Feb/2020:07:44:16 +0900] "GET / HTTP/1.1" 200 612 "-" "curl/7.47.0" "-"
 	swarmservice-nginx.2.xdwf8vkk2n5y@manager    | 10.0.0.2 - - [06/Feb/2020:07:44:16 +0900] "GET / HTTP/1.1" 200 612 "-" "curl/7.47.0" "-"
@@ -207,7 +207,7 @@ tags:
 
 	```
 	.. 현재 Service Task 확인 ..
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                   IMAGE               NODE                DESIRED STATE       CURRENT STATE        ERROR               PORTS
 	dtyilrkv1q69        swarmservice-nginx.1   nginx:latest        manager             Running             Running 38 seconds ago
 	qf4zbbu89r3n        swarmservice-nginx.2   nginx:latest        manager             Running             Running 15 seconds ago
@@ -216,7 +216,7 @@ tags:
 	msyyxjr0jatc        swarmservice-nginx.5   nginx:latest        manager             Running             Running 15 seconds ago
 	
 	.. Service 이미지 업데이트 ..
-	$ sudo docker service update --image nginx:1.16 swarmservice-nginx
+	vagrant@manager:~$ sudo docker service update --image nginx:1.16 swarmservice-nginx
 	swarmservice-nginx
 	overall progress: 5 out of 5 tasks
 	1/5: running   [==================================================>]
@@ -227,7 +227,7 @@ tags:
 	verify: Service converged
 	
 	.. 업데이트 후 Service Task 확인 ..
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                       IMAGE               NODE                DESIRED STATE       CURRENT STATE	             ERROR               PORTS
 	zoii7pjn8omw        swarmservice-nginx.1       nginx:1.16          manager             Running             Running 29 seconds ago
 	dtyilrkv1q69         \_ swarmservice-nginx.1   nginx:latest        manager             Shutdown            Shutdown 30 seconds ago
@@ -245,7 +245,7 @@ tags:
 - 현재 Service 의 Inspector 를 확인해 보면 아래와 같다.
 
 	```
-	$ sudo docker service inspect --pretty swarmservice-nginx
+	vagrant@manager:~$ sudo docker service inspect --pretty swarmservice-nginx
 	
 	ID:             jkw9imb7k23om9yjmkllzgbvk
 	Name:           swarmservice-nginx
@@ -286,9 +286,9 @@ tags:
 	
 	```
 	.. 생성 할때도 동일하게 옵션을 부여하면 된다 ..
-	$ sudo docker service create --name swarmservice-nginx -p 80:80 --replicas=5 --update-delay 10s --update-parallelism=2 nginx
+	vagrant@manager:~$ sudo docker service create --name swarmservice-nginx -p 80:80 --replicas=5 --update-delay 10s --update-parallelism=2 nginx
 	
-	$ sudo docker service update --update-delay=10s --update-parallelism=2 swarmservice-nginx
+	vagrant@manager:~$ sudo docker service update --update-delay=10s --update-parallelism=2 swarmservice-nginx
 	swarmservice-nginx
 	overall progress: 5 out of 5 tasks
 	1/5: running   [==================================================>]
@@ -331,7 +331,7 @@ tags:
 - `docker service rollback <서비스이름>` 으로 수행 할수 있다.
 
 	```
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                       IMAGE               NODE                DESIRED STATE       CURRENT STATE	             ERROR               PORTS
 	zoii7pjn8omw        swarmservice-nginx.1       nginx:1.16          manager             Running             Running 27 minutes ago
 	dtyilrkv1q69         \_ swarmservice-nginx.1   nginx:latest        manager             Shutdown            Shutdown 27 minutes ago
@@ -344,7 +344,7 @@ tags:
 	6g982qiy3eg6        swarmservice-nginx.5       nginx:1.16          manager             Running             Running 27 minutes ago
 	msyyxjr0jatc         \_ swarmservice-nginx.5   nginx:latest        manager             Shutdown            Shutdown 27 minutes ago
 	
-	$ sudo docker service rollback swarmservice-nginx
+	vagrant@manager:~$ sudo docker service rollback swarmservice-nginx
 	swarmservice-nginx
 	rollback: manually requested rollback
 	overall progress: rolling back update: 5 out of 5 tasks
@@ -355,7 +355,7 @@ tags:
 	5/5: running   [>                                                  ]
 	verify: Service converged
 	
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                       IMAGE               NODE                DESIRED STATE       CURRENT STATE	                 ERROR               PORTS
 	b1pnsiezijro        swarmservice-nginx.1       nginx:latest        manager             Running             Running 18 seconds ago
 	f0w1kt4ups7i         \_ swarmservice-nginx.1   nginx:1.16          manager             Shutdown            Shutdown 19 seconds ago
@@ -391,7 +391,7 @@ tags:
 - `docker info` 를 통해 현재 Docker Engine 에 설정된 Task 에 몇개의 기록을 저장할지에 대한 정보를 확인 할 수 있다.
 
 	```
-	$ sudo docker info
+	vagrant@manager:~$ sudo docker info
 	
 	.. 생략 ..
 	
@@ -414,9 +414,9 @@ tags:
 - 커스텀하게 변경이 필요하다면 `docker swarm update --task-history-limit` 를 통해 변경 가능하다.
 	
 	```
-	$ sudo docker swarm update --task-history-limit 3
+	vagrant@manager:~$ sudo docker swarm update --task-history-limit 3
 	Swarm updated.
-	$ docker info
+	vagrant@manager:~$ docker info
 	
 	.. 생략 ..
 	
@@ -441,11 +441,11 @@ tags:
 - Worker Node 1 을 Swarm Cluster 에 추가하고 서비스를 띄우면 아래와 같다.
 
 	```
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
 	z2h43qxvvr5u0poie80zjc5kg *   manager             Ready               Active              Leader              19.03.5
 	5x09cav0mappy087xxjm4rcb1     worker1             Ready               Active                                  19.03.5
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                   IMAGE               NODE                DESIRED STATE       CURRENT STATE	        ERROR               PORTS
 	myo364utv0pm        swarmservice-nginx.1   nginx:latest        manager             Running             Running 25 seconds ago
 	xc42dpnjlryc        swarmservice-nginx.2   nginx:latest        manager             Running             Running 27 seconds ago
@@ -459,9 +459,9 @@ tags:
 	- `drain` 명령어는 Manager Node 에서 수행한다.
 	
 	```
-	$ sudo docker node update --availability drain worker1
+	vagrant@manager:~$ sudo docker node update --availability drain worker1
 	worker1
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
 	z2h43qxvvr5u0poie80zjc5kg *   manager             Ready               Active              Leader              19.03.5
 	5x09cav0mappy087xxjm4rcb1     worker1             Ready               Drain                                   19.03.5
@@ -471,7 +471,7 @@ tags:
 - Swarm Cluster 에서 실행 중인던 `swarmservice-nginx` 를 조회하면 아래와 같다.
 	
 	```
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                       IMAGE               NODE                DESIRED STATE       CURRENT STATE	                 ERROR               PORTS
 	myo364utv0pm        swarmservice-nginx.1       nginx:latest        manager             Running             Running 6 minutes ago
 	xc42dpnjlryc        swarmservice-nginx.2       nginx:latest        manager             Running             Running 6 minutes ago
@@ -486,13 +486,13 @@ tags:
 - `worker1` Node 의 변경 작업이 완료후 Drain 상태에서 다시 활성화를 시키는 명령어는 `active` 이다.
 
 	```
-	$ sudo docker node update --availability active worker1
+	vagrant@manager:~$ sudo docker node update --availability active worker1
 	worker1
-	$ sudo docker node ls
+	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
 	z2h43qxvvr5u0poie80zjc5kg *   manager             Ready               Active              Leader              19.03.5
 	5x09cav0mappy087xxjm4rcb1     worker1             Ready               Active                                  19.03.5
-	$ sudo docker service ps swarmservice-nginx
+	vagrant@manager:~$ sudo docker service ps swarmservice-nginx
 	ID                  NAME                       IMAGE               NODE                DESIRED STATE       CURRENT STATE	            ERROR               PORTS
 	myo364utv0pm        swarmservice-nginx.1       nginx:latest        manager             Running             Running 8 minutes ago
 	xc42dpnjlryc        swarmservice-nginx.2       nginx:latest        manager             Running             Running 8 minutes ago
