@@ -15,10 +15,6 @@ tags:
   - Cluster
 ---  
 
-
-
-
-
 ## Docker Swarm Cluster
 - 클러스터를 사용할 때 아래 2가지 관점에 대한 고려가 필요하다.
 	- `서비스의 가용성` : 클러스터를 이루고 있는 구성 중 일부분에 장애가 발생했을 때, 전체 서비스에 영향을 주지 않아야 한다.
@@ -33,34 +29,49 @@ tags:
 ### HA(High Availability) 클러스터
  - 가용성 클러스터는 클러스터의 구성 중 일부가 불능 상태가 되더라도 수행 하는 동작은 정상적으로 수행하며 최소한의 영향만 미치도록 하는 것이다.
  - 이런 가용성 클러스터에는 아래와 같은 특징 및 기능이 필요하다.
- * 이중화 : 구성의 모든 자원이 둘 이상인 상태에서, 그 중하나가 
+ * 이중화 : 구성의 모든 자원이 둘 이상인 상태에서, 그 중 일부에 문제가 발생했을 때도 다른 부분으로 업무 수행이 가능해야 한다. 서버 장비 뿐만 아니라, 네트워크, 저장소 등 전체 시스템 구성에 모두 이뤄져야 한다.
+ * 동기화 : 업무 수행에 필요한 데이터, 클러스터 관련 정보등 모든 데이터가 특정 자원에 대해 Share Storage, 실시간 동기화등 을 통해 독립성을 보장해야한다.  
+ * 지능화 : 장애가 발생했을 때 장애 지점을 파악하거나, 복구 방법 등을 파악하고 처리할 수 있어야 한다.
+ * 자동화 : 이중화, 동기화, 지능화가 모두 만족 된상황에서 관련 처리가 관리자의 개입 없이 가능하고, 장애 시간을 줄일 수 있어야 한다.
  
+### Swarm Cluster
+- Swarm Cluster 는  Worker Node 에서 하나의 Service 를 Task 로 분할하여 부하분산을 수행한다.
+- Manager Node 는 이런 구성에서 안전적인 작업 수행을 위해 아래와 같은 구현 사항을 가지고 있다.
+* 이중화 : 하나 이상의 Manager Node 를 가질 수 있는 구조를 통해, Swarm Cluster 에 구성돼 있는 모든 Node 들은 상황에 따라 Manager Node 로 쉽게 전환하여 Manager Node 의 작업을 수행 할 수 있다.
+* 동기화 : 하나 이상의 Manager Node 인 Manager Pool 안에서 각 Manager Node 들은 상호간 상태 정보를 별도의 Storage 없이 실시간으로 동기화 한다. 
+* 지능화 : 장애 대한 처리를 위해 [Raft Concensus Algorithm](http://thesecretlivesofdata.com/raft/) 를 사용한다. Manager Pool 에서 과반수 이상이 유효한 경우, 서비스를 멈추지 않고 제공이 가능하고 이러한 특징으로 Manager Pool 의 수는 홀수개를 권장한다.
+* 자동화 : Task Scheduler 를 통해 장애 상황에서 클러스터의 안정성 유지와 업무의 연속성을 보장한다.
  
- 
- 
- 
- 
- 
- 
- 개념 설명~!~!~!~!~!~!
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
+### Swarm Cluster 구성요소
+- Swarm Cluster 의 특징 중 하나는 아주 간단한 Manager Node, Worker Node 의 구조를 가지고 있다는 점이다.
+- Manager Node 는 Swarm Cluster 의 관리 기능을 수행하고, Worker Node 에서는 실제로 업무를 수행하는 Container 가 구동 된다.
+- 한 호스트에서 Swarm Cluster 를 처음 생성 했다면, 해당 호스트는 바로 Manager Node 의 역할을 수행한다.
+- Manager Node 는 아래와 같은 역할을 수행한다.
+	- Swarm Cluster 와 사용자간의 인터페이스 역할을 수행하며, 사용자로 부터 Swarm Cluster 관련 명령을 받아 이를 Docker Engine 을 통해 수행한다.
+	- Swarm Cluster 를 구성하고 있는 Node 를 가입, 탈퇴 등을 처리하는 Node Manager 역할을 수행한다.
+	- 사용자가 구성한 Service 에 맞게 Worker Node 들에게 Task 를 분배해주는 Task Scheduler 역할과 Service 의 생명주기를 관리한다.
+	- 다수의 Manager Node 들과 클러스터 정보를 동기화하며 클러스터의 가용성을 관리하는 Swarm Cluster Manager 역할을 수행한다.
+	
+### Swarm Cluster 구성 방법
+> #### Split Brain
+> - [Split Brain](https://en.wikipedia.org/wiki/Split-brain) 이란 클러스터 환경에서 장애가(네트워크 단절) 발생했을 때, 모든 노드들이 자신이 primary 라고 인식하는 상황을 뜻한다.
+> - Swarm Cluster 에서는 짝수개의 Manager Node 가 있는 생태에서 절반의 Manager Node 에 장애가 발생했을 때, 현재 상황이 Manager Pool 이 과반수 인지 아닌지 판별하기 여려운 상황이다.
+
+#### Manager Node 와 Worker Node 가 분리된 구성
+
+![그림 1]({{site.baseurl}}/img/docker/practice-dockerswarmcluster-1.png)
+
+- 위와 같은 구성은 작은 규모보다는 큰 규모에 어울리는 구성이다.
+- Manager Pool 은 Swarm Cluster 를 관리하는 역할만 수행하고, Worker Pool 은 업무를 수행하는 역할만 수행한다.
+- 이렇게 Manager Node 와 Worker Node 를 분리하는 구성은 `제어의 가용성` 확보에 유리하지만, Swarm Cluster 특성상 홀수개의 Manager Pool 을 유지 해야 한다는 점을 유의해야 한다.
+
+#### Manager Node 와 Worker Node 가 혼합된 구성
+
+![그림 1]({{site.baseurl}}/img/docker/practice-dockerswarmcluster-2.png)
+
+- 적은 규모에 적합한 구성이다.
+- Manager Node 가 Worker Node 의 역할까지 수행하기 때문에 비용적 측면이나, 보다 유연한 클러스터 구성이 가능하다.
+  
 ## Manager Node 가 짝수개 일때 Swarm Cluster
 - Swarm Cluster 의 경우 Manager Node 의 개수가 짝수개일 때, `Split Brain` 상황으로 인해 가용성 기능 제공이 불가할 수 있다고 언급했었다.
 - 실제로 Swarm Cluster 를 2개의 Manager Node 로 구성해서 이를 테스트 해본다.
@@ -385,5 +396,6 @@ tags:
 
 ---
 ## Reference
-
+[Administer and maintain a swarm of Docker Engines](https://docs.docker.com/engine/swarm/admin_guide/)  
+[How nodes work](https://docs.docker.com/engine/swarm/how-swarm-mode-works/nodes/)  
 	
