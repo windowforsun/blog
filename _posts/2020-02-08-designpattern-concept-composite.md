@@ -4,7 +4,7 @@ classes: wide
 title: "[DesignPattern 개념] Composite Pattern"
 header:
   overlay_image: /img/designpattern-bg.jpg
-excerpt: ''
+excerpt: '내용물을 포함하는 상자와 내용물을 동일시해서 재귀적인 구조로 다룰 수 있도록하는 Composite 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
