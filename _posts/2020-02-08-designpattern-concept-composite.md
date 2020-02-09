@@ -151,7 +151,7 @@ public class Node extends Entry {
 ### 테스트
 - 테스트에서 사용할 트리의 구조는 아래 그림과 같다.
 
-	![그림 1]({{site.baseurl}}/img/designpattern/2/concept_composite_2.png)
+	![그림 1]({{site.baseurl}}/img/designpattern/2/concept_composite_3.png)
 
 ```java
 public class CompositeTest {
