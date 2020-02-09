@@ -1,0 +1,27 @@
+@startuml
+
+abstract class Component {
+	{abstract} method1()
+	{abstract} method2()
+	compositeMethod1()
+	compositeMethod12()
+}
+
+class Leaf {
+	method1()
+	method2()
+}
+
+class Composite {
+	children
+	method1()
+	method2()
+	compositeMethod1()
+	compositeMethod2()
+}
+
+Component <|-- Leaf
+Component <|-- Composite
+Component <--o Composite
+
+@enduml

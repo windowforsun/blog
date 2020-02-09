@@ -1,0 +1,29 @@
+@startuml
+
+abstract class Entry {
+	int num
+	Entry (int num)
+	{abstract} int getCount()
+	{abstract} int getSum()
+	Entry add(Entry entry)
+}
+
+class Leaf {
+	Leaf(int num)
+	int getCount()
+	int getSum()
+}
+
+class Tree {
+	List<Entry> children
+	Tree(int num)
+	int getCount()
+	int getSum()
+	Entry add(Entry node)
+}
+
+Entry <|-- Leaf
+Entry <|-- Tree
+Entry <--o Tree
+
+@enduml
