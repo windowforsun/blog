@@ -14,16 +14,16 @@ class Leaf {
 	int getSum()
 }
 
-class Tree {
+class Node {
 	List<Entry> children
-	Tree(int num)
+	Node(int num)
 	int getCount()
 	int getSum()
 	Entry add(Entry node)
 }
 
 Entry <|-- Leaf
-Entry <|-- Tree
-Entry <--o Tree
+Entry <|-- Node
+Entry <--o Node
 
 @enduml
