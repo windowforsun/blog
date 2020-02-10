@@ -172,7 +172,7 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 
 ### 소스코드
 
-![그림 1]({{site.baseurl}}/img/algorithm/practice-randomweightselector-1.png)
+![그림 1]({{site.baseurl}}/img/algorithm/practice_randomweightselector_1.png)
 
 #### ProtoWeightSelector
 
