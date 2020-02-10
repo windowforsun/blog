@@ -1,0 +1,28 @@
+@startuml
+
+class WeightEntry{
+	key
+	weight
+}
+
+abstract class WeightSelector {
+	entryMap
+	totalWeight
+	random
+	WeightSelector()
+	addEntry(entry)
+	removeEntry(key)
+	getRandomWeight()
+	{abstract} getSelectedKeyList(needCount, isDuplicated)
+	checkProcess(needCount, isDuplicated)
+	processSelectKey(needCount, isDuplicated)
+}
+
+class ProtoWeightSelector {
+	getSelectedKeyList(needCount, isDuplicated)
+}
+
+WeightSelector <|-- ProtoWeightSelector
+WeightEntry <--o WeightSelector
+
+@enduml

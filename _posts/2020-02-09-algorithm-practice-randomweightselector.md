@@ -17,7 +17,7 @@ use_math : true
 ## 가중치 기반 랜덤 선출
 - 게임 기획에서 `특정 가중치에 의해 랜덤으로 선출` 을 하는 방식은 자주 등장한다.
 - 아이템 뽑기, 아이템 강화, 상점 리스트 선출, 캐릭터 능력치 수치 등 다양한 기획에서 등장한다.
-- 몇번의 개발을 경험하며 일반적으로 개발하는 방법과 자체적으로 개선한 방법에 대해 소개한다.
+- 관련 개발을 하며 초기버전과 이를 개선한 방법에 대해 소개한다.
 - 여기서 가중치라는 의미는 확률과도 밀접한 관련이 있다. 가중치는 전체 가중치를 가진 풀(Pool) 중에서 각 요소들이 얼마의 확률을 가지고 있는지를 의미한다.
 - 가중치에 대한 확률이란, 각 요소의 가중치의 값이 바뀌거나 가중치의 요소가 추가/삭제가 될때마다 유동적으로 확률 값이 바뀌게 된다.
 
@@ -81,7 +81,7 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
         this.totalWeight -= this.entryMap.remove(key).getWeight();
     }
 
-    public long getRandomSelectWeight() {
+    public long getRandomWeight() {
         return Math.abs(this.random.nextLong()) % this.totalWeight;
     }
 
@@ -115,13 +115,14 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 - `Random` 클래스를 통해 랜덤 값을 사용한다.
 - `addEntry` 메소드는 `WeightEntry` 를 인자값으로 받아 `entryMap` 에 추가하는데, 추가할때 `totalWeight` 에 인자값의 가중치를 더해준다.
 - `removeEntry` 메소드는 인자값으로 가중치 정보의 키값을 받아 `entryMap` 에서 삭제하고, `totalWeight` 에서 가중치 만금 차감해준다.
+- `getRandomWeight()` 
 - `processSelectKey()` 메소드는 인자 값으로 선출할 개수와, 중복 허용 여부를 받아 `checkProcess()` 메소드와 `getSelectedKeyList()` 메소드를 사용해서 선출 된 키를 `List` 로 반환한다.
 	- `getSelectedKeyList()` 메소드는 하위 클래스에서 구현한 내용대로 키를 선출해 `List` 형식으로 반환한다.
 	- `checkProcess()` 메소드는 선출 전 유효성 검사를 수행한다.
 
 
 ## 초기 방식
-- 초기 개발버전에 사용했던 방식이고, 구현이 가장 간단한 방법이다.
+- 초기 개발버전에 사용했던 방식이고, 구현이 간단한 방법이다.
 - 예시로 3개의 키를 선출해 본다.
 - 아래와 같은 가중치 데이터가 있을 때, 모든 가중치의 합인 `totalWeight` 를 구한다.
 
@@ -130,68 +131,77 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 	weight|10|20|30|40 
 	
 	- `totalWeight` 는 100 이 된다.
-- 선출 할때 마다 0 ~ 100(`totlaWeight`) 중 랜덤 값을 하나 뽑고, 뽑힌 값을 `selectedWeight` 라고 한다.
-- `selectedWeight` 의 값이 50이라고 했을 때 `entryMap` 을 차례대로 순회하며 `selectedWeight` 보다 첫 번째로 큰 `weight` 의 `key` 를 구한다.
-	- 이때 순회하며 `selectedWeight` 보다 `weight` 값이 크지 않다면 `selectedWeight` 에 `key` 에 해당하는 `weight` 값을 빼준다.
+- 선출 할때 마다 0 ~ 100(`totlaWeight`) 중 랜덤 값을 하나 뽑고, 뽑힌 값을 `randomWeight` 라고 한다.
+- `randomWeight` 의 값이 50이라고 했을 때 `entryMap` 을 차례대로 순회하며 `randomWeight` 보다 첫 번째로 큰 `weight` 의 `key` 를 구한다.
+	- 이때 순회하며 `randomWeight` 보다 `weight` 값이 크지 않다면 `randomWeight` 에 `key` 에 해당하는 `weight` 값을 빼준다.
 
 	key|0|1|2|3
 	---|---|---|---|---
 	weight|10|20|30|40 
-	selectedWeight|50|40|20|.
+	randomWeight|50|40|20|.
 
-- `key` 가 2인 `weight` 값 30 이 `selectedWeight` 값 20보다 크기 때문에, 첫번째로 선출된 가중치의 `key` 는 2가 된다.
+- `key` 가 2인 `weight` 값 30 이 `randomWeight` 값 20보다 크기 때문에, 첫번째로 선출된 가중치의 `key` 는 2가 된다.
 - 선출된 가중치를 지우면 아래와 같이 되고, `totalWeight` 는 70이 된다.
 
 	key|0|1|3
 	---|---|---|---
-	selectedWeight|10|20|40 
+	weight|10|20|40 
 	
-- 다시 0 ~ 70(`totalWeight`) 중 랜덤 값을 뽑아 `selectedWeight` 의 값은 0 일때, 다시 `entryMap` 을 순회하며 `selectedWeight` 보다 크지만 가장 작은 값을 찾는다.
+- 다시 0 ~ 70(`totalWeight`) 중 랜덤 값을 뽑아 `randomWeight` 의 값은 0 일때, 다시 `entryMap` 을 순회하며 `randomWeight` 보다 크지만 가장 작은 값을 찾는다.
 
 	key|0|1|3
 	---|---|---|---
 	weight|10|20|40 
-	selectedWeight|0|.|.
+	randomWeight|0|.|.
 	
-- `key` 0 의 `weight` 인 10 이 0(`selectedWeight`) 보다 크기 때문에, 두번째 선출된 가중치의 `key` 는 0이 된다.
+- `key` 0 의 `weight` 인 10 이 0(`randomWeight`) 보다 크기 때문에, 두번째 선출된 가중치의 `key` 는 0이 된다.
 - 마지막으로 가중치를 지우면 아래와 같이 되고, `totalWeight` 는 60이 된다.
 
 	key|1|3
 	---|---|---
 	weight|20|40 
 	
-- 마지막으로 0 ~ 60(`totalWeight`) 중 랜덤 값을 뽑아 `selectedWeight` 의 값은 30 일때, 다시 `entryMap` 을 순회하며 `selectedWeight` 보다 크지만 가장 작은 값을 찾는다.
+- 마지막으로 0 ~ 60(`totalWeight`) 중 랜덤 값을 뽑아 `randomWeight` 의 값은 30 일때, 다시 `entryMap` 을 순회하며 `randomWeight` 보다 크지만 가장 작은 값을 찾는다.
 
 	key|1|3
 	---|---|---
 	weight|20|40 
-	selectedWeight|30|10
+	randomWeight|30|10
 	
-- `key` 3 의 `weight` 인 40 이 10(`selectedWeight`) 보다 크기 때문에, 마지막으로 선출된 가중치의 `key` 는 3이 되서 최종적으로 뽑힌 가중치의 키는 `2, 0, 3`(뽑힌 순서대로) 가 된다.
+- `key` 3 의 `weight` 인 40 이 10(`randomWeight`) 보다 크기 때문에, 마지막으로 선출된 가중치의 `key` 는 3이 되서 최종적으로 뽑힌 가중치의 키는 `2, 0, 3`(뽑힌 순서대로) 가 된다.
 
 ### 소스코드
-#### GeneralWeightSelector
+
+![그림 1]({{site.baseurl}}/img/algorithm/practice-randomweightselector-1.png)
+
+#### ProtoWeightSelector
 
 ```java
-public class GeneralWeightSelector<K, V extends WeightEntry<K>> extends WeightSelector<K, V> {
+public class ProtoWeightSelector<K, V extends WeightEntry<K>> extends WeightSelector<K, V> {
     @Override
     protected List<K> getSelectedKeyList(int needCount, boolean isDuplicated) {
         List<K> selectedKeyList = new LinkedList<>();
-        long selectedWeight, entryWeight;
+        long randomWeight, entryWeight;
         K selectedKey;
+        // 가중치 풀
         Set<Map.Entry<K, V>> entrySet = this.entryMap.entrySet();
 
+        // 선출할 수만큼 반복
         for(int i = 0; i < needCount; i++) {
-            selectedWeight = this.getRandomSelectWeight();
+            // i 번째 선출시 사용할 랜덤 가중치 값
+            randomWeight = this.getRandomWeight();
             selectedKey = null;
 
+            // 가중치 풀을 순회하며 랜덤 가중치 값 보다 큰 값 찾기
             for(Map.Entry<K, V> entry : entrySet) {
                 entryWeight = entry.getValue().getWeight();
-                if(selectedWeight < entryWeight) {
+                if(randomWeight < entryWeight) {
+                    // 랜덤 가중치 값보다 크면, 선택된 키로 지정
                     selectedKey = entry.getKey();
                     break;
                 } else {
-                    selectedWeight -= entryWeight;
+                    // 랜덤 가중치 값보다 크지 않다면, i 번째 가중치 값만큼 차감
+                    randomWeight -= entryWeight;
                 }
             }
 
@@ -200,6 +210,7 @@ public class GeneralWeightSelector<K, V extends WeightEntry<K>> extends WeightSe
             } else {
                 selectedKeyList.add(selectedKey);
 
+                // 중복 허용하지 않을 시, 가중치 풀에서 삭제
                 if(!isDuplicated) {
                     this.removeEntry(selectedKey);
                 }
@@ -211,10 +222,12 @@ public class GeneralWeightSelector<K, V extends WeightEntry<K>> extends WeightSe
 }
 ```  
 
+- 선출할 개수인 `needCount` 를 k, 전체 가중치의 개수를 n 이라고 할때, `ProtoWeightSelector` 방식의 시간복잡도는 % O(kn) % 이 된다.
+
 ### 테스트
 
 ```java
-public class GeneralWeightSelectorTest {
+public class ProtoWeightSelectorTest {
     @Test
     public void selectKeyIsDuplicated_Once_선출된개수가오차범위안에들어온다() throws Exception {
         // given
@@ -225,7 +238,10 @@ public class GeneralWeightSelectorTest {
                 40
         };
         int len = weightArray.length;
-        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        double[] weightPercentageArray = Util.getPercentageArray(weightArray);
+        System.out.println(Arrays.toString(weightPercentageArray));
+
+        ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
         for (int i = 0; i < len; i++) {
             selector.addEntry(WeightEntry.<Integer>builder()
                     .key(i)
@@ -235,28 +251,28 @@ public class GeneralWeightSelectorTest {
         int selectCount = 100000;
 
         // when
-        List<Integer> selectedKeyList = selector.processSelectKey(selectCount, true);
-        int[] selectedKeyCountArray = new int[len];
-        for (Integer key : selectedKeyList) {
-            selectedKeyCountArray[key]++;
+        List<Integer> actual = selector.processSelectKey(selectCount, true);
+        // 선출된 키 List 를 각 key 가 몇번 나왔는지 index 기반으로 몇번 나왔는지 카운트한다.
+        int[] actualKeyCountArray = new int[len];
+        for (Integer key : actual) {
+            actualKeyCountArray[key]++;
         }
 
         // then
         int interval = (int)(selectCount * 0.01);
-        assertThat(selectedKeyList, hasSize(selectCount));
-        assertThat(selectedKeyCountArray[0], allOf(
+        assertThat(actualKeyCountArray[0], allOf(
                 greaterThanOrEqualTo(10000 - interval),
                 lessThanOrEqualTo(10000 + interval)
         ));
-        assertThat(selectedKeyCountArray[1], allOf(
+        assertThat(actualKeyCountArray[1], allOf(
                 greaterThanOrEqualTo(20000 - interval),
                 lessThanOrEqualTo(20000 + interval)
         ));
-        assertThat(selectedKeyCountArray[2], allOf(
+        assertThat(actualKeyCountArray[2], allOf(
                 greaterThanOrEqualTo(30000 - interval),
                 lessThanOrEqualTo(30000 + interval)
         ));
-        assertThat(selectedKeyCountArray[3], allOf(
+        assertThat(actualKeyCountArray[3], allOf(
                 greaterThanOrEqualTo(40000 - interval),
                 lessThanOrEqualTo(40000 + interval)
         ));
@@ -264,10 +280,10 @@ public class GeneralWeightSelectorTest {
 
     @Test
     public void selectKeyIsDuplicated_Multiple_선출된개수가오차범위안에들어온다() throws Exception {
+        // given
         int loopCount = 10000;
 
         for (int k = 0; k < loopCount; k++) {
-        	// given
             int selectCount = 100000;
             int[] weightArray = new int[]{
                     10,
@@ -276,7 +292,7 @@ public class GeneralWeightSelectorTest {
                     40
             };
             int len = weightArray.length;
-            GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+            ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
             for (int i = 0; i < len; i++) {
                 selector.addEntry(WeightEntry.<Integer>builder()
                         .key(i)
@@ -285,28 +301,29 @@ public class GeneralWeightSelectorTest {
             }
 
             // when
-            List<Integer> selectedKeyList = selector.processSelectKey(selectCount, true);
-            int[] selectedKeyCountArray = new int[len];
-            for (Integer key : selectedKeyList) {
-                selectedKeyCountArray[key]++;
+            List<Integer> actual = selector.processSelectKey(selectCount, true);
+            // 선출된 키 List 를 각 key 가 몇번 나왔는지 index 기반으로 몇번 나왔는지 카운트한다.
+            int[] actualKeyCountArray = new int[len];
+            for (Integer key : actual) {
+                actualKeyCountArray[key]++;
             }
 
             // then
             int interval = (int)(selectCount * 0.01);
-            assertThat(selectedKeyList, hasSize(selectCount));
-            assertThat(selectedKeyCountArray[0], allOf(
+            assertThat(actual, hasSize(selectCount));
+            assertThat(actualKeyCountArray[0], allOf(
                     greaterThanOrEqualTo(10000 - interval),
                     lessThanOrEqualTo(10000 + interval)
             ));
-            assertThat(selectedKeyCountArray[1], allOf(
+            assertThat(actualKeyCountArray[1], allOf(
                     greaterThanOrEqualTo(20000 - interval),
                     lessThanOrEqualTo(20000 + interval)
             ));
-            assertThat(selectedKeyCountArray[2], allOf(
+            assertThat(actualKeyCountArray[2], allOf(
                     greaterThanOrEqualTo(30000 - interval),
                     lessThanOrEqualTo(30000 + interval)
             ));
-            assertThat(selectedKeyCountArray[3], allOf(
+            assertThat(actualKeyCountArray[3], allOf(
                     greaterThanOrEqualTo(40000 - interval),
                     lessThanOrEqualTo(40000 + interval)
             ));
@@ -323,7 +340,7 @@ public class GeneralWeightSelectorTest {
                 40
         };
         int len = weightArray.length;
-        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
         for (int i = 0; i < len; i++) {
             selector.addEntry(WeightEntry.<Integer>builder()
                     .key(i)
@@ -333,18 +350,18 @@ public class GeneralWeightSelectorTest {
         int selectCount = 4;
 
         // when
-        List<Integer> selectedKeyList = selector.processSelectKey(selectCount, false);
-        int[] selectedKeyCountArray = new int[len];
-        for (Integer key : selectedKeyList) {
-            selectedKeyCountArray[key]++;
-        }
+        List<Integer> actual = selector.processSelectKey(selectCount, false);
 
         // then
-        assertThat(selectedKeyList, hasSize(selectCount));
+        assertThat(actual, hasSize(selectCount));
+        assertThat(actual, hasItem(0));
+        assertThat(actual, hasItem(1));
+        assertThat(actual, hasItem(2));
+        assertThat(actual, hasItem(3));
     }
 
     @Test
-    public void selectKeyNotDuplicated_Multiple_선출된개수가오차범위안에들어온다() throws Exception {
+    public void selectKeyNotDuplicated_Multiple_1개씩여러번_선출된수가오차범위안에들어온다() throws Exception {
         // given
         int loopCount = 100000;
         int interval = (int) (loopCount * 0.01);
@@ -355,9 +372,9 @@ public class GeneralWeightSelectorTest {
                 40
         };
         int len = weightArray.length;
-        int[] selectedKeyCountArray = new int[len];
+        int[] actualKeyCountArray = new int[len];
         for (int k = 0; k < loopCount; k++) {
-            GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+            ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
             for (int i = 0; i < len; i++) {
                 selector.addEntry(WeightEntry.<Integer>builder()
                         .key(i)
@@ -367,41 +384,41 @@ public class GeneralWeightSelectorTest {
             int selectCount = 1;
 
             // when
-            List<Integer> selectedKeyList = selector.processSelectKey(selectCount, false);
-            for (Integer key : selectedKeyList) {
-                selectedKeyCountArray[key]++;
+            List<Integer> actual = selector.processSelectKey(selectCount, false);
+            // 선출된 키 List 를 각 key 가 몇번 나왔는지 index 기반으로 몇번 나왔는지 카운트한다.
+            for (Integer key : actual) {
+                actualKeyCountArray[key]++;
             }
-
         }
 
         // then
-        assertThat(selectedKeyCountArray[0], allOf(
+        assertThat(actualKeyCountArray[0], allOf(
                 greaterThanOrEqualTo(10000 - interval),
                 lessThanOrEqualTo(10000 + interval)
         ));
-        assertThat(selectedKeyCountArray[1], allOf(
+        assertThat(actualKeyCountArray[1], allOf(
                 greaterThanOrEqualTo(20000 - interval),
                 lessThanOrEqualTo(20000 + interval)
         ));
-        assertThat(selectedKeyCountArray[2], allOf(
+        assertThat(actualKeyCountArray[2], allOf(
                 greaterThanOrEqualTo(30000 - interval),
                 lessThanOrEqualTo(30000 + interval)
         ));
-        assertThat(selectedKeyCountArray[3], allOf(
+        assertThat(actualKeyCountArray[3], allOf(
                 greaterThanOrEqualTo(40000 - interval),
                 lessThanOrEqualTo(40000 + interval)
         ));
     }
 
     @Test(timeout = 7000)
-    public void selectKeyIsDuplicated_TooMuch_TimeIn() throws Exception{
+    public void selectKeyIsDuplicated_WeightCount_100000_TimeIn_7000() throws Exception{
         // given
         int weightCount = 100000;
         int[] weightArray = new int[weightCount];
         for(int i = 1; i < weightCount; i++) {
             weightArray[i - 1] = i * 10;
         }
-        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
         for(int i = 0; i < weightCount; i++) {
             selector.addEntry(WeightEntry.<Integer>builder()
                     .key(i)
@@ -418,14 +435,14 @@ public class GeneralWeightSelectorTest {
     }
 
     @Test(timeout = 7000)
-    public void selectKeyNotDuplicated_TooMuch_TimeIn() throws Exception{
+    public void selectKeyNotDuplicated_WeightCount_100000_TimeIn_7000() throws Exception{
         // given
         int weightCount = 100000;
         int[] weightArray = new int[weightCount];
         for(int i = 1; i < weightCount; i++) {
             weightArray[i - 1] = i * 10;
         }
-        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        ProtoWeightSelector<Integer, WeightEntry<Integer>> selector = new ProtoWeightSelector<>();
         for(int i = 0; i < weightCount; i++) {
             selector.addEntry(WeightEntry.<Integer>builder()
                     .key(i)
@@ -442,6 +459,10 @@ public class GeneralWeightSelectorTest {
     }
 }
 ```  
+
+
+## 개선된 방식
+-
 	
 
 
