@@ -26,7 +26,468 @@ use_math : true
 - 랭킹에 대한 가중치를 기반으로 1등급 보상, 2등급 보상, 3등급 보상 순으로 지급한다.
 - 한번 보상에 선정된 유저는 제외된다.
 
-## 일반적인 방식
+### 예시 데이터
+- 랜덤 선출에 사용할 가중치는 아래와 같고, `entryMap` 이라고 한다.
+
+	key|0|1|2|3
+	---|---|---|---|---
+	weight|10|20|30|40 
+	
+- 4개의 가중치를 가지고 선출을 하게 될때, 각 가중치의 값들이 가질 확률을 아래와 같다.
+
+	key|0|1|2|3
+	---|---|---|---|---
+	probaility|10%|20%|30%|40%
+
+
+## 기본 소스코드 구성
+### WeightEntry
+
+```java
+@Getter
+@Setter
+@AllArgsConstructor
+@Builder
+public class WeightEntry<K> {
+    protected K key;
+    protected long weight;
+}
+```  
+
+- `WeightEntry` 는 가중치에 대한 정보를 표현하는 클래스이다.
+- `key` 필드는 가중치를 고유하게 지칭할 수 있는 값으로, Generic 타입으로 선언돼 있다.
+- `weight` 는 가중치의 실제 값을 의미하는 값이다.
+
+### WeightSelector
+
+```java
+public abstract class WeightSelector<K, V extends WeightEntry<K>> {
+    protected Map<K, V> entryMap;
+    protected long totalWeight;
+    protected Random random;
+
+    public WeightSelector() {
+        this.entryMap = new HashMap<>();
+        this.totalWeight = 0;
+        this.random = new Random();
+    }
+
+    public void addEntry(V entry) {
+        this.totalWeight += entry.getWeight();
+        this.entryMap.put(entry.getKey(), entry);
+    }
+
+    public void removeEntry(K key) {
+        this.totalWeight -= this.entryMap.remove(key).getWeight();
+    }
+
+    public long getRandomSelectWeight() {
+        return Math.abs(this.random.nextLong()) % this.totalWeight;
+    }
+
+    protected abstract List<K> getSelectedKeyList(int needCount, boolean isDuplicated);
+
+    public boolean checkProcess(int needCount, boolean isDuplicated) {
+        boolean result = true;
+
+        if(!isDuplicated && this.entryMap.size() < needCount) {
+            result = false;
+        }
+
+        return result;
+    }
+
+    public final List<K> processSelectKey(int needCount, boolean isDuplicated) throws Exception {
+        if(!this.checkProcess(needCount, isDuplicated)) {
+            throw new Exception("Fail to check process");
+        }
+        return this.getSelectedKeyList(needCount, isDuplicated);
+    }
+}
+```  
+
+- `WeightSelector` 는 가중치 정보(`WeightEntry`) 를 바탕으로 가중치를 기반으로 랜덤 선출하기 위해 필요한 메소드가 정의된 추상 클래스이다.
+- 2개의 Generic 타입을 사용한다.
+	- `K` : `WeightEntry` 에서 사용하는 가중치의 고유 키에 대한 타입
+	- `V` : 가중치 정보를 나타내는 클래스의 타입으로 `WeightEntry` 의 하위 클래스여야 한다.
+- 선출시에 사용하는 전체 가중치 정보는 `Map` 형식으로 `entryMap` 필드에 저장한다.
+- `totalWeight` 는 전체 가중치의 총 합을 나태내는 필드이다.
+- `Random` 클래스를 통해 랜덤 값을 사용한다.
+- `addEntry` 메소드는 `WeightEntry` 를 인자값으로 받아 `entryMap` 에 추가하는데, 추가할때 `totalWeight` 에 인자값의 가중치를 더해준다.
+- `removeEntry` 메소드는 인자값으로 가중치 정보의 키값을 받아 `entryMap` 에서 삭제하고, `totalWeight` 에서 가중치 만금 차감해준다.
+- `processSelectKey()` 메소드는 인자 값으로 선출할 개수와, 중복 허용 여부를 받아 `checkProcess()` 메소드와 `getSelectedKeyList()` 메소드를 사용해서 선출 된 키를 `List` 로 반환한다.
+	- `getSelectedKeyList()` 메소드는 하위 클래스에서 구현한 내용대로 키를 선출해 `List` 형식으로 반환한다.
+	- `checkProcess()` 메소드는 선출 전 유효성 검사를 수행한다.
+
+
+## 초기 방식
+- 초기 개발버전에 사용했던 방식이고, 구현이 가장 간단한 방법이다.
+- 예시로 3개의 키를 선출해 본다.
+- 아래와 같은 가중치 데이터가 있을 때, 모든 가중치의 합인 `totalWeight` 를 구한다.
+
+	key|0|1|2|3
+	---|---|---|---|---
+	weight|10|20|30|40 
+	
+	- `totalWeight` 는 100 이 된다.
+- 선출 할때 마다 0 ~ 100(`totlaWeight`) 중 랜덤 값을 하나 뽑고, 뽑힌 값을 `selectedWeight` 라고 한다.
+- `selectedWeight` 의 값이 50이라고 했을 때 `entryMap` 을 차례대로 순회하며 `selectedWeight` 보다 첫 번째로 큰 `weight` 의 `key` 를 구한다.
+	- 이때 순회하며 `selectedWeight` 보다 `weight` 값이 크지 않다면 `selectedWeight` 에 `key` 에 해당하는 `weight` 값을 빼준다.
+
+	key|0|1|2|3
+	---|---|---|---|---
+	weight|10|20|30|40 
+	selectedWeight|50|40|20|.
+
+- `key` 가 2인 `weight` 값 30 이 `selectedWeight` 값 20보다 크기 때문에, 첫번째로 선출된 가중치의 `key` 는 2가 된다.
+- 선출된 가중치를 지우면 아래와 같이 되고, `totalWeight` 는 70이 된다.
+
+	key|0|1|3
+	---|---|---|---
+	selectedWeight|10|20|40 
+	
+- 다시 0 ~ 70(`totalWeight`) 중 랜덤 값을 뽑아 `selectedWeight` 의 값은 0 일때, 다시 `entryMap` 을 순회하며 `selectedWeight` 보다 크지만 가장 작은 값을 찾는다.
+
+	key|0|1|3
+	---|---|---|---
+	weight|10|20|40 
+	selectedWeight|0|.|.
+	
+- `key` 0 의 `weight` 인 10 이 0(`selectedWeight`) 보다 크기 때문에, 두번째 선출된 가중치의 `key` 는 0이 된다.
+- 마지막으로 가중치를 지우면 아래와 같이 되고, `totalWeight` 는 60이 된다.
+
+	key|1|3
+	---|---|---
+	weight|20|40 
+	
+- 마지막으로 0 ~ 60(`totalWeight`) 중 랜덤 값을 뽑아 `selectedWeight` 의 값은 30 일때, 다시 `entryMap` 을 순회하며 `selectedWeight` 보다 크지만 가장 작은 값을 찾는다.
+
+	key|1|3
+	---|---|---
+	weight|20|40 
+	selectedWeight|30|10
+	
+- `key` 3 의 `weight` 인 40 이 10(`selectedWeight`) 보다 크기 때문에, 마지막으로 선출된 가중치의 `key` 는 3이 되서 최종적으로 뽑힌 가중치의 키는 `2, 0, 3`(뽑힌 순서대로) 가 된다.
+
+### 소스코드
+#### GeneralWeightSelector
+
+```java
+public class GeneralWeightSelector<K, V extends WeightEntry<K>> extends WeightSelector<K, V> {
+    @Override
+    protected List<K> getSelectedKeyList(int needCount, boolean isDuplicated) {
+        List<K> selectedKeyList = new LinkedList<>();
+        long selectedWeight, entryWeight;
+        K selectedKey;
+        Set<Map.Entry<K, V>> entrySet = this.entryMap.entrySet();
+
+        for(int i = 0; i < needCount; i++) {
+            selectedWeight = this.getRandomSelectWeight();
+            selectedKey = null;
+
+            for(Map.Entry<K, V> entry : entrySet) {
+                entryWeight = entry.getValue().getWeight();
+                if(selectedWeight < entryWeight) {
+                    selectedKey = entry.getKey();
+                    break;
+                } else {
+                    selectedWeight -= entryWeight;
+                }
+            }
+
+            if(selectedKey == null) {
+                throw new RuntimeException("selectedKey is null");
+            } else {
+                selectedKeyList.add(selectedKey);
+
+                if(!isDuplicated) {
+                    this.removeEntry(selectedKey);
+                }
+            }
+        }
+
+        return selectedKeyList;
+    }
+}
+```  
+
+### 테스트
+
+```java
+public class GeneralWeightSelectorTest {
+    @Test
+    public void selectKeyIsDuplicated_Once_선출된개수가오차범위안에들어온다() throws Exception {
+        // given
+        int[] weightArray = new int[]{
+                10,
+                20,
+                30,
+                40
+        };
+        int len = weightArray.length;
+        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        for (int i = 0; i < len; i++) {
+            selector.addEntry(WeightEntry.<Integer>builder()
+                    .key(i)
+                    .weight(weightArray[i])
+                    .build());
+        }
+        int selectCount = 100000;
+
+        // when
+        List<Integer> selectedKeyList = selector.processSelectKey(selectCount, true);
+        int[] selectedKeyCountArray = new int[len];
+        for (Integer key : selectedKeyList) {
+            selectedKeyCountArray[key]++;
+        }
+
+        // then
+        int interval = (int)(selectCount * 0.01);
+        assertThat(selectedKeyList, hasSize(selectCount));
+        assertThat(selectedKeyCountArray[0], allOf(
+                greaterThanOrEqualTo(10000 - interval),
+                lessThanOrEqualTo(10000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[1], allOf(
+                greaterThanOrEqualTo(20000 - interval),
+                lessThanOrEqualTo(20000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[2], allOf(
+                greaterThanOrEqualTo(30000 - interval),
+                lessThanOrEqualTo(30000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[3], allOf(
+                greaterThanOrEqualTo(40000 - interval),
+                lessThanOrEqualTo(40000 + interval)
+        ));
+    }
+
+    @Test
+    public void selectKeyIsDuplicated_Multiple_선출된개수가오차범위안에들어온다() throws Exception {
+        int loopCount = 10000;
+
+        for (int k = 0; k < loopCount; k++) {
+        	// given
+            int selectCount = 100000;
+            int[] weightArray = new int[]{
+                    10,
+                    20,
+                    30,
+                    40
+            };
+            int len = weightArray.length;
+            GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+            for (int i = 0; i < len; i++) {
+                selector.addEntry(WeightEntry.<Integer>builder()
+                        .key(i)
+                        .weight(weightArray[i])
+                        .build());
+            }
+
+            // when
+            List<Integer> selectedKeyList = selector.processSelectKey(selectCount, true);
+            int[] selectedKeyCountArray = new int[len];
+            for (Integer key : selectedKeyList) {
+                selectedKeyCountArray[key]++;
+            }
+
+            // then
+            int interval = (int)(selectCount * 0.01);
+            assertThat(selectedKeyList, hasSize(selectCount));
+            assertThat(selectedKeyCountArray[0], allOf(
+                    greaterThanOrEqualTo(10000 - interval),
+                    lessThanOrEqualTo(10000 + interval)
+            ));
+            assertThat(selectedKeyCountArray[1], allOf(
+                    greaterThanOrEqualTo(20000 - interval),
+                    lessThanOrEqualTo(20000 + interval)
+            ));
+            assertThat(selectedKeyCountArray[2], allOf(
+                    greaterThanOrEqualTo(30000 - interval),
+                    lessThanOrEqualTo(30000 + interval)
+            ));
+            assertThat(selectedKeyCountArray[3], allOf(
+                    greaterThanOrEqualTo(40000 - interval),
+                    lessThanOrEqualTo(40000 + interval)
+            ));
+        }
+    }
+
+    @Test
+    public void selectedKeyNotDuplicated_Once_가중치개수만큼_선출하면모두선출된다() throws Exception {
+        // given
+        int[] weightArray = new int[]{
+                10,
+                20,
+                30,
+                40
+        };
+        int len = weightArray.length;
+        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        for (int i = 0; i < len; i++) {
+            selector.addEntry(WeightEntry.<Integer>builder()
+                    .key(i)
+                    .weight(weightArray[i])
+                    .build());
+        }
+        int selectCount = 4;
+
+        // when
+        List<Integer> selectedKeyList = selector.processSelectKey(selectCount, false);
+        int[] selectedKeyCountArray = new int[len];
+        for (Integer key : selectedKeyList) {
+            selectedKeyCountArray[key]++;
+        }
+
+        // then
+        assertThat(selectedKeyList, hasSize(selectCount));
+    }
+
+    @Test
+    public void selectKeyNotDuplicated_Multiple_선출된개수가오차범위안에들어온다() throws Exception {
+        // given
+        int loopCount = 100000;
+        int interval = (int) (loopCount * 0.01);
+        int[] weightArray = new int[]{
+                10,
+                20,
+                30,
+                40
+        };
+        int len = weightArray.length;
+        int[] selectedKeyCountArray = new int[len];
+        for (int k = 0; k < loopCount; k++) {
+            GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+            for (int i = 0; i < len; i++) {
+                selector.addEntry(WeightEntry.<Integer>builder()
+                        .key(i)
+                        .weight(weightArray[i])
+                        .build());
+            }
+            int selectCount = 1;
+
+            // when
+            List<Integer> selectedKeyList = selector.processSelectKey(selectCount, false);
+            for (Integer key : selectedKeyList) {
+                selectedKeyCountArray[key]++;
+            }
+
+        }
+
+        // then
+        assertThat(selectedKeyCountArray[0], allOf(
+                greaterThanOrEqualTo(10000 - interval),
+                lessThanOrEqualTo(10000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[1], allOf(
+                greaterThanOrEqualTo(20000 - interval),
+                lessThanOrEqualTo(20000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[2], allOf(
+                greaterThanOrEqualTo(30000 - interval),
+                lessThanOrEqualTo(30000 + interval)
+        ));
+        assertThat(selectedKeyCountArray[3], allOf(
+                greaterThanOrEqualTo(40000 - interval),
+                lessThanOrEqualTo(40000 + interval)
+        ));
+    }
+
+    @Test(timeout = 7000)
+    public void selectKeyIsDuplicated_TooMuch_TimeIn() throws Exception{
+        // given
+        int weightCount = 100000;
+        int[] weightArray = new int[weightCount];
+        for(int i = 1; i < weightCount; i++) {
+            weightArray[i - 1] = i * 10;
+        }
+        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        for(int i = 0; i < weightCount; i++) {
+            selector.addEntry(WeightEntry.<Integer>builder()
+                    .key(i)
+                    .weight(weightArray[i])
+                    .build());
+        }
+        int selectCount = weightCount / 10;
+
+        // when
+        List<Integer> actual = selector.processSelectKey(selectCount, true);
+
+        // then
+        assertThat(actual, hasSize(selectCount));
+    }
+
+    @Test(timeout = 7000)
+    public void selectKeyNotDuplicated_TooMuch_TimeIn() throws Exception{
+        // given
+        int weightCount = 100000;
+        int[] weightArray = new int[weightCount];
+        for(int i = 1; i < weightCount; i++) {
+            weightArray[i - 1] = i * 10;
+        }
+        GeneralWeightSelector<Integer, WeightEntry<Integer>> selector = new GeneralWeightSelector<>();
+        for(int i = 0; i < weightCount; i++) {
+            selector.addEntry(WeightEntry.<Integer>builder()
+                    .key(i)
+                    .weight(weightArray[i])
+                    .build());
+        }
+        int selectCount = weightCount / 10;
+
+        // when
+        List<Integer> actual = selector.processSelectKey(selectCount, false);
+
+        // then
+        assertThat(actual, hasSize(selectCount));
+    }
+}
+```  
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
