@@ -24,7 +24,7 @@ tags:
 - 여러 Host 를 엮어 하나의 Host 처럼 다를 수 있도록 해주는 사용자 인테페이스 역할을 수행한다.
 - Swarm(Cluster) 에 속한 Host 중 장애가 발생하더라도 서비스의 연속성을 최대한 확보할 수 있도록 Cluster 가용성 관리를 제공한다.
 - Swarm 에서 구동의 단위를 Service 등 논리적인 단위를 사용해서 생명주기 및 상호관계를 정의 및 관리하는 Orchestrator 역할을 수행한다.
-- [Swarm mode overview] 공식 문서를 참조하는 아래와 같은 키워드가 있다.
+- [Swarm mode overview](https://docs.docker.com/engine/swarm/) 공식 문서를 참조하면 아래와 같은 키워드가 있다.
 	- Cluster management integrated with Docker Engine
 	- Decentralized design
 	- Declarative service model
@@ -119,25 +119,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 
 	```
 	$ vagrant ssh manager
-	Welcome to Ubuntu 16.04.6 LTS (GNU/Linux 4.4.0-173-generic x86_64)
-	
-	 * Documentation:  https://help.ubuntu.com
-	 * Management:     https://landscape.canonical.com
-	 * Support:        https://ubuntu.com/advantage
-	
-	 * Multipass 1.0 is out! Get Ubuntu VMs on demand on your Linux, Windows or
-	   Mac. Supports cloud-init for fast, local, cloud devops simulation.
-	
-	     https://multipass.run/
-	
-	9 packages can be updated.
-	0 updates are security updates.
-	
-	New release '18.04.3 LTS' available.
-	Run 'do-release-upgrade' to upgrade to it.
-	
-	
-	Last login: Thu Feb  6 04:58:06 2020 from 10.0.2.2
+	.. 생략 ..
 	vagrant@manager:~$ sudo docker swarm init --advertise 192.168.100.10
 	unknown flag: --advertise
 	See 'docker swarm init --help'.
@@ -226,22 +208,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	```
 	Worker Node 1
 	$ vagrant ssh worker1
-	Welcome to Ubuntu 16.04.6 LTS (GNU/Linux 4.4.0-173-generic x86_64)
-	
-	 * Documentation:  https://help.ubuntu.com
-	 * Management:     https://landscape.canonical.com
-	 * Support:        https://ubuntu.com/advantage
-	
-	 * Multipass 1.0 is out! Get Ubuntu VMs on demand on your Linux, Windows or
-	   Mac. Supports cloud-init for fast, local, cloud devops simulation.
-	
-	     https://multipass.run/
-	
-	15 packages can be updated.
-	6 updates are security updates.
-	
-	
-	Last login: Mon Feb  3 07:09:30 2020 from 10.0.2.2
+	.. 생략 ..
 	vagrant@worker1:~$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
 	g6edu6j2eqrgdvr9 192.168.100.10:2377
 	        This node joined a swarm as a worker.
@@ -251,22 +218,7 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 	
 	Worker Node 2
 	$ vagrant ssh worker2
-	Welcome to Ubuntu 16.04.6 LTS (GNU/Linux 4.4.0-173-generic x86_64)
-	
-	 * Documentation:  https://help.ubuntu.com
-	 * Management:     https://landscape.canonical.com
-	 * Support:        https://ubuntu.com/advantage
-	
-	 * Multipass 1.0 is out! Get Ubuntu VMs on demand on your Linux, Windows or
-	   Mac. Supports cloud-init for fast, local, cloud devops simulation.
-	
-	     https://multipass.run/
-	
-	15 packages can be updated.
-	6 updates are security updates.
-	
-	
-	Last login: Mon Feb  3 07:09:56 2020 from 10.0.2.2
+	.. 생략 ..
 	vagrant@worker2:~$ sudo docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642
 	g6edu6j2eqrgdvr9 192.168.100.10:2377
 	        This node joined a swarm as a worker.
@@ -363,6 +315,8 @@ Bringing machine 'worker2' up with 'virtualbox' provider...
 
 ---
 ## Reference
+[How nodes work](https://docs.docker.com/engine/swarm/how-swarm-mode-works/nodes/)
+[Swarm mode key concepts](https://docs.docker.com/engine/swarm/key-concepts/)
 [Docker Swarm을 이용한 쉽고 빠른 분산 서버 관리](https://subicura.com/2017/02/25/container-orchestration-with-docker-swarm.html)
 
 	
