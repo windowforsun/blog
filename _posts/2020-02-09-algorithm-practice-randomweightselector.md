@@ -40,14 +40,15 @@ use_math : true
 	
 - 가중치 데이터의 누적 확률 분포를 구하면 아래와 같다.
 
-	key|weight|addWeight
+	key|weight|accWeight
 	---|---|---
 	0|10|10
 	1|20|30
 	2|30|60
 	3|40|100
 	
-- 4개의 가중치를 가지고 1개만 선출할때, 확률분포와 누적확률분포를 통해 확률을 구하면 아래와 같다.(% (확률분포 / 누적확률분포) * 100 %)
+- 4개의 가중치를 가지고 1개만 선출할때, 확률분포와 누적확률분포를 통해 확률을 구하면 아래와 같다.
+	- $ (확률분포 / 누적확률분포) * 100 $
 
 	key|probability
 	---|---
@@ -319,7 +320,7 @@ public class ProtoWeightSelector<K, V extends WeightEntry<K>> extends WeightSele
 }
 ```  
 
-- 선출할 개수인 `needCount` 를 k, 전체 가중치의 개수를 n 이라고 할때, `ProtoWeightSelector` 방식의 시간복잡도는 % O(kn) % 이 된다.
+- 선출할 개수인 `needCount` 를 k, 전체 가중치의 개수를 n 이라고 할때, `ProtoWeightSelector` 방식의 시간복잡도는 $ O(kn) $ 이 된다.
 
 ### 테스트
 
