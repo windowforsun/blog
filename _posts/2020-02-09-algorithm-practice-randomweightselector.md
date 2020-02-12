@@ -299,13 +299,17 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 
 ```java
 public class Util {
-    public static double[] getPercentageArray(int[] array) {
-        double sum = Arrays.stream(array).sum();
-        int len = array.length;
-        double[] percentageArray = new double[len];
+    public static double[] getPercentageArray(List<Integer> keyList, int keyCount) {
+        int[] keyCountArray = new int[keyCount];
+        double[] percentageArray = new double[keyCount];
 
-        for(int i = 0; i < len; i++) {
-            percentageArray[i] = (array[i] / sum) * 100;
+        for(Integer key : keyList) {
+            keyCountArray[key]++;
+        }
+
+        double sum = Arrays.stream(keyCountArray).sum();
+        for(int i = 0; i < keyCount; i++) {
+            percentageArray[i] = (keyCountArray[i] / sum) * 100;
         }
 
         return percentageArray;
@@ -314,8 +318,66 @@ public class Util {
 ```  
 
 - `Util` 클래스의 `getPercentage()` 메소드는 확률을 반환해주는 정적 메서드이다.
-- 인자 값으로 인덱스에 해당하는 비율값의 배열을 받아, 확률 값으로 환산해서 리턴한다.
+- 인자 값으로 선출된 키의 리스트와 키의 종류 개수를 받으면 이를 비율의 백분율 값으로 환산해서 리턴한다.
 - Test 시에 유틸로 사용된다.
+
+#### Util 테스트
+
+```java
+public class UtilTest {
+    @Test
+    public void getPercentageArray_0_1개_100리턴() {
+        // given
+        List<Integer> list = new ArrayList<>(Arrays.asList(0));
+
+        // when
+        double[] actual = Util.getPercentageArray(list, 1);
+
+        // then
+        assertThat(actual[0], is(100d));
+    }
+
+    @Test
+    public void getPercentageArray_0_1개_1_1개_50_50리턴() {
+        // given
+        List<Integer> list = new ArrayList<>(Arrays.asList(0, 1));
+
+        // when
+        double[] actual = Util.getPercentageArray(list, 2);
+
+        // then
+        assertThat(actual[0], is(50d));
+        assertThat(actual[1], is(50d));
+    }
+
+    @Test
+    public void getPercentageArray_0_1개_1_2개_33_66리턴() {
+        // given
+        List<Integer> list = new ArrayList<>(Arrays.asList(0, 1, 1));
+
+        // when
+        double[] actual = Util.getPercentageArray(list, 2);
+
+        // then
+        assertThat(actual[0], closeTo(33.3d, 0.1));
+        assertThat(actual[1], closeTo(66.6d, 0.1));
+    }
+
+    @Test
+    public void getPercentageArray_0_1개_1_1개_2_1개_33_33_33리턴() {
+        // given
+        List<Integer> list = new ArrayList<>(Arrays.asList(0, 1, 2));
+
+        // when
+        double[] actual = Util.getPercentageArray(list, 3);
+
+        // then
+        assertThat(actual[0], closeTo(33.3d, 0.1));
+        assertThat(actual[1], closeTo(33.3d, 0.1));
+        assertThat(actual[2], closeTo(33.3d, 0.1));
+    }
+}
+```  
 
 ## 초기 방식
 - 초기 개발버전에 사용했던 방식이고, 구현이 간단한 방법이다.
