@@ -58,7 +58,7 @@ tags:
 
 ### Swarm 구성하기
 - Docker Swarm 은 복잡한 절차, 별도의 도구 없이 하나 이상의 Docker Engine 이 있다면 구성 할 수 있다.
-- 하나 이상의 Docker Engine 을 위해 [Vagrant 로 Docker Swarm 테스트 환경 구성하기]({{site.baseurl}}{% link _posts/2020-02-06-docker-practice-docker swarm.md %})
+- 하나 이상의 Docker Engine 을 위해 [Vagrant 로 Docker Swarm 테스트 환경 구성하기]({{site.baseurl}}{% link _posts/2020-02-03-docker-practice-vagrantdockerswarmenv.md %})
 을 사용한다.
 - `vagrant up` 을 통해 구성된 환경을 구동시키고, `vagrant ssh manager` 명령어로 Manager Node 에 접속한다.
 	
