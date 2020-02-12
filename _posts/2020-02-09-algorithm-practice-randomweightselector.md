@@ -140,8 +140,8 @@ use_math : true
 	3|0.3154
 	
 - 이제 1번째, 2번째 까지 모두 고려해 `key` i 가 선출될 평균 비율 ar_2 는 아래와 같이 구할 수 있다.
-	- $ ar_2(i) = {{ar_1(i) + r_2(i)} \over 2} $
-	- $ ar_2(0) = {{0.1 + 0.13455} \over 2} = 0.1173$
+	- $$ ar_2(i) = {{ar_1(i) + r_2(i)} \over 2} $$
+	- $$ ar_2(0) = {{0.1 + 0.13455} \over 2} = 0.1173$$
 	
 	key|$ar_2$
 	---|---
@@ -197,8 +197,8 @@ use_math : true
 	3|0.2063
 	
 - 이제 1번째, 2번째, 3번째 까지 모두 고려해 `key` i 가 선출될 평균 비율 ar_3 는 아래와 같이 구할 수 있다.
-	- $ ar_3(i) = {{ar_1(i) + ar_2(i) + r_3(i)} \over 3} $
-	- $ ar_3(0) = {{0.1 + 0.1173 + 0.2143} \over 3} = 0.1439$
+	- $$ ar_3(i) = {{ar_1(i) + ar_2(i) + r_3(i)} \over 3} $$
+	- $$ ar_3(0) = {{0.1 + 0.1173 + 0.2143} \over 3} = 0.1439$$
 	
 	key|$ar_3$
 	---|---
@@ -295,6 +295,27 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 	- `checkProcess()` 메소드는 선출 전 유효성 검사를 수행한다.
 	- `getSize()` 메소드는 하위 클래스에서 구현한 내용대로 현재 가중치의 개수를 리턴한다.
 
+### Util
+
+```java
+public class Util {
+    public static double[] getPercentageArray(int[] array) {
+        double sum = Arrays.stream(array).sum();
+        int len = array.length;
+        double[] percentageArray = new double[len];
+
+        for(int i = 0; i < len; i++) {
+            percentageArray[i] = (array[i] / sum) * 100;
+        }
+
+        return percentageArray;
+    }
+}
+```  
+
+- `Util` 클래스의 `getPercentage()` 메소드는 확률을 반환해주는 정적 메서드이다.
+- 인자 값으로 인덱스에 해당하는 비율값의 배열을 받아, 확률 값으로 환산해서 리턴한다.
+- Test 시에 유틸로 사용된다.
 
 ## 초기 방식
 - 초기 개발버전에 사용했던 방식이고, 구현이 간단한 방법이다.
@@ -309,7 +330,7 @@ public abstract class WeightSelector<K, V extends WeightEntry<K>> {
 	3|40
 	
 	- `totalWeight` 는 100 이 된다.
-- 선출 할때 마다 0 ~ 100(`totlaWeight`) 중 랜덤 값을 하나 뽑고, 뽑힌 값을 `randomWeight` 라고 한다.
+- 선출 할때 마다 0 ~ 100(`totalWeight`) 중 랜덤 값을 하나 뽑고, 뽑힌 값을 `randomWeight` 라고 한다.
 - `randomWeight` 의 값이 50이라고 했을 때 가중치 풀을 차례대로 순회하며 `randomWeight` 보다 첫 번째로 큰 `weight` 의 `key` 를 구한다.
 	- 이때 순회하며 `randomWeight` 보다 `weight` 값이 크지 않다면 `randomWeight` 에 `key` 에 해당하는 `weight` 값을 빼준다.
 
