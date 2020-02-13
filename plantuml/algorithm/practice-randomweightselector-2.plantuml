@@ -1,0 +1,64 @@
+@startuml
+
+class WeightEntry{
+	key
+	weight
+}
+
+abstract class WeightSelector {
+	totalWeight
+	random
+	WeightSelector()
+	addEntry(entry)
+	getRandomWeight
+	checkProcess(needCount, isDuplicated)
+	processSelectKey(needCount, isDuplicated)
+	{abstract} add(entry)
+	{abstract} getEntrySize()
+	{abstract} getSelectKeyList(needCount, isDuplicated)
+}
+
+class AdvancedWeightEntry {
+	minWeight
+	maxWeight
+	index
+}
+
+class AdvancedWeightSelector {
+	entryList
+	segmentTree
+	AdvancedWeightSector(entrySize)
+	add(entry)
+	getEntrySize()
+	addEntry(entry)
+	getSelectedKeyList(needCount, isDuplicated)
+	findEntryIndexByWeight(long weight, boolean isDuplicated)
+}
+
+class SegmentTree {
+	dataArray
+	segmentTreeArray
+	treeSize
+	SegmentTree(dataArray)
+	initSegmentTree()
+	update(index, value)
+	getSum(start, end)
+	getTreeSize(dataSize)
+}
+
+class AdvancedDuplicatedComparator {
+	compare(AdvancedWeightEntry o1, AdvancedWeightEntry o2)
+}
+
+class AdvancedNotDuplicatedComparator {
+	compare(AdvancedWeightEntry o1, AdvancedWeightEntry o2)
+}
+
+WeightEntry <|-- AdvancedWeightEntry
+WeightSelector <|-- AdvancedWeightSelector
+SegmentTree <--o AdvancedWeightSelector
+AdvancedWeightEntry <--o AdvancedWeightSelector
+AdvancedDuplicatedComparator <-down-o AdvancedWeightSelector
+AdvancedNotDuplicatedComparator <-down-o AdvancedWeightSelector
+
+@enduml
