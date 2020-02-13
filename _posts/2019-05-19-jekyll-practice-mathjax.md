@@ -141,6 +141,8 @@ $$
 ---
 ## Reference
 [MathJax, Jekyll and github pages](http://benlansdell.github.io/computing/mathjax/)  
+[Easy Copy MathJax](https://easy-copy-mathjax.xxxx7.com/)  
+[MathJax basic tutorial and quick reference](https://math.meta.stackexchange.com/questions/5020/mathjax-basic-tutorial-and-quick-reference)  
 
 
 
