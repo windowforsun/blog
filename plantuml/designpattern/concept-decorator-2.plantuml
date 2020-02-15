@@ -1,41 +1,42 @@
 @startuml
 
-abstract class Computer {
-	{abstract} int getPrice()
-	{abstract} int getCpuCount()
-	{abstract} int getRamCount()
+abstract class Calculator {
+	{abstract} double calculate()
 }
 
-class Desktop {
-	int getPrice()
-	int getCpuCount()
-	int getRamCount()
+class SingleCalculator {
+	double num
+	SingleCalculator(double num)
+	double calculate()
 }
 
-abstract class Part {
-	Computer computer
+abstract class Operation {
+	Calculator calculator
+	double operand
 
-	Part(Computer computer)
+	Operation(double operand, Calculator calculator)
 }
 
-class Cpu {
-	Cpu(Computer computer)
-	int getPrice()
-	int getCpuCount()
-	int getRamCount()
+class PlusOperation {
+	PlusOperation(double operand, Calculator calculator)
+	double calculate()
 }
 
-class Ram {
-	Ram(Computer computer)
-	int getPrice()
-	int getCpuCount()
-	int getRamCount()
+class MinusOperation {
+	MinusOperation(double operand, Calculator calculator)
+	double calculate()
 }
 
-Computer <|-- Desktop
-Computer <|-- Part
-Computer <--o Part
-Part <|-- Cpu
-Part <|-- Ram
+class MultiplyOperation {
+	MultiplyOperation(double operand, Calculator calculator)
+	double calculate()
+}
+
+Calculator <|-- SingleCalculator
+Calculator <|-- Operation
+Calculator <--o Operation
+Operation <|-- PlusOperation
+Operation <|-- MinusOperation
+Operation <|-- MultiplyOperation
 
 @enduml

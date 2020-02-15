@@ -94,6 +94,9 @@ use_math : true
 - 이 계산기는 우리가 알고 있는 사칙연산과는 다르게 동작한다는 점에 유의해야 한다.
 	- 연산은 가장 오른쪽 연산자 부터 왼쪽으로 하나씩 연산해 간다.
 	- $5\times2+3=30$ 처럼 $2+3=6$ 을 먼저하고, $5\times6=30$ 연산한다.
+
+
+![그림 1]({{site.baseurl}}/img/designpattern/2/concept_decorator_2.png)
 	
 ### Calculate
 
