@@ -27,7 +27,7 @@ use_math : true
 	- `ConcreteDecorator` : `Decorator` 를 상속해서 구체적인 장식을 `Component` 의 메소드를 구현해서 나타내는 클래스이다.
 - 클래스 구조에서 알 수 있듯이 `Decorator` 패턴은 내용물 `Component` 와 장식물 `Decorator` 를 동일시 해서 객체를 확장해 나간다.
 - `Decorator` 패턴의 재귀적 요소
-	- [Composite 패턴]()
+	- [Composite 패턴]({{site.baseurl}}{% link _posts/2020-02-08-designpattern-concept-composite.md %})
 	와 같이 `Decorator` 패턴을 보면 재귀적인 구조를 가지고 있다.
 	- 내용물을 장식하는 장식또한 동일한 내용물인 셈이다. (`ConcreteComponent`, `Decorator` 모두 `Component` 의 하위 클래스)
 	- 이는 `Composite` 패턴과 동일해 보일 수 있지만, `Decorator` 패턴의 재귀성은 객체의 기능이나 속성을 확장 및 수정해 목적에 맞게 만들어 간다는 점에 있다.
