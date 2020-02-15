@@ -1,0 +1,41 @@
+@startuml
+
+abstract class Computer {
+	{abstract} int getPrice()
+	{abstract} int getCpuCount()
+	{abstract} int getRamCount()
+}
+
+class Desktop {
+	int getPrice()
+	int getCpuCount()
+	int getRamCount()
+}
+
+abstract class Part {
+	Computer computer
+
+	Part(Computer computer)
+}
+
+class Cpu {
+	Cpu(Computer computer)
+	int getPrice()
+	int getCpuCount()
+	int getRamCount()
+}
+
+class Ram {
+	Ram(Computer computer)
+	int getPrice()
+	int getCpuCount()
+	int getRamCount()
+}
+
+Computer <|-- Desktop
+Computer <|-- Part
+Computer <--o Part
+Part <|-- Cpu
+Part <|-- Ram
+
+@enduml
