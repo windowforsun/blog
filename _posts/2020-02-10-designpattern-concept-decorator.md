@@ -4,7 +4,7 @@ classes: wide
 title: "[DesignPattern 개념] Decorator Pattern"
 header:
   overlay_image: /img/designpattern-bg.jpg
-excerpt: ''
+excerpt: '내용물과 장식물을 동일시하면서, 내용물(객체) 를 장식(확장)해나가는 Decorator 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
