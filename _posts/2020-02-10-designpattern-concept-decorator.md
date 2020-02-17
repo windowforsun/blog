@@ -90,7 +90,7 @@ use_math : true
 
 ## 계산기 장식하기
 - 연산은 존재하지 않고, 숫자만 입력할 수 있는 계산기가 있다고 가정한다.
-- 숫자만 입력할 수 있는 계산기에 연산이라는 장식물로 장식해 계산 결과를 도축해보도록 한다.
+- 숫자만 입력할 수 있는 계산기에 연산이라는 장식물로 장식해 계산 결과를 도출해보도록 한다.
 - 이 계산기는 우리가 알고 있는 사칙연산과는 다르게 동작한다는 점에 유의해야 한다.
 	- 연산은 가장 오른쪽 연산자 부터 왼쪽으로 하나씩 연산해 간다.
 	- $5\times2+3=30$ 처럼 $2+3=6$ 을 먼저하고, $5\times6=30$ 연산한다.
@@ -208,10 +208,8 @@ public class DecoratorTest {
 
         // when
         Calculator actual = new PlusOperation(
-                3,
-                new MinusOperation(
-                        5,
-                        singleCalculator
+                3, new MinusOperation(
+                        5, singleCalculator
                 )
         );
 
@@ -226,10 +224,8 @@ public class DecoratorTest {
 
         // when
         Calculator actual = new MinusOperation(
-                3,
-                new PlusOperation(
-                        5,
-                        singleCalculator
+                3, new PlusOperation(
+                        5, singleCalculator
                 )
         );
 
@@ -244,12 +240,9 @@ public class DecoratorTest {
 
         // when
         Calculator actual = new MultiplyOperation(
-                3,
-                new PlusOperation(
-                        2,
-                        new MinusOperation(
-                                5,
-                                singleCalculator
+                3, new PlusOperation(
+                        2, new MinusOperation(
+                                5, singleCalculator
                         )
                 )
         );

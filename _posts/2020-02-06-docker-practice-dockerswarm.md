@@ -62,7 +62,7 @@ tags:
 을 사용한다.
 - `vagrant up` 을 통해 구성된 환경을 구동시키고, `vagrant ssh manager` 명령어로 Manager Node 에 접속한다.
 	
-	```
+	```bash
 	$ vagrant up
 	Bringing machine 'manager' up with 'virtualbox' provider...
 	Bringing machine 'worker1' up with 'virtualbox' provider...
@@ -117,7 +117,7 @@ tags:
 - 구성된 여러 개의 Docker Engine 을 Swarm Cluster 로 구성하기 위해서는 Manager Node 에서 `docker swarm init` 명령어를 수행해 주면된다.
 - Manager Node 에 접속하고, `docker swarm init` 명령어를 수행한다.
 
-	```
+	```bash
 	$ vagrant ssh manager
 	.. 생략 ..
 	vagrant@manager:~$ sudo docker swarm init --advertise 192.168.100.10
@@ -138,7 +138,7 @@ tags:
 	- 새로운 Node 를 추가할 때 `docker swarm init` 명령어의 출력 결과로 나온 `docker swarm join --token SWMTKN-1-16qr38qqzlk834h642ejskmlc4mrx9uw8h6dqbpydsev6wry3j-8f9n1f642g6edu6j2eqrgdvr9 192.168.100.10:2377` 을 사용하면 된다.
 - `docker info` 를 통해 현재 Docker Engine 의 상태를 확인 할 수 있는데, Manager Node 에서 결과는 아래와 같다.
 	
-	```
+	```bash
 	vagrant@manager:~$ sudo docker info
 	
 	.. 생략 ..
@@ -174,7 +174,7 @@ tags:
 	```  
 - `docker node ls` 를 통해 현재 Swarm Cluster 로 구성된 Node 를 조회하면 아래와 같다.
 
-	```
+	```bash
 	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VER	SION
 	yenkumtb6whjug68c32babba9 *   manager             Ready               Active              Leader              19.03.5
@@ -185,7 +185,7 @@ tags:
 ### Swarm Cluster 에 Node 추가하기
 - 구성된 Swarm Cluster 에 참여하기 위해서는 Token 값이 필요한데, `docker swarm init` 명령어의 결과로 출력되지만 잊었을 경우에는 아래 명령어로 다시 조회 할 수 있다.
 
-	```
+	```bash
 	Worker Node 를 추가할 때 사용하는 token 조회
 	vagrant@manager:~$ sudo docker swarm join-token worker
 	To add a worker to this swarm, run the following command:
@@ -205,7 +205,7 @@ tags:
 	
 - Worker Node 로 생성했던 `worker1`, `worker2` 를 구성된 Swarm Cluster 에 참여 시켜본다.
 
-	```
+	```bash
 	Worker Node 1
 	$ vagrant ssh worker1
 	.. 생략 ..
@@ -226,7 +226,7 @@ tags:
 	
 - 각 Node 에서 `docker info` 를 통해 Docker Engine 의 상태를 확인하면 아래와 같다.
 
-	```
+	```bash
 	Worker Node 1
 	vagrant@worker1r:~$ sudo docker info
 	
@@ -258,7 +258,7 @@ tags:
 	
 - Manager Node 에서 `docker node ls` 를 통해 현재 Swarm Cluster 의 구성을 조회하면 아래와 같다.
 
-	```
+	```bash
 	vagrant@manager:~$ sudo docker node ls
 	ID                            HOSTNAME            STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VER	SION
 	yenkumtb6whjug68c32babba9 *   manager             Ready               Active              Leader              19.03.5
@@ -271,7 +271,7 @@ tags:
 ### Swarm Cluster 떠나기
 - 구성된 Swarm Cluster 를 떠나는 방법은 `docker swarm leave` 명령어로 가능하다.
 
-	```
+	```bash
 	Worker Node 1
 	vagrant@worker1:~$ sudo docker swarm leave
 	Node left the swarm.
@@ -318,5 +318,6 @@ tags:
 [How nodes work](https://docs.docker.com/engine/swarm/how-swarm-mode-works/nodes/)
 [Swarm mode key concepts](https://docs.docker.com/engine/swarm/key-concepts/)
 [Docker Swarm을 이용한 쉽고 빠른 분산 서버 관리](https://subicura.com/2017/02/25/container-orchestration-with-docker-swarm.html)
+[[Docker 기본(6/8)] Docker의 Container Ochestartion: Swarm](https://medium.com/dtevangelist/docker-%EA%B8%B0%EB%B3%B8-6-8-docker%EC%9D%98-container-ochestartion-swarm-4ddfb3a8cd83)
 
 	
