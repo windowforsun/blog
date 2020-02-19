@@ -49,6 +49,8 @@ upstream myapp {
 	- `fail_timeout=n` : `max_fails` 가 지정된 상태에서 n 동안 응답하지 않으면 죽은 것으로 판단한다.
 	- `down` : 해당 서버를 사용하지 않게 지정한다. `ip_hash` 가 설정된 상태에만 유효하다.
 	- `backup` : 클러스터로 등록된 모든 서버가 동작하지 않을 때만 `backup` 으로 등록된 서버가 사용된다.
+- Nginx 는 Nginx Plus 에만 `Health check` 기능이 있어, 서버의 상태를 지속적으로 체크하기 위해서는 별도의 API 를 구성하는 방식해야 한다.
+	- 특정 상황에 따라 서버를 스위칭하는 `High Availability` 에는 적합하지 않을 수 있다.
 
 ### HTTP load balancing
 - HTTP 통신에 대한 load balancing 설정을 하면 아래와 같다.
