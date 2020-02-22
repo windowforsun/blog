@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Docker 실습] HAProxy 를 사용한 Web Application 무중단 배포"
+title: "[Docker 실습] HAProxy 를 사용한 Web Application Load Balancing"
 header:
   overlay_image: /img/docker-bg-2.jpg
-excerpt: 'HAProxy 의 Load Balancing 기능과 Swarm 의 rolling update 기능으로 무중단 배포를 해보자'
+excerpt: 'HAProxy 의 Load Balancing 기능과 Swarm 의 rolling update 기능으로 사용해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -54,11 +54,11 @@ tags:
 	- `/healthcheck` 로 `GET` 요청을 보내면 ok 문자열을 응답한다.
 	- 2가지 API 모두 sleep 을 시킬 수 있는 API 가 추가로 구성돼 있다.
 
-## HAProxy 를 이용한 간단한 무중단 배포
+## HAProxy 를 이용한 간단한 Load Balancing
 - 앞단에서 Load Balancing 역할을 수행하는 `HAProxy` 는 [DockerCloud HAProxy](https://hub.docker.com/r/dockercloud/haproxy/) 이미지를 사용한다.
 - `docker-compose` 파일에서 간단한 설정을 통해 `HAProxy` 를 사용할 수 있다는 장점이 있다.
 - `/var/run/docker.sock` 을 이미지에 마운트 해서 사용하기 때문에, `HAProxy` 컨테이너에서 네트워크를 참여하는 컨테이너를 감지해 역할을 수행한다.
-- 무중단 배포를 위해서 Web Application 은 최소 2개로 구성해야 한다.
+- Load Balancing 을 위해 Web Application 은 최소 2개로 구성해야 한다.
 - `HAProxy` 컨테이너에서 자동으로 네트워크에 참여하는, 나가는 컨테이너를 감지해 주기 때문에 모든 Web Application 컨테이너가 중지되는 일만 없다면 무중단으로 배포가 가능하다.
 - 예제의 방법은 `HAProxy` 의 Load Balancing 기능과 `docker-compose` 에서 `update_config` 를 사용하는 방법 이기 때문에, 서비스 `scale` 의 수와 실제로 WebApplication 이 올라가는 시간이 `update_config` 설정 값에 큰 영향을 줄 수 있다.
 	- `update_config` 을 사용하는 것을 `swarm rolling update` 이라고 한다. 관련 설명은 [여기서](https://docs.docker.com/engine/swarm/swarm-tutorial/rolling-update/) 확인 가능하다.
