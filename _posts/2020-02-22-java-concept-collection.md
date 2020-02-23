@@ -171,10 +171,10 @@ use_math: true
 - `null` 원소를 허용하지 않는다.
 - 스택 자료구조처럼 사용될때는 `Stack` 구현체 클래스 보다 빠르고, 큐 자료구조로 사용될 때는 `LinkedList` 구현체 클래스보다 빠른 성능을 보인다.
 - `ArrayDeque` 에서 제공하는 메소드들은 대부분 `Amortized Constant time` 임을 보장한다. 제외 되는 메소드는 removeFirstOccurrence, removeLastOccurrence, contains, iterator, remove 들이 있고, 대부분의 모든 메소드들도 선형시간을 보장한다.
-	>##### Amortized Constant time(분활 상환 상수 시간)
-	>- 동적 배열(ArrayList)에서 발생할 수 있는 시간 복잡도 이다.
-	>- 배열의 공간이 있을 떄 원소를 추가하면 $O(1)$ 이지만, 공간이 다찼다면 확장하고 복사하는데 $O(n)$ 이 걸린다.
-	>- 배열 크기를 늘릴 때는 고비용이 발생하지만, 이후에는 비용이 거의 들지 않으므로 이부분을 분산시키면 성능은 상수 시간과 비슷해 진다.
+	>- Amortized Constant time(분활 상환 상수 시간)
+	>   - 동적 배열(ArrayList)에서 발생할 수 있는 시간 복잡도 이다.
+	>   - 배열의 공간이 있을 떄 원소를 추가하면 $O(1)$ 이지만, 공간이 다찼다면 확장하고 복사하는데 $O(n)$ 이 걸린다.
+	>   - 배열 크기를 늘릴 때는 고비용이 발생하지만, 이후에는 비용이 거의 들지 않으므로 이부분을 분산시키면 성능은 상수 시간과 비슷해 진다.
 - `ArrayDeque` 에서 `Iterator` 를 생성한 후에 기존 `ArrayDeque` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 	
 ## Set
