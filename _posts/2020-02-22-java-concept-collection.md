@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] Collection 컬렉션"
+title: "[Java 개념] Collection Framework, Collection"
 header:
   overlay_image: /img/java-bg.jpg
 excerpt: ''
@@ -13,10 +13,11 @@ tags:
     - Concept
     - Java
     - Collection
+    - Java Collection Framework
+toc: true
 ---  
 
-## Java Collection
-
+## Java Collection 
 
 ![그림 1]({{site.baseurl}}/img/java/concept_collection_1.png)
 
@@ -24,7 +25,155 @@ tags:
 - 데이터 집합을 다양한 자료구조를 통해 효과적으로 처리할 수 있도록 처리하는 알고리즘을 구조화해 각 클래스에 구현해 놓았다.
 - 위 그림은 Collection 의 구조를 표현한 간략한 다이어그램이다.
 - Java Collection 을 이루는 모든 클래스들은 `Iterable` 인터페이스를 구현한다.
+- `Iterable` 의 하위 인터페이스는 보다 구체적인 자료구조의 종류에 따라 나눠져 있다.
+- 인터페이스의 하위에는 자료구조 종류에 따라 추상클래스에서 전체적인 알고리즘이나, 공통적인 부분을 구현한다.
+- 추상 클래스의 하위에는 각 클래스들이 실제로 해당 자료구조에 필요한 알고리즘을 구현하고 있다.
+
+
+# Iterable
+- `Iterable` 인터페이스를 구현하면 객체가 `for-each loop` 문에 사용이 가능하다.
+- 앞서 설명한 것처럼 Collection 을 구성하는 모든 인터페이스와 클래스는 해당 인터페이스의 하위에 있다.
+- `Iterable` 인터페이스는 Java Collection 에서만 쓰이는 인터페이스가 아닌 `for-each loop` 이 필요하면 해당 인터페이스를 구현하기 때문에 다양한 곳에서 사용된다.
+
+# Collection 
+- Java Collection Framework 의 루트 인터페이스로, Collection 동작에 공통적으로 필요한 메소드가 정의돼 있다.
+- 하위 인터페이스에서는 보다 구체적인 자료구조의 인터페이스를 제공한다. (List, Set, Queue)
+
+## List
+- `Collection` 의 하위 인터페이스로 순서(`sequence`)가 있는 데이터 구조의 인터페이스이다.
+- 다수의 데이터에서 위치(`index`) 를 통해 삽입, 삭제, 검색 등을 수행할 수 있다.
+- 중복을 허용한다.
+- 하위 클래스에서는 각 다른 구조로 순서가 있는 데이터를 컨트롤하는 구현체가 있다.(LinkedList, ArrayList, Vector, Stack)
+- 일부 하위 구현체에서는 `null` 값을 추가할 경우 예외가 발생한다.
+
+### AbstractList
+- `List` 를 구현하는 추상 클래스로 랜덤 접근, 인덱스 기반 접근이 가능한 데이터 구조의 구현체이다.
+- 랜덤 접근이 가능한 데이터 구조 구현에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
+
+#### ArrayList
+- `AbatractList` 의 하위 클래스로 가변적인 배열의 구현체이다.
+- 가변적인 배열은 `null` 값을 원소를 허용한다.
+- 배열의 크기를 명시해서도 사용 가능하다.
+- 동기화에 대한 처리가 돼있지 않으므로, 동기화 처리가 필요한 경우 `Vector` 를 사용한다.
+- 배열의 크기가 다차면 자동으로 조정하고, 명시적으로 배열의 크기를 조정할 수도 있다.
+- 랜덤 접근 동작의 비율이 많은 경우 사용하기 좋다.
+
+#### Vector
+- `AbstractList` 의 하위 클래스로 가벼적인 배열이면서 동기화에 대한 처리가 추가된 구현체이다.
+- 가변적인 배열인 `ArrayList` 와 동기화 처리에 대한 유/무의 차이만 제외하면 기능적 내용은 동일하다.
+
+
+#### Stack
+- `Vector` 의 하위 클래스로 `LIFO` 동작의 구현체이다.
+- `Vector` 에서 `LIFO` 동작을 위해 5가지 메소드를 확장 한다.
+- `Deque` 인터페이스의 구현체인 `ArrayDequeue` 가 보다 완벽하고 일관된 기능을 제공한다.
+
+
+### AbstractSequentialList
+- `AbstractList` 의 하위 추상 클래스로, 순차 접근하는 데이터 구조의 구현체이다.
+- 순차 접근 데이터 구조 구현을에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
+
+#### LinkedList
+- `AbstractSequentialList` 와 `Deque` 의 하위 클래스로 이중 연결 리스트의 구현체이다.
+- 이중 연결 리스트는 `null` 값을 원소로 허용한다.
+- 동기화에 대한 처리가 돼있지 않다.
+- 순차적인 동작에 대해 최적화 돼있다.
+
+
+## Queue
+- `Collection` 의 하위 인터페이스로 데이터의 삽입, 삭제에서 항상 순서가 유지되는 데이터 구조의 인터페이스이다.
+- `Collection` 인터페이스에서 제공하는 삽입, 삭제, 검색 외에 별도의 기능을 제공한다.
+- 기본적으로 `FIFO` 방식으로 요소를 컨트롤이 가능하고, 하위 구현체를 사용할 경우 `LIFO` 도 가능하다.
+- 삽입의 경우 `tail`(배열의 마지막) 에 추가되고, 삭제는 `head`(배열의 처음) 에서 수행된다.
+- `Queue` 인터페이스에서 직접 제공하는 데이터 조작 기능은 예외가 발생하지 않고 특정 값을 반환한다.
+
+	.|예외 발생|특정값 반환
+	---|---|---
+	추가|add(e)|offer(e)
+	삭제|remove()|poll()
+	조회|element()|peek()
+
+- 동기화가 필요한 데이터의 경우 `BlockingQueue` 를 사용한다.
+- 일부 하위 구현체에서는 `null` 값을 추가할 경우 예외가 발생한다.
+
+### AbstractQueue
+- `Queue` 를 구현하는 추상 클래스로 Queue 데이터 구조의 구현체이다.
+- Queue 데이터 구조 구현에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
+
+### PriorityQueue
+- `AbstractQueue` 의 하위 클래스로 우선순위 큐의 구현체이다.
+- 우선순위는 `Comparator` 에 의해 순서대로 정렬된다.
+- 우선순위 큐는 `null` 원소를 허용하지 않는다.
+- `PriorityQueue` 의 `head` 는 우선순위 중 가장 
 	
+## Dequeue
+- `Queue` 인터페이스의 하위 인터페이스로 배열의 양쪽 끝에서 데이터 추가, 삭제가 가능한 데이터 구조의 인터페이스이다.
+- `double ended queue` 의 약자이고 `deck` 이라고 불리기도 한다.
+- 용량에 제한이 없지만, 필요한 경우 제한도 가능하다.
+- 인덱스를 기반으로 데이터를 조작하는 연산은 지원하지 않는다.
+- `Queue` 의 메소드에서 양쪽 끝의 동작에 대한 아래와 같은 메소드를 제공한다.
+	- 첫 번째 요소(head)
+		
+		.|예외 발생|특정값 반환
+		---|---|---
+		추가|addFirst(e)|offerFirst(e)
+		삭제|removeFirst()|pollFirst()
+		조회|getFirst()|peekFirst()
+		
+	- 마지막 요소(tail)
+		
+		.|예외 발생|특정값 반환
+		---|---|---
+		추가|addLast(e)|offerLast(e)
+		삭제|removeLast()|pollLast()
+		조회|getLast()|peekLast()
+
+- `Queue` 에서 확장된 `Dequeue` 를 `Queue` 와 같이 `FIFO` 에 대응되는 메소드는 아래와 같다.
+
+	Queue|Dequeue
+	---|---
+	add(e)|addLast(e)
+	offer(e)|offerLast(e)
+	remove()|removeFirst()
+	poll()|pollFirst()
+	element()|getFirst()
+	peek()|peekFirst()
+	
+- `Stack` 과 같은 `LIFO` 에 대응되는 메소드는 아래와 같다.
+
+	Stack|Dequeue
+	---|---
+	push(e)|addFirst(e)
+	pop()|removeFirst()
+	peek()|peekFirst()
+	
+	
+## Set
+- `Collection` 의 하위 인터페이스로 중복을 허용하지 않는 데이터 구조의 인터페이스이다.
+- 수학의 집합을 추상화해 모델링한것이다
+- 중복에 대한 판별은 `e1.eqauls(e2)` 를 사용한다.
+- 일부 하위 구현체에서는 `null` 값을 추가할 경우 예외가 발생한다.
+
+### AbstractSet
+
+
+## SortedSet
+- `Set` 인터페이스의 하위 인터페이스로 중복이 없는 정렬된 데이터 구조의 인터페이스이다.
+- `Comparator` 으로 정렬 기준의 변경할 수 있다.
+- 기본적으로 오름차순으로 데이터를 순회한다.
+- `SortedSet` 에 추가되는 데이터(객체)는 모두 `Comparable` 을 구현해야 한다.
+
+## NavigableSet
+- `SortedSet` 인터페이스의 하위 인터페이스로 정렬이라는 부분을 보다 확장한 데이터 구조의 인터페이스이다.
+- `SortedSet` 은 오름차순으로 조회, 순회만 가능 했다면, 정렬 기준에서 오름차순, 내림차순으로 조회, 순회가 가능하다.
+- 조회 하려는 원소와 값이 완전히 같지 않더라도, 가장 인접한 원소를 조회할 수 있다.
+- 범위 검색을 통해 범위에 해당하는 `SortedSet` 을 검색 할 수 있다.
+
+		
+
+
+
+
 ---
 ## Reference
 [Hierarchy For Package java.util](https://docs.oracle.com/javase/8/docs/api/java/util/package-tree.html)  
