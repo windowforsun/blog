@@ -1,0 +1,128 @@
+@startuml
+
+interface Iterable {
+
+}
+
+interface Collection {
+
+}
+
+interface List {
+
+}
+
+interface Queue {
+
+}
+
+interface Dequeue {
+
+}
+
+interface Set {
+
+}
+
+interface SortedSet {
+
+}
+
+interface NavigableSet {
+
+}
+
+abstract class AbstractList {
+
+}
+
+abstract class AbstractSequentialList {
+
+}
+
+class LinkedList {
+
+}
+
+class ArrayList {
+
+}
+
+class Vector {
+
+}
+
+class Stack {
+
+}
+
+abstract AbstractQueue {
+
+}
+
+class PriorityQueue {
+
+}
+
+abstract AbstractSet {
+
+}
+
+class EnumSet {
+
+}
+
+class HashSet {
+
+}
+
+class LinkedHashSet {
+
+}
+
+class TreeSet {
+
+}
+
+class ArrayDequeue {
+
+}
+
+
+
+Iterable <|-- Collection
+Collection <|-- List
+Collection <|-- Queue
+Collection <|-- Set
+Queue<|-- Dequeue
+Set <|-- SortedSet
+SortedSet <|-- NavigableSet
+
+List <... AbstractList
+AbstractList <|-- AbstractSequentialList
+AbstractSequentialList <|-- LinkedList
+Dequeue <... LinkedList
+AbstractList <|-- ArrayList
+AbstractList <|-- Vector
+Vector <|-- Stack
+
+Queue <... AbstractQueue
+AbstractQueue <|-- PriorityQueue
+
+Set <... AbstractSet
+AbstractSet <|-- EnumSet
+AbstractSet <|-- HashSet
+AbstractSet <|-- TreeSet
+HashSet <|-- LinkedHashSet
+NavigableSet <... TreeSet
+
+Dequeue <.. ArrayDequeue
+
+
+
+
+
+
+
+
+@enduml
