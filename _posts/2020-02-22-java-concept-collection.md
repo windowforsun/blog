@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] Collection Framework, Collection"
+title: "[Java 개념] Collection Framework - Collection"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java Collection Framework 중 Collection 부분에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,9 +15,10 @@ tags:
     - Collection
     - Java Collection Framework
 toc: true
+use_math: true
 ---  
 
-## Java Collection 
+# Java Collection 
 
 ![그림 1]({{site.baseurl}}/img/java/concept_collection_1.png)
 
@@ -75,6 +76,7 @@ toc: true
 
 #### LinkedList
 - `AbstractSequentialList` 와 `Deque` 의 하위 클래스로 이중 연결 리스트의 구현체이다.
+- `Deque` 를 구현하고 있기 때문에, 이준 연결 리스트에서 양 끝쪽에 대한 삽입, 삭제, 조회 연산이 가능하다.
 - 이중 연결 리스트는 `null` 값을 원소로 허용한다.
 - 동기화에 대한 처리가 돼있지 않다.
 - 순차적인 동작에 대해 최적화 돼있다.
@@ -104,9 +106,24 @@ toc: true
 - `AbstractQueue` 의 하위 클래스로 우선순위 큐의 구현체이다.
 - 우선순위는 `Comparator` 에 의해 순서대로 정렬된다.
 - 우선순위 큐는 `null` 원소를 허용하지 않는다.
-- `PriorityQueue` 의 `head` 는 우선순위 중 가장 
+- `PriorityQueue` 의 `head` 는 우선순위 중 가장 가장 적은 원소를 가리킨다.
+- `PriorityQueue` 는 내부적으로 배열을 사용하고, 배열의 크기는 자동으로 조정된다.
+- 동기화에 대한 처리가 돼있지 않기 때문에, 동기화 처리가 필요한 경우 `PriorityBlockingQueue` 를 사용해야 한다.
+- 각 메소드가 가지는 시간 복잡도는 아래와 같다.
+
+	메소드명|시간복잡도
+	---|---
+	offer(e)|$O(\log_n)$
+	poll()|$O(\log_n)$
+	remove()|$O(\log_n)$
+	add(e)|$O(\log_n)$
+	remove(e)|$O(n)$
+	contains(e)|$O(n)$
+	peek()|$O(1)$
+	element()|$O(1)$
+	size()|$O(1)$	
 	
-## Dequeue
+## Deque
 - `Queue` 인터페이스의 하위 인터페이스로 배열의 양쪽 끝에서 데이터 추가, 삭제가 가능한 데이터 구조의 인터페이스이다.
 - `double ended queue` 의 약자이고 `deck` 이라고 불리기도 한다.
 - 용량에 제한이 없지만, 필요한 경우 제한도 가능하다.
@@ -128,9 +145,9 @@ toc: true
 		삭제|removeLast()|pollLast()
 		조회|getLast()|peekLast()
 
-- `Queue` 에서 확장된 `Dequeue` 를 `Queue` 와 같이 `FIFO` 에 대응되는 메소드는 아래와 같다.
+- `Queue` 에서 확장된 `Deque` 를 `Queue` 와 같이 `FIFO` 에 대응되는 메소드는 아래와 같다.
 
-	Queue|Dequeue
+	Queue|Deque
 	---|---
 	add(e)|addLast(e)
 	offer(e)|offerLast(e)
@@ -146,7 +163,19 @@ toc: true
 	push(e)|addFirst(e)
 	pop()|removeFirst()
 	peek()|peekFirst()
-	
+
+#### ArrayDeque
+- `Dequeue` 를 구현한 클래스로, 배열을 사용한 `deck` 의 구현체이다.
+- 내부에서 사용한 배열의 크기는 자동으로 조정 된다.
+- 동기화에 대한 처리가 돼있지 않다.
+- `null` 원소를 허용하지 않는다.
+- 스택 자료구조처럼 사용될때는 `Stack` 구현체 클래스 보다 빠르고, 큐 자료구조로 사용될 때는 `LinkedList` 구현체 클래스보다 빠른 성능을 보인다.
+- `ArrayDeque` 에서 제공하는 메소드들은 대부분 `Amortized Constant time` 임을 보장한다. 제외 되는 메소드는 removeFirstOccurrence, removeLastOccurrence, contains, iterator, remove 들이 있고, 대부분의 모든 메소드들도 선형시간을 보장한다.
+	>##### Amortized Constant time(분활 상환 상수 시간)
+	>- 동적 배열(ArrayList)에서 발생할 수 있는 시간 복잡도 이다.
+	>- 배열의 공간이 있을 떄 원소를 추가하면 $O(1)$ 이지만, 공간이 다찼다면 확장하고 복사하는데 $O(n)$ 이 걸린다.
+	>- 배열 크기를 늘릴 때는 고비용이 발생하지만, 이후에는 비용이 거의 들지 않으므로 이부분을 분산시키면 성능은 상수 시간과 비슷해 진다.
+- `ArrayDeque` 에서 `Iterator` 를 생성한 후에 기존 `ArrayDeque` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 	
 ## Set
 - `Collection` 의 하위 인터페이스로 중복을 허용하지 않는 데이터 구조의 인터페이스이다.
@@ -155,7 +184,34 @@ toc: true
 - 일부 하위 구현체에서는 `null` 값을 추가할 경우 예외가 발생한다.
 
 ### AbstractSet
+- `Set` 을 구현하는 추상클래스로 집합 데이터 구조의 구현체이다.
+- 집합 데이터 구조 구현에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
 
+#### EnumSet
+- `AbstractSet` 의 하위 클래스로 Enum 을 사용하는 집합의 구현체이다.
+- `EnumSet` 은 하나의 각 원소를 비트 벡터로 표현해서 저장하고 이런 저장방식은 성능적으로나 공간적으로 매우 효율적이다.
+- `null` 원소는 허용하지 않는다.
+- `Iterator` 로 순차 접근을 할때 순서는 사용하는 Enum 상수값에 의존한다.
+- 동기화에 대한 처리는 돼있지 않다.
+- 제공하는 모든 메소드는 상수시간 $O(1)$ 에 처리된다.
+- `HashSet` 구현체 보다 빠를 수도 있다.(보장은 하지 않음)
+
+#### HashSet
+- `AbstractSet` 의 하위 클래스로 해시 테이블을 사용하는 집합의 구현체이다.
+- `Iterator` 로 순차 접근할 할때 순서는 보장되지 않는다.
+- `null` 원소를 허용한다.
+- 제공하는 모든 메소드는 해시 함수의 값이 해시 테이블에 잘 분배된다면 상수시간 $O(1)$ 안에 처리된다. (add, remove, contains, size)
+- 해시 함수의 값이 잘 분배되기 위해서는 `capacity` 값이 중요한데, 너무 크지도 너무 작지도 않게 설정해야 계속해서 해시 함수를 돌리며 빈 버킷을 찾는 일을 줄일 수 있다.
+- 동기화에 대한 처리는 돼있지 않다.
+- `HashSet` 에서 `Iterator` 를 생성한 후에 기존 `HashSet` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
+
+#### LinkedHashSet
+- `HashSet` 의 하위 클래스로 순서를 예측가능한 집합의 구현체이다.
+- `HashSet` 과 다른점은 집합의 구조에서 원소간 이중 링크를 유지한다는 점에 있다. 이 링크를 통해 순차 접근시에 순서를 보장한다.
+- 순서는 집합에 원소를 추가한 순서로 결정된다.
+- `HashSet` 의 성능은 `capacity` 에만 의존했다면, `LinkedHashSet` 은 `capacity` 와 `loadfactor` 두 가지에 의존한다.
+- 순서를 유저하는데 사용되는 목록이 추가되고, 이를 관리하는 비용이 추가되어 `HashSet` 와 비교해 약간의 성능저하는 발생 할 수 있다.
+- 위의 특징외에는 `HashSet` 과 동일한 스펙을 가지고 있다.
 
 ## SortedSet
 - `Set` 인터페이스의 하위 인터페이스로 중복이 없는 정렬된 데이터 구조의 인터페이스이다.
@@ -169,9 +225,12 @@ toc: true
 - 조회 하려는 원소와 값이 완전히 같지 않더라도, 가장 인접한 원소를 조회할 수 있다.
 - 범위 검색을 통해 범위에 해당하는 `SortedSet` 을 검색 할 수 있다.
 
-		
-
-
+#### TreeSet
+- `AbstractSet` 과 `NavigableSet` 의 하위 클래스로 임의의 정렬 집합의 구현체이다.
+- `Comparable` 의 기본 정렬 기준으로 사용이 가능하고, `Comparator` 를 통해 특정 정렬 기준을 정의할 수도 있다.
+- `TreeSet` 에서 제공하는 기본 메소드(add, remove, contains)는 $O(\log_n)$ 의 시간복잡도를 보장한다.
+- 동기화에 대한 처리는 돼있지 않다.
+- `TreeSet` 에서 `Iterator` 를 생성한 후에 기존 `TreeSet` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 
 
 ---
