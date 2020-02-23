@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] Collection Framework - Collection"
+title: "[Java 개념] Collections Framework - Collection"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: 'Java Collection Framework 중 Collection 부분에 대해 알아보자'
+excerpt: 'Java Collections Framework 중 Collection 부분에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
