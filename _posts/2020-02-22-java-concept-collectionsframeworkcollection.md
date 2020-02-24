@@ -20,16 +20,15 @@ use_math: true
 
 # Java Collection 
 
-![그림 1]({{site.baseurl}}/img/java/concept_collection_1.png)
+![그림 1]({{site.baseurl}}/img/java/concept_collectionsframeworkcollection_1.png)
 
 - Java 에서 Collection 은 다수의 데이터를 쉽고 효과적으로 처리 할 수 있는 표준화된 방법을 제공하는 클래스의 집합을 의미한다.
 - 데이터 집합을 다양한 자료구조를 통해 효과적으로 처리할 수 있도록 처리하는 알고리즘을 구조화해 각 클래스에 구현해 놓았다.
-- 위 그림은 Collection 의 구조를 표현한 간략한 다이어그램이다.
+- 위 그림은 Java Collections Framework 중 Collection 부분의 구조를 표현한 간략한 다이어그램이다.
 - Java Collection 을 이루는 모든 클래스들은 `Iterable` 인터페이스를 구현한다.
 - `Iterable` 의 하위 인터페이스는 보다 구체적인 자료구조의 종류에 따라 나눠져 있다.
 - 인터페이스의 하위에는 자료구조 종류에 따라 추상클래스에서 전체적인 알고리즘이나, 공통적인 부분을 구현한다.
-- 추상 클래스의 하위에는 각 클래스들이 실제로 해당 자료구조에 필요한 알고리즘을 구현하고 있다.
-
+- 인터페이스나, 추상 클래스의 하위에는 각 클래스들이 실제로 해당 자료구조에 필요한 알고리즘을 구현하고 있다.
 
 # Iterable
 - `Iterable` 인터페이스를 구현하면 객체가 `for-each loop` 문에 사용이 가능하다.
@@ -37,7 +36,7 @@ use_math: true
 - `Iterable` 인터페이스는 Java Collection 에서만 쓰이는 인터페이스가 아닌 `for-each loop` 이 필요하면 해당 인터페이스를 구현하기 때문에 다양한 곳에서 사용된다.
 
 # Collection 
-- Java Collection Framework 의 루트 인터페이스로, Collection 동작에 공통적으로 필요한 메소드가 정의돼 있다.
+- Java Collection 의 루트 인터페이스로, Collection 동작에 공통적으로 필요한 메소드가 정의돼 있다.
 - 하위 인터페이스에서는 보다 구체적인 자료구조의 인터페이스를 제공한다. (List, Set, Queue)
 
 ## List
@@ -53,22 +52,30 @@ use_math: true
 
 #### ArrayList
 - `AbatractList` 의 하위 클래스로 가변적인 배열의 구현체이다.
+- 가변적인 배열인 만큼 내부적으로 고정 크기의 배열을 사용하고 이를 `ArrayList` 단에서 조정해주는 처리가 들어간다.
 - 가변적인 배열은 `null` 값을 원소를 허용한다.
 - 배열의 크기를 명시해서도 사용 가능하다.
 - 동기화에 대한 처리가 돼있지 않으므로, 동기화 처리가 필요한 경우 `Vector` 를 사용한다.
 - 배열의 크기가 다차면 자동으로 조정하고, 명시적으로 배열의 크기를 조정할 수도 있다.
 - 랜덤 접근 동작의 비율이 많은 경우 사용하기 좋다.
+- `size`, `isEmpty`, `get`, `set`, `iterator` 는 상수시간인 $O(1)$ 을 보장한다.
+- `add` 의 경우 `amorized constant time` 으로 할당된 배열의 공간이 충분할 경우 $O(1)$, 충분하지 않을 경우 $O(n)$ 이 소요 된다.
+	>- Amortized Constant time(분활 상환 상수 시간)
+	>   - 동적 배열(ArrayList)에서 발생할 수 있는 시간 복잡도 이다.
+	>   - 배열의 공간이 있을 떄 원소를 추가하면 $O(1)$ 이지만, 공간이 다찼다면 확장하고 복사하는데 $O(n)$ 이 걸린다.
+	>   - 배열 크기를 늘릴 때는 고비용이 발생하지만, 이후에는 비용이 거의 들지 않으므로 이부분을 분산시키면 성능은 상수 시간과 비슷해 진다.
+- 이외의 다른 메소드들은 $O(n)$ 의 시간복잡도를 갖는다.
+- `ArrayList` 에서 `Iterator` 를 생성한 후에 기존 `ArrayList` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 
 #### Vector
-- `AbstractList` 의 하위 클래스로 가벼적인 배열이면서 동기화에 대한 처리가 추가된 구현체이다.
-- 가변적인 배열인 `ArrayList` 와 동기화 처리에 대한 유/무의 차이만 제외하면 기능적 내용은 동일하다.
-
+- `AbstractList` 의 하위 클래스로 가변적인 배열이면서 동기화에 대한 처리가 추가된 구현체이다.
+- `Vector` 는 삽입, 삭제 연산에 따라 배열의 크기가 늘어나거나 줄어드는 방식으로 사용 중인 배열의 전체 크기를 최적화 한다.
+- 가변적인 배열인 `ArrayList` 와 위의 내용을 제외하면 기능적 내용은 거의 동일하다.
 
 #### Stack
 - `Vector` 의 하위 클래스로 `LIFO` 동작의 구현체이다.
-- `Vector` 에서 `LIFO` 동작을 위해 5가지 메소드를 확장 한다.
+- `Vector` 에서 `LIFO` 동작을 위해 5가지 메소드를(`empty`, `peek`, `pop`, `push(e)`, `search(e)`) 확장 한다.
 - `Deque` 인터페이스의 구현체인 `ArrayDequeue` 가 보다 완벽하고 일관된 기능을 제공한다.
-
 
 ### AbstractSequentialList
 - `AbstractList` 의 하위 추상 클래스로, 순차 접근하는 데이터 구조의 구현체이다.
@@ -80,6 +87,9 @@ use_math: true
 - 이중 연결 리스트는 `null` 값을 원소로 허용한다.
 - 동기화에 대한 처리가 돼있지 않다.
 - 순차적인 동작에 대해 최적화 돼있다.
+- `getFirst`, `getLast`, `removeFirst`, `removeLast`, `offer`, `offerFirst`, `offerLast`, `pop`, `popFirst`, `popLast`, `peek`, `peekFirst`, `peekLast`, `size` 등과 같이 순서에 따른 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
+- `add(i,e)`, `contains(e)`, `indexOf(e)`, `get(i)`, `remove(i)`, `remove(e)` 와 같은 순서 혹은 특정 원소에 해당하는 메소는 선형시간 $O(n)$ 의 시간복잡도가 소요된다.
+- `LinkedList` 에서 `Iterator` 를 생성한 후에 기존 `LinkedList` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 
 
 ## Queue
@@ -236,3 +246,4 @@ use_math: true
 ---
 ## Reference
 [Hierarchy For Package java.util](https://docs.oracle.com/javase/8/docs/api/java/util/package-tree.html)  
+[Java Collections – Performance (Time Complexity)](http://infotechgems.blogspot.com/2011/11/java-collections-performance-time.html)  
