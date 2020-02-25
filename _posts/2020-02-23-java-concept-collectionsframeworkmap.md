@@ -20,7 +20,7 @@ use_math: true
 
 # Java Map
 
-![그림 1]({{site.baseurl}}/img/java/concept_collectionsframeworkcollection_1.png)
+![그림 1]({{site.baseurl}}/img/java/concept_collectionsframeworkmap_1.png)
 
 - Java 에서 Map 은 `key-value` 형식으로 데이터를 저장하는 구조에서 효과적으로 처리할 수 있는 표준화된 방법을 제공하는 클래스의 집합니다.
 - 위 그림은 Java Collections Framework 에서 Map 부분을 구성하고 있는 다이어그램이다.
