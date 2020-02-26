@@ -43,12 +43,57 @@ use_math: true
 	- 어떤 구현체에서는 `key` 타입에 제한이 있다.
 
 ## AbstractMap
+- `Map` 을 구현하는 추상 클래스로 Map 데이터 구조의 구현체이다.
+- Map 데이터 구조 구현에 필요한 기본적이면서 공통적인 구현체를 제공한다.
 
 ### EnumMap
+- `AbstractMap` 의 하위 클래스로 `key` 가 `Enum` 형식인 Map 의 구현체이다.
+- `key` 가 `Enum` 형식이기 때문에 다른 Map 구현체보다 `key` 에 있어서는 작고 효율적이다.
+- `EnumMap` 은 내부적으로 배열을 통해 표현한다. (`key` 가 `Enum` 이기때문에 순서값이 존재)
+- Map 에 있는 `key` 를 `Set` 구조로 가져오면 정렬은 원래 `Enum` 의 정렬(순서값)기준으로 정렬된다.
+- `key` 에 `null` 은 허용하지 않는다.
+- 동기화처리가 돼있지 않다.
+- `HashMap` 의 구현체보다 성능적 이점이 있을 수 있다.(보장하진 않음)
+- 주요 메소드들의 구체적인 시간복잡도는 아래와 같고 대부분은 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
+
+	메소드|시간 복잡도
+	---|---
+	get(key)|$O(1)$
+	containsKey(key)|$O(1)$
+	for-each next|$(1)$
 
 ### HashMap
+- `AbstractMap` 의 하위 클래스로 `key` 가 다양한 형태를 가질 수 있는 Map 의 구현체이다.
+- `key` 는 `Set` 구현체에 저장되기 때문에 정렬 순서는 정해진 기준이 없다.
+- `key`, `value` 에 모두 `null` 값을 허용한다.
+- `HashMap` 은 내부적으로 `key` 값의 저장을 `Set` 구현체를 사용하는 만큼 HashTable 에 의존한다.
+- 동기화처리가 돼있지 않다.
+- `HashMap` 에서 `Iterator` 를 생성한 후에 기존 `HashMap` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
+- `add`, `remove`, `contains`, `size` 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
+- 반복자인 `Iterator` 관련 동작의 경우 `HashMap` 을 구성하는 전체 원소의 수와 할당된 `capacity`(버킷 수) 를 더 한만큼의 시간이 필요하다.
+	
+메소드|시간 복잡도
+---|---
+get(key)|$O(1)$
+containsKey(key)|$O(1)$
+for-each next|$O(h/n)$
 
 #### LinkedHashMap
+- `HashMap` 의 하위 클래스로 순서 예측이 가능한 Map 의 구현체이다.
+- 내부적으론 `HashMap` 의 구조에서 이중 연결 리스크가 `key` 의 순서를 관리한다.(insertion-order)
+- 기존에 존재하던 `key` 가 다시 삽입되는 경우에는 순서에 영향을 끼치지 않는다.
+- `LinkedHashMap` 구현체는 LRU(least-recently-used) 캐시와 같은 동작을 구현하는데 적합한다.
+- `null` 값을 허용한다.
+- 메소드 시간 복잡도의 경우 대부분 `HashMap` 과 비슷하거나, 리스트 관리 부분으로 인해 약간의 비용이 추가 될 수 있다.
+- 반복자인 `Iterator` 관련 동작의 경우, `LinkedListHashMap` 을 구성하는 전체 원소의 수만큼 소요된다.
+- 동기화처리가 돼있지 않다.
+- `LinkedHashMap` 에서 `Iterator` 를 생성한 후에 기존 `LinkedHashMap` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
+
+메소드|시간 복잡도
+---|---
+get(key)|$O(1)$
+containsKey(key)|$O(1)$
+for-each next|$O(1)$
 
 ### IdentityHashMap
 

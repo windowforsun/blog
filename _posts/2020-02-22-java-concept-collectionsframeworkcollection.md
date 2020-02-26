@@ -51,7 +51,7 @@ use_math: true
 - 랜덤 접근이 가능한 데이터 구조 구현에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
 
 #### ArrayList
-- `AbatractList` 의 하위 클래스로 가변적인 배열의 구현체이다.
+- `AbatractList` 의 하위 클래스로 가변적인 배열(Array)의 구현체이다.
 - 가변적인 배열인 만큼 내부적으로 고정 크기의 배열을 사용하고 이를 `ArrayList` 단에서 조정해주는 처리가 들어간다.
 - 가변적인 배열은 `null` 값을 원소를 허용한다.
 - 배열의 크기를 명시해서도 사용 가능하다.
@@ -82,7 +82,7 @@ use_math: true
 - 순차 접근 데이터 구조 구현을에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
 
 #### LinkedList
-- `AbstractSequentialList` 와 `Deque` 의 하위 클래스로 이중 연결 리스트의 구현체이다.
+- `AbstractSequentialList` 와 `Deque` 의 하위 클래스로 이중 연결 리스트(Linked List)의 구현체이다.
 - `Deque` 를 구현하고 있기 때문에, 이준 연결 리스트에서 양 끝쪽에 대한 삽입, 삭제, 조회 연산이 가능하다.
 - 이중 연결 리스트는 `null` 값을 원소로 허용한다.
 - 동기화에 대한 처리가 돼있지 않다.
@@ -113,7 +113,7 @@ use_math: true
 - Queue 데이터 구조 구현에 필요한 기본적인 구현체를 제공하는 추상 클래스이다.
 
 ### PriorityQueue
-- `AbstractQueue` 의 하위 클래스로 우선순위 큐의 구현체이다.
+- `AbstractQueue` 의 하위 클래스로 우선순위 큐(Priority Heap)의 구현체이다.
 - 우선순위는 `Comparator` 에 의해 순서대로 정렬된다.
 - 우선순위 큐는 `null` 원소를 허용하지 않는다.
 - `PriorityQueue` 의 `head` 는 우선순위 중 가장 가장 적은 원소를 가리킨다.
@@ -175,7 +175,7 @@ use_math: true
 	peek()|peekFirst()
 
 #### ArrayDeque
-- `Dequeue` 를 구현한 클래스로, 배열을 사용한 `deck` 의 구현체이다.
+- `Dequeue` 를 구현한 클래스로, 배열을 사용한 `deck`(Linked List) 의 구현체이다.
 - 내부에서 사용한 배열의 크기는 자동으로 조정 된다.
 - 동기화에 대한 처리가 돼있지 않다.
 - `null` 원소를 허용하지 않는다.
@@ -199,7 +199,7 @@ use_math: true
 
 #### EnumSet
 - `AbstractSet` 의 하위 클래스로 Enum 을 사용하는 집합의 구현체이다.
-- `EnumSet` 은 하나의 각 원소를 비트 벡터로 표현해서 저장하고 이런 저장방식은 성능적으로나 공간적으로 매우 효율적이다.
+- `EnumSet` 은 하나의 각 원소를 비트 벡터(Bit Vector)로 표현해서 저장하고 이런 저장방식은 성능적으로나 공간적으로 매우 효율적이다.
 - `null` 원소는 허용하지 않는다.
 - `Iterator` 로 순차 접근을 할때 순서는 사용하는 Enum 상수값에 의존한다.
 - 동기화에 대한 처리는 돼있지 않다.
@@ -207,7 +207,7 @@ use_math: true
 - `HashSet` 구현체 보다 빠를 수도 있다.(보장은 하지 않음)
 
 #### HashSet
-- `AbstractSet` 의 하위 클래스로 해시 테이블을 사용하는 집합의 구현체이다.
+- `AbstractSet` 의 하위 클래스로 해시 테이블(Hash Table)을 사용하는 집합의 구현체이다.
 - `Iterator` 로 순차 접근할 할때 순서는 보장되지 않는다.
 - `null` 원소를 허용한다.
 - 제공하는 모든 메소드는 해시 함수의 값이 해시 테이블에 잘 분배된다면 상수시간 $O(1)$ 안에 처리된다. (add, remove, contains, size)
@@ -216,7 +216,7 @@ use_math: true
 - `HashSet` 에서 `Iterator` 를 생성한 후에 기존 `HashSet` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 
 #### LinkedHashSet
-- `HashSet` 의 하위 클래스로 순서를 예측가능한 집합의 구현체이다.
+- `HashSet` 의 하위 클래스로 순서를 예측가능한 집합의 구현체이다.(Hash Table + Linked List)
 - `HashSet` 과 다른점은 집합의 구조에서 원소간 이중 링크를 유지한다는 점에 있다. 이 링크를 통해 순차 접근시에 순서를 보장한다.
 - 순서는 집합에 원소를 추가한 순서로 결정된다.
 - `HashSet` 의 성능은 `capacity` 에만 의존했다면, `LinkedHashSet` 은 `capacity` 와 `loadfactor` 두 가지에 의존한다.
@@ -236,7 +236,7 @@ use_math: true
 - 범위 검색을 통해 범위에 해당하는 `SortedSet` 을 검색 할 수 있다.
 
 #### TreeSet
-- `AbstractSet` 과 `NavigableSet` 의 하위 클래스로 임의의 정렬 집합의 구현체이다.
+- `AbstractSet` 과 `NavigableSet` 의 하위 클래스로 임의의 정렬 집합의 구현체이다.(Red-black Tree)
 - `Comparable` 의 기본 정렬 기준으로 사용이 가능하고, `Comparator` 를 통해 특정 정렬 기준을 정의할 수도 있다.
 - `TreeSet` 에서 제공하는 기본 메소드(add, remove, contains)는 $O(\log_n)$ 의 시간복잡도를 보장한다.
 - 동기화에 대한 처리는 돼있지 않다.
