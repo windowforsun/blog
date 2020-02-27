@@ -210,6 +210,8 @@ use_math: true
 - `AbstractSet` 의 하위 클래스로 해시 테이블(Hash Table)을 사용하는 집합의 구현체이다.
 - `Iterator` 로 순차 접근할 할때 순서는 보장되지 않는다.
 - `null` 원소를 허용한다.
+- 내부적으로 사용하는 `HashTable` 의 버킷의 수가 $bucketCount * loadfactor$ 보다 같거나 클 때, `rehash` 를 통해 다시 구축하는데 기존의 2배의 공간을 할당한다.
+- `HashSet` 에서 원소의 비교는 `k1==null ? k2==null : k1.equals(k2)` 와 같이 수행한다.
 - 제공하는 모든 메소드는 해시 함수의 값이 해시 테이블에 잘 분배된다면 상수시간 $O(1)$ 안에 처리된다. (add, remove, contains, size)
 - 해시 함수의 값이 잘 분배되기 위해서는 `capacity` 값이 중요한데, 너무 크지도 너무 작지도 않게 설정해야 계속해서 해시 함수를 돌리며 빈 버킷을 찾는 일을 줄일 수 있다.
 - 동기화에 대한 처리는 돼있지 않다.

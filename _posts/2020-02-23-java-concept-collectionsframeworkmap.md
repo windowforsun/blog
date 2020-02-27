@@ -54,19 +54,21 @@ use_math: true
 - `key` 에 `null` 은 허용하지 않는다.
 - 동기화처리가 돼있지 않다.
 - `HashMap` 의 구현체보다 성능적 이점이 있을 수 있다.(보장하진 않음)
-- 주요 메소드들의 구체적인 시간복잡도는 아래와 같고 대부분은 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
+- 대부분은 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
 
-	메소드|시간 복잡도
-	---|---
-	get(key)|$O(1)$
-	containsKey(key)|$O(1)$
-	for-each next|$(1)$
+메소드|시간 복잡도
+---|---
+get(key)|$O(1)$
+containsKey(key)|$O(1)$
+for-each next|$(1)$
 
 ### HashMap
 - `AbstractMap` 의 하위 클래스로 `key` 가 다양한 형태를 가질 수 있는 Map 의 구현체이다.
 - `key` 는 `Set` 구현체에 저장되기 때문에 정렬 순서는 정해진 기준이 없다.
 - `key`, `value` 에 모두 `null` 값을 허용한다.
 - `HashMap` 은 내부적으로 `key` 값의 저장을 `Set` 구현체를 사용하는 만큼 HashTable 에 의존한다.
+- 내부적으로 사용하는 `HashTable` 의 버킷의 수가 $bucketCount * loadfactor$ 보다 같거나 클 때, `rehash` 를 통해 다시 구축하는데 기존의 2배의 공간을 할당한다.
+- 크기를 예측할 수 있다면 적절한 크기를 설정해 주는 것이 효과적이다. 초기 크기를 너무 크게 설정하면 반복자와 같은 연산에서 느려질 수 있고, 너무 작게 설정하면 `rehash` 작업으로 인해 느려 질 수 있기 때문이다.
 - 동기화처리가 돼있지 않다.
 - `HashMap` 에서 `Iterator` 를 생성한 후에 기존 `HashMap` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 - `add`, `remove`, `contains`, `size` 메소드는 상수시간 $O(1)$ 의 시간복잡도를 갖는다.
@@ -96,6 +98,20 @@ containsKey(key)|$O(1)$
 for-each next|$O(1)$
 
 ### IdentityHashMap
+- `AbstractMap` 의 하위 클래스로 `key` 의 비교가 `reference` 방식인 Map 의 구현체이다.
+- `key` 비교가 `reference` 라는 것은 기존 `HashSet` 의 비교처럼 `k1==nul ? k2==null : k1.equals(k2)` 와 같이 수행하는 것이 아니라, `k1==k2` 와 같이 `key` 의 `reference` 만 비교하는 것을 뜻한다.
+- `IdentityHashMap` 은 프로그래밍 로직상 객체의 값은 같지만 다른 객체를 `Map` 구조로 표현해야 할때 사용할 수 있다.
+- `key`, `value` 에 모두 `null` 값을 허용한다.
+- `Iterator` 와 같은 반복자를 수행할때 순서는 예측 할 수 없다.
+- 크기를 예측할 수 있다면 적절한 크기를 설정해 주는 것이 효과적이다. 초기 크기를 너무 크게 설정하면 반복자와 같은 연산에서 느려질 수 있고, 너무 작게 설정하면 `rehash` 작업으로 인해 느려 질 수 있기 때문이다.
+- 동기화처리가 돼있지 않다.
+- `IdentityHashMap` 에서 `Iterator` 를 생성한 후에 기존 `IdentityHashMap` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
+
+메소드|시간 복잡도
+---|---
+get(key)|$O(1)$
+containsKey(key)|$O(1)$
+for-each next|$O(h/n)$
 
 ### WeakHashMap
 
