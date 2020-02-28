@@ -98,25 +98,25 @@ Queue<|-- Dequeue
 Set <|-- SortedSet
 SortedSet <|-- NavigableSet
 
-List <... AbstractList
+List <|... AbstractList
 AbstractList <|-- AbstractSequentialList
 AbstractSequentialList <|-- LinkedList
-Dequeue <... LinkedList
+Dequeue <|... LinkedList
 AbstractList <|-- ArrayList
 AbstractList <|-- Vector
 Vector <|-- Stack
 
-Queue <... AbstractQueue
+Queue <|... AbstractQueue
 AbstractQueue <|-- PriorityQueue
 
-Set <... AbstractSet
+Set <|... AbstractSet
 AbstractSet <|-- EnumSet
 AbstractSet <|-- HashSet
 AbstractSet <|-- TreeSet
 HashSet <|-- LinkedHashSet
-NavigableSet <... TreeSet
+NavigableSet <|... TreeSet
 
-Dequeue <.. ArrayDequeue
+Dequeue <|.. ArrayDequeue
 
 
 

@@ -44,8 +44,8 @@ class WeakHashMap {
 Map <|-- SortedMap
 SortedMap <|-- NavigableMap
 
-Map <... AbstractMap
-NavigableMap <... TreeMap
+Map <|... AbstractMap
+NavigableMap <|... TreeMap
 
 AbstractMap <|-- EnumMap
 AbstractMap <|-- HashMap
