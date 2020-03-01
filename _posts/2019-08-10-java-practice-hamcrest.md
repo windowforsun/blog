@@ -232,7 +232,7 @@ public void object_Expected_AnyOf_IterableMatcher() {
 	List<Matcher<? super String>> matchers = Arrays.asList(startsWith("abbbbb"), endsWith("ef"));
 
 	// then
-	assertThat(strActual, allOf(matchers));
+	assertThat(strActual, anyOf(matchers));
 }
 ```  
 
