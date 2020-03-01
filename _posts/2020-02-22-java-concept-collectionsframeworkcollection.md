@@ -123,10 +123,10 @@ use_math: true
 
 	메소드명|시간복잡도
 	---|---
-	offer(e)|$O(\log_n)$
-	poll()|$O(\log_n)$
-	remove()|$O(\log_n)$
-	add(e)|$O(\log_n)$
+	offer(e)|$O(\log n)$
+	poll()|$O(\log n)$
+	remove()|$O(\log n)$
+	add(e)|$O(\log n)$
 	remove(e)|$O(n)$
 	contains(e)|$O(n)$
 	peek()|$O(1)$
@@ -240,7 +240,7 @@ use_math: true
 #### TreeSet
 - `AbstractSet` 과 `NavigableSet` 의 하위 클래스로 임의의 정렬 집합의 구현체이다.(Red-black Tree)
 - `Comparable` 의 기본 정렬 기준으로 사용이 가능하고, `Comparator` 를 통해 특정 정렬 기준을 정의할 수도 있다.
-- `TreeSet` 에서 제공하는 기본 메소드(add, remove, contains)는 $O(\log_n)$ 의 시간복잡도를 보장한다.
+- `TreeSet` 에서 제공하는 기본 메소드(add, remove, contains)는 $O(\log n)$ 의 시간복잡도를 보장한다.
 - 동기화에 대한 처리는 돼있지 않다.
 - `TreeSet` 에서 `Iterator` 를 생성한 후에 기존 `TreeSet` 를 삭제 및 변경하게 될경우 에러가 발생한다. (`fast-fail`)(`Iterator` 의 `remove` 메소드는 제외된다)
 

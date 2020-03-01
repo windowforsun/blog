@@ -129,7 +129,7 @@ for-each next|$O(h/n)$
 >		- `java.lang.ref.SoftReference` 를 이용해서 참조를 생성할 수 있다.			
 >		- `SoftReference<Integer> softNum = new SoftReference<Integer>(strongNum)`
 >		- `softNum` 변수가 가리키는 참조가 없을 경우(== null) GC 대상이 된다.
->		- 메모리가 부족하지 않을 경우, 위의 경우라도 GC 대상이 되지 않는다.
+>		- 메모리가 부족하지 않을 때는 위의 경우라도 GC 대상이 되지 않는다.
 >	1. 약한 참조(Weak Reference)
 >		- `java.lang.ref.WeakReference` 를 이용해서 참조를 생성할 수 있다.
 >		- `WeakReference<Integer> weakNum = new WeakReference<Integer>(strongNum)`
@@ -167,14 +167,14 @@ for-each next|$O(h/n)$
 - `key` 에서 구현한 `Comparable` 을 기본 정렬 기준으로 사용하고, 필요에 따라 `Comparator` 를 별도로 구현해 특정 정렬 기준을 정의 할 수도 있다.
 - 동기화에 대한 처리는 돼있지 않다.
 - TreeMap 에서 Iterator 를 생성한 후에 기존 TreeMap 를 삭제 및 변경하게 될경우 에러가 발생한다. (fast-fail)(Iterator 의 remove 메소드는 제외된다)
-- `containsKey`, `get`, `put`, `remove` 메소드에 대해서 $\log_n$ 을 보장한다.
+- `containsKey`, `get`, `put`, `remove` 메소드에 대해서 $\log n$ 을 보장한다.
 
 
 메소드|시간 복잡도
 ---|---
-get(key)|$O(\log_n)$
-containsKey(key)|$O(\log_n)$
-for-each next|$O(\log_n)$
+get(key)|$O(\log n)$
+containsKey(key)|$O(\log n)$
+for-each next|$O(\log n)$
 
 
 
