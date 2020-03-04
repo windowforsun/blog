@@ -202,5 +202,5 @@ public class SortingTest {
 
 ---
 ## Reference
-[Comparable (Java Platform SE 8 )](https://docs.oracle.com/javase/8/docs/api/java/lang/Comparable.html)
-[Comparator (Java Platform SE 8 )](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html)
+[Comparable (Java Platform SE 8 )](https://docs.oracle.com/javase/8/docs/api/java/lang/Comparable.html)  
+[Comparator (Java Platform SE 8 )](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html)  
