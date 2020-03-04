@@ -1,0 +1,36 @@
+@startuml
+
+abstract class Visitor {
+	{abstract} visit(ConcreteElementA)
+	{abstract} visit(ConcreteElementB)
+}
+
+class ConcreteVisitor {
+	visit(ConcreteElementA)
+	visit(ConcreteElementB)
+}
+
+abstract class Element {
+	{abstract} accept()
+}
+
+class ObjectStructure {
+
+}
+
+class ConcreteElementA {
+	accept()
+}
+
+class ConcreteElementB {
+	accept()
+}
+
+Visitor <|-- ConcreteVisitor
+
+Element <|-- ConcreteElementA
+Element <|-- ConcreteElementB
+
+Element <--o ObjectStructure
+
+@enduml

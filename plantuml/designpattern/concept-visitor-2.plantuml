@@ -1,0 +1,69 @@
+@startuml
+
+abstract class Visitor {
+	{abstract} int visit(Node node)
+	{abstract} int visit(Leaf leaf)
+}
+
+class AllCountVisitor {
+	int visit(Node node)
+	int visit(Leaf leaf)
+}
+
+class NodeCountVisitor {
+	int visit(Node node)
+	int visit(Leaf leaf)
+}
+
+class LeafCountVisitor {
+	int visit(Node node)
+	int visit(Leaf leaf)
+}
+
+interface Element {
+	{abstract} int accept(Visitor visitor)
+}
+
+abstract class Entry {
+	int num
+
+	Entry(int num)
+	Entry add(Entry entry)
+	{abstract} int getCount()
+	{abstract} int getSum()
+}
+
+class Node {
+	List<Entry> children
+
+	Node(int num)
+	Iterator<Entry> getIterator()
+	int getCount()
+	int getSum()
+	int accept(Visitor visitor)
+	Entry add(Entry entry)
+}
+
+class Leaf {
+	Leaf(int num)
+
+	int getCount()
+	int getSum()
+	int accept(Visitor visitor)
+}
+
+Visitor <|-- AllCountVisitor
+Visitor <|-- NodeCountVisitor
+Visitor <|-- LeafCountVisitor
+
+Element <|... Entry
+Entry <|-- Node
+Entry <|-- Leaf
+
+Client -up-> Node : Use >
+Client -up-> Leaf : Use >
+Client -up-> AllCountVisitor : Use >
+Client -up-> NodeCountVisitor : Use >
+Client -up-> LeafCountVisitor : Use >
+
+@enduml

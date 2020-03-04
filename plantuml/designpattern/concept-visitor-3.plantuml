@@ -1,0 +1,38 @@
+@startuml
+
+participant LeafCountVisitor
+participant Node
+participant Leaf1
+participant Leaf2
+
+-> LeafCountVisitor : new(1)
+[-> Node : accept(2)
+activate Node
+Node -> LeafCountVisitor : visit(3)
+activate LeafCountVisitor
+LeafCountVisitor -> Leaf1 : accept(4)
+activate Leaf1
+Leaf1 -> LeafCountVisitor : visit(5)
+activate LeafCountVisitor
+LeafCountVisitor -> Leaf1
+deactivate LeafCountVisitor
+Leaf1 -> LeafCountVisitor
+deactivate Leaf1
+LeafCountVisitor -> Leaf2 : accept(6)
+activate Leaf2
+Leaf2 -> LeafCountVisitor : visit(7)
+activate LeafCountVisitor
+LeafCountVisitor -> Leaf2
+deactivate LeafCountVisitor
+Leaf2 -> LeafCountVisitor
+deactivate Leaf2
+LeafCountVisitor -> Node
+deactivate LeafCountVisitor
+
+[<- Node
+deactivate Node
+
+
+
+
+@enduml

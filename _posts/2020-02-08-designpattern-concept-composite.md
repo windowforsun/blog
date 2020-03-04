@@ -45,7 +45,7 @@ use_math : true
 
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_composite_2.png)
 
-### Node
+### Entry
 
 ```java
 public abstract class Entry {
@@ -141,7 +141,7 @@ public class Node extends Entry {
 }
 ```  
 
-- `Node` 클래스는 자식을 포함하는 노드를 표현하는 `Entry` 의 하위 클래스이다.
+- `Node` 는 자식을 가질수 있는 노드를 표현하는 `Entry` 의 하위 클래스이다.
 - `Composite` 패턴에서 `Composite` 역할을 수행한다.
 - `children` 필드에 자신의 노트 엔트리에서 포함하는 노드 엔트리를 저장한다.
 - `add()` 메소드를 `Entry` 클래스에서 Override 해서 `children` 필드에 추가하도록 구현한다.
