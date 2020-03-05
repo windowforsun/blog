@@ -1,0 +1,53 @@
+@startuml
+skinparam classAttributeIconSize 0
+class Request {
+	-int id
+
+	Request(int id)
+	int getId()
+}
+
+class Response {
+	-int id
+	-String receiverName
+
+	Response(int id, String receiverName)
+	int getId()
+	String getReceiverName()
+}
+
+abstract class Receiver {
+	-String name
+	-Receiver next
+
+	+Receiver(String name)
+	+Receiver setNext(Receiver next)
+	+String getName()
+	+Response receive(Request request)
+	#Response done(Request request)
+	#Response fail(Request request)
+	#{abstract} boolean resolve(Request request)
+}
+
+class OddReceiver {
+	+OddReceiver(String name)
+	#boolean resolve(Request request)
+}
+
+class RangeReceiver {
+	+RangeReceiver(String name)
+	#boolean resolve(Request request)
+}
+
+class ListReceiver {
+	+ListReceiver(String name)
+	#boolean resolve(Request request)
+}
+
+Receiver <|-- OddReceiver
+Receiver <|-- RangeReceiver
+Receiver <|-- ListReceiver
+Response <-- Receiver : < Use
+Request <-- Receiver : < Use
+
+@enduml

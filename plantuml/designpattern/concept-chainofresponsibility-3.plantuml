@@ -1,0 +1,25 @@
+@startuml
+
+participant Odd
+participant SmallRange
+participant BigRange
+participant List
+
+-> Odd : receive
+activate Odd
+
+Odd -> SmallRange : receive
+activate SmallRange
+
+SmallRange -> BigRange : receive
+activate BigRange
+BigRange --> SmallRange
+deactivate BigRange
+
+SmallRange --> Odd
+deactivate SmallRange
+
+[<-- Odd
+deactivate Odd
+
+@enduml
