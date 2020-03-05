@@ -44,6 +44,7 @@ class ListReceiver {
 	#boolean resolve(Request request)
 }
 
+Receiver <--o Receiver
 Receiver <|-- OddReceiver
 Receiver <|-- RangeReceiver
 Receiver <|-- ListReceiver
