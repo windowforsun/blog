@@ -1,0 +1,28 @@
+@startuml
+
+class Facade {
+
+}
+
+package subsystem {
+	class ClassA {
+	}
+	class ClassB {
+	}
+	class ClassC {
+	}
+	class ClassD {
+	}
+}
+ClassA <-right- Facade
+ClassB <-right- Facade
+ClassC <-right- Facade
+ClassD <-right- Facade
+ClassC <-- ClassA
+ClassD <-- ClassB
+ClassC <-- ClassD
+ClassD <-- ClassC
+Facade  <-right- Client : Use <
+
+
+@enduml

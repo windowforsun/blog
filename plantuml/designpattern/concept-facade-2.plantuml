@@ -1,0 +1,73 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Calculator << Singleton >> {
+	- {static} Calculator instance
+	OperationHandler handler
+
+	-Calculator()
+	+{static} Calculator getInstance()
+	+ double calculator(String expression)
+}
+
+
+package operation {
+class Parser {
+	+ {static} List<String> parsing(String expression, String operation)
+}
+
+class OperationHandler {
+	-Operation operation
+	-LinkedList<String> operandList
+	-OperationHandler next
+
+	+OperationHandler(Operation operation)
+	+OperationHandler setNext(OperationHandler next)
+	-double calculator()
+	+double operandProcess(String expression)
+}
+
+
+abstract class Operation {
+	- String operationStr
+
+	+Operation(String operationStr)
+	+String getOperationStr()
+	+ {abstract} double operate(double ...nums)
+}
+
+class PlusOperation {
+	+ PlusOperation()
+	double operate(double ...nums)
+}
+
+class MinusOperation {
+	+ MinusOperation()
+	double operate(double ...nums)
+}
+
+class MultiplyOperation {
+	+ MultiplyOperation()
+	double operate(double ...nums)
+}
+
+class DivisionOperation {
+	+ DivisionOperation()
+	double operate(double ...nums)
+}
+}
+
+
+Operation <|-- PlusOperation
+Operation <|-- MinusOperation
+Operation <|-- MultiplyOperation
+Operation <|-- DivisionOperation
+
+Calculator <--o Calculator
+OperationHandler <--o OperationHandler
+OperationHandler <-down-o Calculator
+Parser <-down- OperationHandler : Use <
+Operation <--o OperationHandler
+
+
+@enduml
