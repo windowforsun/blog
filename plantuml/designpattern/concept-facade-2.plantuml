@@ -38,22 +38,22 @@ abstract class Operation {
 
 class PlusOperation {
 	+ PlusOperation()
-	double operate(double ...nums)
+	+double operate(double ...nums)
 }
 
 class MinusOperation {
 	+ MinusOperation()
-	double operate(double ...nums)
+	+double operate(double ...nums)
 }
 
 class MultiplyOperation {
 	+ MultiplyOperation()
-	double operate(double ...nums)
+	+double operate(double ...nums)
 }
 
 class DivisionOperation {
 	+ DivisionOperation()
-	double operate(double ...nums)
+	+double operate(double ...nums)
 }
 }
 
@@ -64,6 +64,8 @@ Operation <|-- MultiplyOperation
 Operation <|-- DivisionOperation
 
 Calculator <--o Calculator
+Calculator <-- Client : Use <
+
 OperationHandler <--o OperationHandler
 OperationHandler <-down-o Calculator
 Parser <-down- OperationHandler : Use <
