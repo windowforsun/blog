@@ -250,7 +250,7 @@ public class OperationHandler {
 	- `operandList` 는 계산을 수행 할 수 있는 숫자와 파싱이 필요한 수식을 포함할 수 있다.
 - `calculate()` 메소드는 `operandList` 에 있는 피연사자를 `Operation` 의 `operate()` 메소드를 통해 계산한다.
 - `expressionProcess(expression)` 은 인자값으로 받은 수식을 담당하는 연산자 문자열과 `Parser` 를 통해 파싱해 `operandList` 에 추기하고, 이를 계산할 수 있는 피연산자로 만들어 `calculate()` 를 호출한다.
-	- `OperationHandler` 는 [Chain Of Responsibility 패턴]()
+	- `OperationHandler` 는 [Chain Of Responsibility 패턴]({{site.baseurl}}{% link _posts/2020-03-05-designpattern-concept-chainofresponsibility.md %})
 	으로 구성돼 있어, 피연산자가 수식일 경우(담당하는 연산자가 아닐 경우) 계속해서 다음 `OperationHandler` 의 `expressionProcess(expression)` 메소드로 수식의 처리를 위임한다.
 
 
@@ -293,7 +293,7 @@ public class Calculator {
 - `Calculator` 는 `operation` 패키지를 사용해 수식을 계산하는 계산기를 나타내는 클래스이다.
 - `Facade` 패턴에서 `Facade` 역할을 수행한다.
 - `operation` 패키지의 연산자관련 인스턴스를 미리 생성하고, 수식 계산에 필요한 관련 처리를 해서 단순한 계산 인터페이스만 외부로 제공한다.
-- `Calculator` 는 [Singleton 패턴]()
+- `Calculator` 는 [Singleton 패턴]({{site.baseurl}}{% link _posts/2020-01-11-designpattern-concept-singleton.md %})
 으로 구성됐다.
 - 생성자에서 미리 연산자 우선순위에 따라 `Chain Of Responsibility 패턴` 에 맞게 `OperationHandler` 인스턴스를 구성한다.
 	- 사칙연산은 곱하기, 나누기를 먼저 수행하고 더하기 빼기를 수행하는 것이 원칙
