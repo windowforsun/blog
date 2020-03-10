@@ -60,8 +60,8 @@ class DivisionOperation {
 
 Operation <|-- PlusOperation
 Operation <|-- MinusOperation
-Operation <|-- MultiplyOperation
-Operation <|-- DivisionOperation
+Operation <|-up- MultiplyOperation
+Operation <|-up- DivisionOperation
 
 Calculator <--o Calculator
 Calculator <-- Client : Use <

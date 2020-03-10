@@ -1,0 +1,84 @@
+@startuml
+
+interface Mediator {
+	{abstract} void addUser(ColleagueUser user)
+	{abstract} void addBot(ColleagueBot bot)
+	{abstract} void broadcastMessage(ChatMessage msg)
+	{abstract} void whisperMessage(ChatMessage msg)
+}
+
+class ChatRoom {
+	Map<String, ColleagueUser> userMap
+	Map<String, ColleagueBot> botMap
+
+	ChatRoom()
+	void addUseR(ColleagueUser user)
+	void addBot(ColleagueBot bot)
+	void broadcastMessage(ChatMessage msg)
+	void whisperMessage(ChatMessage msg)
+	void broadcastUser(ChatMessage msg)
+	void broadcastBot(ChatMessage msg)
+}
+
+abstract class Colleague {
+	Mediator mediator
+	String id
+
+	Colleague(String id)
+	void setMediator(Mediator mediator)
+	void sendMessage(String message)
+	String getId()
+	{abstract} void receiveMessage(ChatMessage msg)
+}
+
+class ColleagueUser {
+	LinkedList<String> chatMessageList
+
+	ColleagueUser(String id)
+	void sendMessage(String id, String msg)
+	void receiveMessage(ChatMessage msg)
+	LinkedList<ChatMessage> getChatMessageList()
+}
+
+abstract class ColleagueBot {
+	LinkedList<String> chatMessageList
+
+	ColleagueBot(String id)
+	void sendMessage(String id, String msg)
+	void receiveMessage(ChatMessage msg)
+	LinkedList<ChatMessage> getChatMessageList()
+	{abstract} boolean checkMessage(ChatMessage msg)
+	{abstract} void doBot(ChatMessage msg)
+}
+
+class ColleagueBotDateTime {
+	ColleagueBotDateTime(String id)
+	boolean checkMessage(ChatMessage msg)
+	void doBot(ChatMessage msg)
+}
+
+class ColleagueBotRandom {
+	ColleagueBotRandom(String id)
+	boolean checkMessage(ChatMessage msg)
+	void doBot(ChatMessage msg)
+}
+
+class ChatMessage {
+	String fromId
+	String toId
+	String message
+}
+
+Mediator <|.right. ChatRoom
+Mediator <-up-o Colleague
+
+Colleague <|-- ColleagueUser
+Colleague <|-- ColleagueBot
+ColleagueBot <|-- ColleagueBotDateTime
+ColleagueBot <|-- ColleagueBotRandom
+
+ChatRoom <--o ColleagueUser
+ChatRoom <--o ColleagueBot
+
+
+@enduml
