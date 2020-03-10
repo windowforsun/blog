@@ -330,7 +330,7 @@ public class ChatRoom implements Mediator {
 ### Mediator 패턴의 처리과정
 - `ColleagueUser` 가 `ColleagueBotDateTime` 을 사용할 때 처리과정은 아래와 같다.
 
-![그림 1]({{site.baseurl}}/img/designpattern/2/concept_mediator_1.png)
+![그림 1]({{site.baseurl}}/img/designpattern/2/concept_mediator_3.png)
 
 ### 테스트
 

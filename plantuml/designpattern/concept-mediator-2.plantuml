@@ -74,8 +74,8 @@ Colleague <|-- ColleagueBot
 ColleagueBot <|-- ColleagueBotDateTime
 ColleagueBot <|-- ColleagueBotRandom
 
-ChatRoom <--o ColleagueUser
-ChatRoom <--o ColleagueBot
+ColleagueUser <--o ChatRoom
+ColleagueBot <--o ChatRoom
 
 
 @enduml
