@@ -328,7 +328,7 @@ public class ChatRoom implements Mediator {
 	- 다수의 특정 `Colleague` 를 중재하는 메소드
 
 ### Mediator 패턴의 처리과정
-- `ColleagueUser` 가 `ColleagueBotDateTime` 을 사용할 때 처리과정은 아래와 같다.
+- `ColleagueUser` 와 `ColleagueBotDateTime` 가 상호작용할 때 처리과정은 아래와 같다.
 
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_mediator_3.png)
 
