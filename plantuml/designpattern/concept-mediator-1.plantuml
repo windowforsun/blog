@@ -1,0 +1,46 @@
+@startuml
+
+interface Mediator {
+	{abstract} createColleague()
+	{abstract} colleagueChanged()
+}
+
+class ConcreteMediator {
+	concreteColleague1
+	concreteColleague2
+	concreteColleague3
+
+	createColleague()
+	colleagueChanged()
+}
+
+abstract class Colleague {
+	mediator
+	setMediator()
+	{abstract} controlColleague()
+}
+
+class ConcreteColleague1 {
+	controlColleague()
+}
+
+class ConcreteColleague2 {
+	controlColleague()
+}
+
+class ConcreteColleague3 {
+	controlColleague()
+}
+
+Mediator <-left-o Colleague
+Mediator <|.down. ConcreteMediator
+
+Colleague <|-- ConcreteColleague1
+Colleague <|-- ConcreteColleague2
+Colleague <|-- ConcreteColleague3
+
+ConcreteColleague1 <--o ConcreteMediator
+ConcreteColleague2 <--o ConcreteMediator
+ConcreteColleague3 <--o ConcreteMediator
+
+@enduml

@@ -1,8 +1,7 @@
 @startuml
 
 interface Mediator {
-	{abstract} void addUser(ColleagueUser user)
-	{abstract} void addBot(ColleagueBot bot)
+	{abstract} void addColleague(Colleague col)
 	{abstract} void broadcastMessage(ChatMessage msg)
 	{abstract} void whisperMessage(ChatMessage msg)
 }
@@ -12,8 +11,7 @@ class ChatRoom {
 	Map<String, ColleagueBot> botMap
 
 	ChatRoom()
-	void addUseR(ColleagueUser user)
-	void addBot(ColleagueBot bot)
+	void addColleague(Colleague col)
 	void broadcastMessage(ChatMessage msg)
 	void whisperMessage(ChatMessage msg)
 	void broadcastUser(ChatMessage msg)
@@ -44,7 +42,6 @@ abstract class ColleagueBot {
 	LinkedList<String> chatMessageList
 
 	ColleagueBot(String id)
-	void sendMessage(String id, String msg)
 	void receiveMessage(ChatMessage msg)
 	LinkedList<ChatMessage> getChatMessageList()
 	{abstract} boolean checkMessage(ChatMessage msg)

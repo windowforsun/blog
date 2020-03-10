@@ -1,0 +1,21 @@
+@startuml
+
+participant ChatRoom
+participant ColleagueUser
+participant ColleagueBotDateTime
+
+activate ColleagueUser
+ColleagueUser -> ChatRoom : sendMessage(datetime)
+activate ChatRoom
+
+ChatRoom -> ColleagueUser : receiveMessage(datetime)
+ChatRoom -> ColleagueBotDateTime : receiveMessage(datetime)
+activate ColleagueBotDateTime
+
+ColleagueBotDateTime -> ChatRoom : sendMessage(2020-03-11 00:00:00)
+deactivate ColleagueBotDateTime
+
+ChatRoom -> ColleagueUser : sendMessage(2020-03-11 00:00:00)
+deactivate ChatRoom
+
+@enduml
