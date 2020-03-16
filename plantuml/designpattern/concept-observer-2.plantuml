@@ -1,0 +1,68 @@
+@startuml
+
+abstract class LogGenerator {
+	List<Observer> observerList
+	Log log
+	LogGenerator()
+	void addObserver(Observer observer)
+	void deleteObserver(Observer observer)
+	void notifyObservers()
+	Log getLog()
+	{abstract} void generate(String level, String profile, String contents)
+}
+
+class PlainLogGenerator {
+	void generate(String level, String profile, String contents)
+}
+
+interface Observer{
+	{abstract} void update(LogGenerator logGenerator)
+}
+
+abstract class LogObserver {
+	List<Log> logList
+
+	LogObserver()
+	List<Log> getLogList()
+}
+
+class LogLevelObserver {
+	String logLevel
+
+	LogLevelObserver(String level)
+	void update(LogGenerator logGenerator)
+	String getLogLevel()
+}
+
+class LogProfileObserver {
+	String profile
+
+	LogProfileObserver(String profile)
+	void update(LogGenerator logGenerator)
+}
+
+class LogAllObserver {
+	void update(LogGenerator logGenerator)
+}
+
+class Log {
+	String profile
+	String level
+	String contents
+
+	Log(String profile, String level, String contents)
+}
+
+LogGenerator <|-- PlainLogGenerator
+
+Observer <|.. LogObserver
+LogObserver <|-- LogLevelObserver
+LogObserver <|-- LogProfileObserver
+LogObserver <|-right- LogAllObserver
+
+Observer <-right-o LogGenerator : < Notifies
+
+Log <-down-o LogGenerator : < Uses
+Log <-down-o LogObserver : < Use
+
+@enduml
