@@ -1,0 +1,36 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Editor {
+	-Page page
+	-LinkedList<Memento> undoList
+	-LinkedList<Memento> redoList
+
+	+Editor()
+	+String addStr(String str)
+	+String undo()
+	+String redo()
+}
+
+class Page {
+	-StringBuilder str
+
+	+Page()
+	+void addStr(String str)
+	+Memento createMemento()
+	+void restoreMemento(Memento memento)
+	+String getStr()
+}
+
+class Memento {
+	#String str
+
+	#Memento(String str)
+	+int getLenth()
+}
+
+Page <-right- Editor : < Requests
+Memento <-down- Page : < Creates
+Memento <-down-o Editor
+
+@enduml
