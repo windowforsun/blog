@@ -12,6 +12,8 @@ class Editor {
 	+String redo()
 }
 
+package page {
+
 class Page {
 	-StringBuilder str
 
@@ -27,6 +29,7 @@ class Memento {
 
 	#Memento(String str)
 	+int getLenth()
+}
 }
 
 Page <-right- Editor : < Requests
