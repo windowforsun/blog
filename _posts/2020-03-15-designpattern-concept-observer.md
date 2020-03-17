@@ -18,45 +18,54 @@ use_math : true
 ## Observer 패턴이란
 - `Observer` 는 관찰자라는 의미를 가진 것과 같이, 객체의 상태가 변할때 이를 관찰자에게 알려줘서 상태에 변화에 따른 처리를 구성할 수 있는 패턴이다.
 
+### 패턴의 구성요소
+
 ![그림 1]({{site.baseurl}}/img/designpattern/2/concept_observer_1.png)
 
-- 패턴의 구성요소
-	- `Subject` : 관찰이 되는 대상자를 의미하고, 관찰차인 `Observer` 를 등록 및 삭제하는 메소드와 현재상태를 취득하는 메소드를 정의하는 추상 클래스이다.
-	- `ConcreteSubject` : `Subject` 의 구현체로 관찰의 대상을 구체적으로 구현한 클래스이다.
-	- `Observer` : 관찰자로 `Subject` 의 상태 변화를 인지하면 하위 구현체에 따라 구현하는 메소드를 선언하는 인터페이스이다.
-	- `ConcreteObserver`: `Observer` 의 구현체로 `Subject` 의 상태 변화에 따라 상태를 받아 실제 처리를 수행하는 클래스이다.
-- `Observer` 패턴은 상위 타입을 사용해서 높은 확장성을 제공한다.
-	- 확장성은 아래와 같은 특징을 통해 제공 될 수 있다.
-		- 추상 클래스나 인터페이스를 사용해서 구현(하위) 클래스로부터 추상 메소드를 분리한다.
-		- 인스로 인스턴스를 전달 하거나, 필드에서 인스턴스를 저장할 때 하위 클래스의 형태를 사용하지않고 상위 타입(추상 클래스, 인터페이스)의 형태를 사용한다.
-	- 위와 같은 특징들을 사용해서 `Subject` 와 `Observer` 가 지속적으로 상호작용을 할때, 구현에 따라 추가되는 하위 클래스는 큰 영향 없이 패턴에 적용 시킬 수 있다.
-- `Observer` 호출 순서는 독립성을 보장해야 한다.
-	- `Subject` 에서 상태의 변화 가 있을 때, 한개 이상의 `Observer` 에게 상태변화를 알리게 된다.
-	- 상태 변화를 알릴때 `Observer` 의 호출 순서와는 무관하게 `ConcreteObserver` 의 처리가 가능하도록 설계해야 한다.
-- `Observer` 의 동작이 `Subject` 에 영향을 주는 경우는 주의해야 한다.
-	- `Observer` 의 구현 동작이 `Subject` 의 상태를 변경하는 경우를 의미한다.
-	- `Subject 상태 변화` -> `Observer 전달` -> `Observer 가 Subject 상태 변경` -> `Observer 전달` -> .. 반복 ..
-	- 이러한 반복을 방지하기 위해서 `Observer` 에서 `Subject` 에게 상태를 받아 처리 중인지를 나타내는 플래그를 사용해서 관리할 수 있다.
-- `Subject` 의 상태를 `Observer` 에게 전달하는 다양한 방법
-	- `Subject` 는 문자열(`str`)에 대한 상태값을 가지고 있다고 가정한다.
-	- `void update(Subject subject);`
-		- `Subject` 의 인스턴스를 `Observer` 에게 전달하고, `Observer` 는 `Subject` 인스턴스 사용해서 동작을 수행한다.
-	- `void update(Subject subject, String str);`
-		- `Subject` 의 인스턴스와 상태값인 `str` 도 같이 전달해서, 항상 얻어야 하는 상태값을 바로 전달하는 방식이다.
-		- 이러한 방식은 `Subject` 가 `Observer` 의 처리에 대해 인지하고 있는 경우이다.
-	- `void update(String str);`
-		- `Subject` 의 상태 값만 `Observer` 에게 전달하는 방식으로, `Observer` 에서 필요라한 정보가 상태값 뿐이면 동작은 가능하지만 추후 확장성에 대해서는 고민이 필요하다.
-	- `Subject` 에서 `Observer` 에게 정보를 전달할 때, 얼마나 어떤 정보를 전달할지는 구현하는 내용에 따라 적절한 방식을 선정해야 한다.
-- `Observer` 패턴은 관찰자라는 의미이지만, 정보를 전달 받는 역할이다.
-	- `Observer` 는 의미와는 달리 정보를 전달 받는 다는 수동적인 역할을 내포하고 있다.
-	- `Observer` 패턴을 다른 용어로는 `Publish-Subscribe` 패턴이라고도 한다.
-	- `Publish` 는 발생이라는 의미로 `Subject` 와 같은 역할을 수행하고, `Subscribe` 는 구독이라는 의미로 `Observer` 와 같은 역할을 수행한다.
+- `Subject` : 관찰이 되는 대상자를 의미하고, 관찰차인 `Observer` 를 등록 및 삭제하는 메소드와 현재상태를 취득하는 메소드를 정의하는 추상 클래스이다.
+- `ConcreteSubject` : `Subject` 의 구현체로 관찰의 대상을 구체적으로 구현한 클래스이다.
+- `Observer` : 관찰자로 `Subject` 의 상태 변화를 인지하면 하위 구현체에 따라 구현하는 메소드를 선언하는 인터페이스이다.
+- `ConcreteObserver`: `Observer` 의 구현체로 `Subject` 의 상태 변화에 따라 상태를 받아 실제 처리를 수행하는 클래스이다.
+
+### 상위 타입을 사용해서 높은 확장성 제공
+- 확장성은 아래와 같은 특징을 통해 제공 될 수 있다.
+	- 추상 클래스나 인터페이스를 사용해서 구현(하위) 클래스로부터 추상 메소드를 분리한다.
+	- 인스로 인스턴스를 전달 하거나, 필드에서 인스턴스를 저장할 때 하위 클래스의 형태를 사용하지않고 상위 타입(추상 클래스, 인터페이스)의 형태를 사용한다.
+- 위와 같은 특징들을 사용해서 `Subject` 와 `Observer` 가 지속적으로 상호작용을 할때, 구현에 따라 추가되는 하위 클래스는 큰 영향 없이 패턴에 적용 시킬 수 있다.
+
+### `Observer` 호출 순서의 독립성
+- `Subject` 에서 상태의 변화 가 있을 때, 한개 이상의 `Observer` 에게 상태변화를 알리게 된다.
+- 상태 변화를 알릴때 `Observer` 의 호출 순서와는 무관하게 `ConcreteObserver` 의 처리가 가능하도록 설계해야 한다.
+
+### `Observer` 의 동작이 `Subject` 에 영향을 주는 경우
+- `Observer` 의 구현 동작이 `Subject` 의 상태를 변경하는 경우를 의미한다.
+- `Subject 상태 변화` -> `Observer 전달` -> `Observer 가 Subject 상태 변경` -> `Observer 전달` -> .. 반복 ..
+- 이러한 반복을 방지하기 위해서 `Observer` 에서 `Subject` 에게 상태를 받아 처리 중인지를 나타내는 플래그를 사용해서 관리할 수 있다.
+
+### `Subject` 의 상태를 `Observer` 에게 전달하는 다양한 방법
+- `Subject` 는 문자열(`str`)에 대한 상태값을 가지고 있다고 가정한다.
+- `void update(Subject subject);`
+	- `Subject` 의 인스턴스를 `Observer` 에게 전달하고, `Observer` 는 `Subject` 인스턴스 사용해서 동작을 수행한다.
+- `void update(Subject subject, String str);`
+	- `Subject` 의 인스턴스와 상태값인 `str` 도 같이 전달해서, 항상 얻어야 하는 상태값을 바로 전달하는 방식이다.
+	- 이러한 방식은 `Subject` 가 `Observer` 의 처리에 대해 인지하고 있는 경우이다.
+- `void update(String str);`
+	- `Subject` 의 상태 값만 `Observer` 에게 전달하는 방식으로, `Observer` 에서 필요라한 정보가 상태값 뿐이면 동작은 가능하지만 추후 확장성에 대해서는 고민이 필요하다.
+- `Subject` 에서 `Observer` 에게 정보를 전달할 때, 얼마나 어떤 정보를 전달할지는 구현하는 내용에 따라 적절한 방식을 선정해야 한다.
+
+### `Observer` 는 정보를 전달 받는 역할
+- `Observer` 는 의미와는 달리 정보를 전달 받는 다는 수동적인 역할을 내포하고 있다.
+- `Observer` 패턴을 다른 용어로는 `Publish-Subscribe` 패턴이라고도 한다.
+- `Publish` 는 발생이라는 의미로 `Subject` 와 같은 역할을 수행하고, `Subscribe` 는 구독이라는 의미로 `Observer` 와 같은 역할을 수행한다.
+
+### `java.util.Observer`
+- Java 라이브러리 중에서는 `Observer` 패턴을 제공해주는 `java.util.Observer` 인터페이스와 `java.util.Observable` 클래스가 있다.
+- `Observer` 인터페이스는 `void update(Observable obj, Object arg)` 라는 메소드를 가지고 있다.
+- Java 라이브러리에서 제공하는 `Observer` 를 사용하기 위해서는 `Subject` 역할을 수행하는 클래스가 `Observable` 클래스의 하위 클래스일 경우에 가능하다는 것을 인지할 필요가 있다.
+	- Java 는 단일 상속인 점을 고려하면 사용하기 까다로운 구조이다.
+		
+### 기타
 - MVC 패턴에서 Model 과 View 는 `Subject` 와 `Observer` 의 관계이다.
-- `java.util.Observer`
-	- Java 라이브러리 중에서는 `Observer` 패턴을 제공해주는 `java.util.Observer` 인터페이스와 `java.util.Observable` 클래스가 있다.
-	- `Observer` 인터페이스는 `void update(Observable obj, Object arg)` 라는 메소드를 가지고 있다.
-	- Java 라이브러리에서 제공하는 `Observer` 를 사용하기 위해서는 `Subject` 역할을 수행하는 클래스가 `Observable` 클래스의 하위 클래스일 경우에 가능하다는 것을 인지할 필요가 있다.
-		- Java 는 단일 상속인 점을 고려하면 사용하기 까다로운 구조이다.
 
 ## 로그 수집기
 - 애플리케이션에서는 테스트용이던, 유저 정보수집을 위한 목적이던 수많은 로그가 쌓이게 된다.
