@@ -1,0 +1,24 @@
+@startuml
+
+participant Editor
+participant Page
+
+activate Editor
+Editor -> Page : createMemento
+activate Page
+
+create Memento
+Page -> Memento : new
+Page -> Memento : setStatus
+activate Memento
+Page <-- Memento
+deactivate Memento
+Editor <-- Page
+deactivate Page
+
+Editor -> Page : restoreMemento
+activate Page
+Editor <-- Page
+deactivate Page
+
+@enduml
