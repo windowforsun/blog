@@ -1,0 +1,62 @@
+@startuml
+
+participant Client
+'participant HighState
+'participant MiddleState
+'participant LowState
+
+activate Client
+create Computer
+Client -> Computer : new
+activate Computer
+
+Computer -> HighState : getMaxCpuClock()
+activate HighState
+Computer <- HighState
+deactivate HighState
+Computer -> HighState : getMaxRamBandwidth()
+activate HighState
+Computer <- HighState
+deactivate HighState
+Computer -> HighState : checkState()
+activate HighState
+Computer <- HighState : changeState()
+deactivate HighState
+deactivate Computer
+
+Client -> Computer : setBattery(70)
+activate Computer
+Computer -> HighState : checkState()
+activate HighState
+Computer <- HighState : changeState()
+deactivate HighState
+Computer -> MiddleState : getMaxCpuClock()
+activate MiddleState
+Computer <- MiddleState
+deactivate MiddleState
+Computer -> MiddleState : getMaxRamBandwidth()
+activate MiddleState
+Computer <- MiddleState
+deactivate MiddleState
+deactivate Computer
+
+Client -> Computer : setBattery(20)
+activate Computer
+Computer -> MiddleState : checkState()
+activate MiddleState
+Computer <- MiddleState : changeState()
+deactivate MiddleState
+Computer -> LowState : getMaxCpuClock()
+activate LowState
+Computer <- LowState
+deactivate LowState
+Computer -> LowState : getMaxRamBandwidth()
+activate LowState
+Computer <- LowState
+deactivate LowState
+deactivate Computer
+
+deactivate Client
+
+
+@enduml

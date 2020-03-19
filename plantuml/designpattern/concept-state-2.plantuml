@@ -1,0 +1,72 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+interface Context {
+	{abstract} void setBattery(double battery)
+	{abstract} void changeState(State state)
+	{abstract} void setMaxCpuClock()
+	{abstract} void setMaxRamBandwidth()
+	{abstract} double getPerformanceScore()
+}
+
+class Computer {
+	State state
+	double battery
+	double maxCpuClock
+	double maxRamBandwidth
+
+	Computer(double battery, double cpuClock, double ramBandwidth)
+	void setBattery(double battery)
+	void changeState(State state)
+	void setMaxCpuClock()
+	void setMaxRamBandwidth()
+	void getPerformanceScore()
+}
+
+interface State {
+	{abstract} void checkState(Context context, double battery)
+	{abstract} double getMaxCpuClock(double cpuClock)
+	{abstract} double getMaxRamBandwidth(double ramBandwidth)
+	{abstract} boolean isState(double battery)
+}
+
+class HighState <<Singleton>>{
+	-{static} HighState instance
+
+	-HighState()
+	{static} HighState getInstance()
+	void checkState(Context context, double battery)
+	double getMaxCpuClock(double cpuClock)
+	double getMaxRamBandwidth(double ramBandwidth)
+	boolean isState(double battery)
+}
+
+class MiddleState <<Singleton>>{
+	-{static} MiddleState instance
+
+	-MiddleState()
+	{static} HighState getInstance()
+	void checkState(Context context, double battery)
+	double getMaxCpuClock(double cpuClock)
+	double getMaxRamBandwidth(double ramBandwidth)
+	boolean isState(double battery)
+}
+
+class LowState <<Singleton>>{
+	-{static} LowState instance
+
+	-LowState()
+	{static} HighState getInstance()
+	void checkState(Context context, double battery)
+	double getMaxCpuClock(double cpuClock)
+	double getMaxRamBandwidth(double ramBandwidth)
+	boolean isState(double battery)
+}
+
+Context <|.. Computer
+State <-right-o Computer
+
+State <|.. HighState
+State <|.. MiddleState
+State <|.. LowState
+@enduml

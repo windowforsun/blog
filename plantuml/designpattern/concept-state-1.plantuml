@@ -1,0 +1,34 @@
+@startuml
+
+class Context {
+	state
+
+	requestX()
+	requestY()
+	requestZ()
+}
+
+abstract class State {
+	{abstract} methodA()
+	{abstract} methodB()
+	{abstract} methodC()
+}
+
+class ConcreteState1 {
+	methodA()
+	methodB()
+	methodC()
+}
+
+class ConcreteState2 {
+	methodA()
+	methodB()
+	methodC()
+}
+
+State <-right-o Context
+State <|-- ConcreteState1
+State <|-- ConcreteState2
+
+
+@enduml
