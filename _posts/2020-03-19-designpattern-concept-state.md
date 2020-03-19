@@ -20,7 +20,7 @@ use_math : true
 
 ### 패턴의 구성요소
 
-![그림 1]({{site.baseurl}}/img/designpattern/2/concept_memento_1.png)
+![그림 1]({{site.baseurl}}/img/designpattern/2/concept_state_1.png)
 
 - `State` : 상태를 나타내는 역할로, 각 상태에서 수행해야하는 동작인 메소드를 정의하는 추상 클래스나 인터페이스이다.
 - `ConcreteState` : `State` 의 구현체로 하나의 상태가 수행해야하는 동작을 구현한 클래스이다.
@@ -98,7 +98,7 @@ use_math : true
     - 배터리관리를 보다 세부적으로 하기위해 상태를 세분화하게되면, 각 동작을 수행하는 메소드의 분기가 복잡해 질 수 있다.
 
 
-![그림 1]({{site.baseurl}}/img/designpattern/2/concept_memento_2.png)
+![그림 1]({{site.baseurl}}/img/designpattern/2/concept_state_2.png)
 
 ### State
 
@@ -315,7 +315,7 @@ public class Computer implements Context {
 - `Computer` 인스턴스를 생성할 때 생성자의 `battery` 값은 100이다.
 - `setBattery()` 메소드를 통해 `Computer` 의 배터리를 70, 20 으로 설정 했을 때 상태 변화의 과정이다.
 
-![그림 1]({{site.baseurl}}/img/designpattern/2/concept_memento_2.png)
+![그림 1]({{site.baseurl}}/img/designpattern/2/concept_state_3.png)
 
 ### 테스트
 
