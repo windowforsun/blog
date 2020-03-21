@@ -1,0 +1,19 @@
+@startuml
+
+class Flyweight {
+	methodA()
+	methodB()
+}
+
+class FlyweightFactory {
+	pool
+	getFlyweight()
+}
+
+Flyweight <--o FlyweightFactory : Creates <
+
+FlyweightFactory <-- Client : Uses <
+
+Flyweight <-- Client : Uses <
+
+@enduml
