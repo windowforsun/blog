@@ -268,7 +268,7 @@ public class FlyweightTest {
             }.init(stationArray[i])));
         }
 
-        // then
+        // when
         for (int i = 0; i < threadCount; i++) {
             // Thread 시작
             threadList.get(i).start();
