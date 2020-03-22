@@ -1,0 +1,12 @@
+@startuml
+[BusStationA] --> Bus1
+[BusStationC] --> Bus1
+[BusStationD] --> Bus1
+[BusStationA] --> Bus2
+[BusStationB] --> Bus2
+[BusStationC] --> Bus2
+[BusStationB] --> Bus3
+[BusStationC] --> Bus3
+[BusStationD] --> Bus3
+
+@enduml

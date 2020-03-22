@@ -1,9 +1,39 @@
 @startuml
+skinparam classAttributeIconSize 0
 
-class A{
+class Bus{
+	-int number
+	-int count
 
+	+Bus(int number)
+	+synchronized int increaseCount()
+	+int getCount()
 }
 
+class BusFactory <<Singleton>> {
+	-{static} BusFactory instance
+	-Map<Integer, Bus> pool
+	-BusFactory()
+	+{static} BusFactory getInstance()
+	+synchronized Bus get(int number)
+	+void clearPool()
+}
+
+class BusStation {
+	-String name;
+	-Map<Integer, Bus> busMap;
+
+	+BusStation(String name, int[] busNumberArray)
+	-void addBus(int[] busNumberArray)
+	+Bus takeBus(int number)
+	+List<Integer> busNumberList()
+}
+
+Bus <--o BusFactory : Creates <
+Bus <--o BusStation : Uses <
+BusFactory <-- BusStation : Uses <
+
+BusStation <-- Client : Uses <
 
 
 @enduml
