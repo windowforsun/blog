@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Filter 를 사용한 요청/응답 값 컨트롤"
+title: "[Spring 실습] Filter 를 이용한 요청/응답 값 컨트롤"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: '요청/응답 값을 Filter 를 사용해서 컨트롤 해보자'
