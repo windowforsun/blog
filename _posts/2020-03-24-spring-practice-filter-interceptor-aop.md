@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Filter, Interceptor, AOP 이용한 요청/응답 공통 처리 "
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: '요쳥/응답에 대한 공통 부분을 처리할 수 있도록 해주는 Filter, Interceptor, AOP 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -62,110 +62,111 @@ tags:
 	- `doFilter()` : 전/후 처리
 	- `destroy()` : `Filter` 인스턴스 종료
 - `Filter` 는 `@WebFilter` 애노테이션을 사용한 방법과 `FilterRegistryBean` 을 사용한 방법, 애노테이션을 사용한이 있다.
-	- `@WebFilter` 애노테이션을 사용한 방법
-		- `Filter` 간 우선순위 설정이 불가능하다.
-	
-		```java
-		@WebFilter("/**")
-	    public class CustomFilter implements Filter {
-	        @Override
-	        public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-	            // 요청 전 처리
-	            filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
-	            // 응답 후 처리
-	        }
-	    
-	        @Override
-	        public void init(FilterConfig filterConfig) throws ServletException {
-	            // 초기화
-	        }
-	    
-	        @Override
-	        public void destroy() {
-	            // 종료
-	        }
-	    }
-		```  
-		
-		- `@WebFilter` : 적용될 경로를 설정 및 `Filter` 를 등록한다.		
-		- `@ServletComponentScan` 을 통해 `@WebFilter` 을 등록해 준다.
-		
-			```java
-			@SpringBootApplication
-		    @ServletComponentScan
-		    public class ExamApplication {        
-		        public static void main(String[] args) {
-		            SpringApplication.run(ExamApplication.class, args);
-		        }        
-		    }
-			```  
-			
-	- `FilterRegistrationBean` 을 사용한 방법
 
-		```java
-	    public class CustomFilter implements Filter {
-	        @Override
-	        public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-	            // 요청 전 처리
-	            filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
-	            // 응답 후 처리
-	        }
-	    
-	        @Override
-	        public void init(FilterConfig filterConfig) throws ServletException {
-	            // 초기화
-	        }
-	    
-	        @Override
-	        public void destroy() {
-	            // 종료
-	        }
-	    }
-		```  
+#### @WebFilter 애노테이션을 사용한 방법
+- `Filter` 간 우선순위 설정이 불가능하다.
+
+```java
+@WebFilter("/**")
+public class CustomFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        // 요청 전 처리
+        filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
+        // 응답 후 처리
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        // 초기화
+    }
+
+    @Override
+    public void destroy() {
+        // 종료
+    }
+}
+```  
+
+- `@WebFilter` : 적용될 경로를 설정 및 `Filter` 를 등록한다.		
+- `@ServletComponentScan` 을 통해 `@WebFilter` 을 등록해 준다.
+
+	```java
+	@SpringBootApplication
+    @ServletComponentScan
+    public class ExamApplication {        
+        public static void main(String[] args) {
+            SpringApplication.run(ExamApplication.class, args);
+        }        
+    }
+	```  
 		
-		- Java Config 를 통해 `Filter` 를 등록하고 설정한다.
+#### `FilterRegistrationBean` 을 사용한 방법
+
+```java
+public class CustomFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        // 요청 전 처리
+        filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
+        // 응답 후 처리
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        // 초기화
+    }
+
+    @Override
+    public void destroy() {
+        // 종료
+    }
+}
+```  
+
+- Java Config 를 통해 `Filter` 를 등록하고 설정한다.
+
+	```java
+	@Configuration
+      public class FilterConfiguration implements WebMvcConfigurer {
+         @Bean
+         public FilterRegistrationBean filterRegistrationBean() {
+             FilterRegistrationBean bean = new FilterRegistrationBean(new CustomFilter());
+             bean.setOrder(2);
+             bean.addUrlPatterns("/*");
+             return bean;
+         }
+      }
+	```  
 		
-			```java
-			@Configuration
-            public class FilterConfiguration implements WebMvcConfigurer {
-		         @Bean
-		         public FilterRegistrationBean filterRegistrationBean() {
-		             FilterRegistrationBean bean = new FilterRegistrationBean(new CustomFilter());
-		             bean.setOrder(2);
-		             bean.addUrlPatterns("/*");
-		             return bean;
-		         }
-            }
-			```  
-			
-	- 애노테이션을 사용한 방법
-		- 경로설정이 불가능하다.
-	
-		```java
-		@Component
-		@Order(Ordered.HIGHEST_PRECEDENCE + 1)
-	    public class CustomFilter implements Filter {
-	        @Override
-	        public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-	            // 요청 전 처리
-	            filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
-	            // 응답 후 처리
-	        }
-	    
-	        @Override
-	        public void init(FilterConfig filterConfig) throws ServletException {
-	            // 초기화
-	        }
-	    
-	        @Override
-	        public void destroy() {
-	            // 종료
-	        }
-	    }
-		```  
-		
-		- `@Component` 로 빈으로 등록한다.
-		- `@Order` 로 `Filter` 우선순위를 설정한다.
+#### 애노테이션을 사용한 방법
+- 경로설정이 불가능하다.
+
+```java
+@Component
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+public class CustomFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        // 요청 전 처리
+        filterChain.doFilter(modifyRequestWrapper, modifyResponseWrapper);
+        // 응답 후 처리
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        // 초기화
+    }
+
+    @Override
+    public void destroy() {
+        // 종료
+    }
+}
+```  
+
+- `@Component` 로 빈으로 등록한다.
+- `@Order` 로 `Filter` 우선순위를 설정한다.
 	
 ### Interceptor
 - 요청 처리에 대해서 전/후로 가로챈다.
@@ -763,7 +764,7 @@ public class AControllerTest {
         System.out.println(Util.LIST);
         List<String> actual = Util.LIST;
         assertThat(actual, contains(
-        		// Filter
+                // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
                 "com.windowforsun.exam.filter.AFilter.doFilter:before",
                 // Interceptor
@@ -776,6 +777,7 @@ public class AControllerTest {
                 "com.windowforsun.exam.aop.ControllerAdvice.beforeAll",
                 // Controller
                 "com.windowforsun.exam.controller.a.AController.post",
+                // AOP
                 "com.windowforsun.exam.aop.ControllerAdvice.aroundAll:after",
                 "com.windowforsun.exam.aop.ControllerAdvice.aroundA:after",
                 "com.windowforsun.exam.aop.ControllerAdvice.afterA",
