@@ -493,7 +493,6 @@ public class AllControllerTest {
         List<String> actual = this.restTemplate.postForObject("/", list, List.class);
 
         // then
-        System.out.println(Arrays.toString(actual.toArray()));
         assertThat(actual, contains(
                 "request",
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
@@ -521,7 +520,6 @@ public class AControllerTest {
         List<String> actual = this.restTemplate.postForObject("/a", list, List.class);
 
         // then
-        System.out.println(Arrays.toString(actual.toArray()));
         assertThat(actual, contains(
                 "request",
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
