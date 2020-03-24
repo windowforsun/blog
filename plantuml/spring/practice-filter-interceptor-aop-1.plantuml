@@ -1,0 +1,48 @@
+@startuml
+
+participant Filter
+
+box Spring
+participant DispatcherServlet
+participant Interceptor
+participant AOP
+participant Controller
+end box
+
+[-> Filter : doFilter()
+activate Filter
+
+Filter -> DispatcherServlet : Request
+activate DispatcherServlet
+
+DispatcherServlet -> Interceptor : preHandler()
+activate Interceptor
+
+Interceptor -> AOP : @Around
+activate AOP
+Interceptor -> AOP : @Before
+AOP -> Controller : Request
+activate Controller
+
+AOP <- Controller : Response
+deactivate Controller
+
+Interceptor <- AOP : @Around
+Interceptor <- AOP : @After
+Interceptor <- AOP : @AfterThrowing
+Interceptor <- AOP : @AfterReturning
+deactivate AOP
+
+DispatcherServlet <- Interceptor : postHandler()
+DispatcherServlet <- Interceptor : afterComplete()
+deactivate Interceptor
+
+Filter <- DispatcherServlet : Response
+deactivate DispatcherServlet
+[<- Filter : doFilter()
+deactivate Filter
+
+
+
+
+@enduml
