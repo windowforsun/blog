@@ -717,7 +717,6 @@ public class AllControllerTest {
         this.restTemplate.postForObject("/", null, Void.class);
 
         // then
-        System.out.println(Util.LIST);
         List<String> actual = Util.LIST;
         assertThat(actual, contains(
         		// Filter
@@ -761,7 +760,6 @@ public class AControllerTest {
         this.restTemplate.postForObject("/", null, Void.class);
 
         // then
-        System.out.println(Util.LIST);
         List<String> actual = Util.LIST;
         assertThat(actual, contains(
                 // Filter
