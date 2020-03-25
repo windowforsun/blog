@@ -350,8 +350,9 @@ src
 │  │          └─exam
 │  │              │  ExamApplication.java
 │  │              │
-│  │              ├─aop
-│  │              │      ControllerAdvice.java
+│  │              ├─advice
+│  │              │      AopAdvice.java
+│  │              │      ExceptionAdvice.java
 │  │              │
 │  │              ├─config
 │  │              │      AppConfig.java
@@ -361,6 +362,9 @@ src
 │  │              │  │
 │  │              │  └─a
 │  │              │          AController.java
+│  │              │
+│  │              ├─exception
+│  │              │      CustomException.java
 │  │              │
 │  │              ├─filter
 │  │              │      AFilter.java
@@ -379,13 +383,13 @@ src
 │      ├─static
 │      └─templates
 └─test
-  └─java
-      └─com
-          └─windowforsun
-              └─exam
-                  └─controller
-                          AControllerTest.java
-                          AllControllerTest.java
+    └─java
+        └─com
+            └─windowforsun
+                └─exam
+                    └─controller
+                            AControllerTest.java
+                            AllControllerTest.java
 ```  
 	
 ### pom.xml
@@ -519,6 +523,16 @@ public class Util {
 	- `a.b.c.D` 클래스에서 `method()` 메소드가 `getSignature()` 를 호출하면 리턴값은 `a.b.c.D.method` 가 된다.
 - `addList()` 는 `LIST` 필드에 `getSignature()` 의 정보를 추가한다.
 
+### CustomException 
+
+```java
+public class CustomException extends Exception {
+
+}
+```  
+
+- `CustomException` 는 `Controller` 에서 발생하는 예외를 의미한다.
+
 ### Controller
 
 ```java
@@ -529,6 +543,12 @@ public class AController {
     public void post() {
         Util.addList(new Throwable());
     }
+    
+    @PostMapping("/exception")
+    public void exception() throws Exception{
+        Util.addList(new Throwable());
+        throw new CustomException();
+    }
 }
 ```  
 
@@ -538,6 +558,12 @@ public class AllController {
     @PostMapping
     public void post() {
         Util.addList(new Throwable());
+    }
+    
+    @PostMapping("/exception")
+    public void exception() throws Exception{
+        Util.addList(new Throwable());
+        throw new CustomException();
     }
 }
 ```  
@@ -635,7 +661,7 @@ public class AInterceptor implements HandlerInterceptor {
 ```java
 @Aspect
 @Component
-public class ControllerAdvice {
+public class AopAdvice {
     @Pointcut("execution(* com.windowforsun.exam.controller..*.*(..))")
     public void allPointcut() {}
 
@@ -666,6 +692,10 @@ public class ControllerAdvice {
         Util.addList(new Throwable());
     }
 
+    @AfterThrowing(pointcut = "allPointcut()", throwing = "e")
+    public void afterThrowingAll(JoinPoint joinPoint, Throwable e) {
+        Util.addList(new Throwable());
+    }
 
     @Before("aPointcut()")
     public void beforeA(JoinPoint joinPoint) {
@@ -690,18 +720,39 @@ public class ControllerAdvice {
     public void afterReturningA(JoinPoint joinPoint, Object result) {
         Util.addList(new Throwable());
     }
+
+    @AfterThrowing(pointcut = "aPointcut()", throwing = "e")
+    public void afterThrowingA(JoinPoint joinPoint, Throwable e) {
+        Util.addList(new Throwable());
+    }
 }
 ```  
 
 - `allPointcut()` 은 모든 경로에 적용되는 `Pointcut` 이다.
 - `aPointcut()` 은 `/a` 하위 경로에 적용되는 `Pointcut` 이다.
-- `@Around`, `@Before`, `@After`, `@AfterReturning` 종류의 `Advice` 를 `allPointcut()`, `aPointcut()` 에 각각 등록 한다.
+- `@Around`, `@Before`, `@After`, `@AfterReturning`, `@AfterThrowing` 종류의 `Advice` 를 `allPointcut()`, `aPointcut()` 에 각각 등록 한다.
+
+### ExceptionAdvice
+
+```java
+@ControllerAdvice
+public class ExceptionAdvice {
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<?> customException(CustomException customException) {
+        Util.addList(new Throwable());
+        return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+```  
+
+- `ExceptionAdvice` 는 `@ControllerAdvice` 가 선언된, `Controller` 에서 발생하는 예외를 처리하는 클래스이다.
 
 ### 테스트
 
 ```java
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureMockMvc
 public class AllControllerTest {
     @Autowired
     private TestRestTemplate restTemplate;
@@ -717,23 +768,54 @@ public class AllControllerTest {
         this.restTemplate.postForObject("/", null, Void.class);
 
         // then
+        System.out.println(Util.LIST);
         List<String> actual = Util.LIST;
         assertThat(actual, contains(
-        		// Filter
+                // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
                 // Interceptor
                 "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
                 // AOP
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundAll:before",
-                "com.windowforsun.exam.aop.ControllerAdvice.beforeAll",
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:before",
+                "com.windowforsun.exam.advice.AopAdvice.beforeAll",
                 // Controller
                 "com.windowforsun.exam.controller.AllController.post",
                 // AOP
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundAll:after",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterAll",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterReturningAll",
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:after",
+                "com.windowforsun.exam.advice.AopAdvice.afterAll",
+                "com.windowforsun.exam.advice.AopAdvice.afterReturningAll",
                 // Interceptor
                 "com.windowforsun.exam.interceptor.AllInterceptor.postHandle",
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
+                "com.windowforsun.exam.filter.AllFilter.doFilter:after"
+        ));
+    }
+
+    @Test
+    public void exception_CallSequence() {
+        // when
+        this.restTemplate.postForObject("/exception", null, Void.class);
+
+        // then
+        System.out.println(Util.LIST);
+        List<String> actual = Util.LIST;
+        assertThat(actual, contains(
+                // Filter
+                "com.windowforsun.exam.filter.AllFilter.doFilter:before",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
+                // AOP
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:before",
+                "com.windowforsun.exam.advice.AopAdvice.beforeAll",
+                // Controller
+                "com.windowforsun.exam.controller.AllController.exception",
+                // AOP
+                "com.windowforsun.exam.advice.AopAdvice.afterAll",
+                "com.windowforsun.exam.advice.AopAdvice.afterThrowingAll",
+                // ControllerAdvice
+                "com.windowforsun.exam.advice.ExceptionAdvice.customException",
+                // Interceptor
                 "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
                 // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:after"
@@ -753,13 +835,14 @@ public class AControllerTest {
     public void tearDown() {
         Util.LIST.clear();
     }
-    
+
     @Test
     public void post_CallSequence() {
         // when
-        this.restTemplate.postForObject("/", null, Void.class);
+        this.restTemplate.postForObject("/a", null, Void.class);
 
         // then
+        System.out.println(Util.LIST);
         List<String> actual = Util.LIST;
         assertThat(actual, contains(
                 // Filter
@@ -769,19 +852,19 @@ public class AControllerTest {
                 "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
                 "com.windowforsun.exam.interceptor.AInterceptor.preHandle",
                 // AOP
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundA:before",
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundAll:before",
-                "com.windowforsun.exam.aop.ControllerAdvice.beforeA",
-                "com.windowforsun.exam.aop.ControllerAdvice.beforeAll",
+                "com.windowforsun.exam.advice.AopAdvice.aroundA:before",
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:before",
+                "com.windowforsun.exam.advice.AopAdvice.beforeA",
+                "com.windowforsun.exam.advice.AopAdvice.beforeAll",
                 // Controller
                 "com.windowforsun.exam.controller.a.AController.post",
                 // AOP
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundAll:after",
-                "com.windowforsun.exam.aop.ControllerAdvice.aroundA:after",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterA",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterAll",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterReturningA",
-                "com.windowforsun.exam.aop.ControllerAdvice.afterReturningAll",
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:after",
+                "com.windowforsun.exam.advice.AopAdvice.aroundA:after",
+                "com.windowforsun.exam.advice.AopAdvice.afterA",
+                "com.windowforsun.exam.advice.AopAdvice.afterAll",
+                "com.windowforsun.exam.advice.AopAdvice.afterReturningA",
+                "com.windowforsun.exam.advice.AopAdvice.afterReturningAll",
                 // Interceptor
                 "com.windowforsun.exam.interceptor.AInterceptor.postHandle",
                 "com.windowforsun.exam.interceptor.AllInterceptor.postHandle",
@@ -792,11 +875,50 @@ public class AControllerTest {
                 "com.windowforsun.exam.filter.AllFilter.doFilter:after"
         ));
     }
+
+    @Test
+    public void exception_CallSequence() {
+        // when
+        this.restTemplate.postForObject("/a/exception", null, Void.class);
+
+        // then
+        System.out.println(Util.LIST);
+        List<String> actual = Util.LIST;
+        assertThat(actual, contains(
+                // Filter
+                "com.windowforsun.exam.filter.AllFilter.doFilter:before",
+                "com.windowforsun.exam.filter.AFilter.doFilter:before",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
+                "com.windowforsun.exam.interceptor.AInterceptor.preHandle",
+                // AOP
+                "com.windowforsun.exam.advice.AopAdvice.aroundA:before",
+                "com.windowforsun.exam.advice.AopAdvice.aroundAll:before",
+                "com.windowforsun.exam.advice.AopAdvice.beforeA",
+                "com.windowforsun.exam.advice.AopAdvice.beforeAll",
+                // Controller
+                "com.windowforsun.exam.controller.a.AController.exception",
+                // AOP
+                "com.windowforsun.exam.advice.AopAdvice.afterA",
+                "com.windowforsun.exam.advice.AopAdvice.afterAll",
+                "com.windowforsun.exam.advice.AopAdvice.afterThrowingA",
+                "com.windowforsun.exam.advice.AopAdvice.afterThrowingAll",
+                // ControllerAdvice
+                "com.windowforsun.exam.advice.ExceptionAdvice.customException",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AInterceptor.afterCompletion",
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
+                "com.windowforsun.exam.filter.AFilter.doFilter:after",
+                "com.windowforsun.exam.filter.AllFilter.doFilter:after"
+        ));
+    }
 }
 ```  
 
-- 테스트 결과에서 알 수 있는 것처럼 `Filter -> Interceptor -> AOP -> Controller -> AOP -> Interceptor -> Filter` 순으로 실행된다.
-- `Filter`, `Interceptor` 의 실행은 요청 경로에 따라 달리진다.
+- 테스트 결과는 요청 경로(`Filter`, `Interceptor`), 예외 발생 여부에 따라 달라진다.
+- 예외가 발생하지 않은 경우 결과는 `Filter -> Interceptor -> AOP -> Controller -> AOP -> Interceptor -> Filter` 순으로 실행된다.
+- 예외가발생한 경우 결과는 `Filter -> Interceptor -> AOP -> Controller -> AOP -> ControllerAdvice -> Interceptor -> Filter` 순으로 실행된다.
 
 ---
 ## Reference

@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Filter 를 이용한 요청/응답 값 컨트롤"
+title: "[Spring 실습] Filter, Interceptor 를 이용한 요청/응답 값 컨트롤"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: '요청/응답 값을 Filter 를 사용해서 컨트롤 해보자'
@@ -13,6 +13,7 @@ tags:
   - Spring
   - Practice
   - Filter
+  - Interceptor
 ---  
 
 ## 요청/응답 값 컨트롤
@@ -23,7 +24,7 @@ tags:
 
 ## 예제
 - `HttpServletRequestWrapper`, `HttpServletResponseWrapper` 을 통해 요청/응답을 `Wrapping` 한다.
-- `Filter` 를 사용해서 요청/응답에 원하는 값을 추가하는 방식으로 예제를 진행한다.
+- `Filter` 와 `Interceptor` 를 사용해서 요청/응답에 원하는 값을 추가하는 방식으로 예제를 진행한다.
 
 ### 디렉토리 구조
 
@@ -36,6 +37,9 @@ src
 │  │          └─exam
 │  │              │  ExamApplication.java
 │  │              │
+│  │              ├─advice
+│  │              │      ExceptionAdvice.java
+│  │              │
 │  │              ├─config
 │  │              │      AppConfig.java
 │  │              │
@@ -45,9 +49,16 @@ src
 │  │              │  └─a
 │  │              │          AController.java
 │  │              │
+│  │              ├─exception
+│  │              │      CustomException.java
+│  │              │
 │  │              ├─filter
 │  │              │      AFilter.java
 │  │              │      AllFilter.java
+│  │              │
+│  │              ├─interceptor
+│  │              │      AInterceptor.java
+│  │              │      AllInterceptor.java
 │  │              │
 │  │              └─wrapper
 │  │                      CustomServletInputStream.java
@@ -114,7 +125,18 @@ public class ExamApplication {
 
 ```java
 @Configuration
-public class AppConfig {
+public class AppConfig implements WebMvcConfigurer {
+    @Autowired
+    private AllInterceptor allInterceptor;
+    @Autowired
+    private AInterceptor aInterceptor;
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(this.allInterceptor).addPathPatterns("/**").order(Ordered.HIGHEST_PRECEDENCE + 1);
+        registry.addInterceptor(this.aInterceptor).addPathPatterns("/a/**").order(Ordered.HIGHEST_PRECEDENCE + 2);
+    }
+    
     @Bean
     public FilterRegistrationBean allFilter() {
         FilterRegistrationBean bean = new FilterRegistrationBean(new AllFilter());
@@ -137,6 +159,9 @@ public class AppConfig {
 - `Filter` 는 설정된 우선순위에 따라 `AllFilter`, `AFilter` 순으로 실행된다.
 	- `AllFilter` 는 모든 URL 에서 실행된다.
 	- `AFilter` 는 `/a` 의 하위 URL 에서 실행된다.
+- `Interceptor` 도 설정된 우선순위에 따라 `AllInterceptor`, `AInterceptor` 순으로 실행된다.
+	- `AllInterceptor` 는 모든 URL 에서 실행된다.
+	- `AInterceptor` 는 `/a` 의 하위 URL 에서 실행된다.
 	
 ### Util
 
@@ -164,6 +189,18 @@ public class Util {
 - `getSignature()` 는 클래스와 메소드 이름을 통해 고유한 정보를 만들어 리턴한다.
 	- `a.b.c.D` 클래스에서 `method()` 메소드가 `getSignature()` 를 호출하면 리턴값은 `a.b.c.D.method` 가 된다.
 	
+
+### CustomException 
+
+```java
+public class CustomException extends Exception {
+
+}
+```  
+
+- `CustomException` 는 `Controller` 에서 발생하는 예외를 의미한다.
+
+	
 ### Controller
 
 ```java
@@ -173,6 +210,12 @@ public class AllController {
     public List<String> post(@RequestBody List<String> list) throws Exception{
         list.add("response");
         return list;
+    }
+    
+    @PostMapping("/exception")
+    public List<String> exception(@RequestBody List<String> list) throws Exception{
+        list.add("response");
+        throw new CustomException();
     }
 }
 ```  
@@ -185,6 +228,12 @@ public class AController {
     public List<String> post(@RequestBody List<String> list) throws Exception{
         list.add("response");
         return list;
+    }
+    
+    @PostMapping("/exception")
+    public List<String> exception(@RequestBody List<String> list) throws Exception{
+        list.add("response");
+        throw new CustomException();
     }
 }
 ```  
@@ -473,6 +522,79 @@ public class AllFilter implements Filter {
 - `filterChain.doFilter()` 수행 후에는 `ModifyResponseWrapper` 의 `add()` 메소드를 사용해서 현재 클래스 메소드 정보를 응답 값에 추가한다.
 - `doFilter()` 마지막 부분에서는 인자값의 `servletResponse` 의 `getOutputStream()` 을 사용해서 `ModifyResponseWrapper` 의 응답 값을 전달해줘야 실제 응답 값이 제대로 전달된다.
 
+
+### Interceptor 
+
+```java
+@Component
+public class AllInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        ModifyRequestWrapper modifyRequestWrapper = (ModifyRequestWrapper) request;
+        modifyRequestWrapper.add(Util.getSignature(new Throwable()));
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        ModifyResponseWrapper modifyResponseWrapper = (ModifyResponseWrapper) response;
+        modifyResponseWrapper.add(Util.getSignature(new Throwable()));
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        ModifyResponseWrapper modifyResponseWrapper = (ModifyResponseWrapper) response;
+        modifyResponseWrapper.add(Util.getSignature(new Throwable()));
+    }
+}
+```  
+
+```java
+@Component
+public class AInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        ModifyRequestWrapper modifyRequestWrapper = (ModifyRequestWrapper) request;
+        modifyRequestWrapper.add(Util.getSignature(new Throwable()));
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        ModifyResponseWrapper modifyResponseWrapper = (ModifyResponseWrapper) response;
+        modifyResponseWrapper.add(Util.getSignature(new Throwable()));
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        ModifyResponseWrapper modifyResponseWrapper = (ModifyResponseWrapper) response;
+        modifyResponseWrapper.add(Util.getSignature(new Throwable()));
+    }
+}
+```  
+
+- `Filter` 의 `doFilter()` 메소드를 통해 전달해준 값은 `ModifyRequestWrapper`, `ModifyResponseWrapper` 의 인스턴스이다.
+- `Interceptor` 의 인자에서 형식은 `HttpServletRequest`, `HttpServletResponse` 이지만 이를 `Wrapper` 클래스 타입으로 변환해서 사용할 수 있다.
+- `Filter` 와 동일하게 요청/응답 값을 컨트롤 할 수 있다.
+- `preHandler()` 메소드에서는 요청 전에 현재 클래스 메소드의 정보를 요청 값에 추가한다.
+- `postHandler()` 메소드에서는 응답 후에 현재 클래스 메소드의 정보를 응답 값에 추가한다.
+
+### ExceptionAdvice
+
+```java
+@ControllerAdvice
+public class ExceptionAdvice {
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<?> customException(CustomException customException) {
+        List<String> list  = new LinkedList<>(Arrays.asList(Util.getSignature(new Throwable())));
+        return new ResponseEntity<>(list, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}
+```  
+
+- `ExceptionAdvice` 는 `@ControllerAdvice` 가 선언된, `Controller` 에서 발생하는 예외를 처리하는 클래스이다.
+- `customException()` 은 `CustomException` 예외를 처리하는 메소드로, 응답 값에 현재 클래스 메소드의 정보를 넣어 응답한다.
+
 ### 테스트
 
 ```java
@@ -482,7 +604,7 @@ public class AllFilter implements Filter {
 public class AllControllerTest {
     @Autowired
     private TestRestTemplate restTemplate;
-    
+
     @Test
     public void post_Response() {
         // given
@@ -493,10 +615,41 @@ public class AllControllerTest {
         List<String> actual = this.restTemplate.postForObject("/", list, List.class);
 
         // then
+        System.out.println(Arrays.toString(actual.toArray()));
         assertThat(actual, contains(
+                // Client
                 "request",
+                // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
+                // Controller
                 "response",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.postHandle",
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
+                "com.windowforsun.exam.filter.AllFilter.doFilter:after"
+        ));
+    }
+
+    @Test
+    public void exception_Response() {
+        // given
+        List<String> list = new LinkedList<>();
+        list.add("request");
+
+        // when
+        List<String> actual = this.restTemplate.postForObject("/exception", list, List.class);
+
+        // then
+        System.out.println(Arrays.toString(actual.toArray()));
+        assertThat(actual, contains(
+                // ControllerAdvice
+                "com.windowforsun.exam.advice.ExceptionAdvice.customException",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:after"
         ));
     }
@@ -520,11 +673,47 @@ public class AControllerTest {
         List<String> actual = this.restTemplate.postForObject("/a", list, List.class);
 
         // then
+        System.out.println(Arrays.toString(actual.toArray()));
         assertThat(actual, contains(
+                // Client
                 "request",
+                // Filter
                 "com.windowforsun.exam.filter.AllFilter.doFilter:before",
                 "com.windowforsun.exam.filter.AFilter.doFilter:before",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AllInterceptor.preHandle",
+                "com.windowforsun.exam.interceptor.AInterceptor.preHandle",
+                // Controller
                 "response",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AInterceptor.postHandle",
+                "com.windowforsun.exam.interceptor.AllInterceptor.postHandle",
+                "com.windowforsun.exam.interceptor.AInterceptor.afterCompletion",
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
+                "com.windowforsun.exam.filter.AFilter.doFilter:after",
+                "com.windowforsun.exam.filter.AllFilter.doFilter:after"
+        ));
+    }
+
+    @Test
+    public void exception_Response() {
+        // given
+        List<String> list = new LinkedList<>();
+        list.add("request");
+
+        // when
+        List<String> actual = this.restTemplate.postForObject("/a/exception", list, List.class);
+
+        // then
+        System.out.println(Arrays.toString(actual.toArray()));
+        assertThat(actual, contains(
+                // ControllerAdvice
+                "com.windowforsun.exam.advice.ExceptionAdvice.customException",
+                // Interceptor
+                "com.windowforsun.exam.interceptor.AInterceptor.afterCompletion",
+                "com.windowforsun.exam.interceptor.AllInterceptor.afterCompletion",
+                // Filter
                 "com.windowforsun.exam.filter.AFilter.doFilter:after",
                 "com.windowforsun.exam.filter.AllFilter.doFilter:after"
         ));
@@ -532,8 +721,10 @@ public class AControllerTest {
 }
 ```  
 
-- 테스트 결과는 요청 경로에 따라 달라진다. (`Filter` 설정 관련)
-- 요청값으로 `["request"]` 를 보냈을 때 `Controller` 에서는 `response` 를 리스트에 추가하는데, `Controller` 처리 전후에 `Filter` 에서 추가한 값이 있는 것을 확인 할 수 있다.
+- 테스트 결과는 요청 경로(`Filter`, `Interceptor`), 예외 발생 여부에 따라 달라진다.
+- 예외가 발생하지 않은 경우 결과는 `Client -> Filter -> Interceptor -> Controller -> Interceptor -> Filter` 순으로 실행된다.
+- 예외가발생한 경우 결과는 `Client -> Filter -> Interceptor -> Controller -> ControllerAdvice -> Interceptor -> Filter` 순으로 실행된다.
+	- 응답은 `ControllerAdvice` 부터 `Filter` 까지의 값이다.
 
 ---
 ## Reference
