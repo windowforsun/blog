@@ -1,0 +1,50 @@
+@startuml
+
+activate Client
+create KeyValueDBProxy
+Client -> KeyValueDBProxy : new
+
+Client -> KeyValueDBProxy : setName()
+activate KeyValueDBProxy
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+
+Client -> KeyValueDBProxy : getName()
+activate KeyValueDBProxy
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+
+Client -> KeyValueDBProxy : set()
+activate KeyValueDBProxy
+create KeyValueDB
+KeyValueDBProxy -> KeyValueDB : new
+KeyValueDBProxy -> KeyValueDB : set()
+activate KeyValueDB
+KeyValueDBProxy <-- KeyValueDB
+deactivate KeyValueDB
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+
+Client -> KeyValueDBProxy : get()
+activate KeyValueDBProxy
+KeyValueDBProxy -> KeyValueDB : get()
+activate KeyValueDB
+KeyValueDBProxy <-- KeyValueDB
+deactivate KeyValueDB
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+
+Client -> KeyValueDBProxy : setName()
+activate KeyValueDBProxy
+KeyValueDBProxy -> KeyValueDB : setName()
+activate KeyValueDB
+KeyValueDBProxy <-- KeyValueDB
+deactivate KeyValueDB
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+
+Client -> KeyValueDBProxy : getName()
+activate KeyValueDBProxy
+Client <-- KeyValueDBProxy
+deactivate KeyValueDBProxy
+@enduml

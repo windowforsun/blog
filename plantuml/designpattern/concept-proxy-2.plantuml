@@ -1,0 +1,38 @@
+@startuml
+
+interface DB {
+	{abstract} void setName(String name)
+	{abstract} String getName()
+	{abstract} void set(String key, String value)
+	{abstract} void get(String key)
+}
+
+class KeyValueDB {
+	String name
+	Map<String, String> storage
+
+	KeyValueDB(String name)
+	void init()
+	void setName(String name)
+	String getName()
+	void set(String key, String value)
+	String get(String key)
+}
+
+class KeyValueDBProxy {
+	String name
+	KeyValueDB real
+
+	KeyValueDbProxy(String name)
+	synchronized realize()
+	synchronized setName(String name)
+	String getName()
+	void set(String key, String value)
+	void get(String key)
+}
+
+DB <|.. KeyValueDB
+DB <|.. KeyValueDBProxy
+DB <-right-o Client : Uses <
+
+@enduml
