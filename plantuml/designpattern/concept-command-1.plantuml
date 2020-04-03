@@ -1,0 +1,27 @@
+@startuml
+
+interface Command {
+	{abstract} execute()
+}
+
+class ConcreteCommand {
+	receiver
+	execute()
+}
+
+class Receiver {
+	action()
+}
+
+class Invoker {
+}
+
+class Client {
+}
+
+Command <-left-o Invoker
+Command <|.down. ConcreteCommand
+Receiver <-left-o ConcreteCommand
+ConcreteCommand <-- Client : Creates <
+
+@enduml

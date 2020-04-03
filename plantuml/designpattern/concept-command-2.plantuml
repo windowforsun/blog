@@ -1,0 +1,23 @@
+@startuml
+
+participant Invoker
+participant Client
+
+hide footbox
+
+activate Invoker
+activate Client
+create ConcreteCommand
+Client -> ConcreteCommand : new
+Invoker -> ConcreteCommand : execute
+activate ConcreteCommand
+ConcreteCommand -> Receiver : action
+activate Receiver
+ConcreteCommand <-- Receiver
+deactivate Receiver
+Invoker <-- ConcreteCommand
+deactivate ConcreteCommand
+'deactivate Client
+'deactivate Invoker
+
+@enduml
