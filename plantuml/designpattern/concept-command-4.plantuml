@@ -1,0 +1,57 @@
+@startuml
+
+participant Calculator
+participant PlusCommand
+participant Expression
+
+[-> Calculator : plus()
+activate Calculator
+create PlusCommand
+Calculator -> PlusCommand : new
+Calculator -> MacroCommand : appendCommand()
+activate MacroCommand
+Calculator <-- MacroCommand
+deactivate MacroCommand
+Calculator -> MacroCommand : doCommand()
+activate MacroCommand
+MacroCommand -> PlusCommand : doCommand()
+activate PlusCommand
+PlusCommand -> Expression : doResult()
+activate Expression
+PlusCommand <-- Expression
+deactivate Expression
+MacroCommand <-- PlusCommand
+deactivate PlusCommand
+Calculator <-- MacroCommand
+deactivate MacroCommand
+Calculator -> Expression : getResult()
+activate Expression
+Calculator <-- Expression
+deactivate Expression
+[<-- Calculator
+deactivate Calculator
+
+[-> Calculator : undo()
+activate Calculator
+Calculator -> MacroCommand : undoCommand()
+activate MacroCommand
+MacroCommand -> PlusCommand : undoCommand()
+activate PlusCommand
+PlusCommand -> Expression : undoResult()
+activate Expression
+Expression <-- PlusCommand
+deactivate Expression
+MacroCommand <-- PlusCommand
+deactivate PlusCommand
+Calculator <-- MacroCommand
+deactivate MacroCommand
+Calculator -> Expression : getResult()
+activate Expression
+Calculator <-- Expression
+deactivate Expression
+[<-- Calculator
+deactivate Calculator
+
+
+
+@enduml

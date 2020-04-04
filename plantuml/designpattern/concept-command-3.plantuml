@@ -1,0 +1,88 @@
+@startuml
+
+interface Command {
+	{abstract}void doCommand()
+	{abstract} void undoCommand()
+}
+
+class PlusCommand {
+	double operand
+	Expression expression
+
+	PlusCommand(Expression expression, double operand)
+	void doCommand()
+	void undoCommand()
+}
+
+class MinusCommand {
+	double operand
+	Expression expression
+
+	MinusCommand(Expression expression, double operand)
+	void doCommand()
+	void undoCommand()
+}
+
+class MacroCommand {
+	LinkedList<Command> undoCommands
+	LinkedList<Command> redoCommands
+
+	MacroCommand()
+	void appendCommand(Command command)
+	void doCommand()
+	void undoCommand()
+	void redoCommand()
+	void clear()
+}
+
+interface Expression {
+	{abstract} void doResult(double result, double operand, String operation)
+	{abstract} void undoResult(double result)
+	{abstract} String getExpressionStr()
+	{abstract} double getResult()
+	{abstract} void clear()
+}
+
+class SimpleExpression {
+	double result
+	LinkedList<Double> operandList
+	LinkedList<String> operationList
+
+	SimpleExpression()
+	void doResult(double result, double operand, String operation)
+	void undoResult(double result)
+	void getExpressionStr()
+	double getResult()
+	void clear()
+}
+
+class Calculator {
+	Expression expression
+	MacroCommand macroCommand
+
+	Calculator()
+	void calculate(Command command)
+	double plus(double operand)
+	double minus(double operand)
+	double undo()
+	double redo()
+	String getExpression()
+	double getResult()
+	void clear()
+}
+
+Command <|.down. PlusCommand
+Command <|.down. MinusCommand
+Command <|.. MacroCommand
+Command <--o MacroCommand
+
+Expression <|.. SimpleExpression
+
+Expression <-down-o PlusCommand
+Expression <-down-o MinusCommand
+
+MacroCommand <--o Calculator
+Expression <--o Calculator
+
+
+@enduml
