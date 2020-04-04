@@ -3,7 +3,7 @@
 participant Invoker
 participant Client
 
-hide footbox
+'hide footbox
 
 activate Invoker
 activate Client
@@ -17,7 +17,7 @@ ConcreteCommand <-- Receiver
 deactivate Receiver
 Invoker <-- ConcreteCommand
 deactivate ConcreteCommand
-'deactivate Client
-'deactivate Invoker
+deactivate Client
+deactivate Invoker
 
 @enduml
