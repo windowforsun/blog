@@ -1,0 +1,30 @@
+@startuml
+
+
+node "JVM" {
+	[Class Loader]
+
+		package "Runtime Data Area" {
+			[Method Area]
+			[Heap]
+			[JVM Language Stacks]
+			[PC Registers]
+			[Native Method Stacks]
+		}
+
+
+	package "Execution Engine" {
+		[JIT Compiler]
+		[Garbage Collector]
+	}
+
+	[Native Method Interface]
+
+	[Native Method Libraries]
+}
+
+[Java Source] -> [Java Compiler]
+[Java Compiler] -> [JVM Language Classes]
+[JVM Language Classes] -> [Class Loader]
+
+@enduml
