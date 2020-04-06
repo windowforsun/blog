@@ -1,0 +1,11 @@
+@startuml
+
+node JRE {
+	[JVM]
+	[rt.jar]
+}
+
+note right of [rt.jar]
+	Libraries and compiled class files
+end note
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+
+node JDK {
+	node JRE {
+		[JVM]
+		[rt.jar]
+	}
+
+	[Compiler]
+	[Debugger]
+	[Development Tools]
+}
+
+note right of [rt.jar]
+	Libraries and compiled class files
+end note
+
+@enduml

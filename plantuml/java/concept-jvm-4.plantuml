@@ -1,0 +1,85 @@
+@startuml
+
+package "Class file" <<Node>> {
+}
+
+package JVM <<Node>> {
+	package "Class Loader" <<Rectangle>> {
+	}
+
+	package "Runtime Data Area" <<Rectangle>> {
+		package "Method Area" <<Rectangle>> {
+		}
+		package "Heap" <<Rectangle>> {
+		}
+		package "JVM Language Stacks" <<Rectangle>> {
+		}
+		package "PC Registers" <<Rectangle>> {
+		}
+		package "Native Method Stacks" <<Rectangle>> {
+		}
+	}
+
+	package "Execution Engine" <<Rectangle>> {
+		package "Interpreter" <<Rectangle>> {
+		}
+		package "JIT Compiler" <<Rectangle>> {
+		}
+		package "Garbage Collector" <<Rectangle>> {
+		}
+	}
+
+	package "Native Method Interface" <<Rectangle>> {
+	}
+
+	package "Native Method Library" <<Rectangle>> {
+	}
+}
+
+
+"Class file" -right-> "Class Loader"
+
+"Class Loader" <--> "Runtime Data Area"
+
+"Runtime Data Area" <--> "Execution Engine"
+
+"Runtime Data Area" <--> "Native Method Interface"
+
+"Execution Engine" <--> "Native Method Interface"
+
+"Native Method Interface" <-right-> "Native Method Library"
+
+
+'node "JVM" {
+'	[Class Loader]
+'
+'		package "Runtime Data Area" {
+'			[Method Area]
+'			[Heap]
+'			[JVM Language Stacks]
+'			[PC Registers]
+'			[Native Method Stacks]
+'		}
+'
+'
+'	package "Execution Engine" {
+'		[Interpreter]
+'		[JIT Compiler]
+'		[Garbage Collector]
+'	}
+'
+'	[Native Method Interface]
+'
+'	[Native Method Libraries]
+'}
+
+'class  <<Serializable>> {
+'
+'}
+'
+'hide member
+'hide method
+'hide <<Serializable>> circle
+
+
+@enduml

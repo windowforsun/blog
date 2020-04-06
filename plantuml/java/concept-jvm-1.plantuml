@@ -1,31 +1,12 @@
 @startuml
 
-
-node "JVM" {
-	[Class Loader]
-
-		package "Runtime Data Area" {
-			[Method Area]
-			[Heap]
-			[JVM Language Stacks]
-			[PC Registers]
-			[Native Method Stacks]
-		}
-
-
-	package "Execution Engine" {
-		[Interpreter]
-		[JIT Compiler]
-		[Garbage Collector]
-	}
-
-	[Native Method Interface]
-
-	[Native Method Libraries]
-}
-
-[Java Source] -> [Java Compiler]
-[Java Compiler] -> [JVM Language Classes]
-[JVM Language Classes] -> [Class Loader]
+[Source Code(.java)] -> [Compiler(javac)]
+[Compiler(javac)] -> [Byte code(.class)]
+[Byte code(.class)] --> JVM1
+[Byte code(.class)] --> JVM2
+[Byte code(.class)] --> JVM3
+JVM1 --> [Interpreter for Mac]
+JVM2 --> [Interpreter for Windows]
+JVM3 --> [Interpreter for Linux]
 
 @enduml
