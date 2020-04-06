@@ -4,7 +4,7 @@ classes: wide
 title: "[Java 개념] JVM 과 JAVA 환경"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java 환경의 구성과 구동환경인 JVM 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
