@@ -5,7 +5,7 @@ node JRE {
 	[rt.jar]
 }
 
-note right of [rt.jar]
+note bottom of [rt.jar]
 	Libraries and compiled class files
 end note
 @enduml

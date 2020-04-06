@@ -9,10 +9,11 @@ node JDK {
 	[Compiler]
 	[Debugger]
 	[Development Tools]
+
+	note bottom of [rt.jar]
+		Libraries and compiled class files
+	end note
 }
 
-note right of [rt.jar]
-	Libraries and compiled class files
-end note
 
 @enduml

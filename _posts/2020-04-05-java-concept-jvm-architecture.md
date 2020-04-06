@@ -23,8 +23,6 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/java/concept_jvm_1.png)
 
-`Java source code(.java) -> Java compiler(javac) -> Java byte code(.class) -> JVM -> Interpreter for (Mac, Windows, Linux)`
-
 - 사용자가 작성한 소스코드 파일을 `Java Compiler` 를 통해 컴파일 한다.
 - `Java Compiler` 는 `.java` 확장자의 파일들을 컴파일을 통해 `.class` 확장자인 `Java byte code` 를 만들어 낸다.
 - `Java byte code` 는 기계어가 아니기 때문에 바로 `OS` 환경에서 실행될 수 없다.
@@ -59,7 +57,7 @@ use_math: true
 - `JVM` 은 `JAVA Virtual Machine` 의 줄임말로 불리는 용어이다.
 - 이름에서 알 수 있듯이 추상적인 컴퓨팅 머신이다.
 - 다양한 환경(Windows, Linux)에서 의존성 없이(독립적으로) 사용자의 애플리케이션이(`Java byte code`) 구동가능하도록 `JAVA` 와 `OS` 사이에서 중재자 역할을 수행한다.
-- `JVM` 은 중재자 역할을 수행하기 위해서 내부적으로 여러 기능을 제공하면서 안정적이면서 지속적으로 애플리케이션이 실행될 수 있도록 제공한다.
+- `JVM` 은 중재자 역할을 수행하기 위해서 내부적으로 여러 기능을 컴포넌트로 구성돼, 안정적이면서 지속적으로 애플리케이션이 실행될 수 있도록 제공한다.
 
 ### Class Loader
 
