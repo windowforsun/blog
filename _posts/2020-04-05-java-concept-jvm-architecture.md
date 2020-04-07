@@ -32,7 +32,7 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/java/concept-jvm-1.png)
 
-- `JVM`, `JDK`, `JRE` 모두 `JAVA` 를 실행하기 위해 필요한 기반 환경이다.
+- `JVM`, `JDK`, `JRE` 모두 `JAVA` 를 사용하기 위해 필요한 기반 환경이다.
 
 ### JRE
 
@@ -61,7 +61,7 @@ use_math: true
 
 ### Class Loader
 
-[그림]
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_5.png)
 
 - `JAVA` 에서 `Dynamic class loading` 을 담당하는 모듈이다.
 - `JVM` 으로 클래스파일(.class) 을 로드하고, 링크를 통해 배치하는 작업을 수행한다.
@@ -86,7 +86,7 @@ use_math: true
 
 ### Runtime Data Area
 
-[그림]
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_6.png)
 
 - 애플리케이션 구동을 위해 `OS` 로 부터 할당 받은 메모리 공간을 의미한다.
 - `Runtime Data Area` 는 5개의 컴포넌트로 구성돼있다.
@@ -125,7 +125,7 @@ use_math: true
 			
 ### Execution Engine
 
-[그림]
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_7.png)
 
 - 컴파일된 `bytecode` 를 `Class Loader` 가 `Runtime Data Area` 에 로드 시키면, `Execution Engine` 에서는 이를 실행시키는 역할을 수행한다.
 - `Execution Engine` 은 `bytecode` 를 읽어 하나씩 실행한다.
@@ -148,104 +148,11 @@ use_math: true
 - 사용되지 않는 객체를 수집하거나, 지우는 역할을 수행한다.
 - `System.gc()` 메소드를 통해 사용자 임의로 호출해 동작을 수행할 수 있도록 할 수 있지만, 실제 동작에 대해서는 보장하지 않는다.
 
-### Native Method Interface(Java Native Interface, JNI)
+### Native Method Interface(JNI)
 - `Native Method Library` 와 상호작용을 통해 `Execution Engine` 에서 필요한 `Native Library` 를 제공한다.
 
 ### Native Method Library
 - `Execution Engine` 에서 필요한 `Native Library` 가 위치하는 곳이다.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ---

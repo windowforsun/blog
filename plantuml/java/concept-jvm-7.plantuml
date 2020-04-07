@@ -1,0 +1,28 @@
+@startuml
+
+package "Execution Engine" <<Node>> {
+	package "Interpreter" <<Rectangle>> {
+	}
+	package "JIT Compiler" <<Rectangle>> {
+		package "Intermediate Code Generator" <<Rectangle>> {
+		}
+		package "Code Optimizer" <<Rectangle>> {
+		}
+		package "Target Code Generator" <<Rectangle>> {
+		}
+		package "Profiler" <<Rectangle>> {
+		}
+
+		"Intermediate Code Generator" -[hidden]right-> "Profiler"
+		"Intermediate Code Generator" --> "Code Optimizer"
+		"Code Optimizer" --> "Target Code Generator"
+
+	}
+	package "Garbage Collection" <<Rectangle>> {
+	}
+
+	"Interpreter" -[hidden]-> "Garbage Collection"
+}
+
+
+@enduml

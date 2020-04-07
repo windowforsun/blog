@@ -1,0 +1,33 @@
+@startuml
+
+package "Class Loader" <<Node>> {
+	package "Loading" <<Rectangle>> {
+		package "Bootstrap Class Loader" <<Rectangle>> {
+		}
+		package "Extension Class Loader" <<Rectangle>> {
+		}
+		package "Application Class Loader" <<Rectangle>> {
+		}
+
+		"Bootstrap Class Loader" --> "Extension Class Loader"
+		"Extension Class Loader" --> "Application Class Loader"
+	}
+	package "Linking" <<Rectangle>> {
+		package "Verify" <<Rectangle>> {
+		}
+		package "Prepare" <<Rectangle>> {
+		}
+		package "Resolve" <<Rectangle>> {
+		}
+		"Verify" --> "Prepare"
+		"Prepare" --> "Resolve"
+	}
+	package "Initialization" <<Rectangle>> {
+	}
+
+	"Loading" --> "Linking"
+	"Linking" --> "Initialization"
+}
+
+
+@enduml

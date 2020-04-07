@@ -1,0 +1,59 @@
+@startuml
+
+package "Runtime Data Area" <<Node>> {
+	package "Method Area" <<Rectangle>> {
+	}
+	package "Heap" <<Rectangle>> {
+	}
+	package "JVM Language Stacks" <<Rectangle>> {
+		package "Thread_1" <<Rectangle>> {
+			package "Stack Frame_1" <<Rectangle>> {
+			}
+			package "Local Variable Array_1" <<Rectangle>> {
+			}
+			package "Operand stack_1" <<Rectangle>> {
+			}
+			package "Frame data_1" <<Rectangle>> {
+			}
+
+			"Stack Frame_1" -[hidden]-> "Local Variable Array_1"
+			"Local Variable Array_1" -[hidden]-> "Operand stack_1"
+			"Operand stack_1" -[hidden]-> "Frame data_1"
+		}
+		package "Thread_2" <<Rectangle>> {
+			package "Stack Frame_2" <<Rectangle>> {
+			}
+			package "Local Variable Array_2" <<Rectangle>> {
+			}
+			package "Operand stack_2" <<Rectangle>> {
+			}
+			package "Frame data_2" <<Rectangle>> {
+			}
+
+			"Stack Frame_2" -[hidden]-> "Local Variable Array_2"
+			"Local Variable Array_2" -[hidden]-> "Operand stack_2"
+			"Operand stack_2" -[hidden]-> "Frame data_2"
+		}
+
+'		"Thread_1" .[hidden].> "Thread_2"
+	}
+	package "PC Registers" <<Rectangle>> {
+		package "PC Register for Thread_1" <<Rectangle>> {
+		}
+		package "PC Register for Thread_2" <<Rectangle>> {
+		}
+		package "PC Register for Thread_n" <<Rectangle>> {
+		}
+
+		"PC Register for Thread_1" -[hidden]-> "PC Register for Thread_2"
+		"PC Register for Thread_2" -[hidden]-> "PC Register for Thread_n"
+	}
+	package "Native Method Stack" <<Rectangle>> {
+	}
+
+	"Method Area" -[hidden]-> "Heap"
+	"Heap" -[hidden]-> "Native Method Stack"
+}
+
+
+@enduml
