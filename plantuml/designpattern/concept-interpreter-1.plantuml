@@ -1,0 +1,26 @@
+@startuml
+
+class Context {
+	getInfoInterpreter()
+}
+
+abstract class AbstractExpression {
+	{abstract} interpret()
+}
+
+class TerminalExpression {
+	interpret()
+}
+
+class NonTerminalExpression {
+	childExpression
+	interpret()
+}
+
+Context <-- Client : Creates <
+AbstractExpression <-- Client : Uses <
+AbstractExpression <|-- TerminalExpression
+AbstractExpression <|-- NonTerminalExpression
+AbstractExpression <--o NonTerminalExpression
+
+@enduml
