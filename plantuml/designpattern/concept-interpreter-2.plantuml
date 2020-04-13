@@ -1,0 +1,88 @@
+@startuml
+
+class Calculator {
+	Context context
+	Node calcNode
+
+	int calculate(String exp)
+	void parse(String exp)
+}
+
+class Context {
+	StringTokenizer tokenizer
+	String currentToken
+	int result
+	int operand
+
+	Context(String exp)
+	String nextToken()
+	void skipToken(String token)
+	String getCurrentToken()
+	int getCurrentNumber()
+	void setDefaultResult()
+	int getResult()
+	void setResult()
+	int getOperand()
+	void setOperand()
+}
+
+interface Executor {
+	{abstract} void execute(Context context)
+}
+
+interface Node {
+	{abstract} void parse(Context context)
+}
+
+class CalcNode {
+	Node operationExpressionListNode
+
+	void parse(Context context)
+	void execute(Context context)
+}
+
+class OperationExpressionListNode {
+	Node operandNode
+	List<Node> list
+
+	OperationExpressionListNode()
+	void parse(Context context)
+	void execute(Context context)
+}
+
+class OperationExpressionNode {
+	Node operationNode
+	Node operandNode
+
+	void parse(Context)
+	void execute(Context context)
+}
+
+class OperationNode {
+	String operation
+
+	void parse(Context context)
+	void execute(Context context)
+}
+
+class OperandNode {
+	int operand
+
+	void parse(Context context)
+	void execute(Context context)
+}
+
+Executor <|-- Node
+Node <|.. CalcNode
+Node <|.. OperationExpressionListNode
+Node <|.. OperationExpressionNode
+Node <|.. OperationNode
+Node <|.. OperandNode
+CalcNode <--o Node
+OperationExpressionListNode <--o Node
+OperationExpressionNode <--o Node
+
+Context <-- Calculator : Creates <
+Node <-right- Calculator : Uses <
+
+@enduml
