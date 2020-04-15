@@ -1,0 +1,30 @@
+@startuml
+skinparam linetype ortho
+
+title param.num *= 2;
+
+rectangle "Stack" {
+	rectangle "methodA" {
+		rectangle "param"
+	}
+	rectangle "main" {
+		rectangle "exam"
+	}
+
+	methodA -[hidden]d- main
+}
+
+cloud "Heap" {
+	rectangle "Exam:1000" as Exam1000 {
+		rectangle "num = 2" as num1000
+		rectangle "str = "str1"" as str1000
+		num1000 -[hidden]d- str1000
+	}
+}
+
+Stack -[hidden]right-Heap
+
+exam -right-> Exam1000
+param -right-> Exam1000
+
+@enduml

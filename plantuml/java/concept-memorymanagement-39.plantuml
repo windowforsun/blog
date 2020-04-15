@@ -1,0 +1,32 @@
+@startuml
+skinparam linetype ortho
+
+title String methodAStr = "hello";
+
+rectangle "Stack" {
+	rectangle "methodA" {
+		rectangle "methodAStr"
+	}
+
+	rectangle "main" {
+		rectangle "b"
+		rectangle "a"
+
+		b -[hidden]d- a
+	}
+
+	methodAStr -[hidden]d- main
+}
+
+cloud "Heap" {
+	rectangle "String Pool" {
+		rectangle "hello"
+	}
+}
+
+Stack -[hidden]r-Heap
+a -r-> hello
+b -u-> hello
+methodAStr -l-> hello
+
+@enduml

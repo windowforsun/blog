@@ -1,0 +1,24 @@
+@startuml
+skinparam linetype ortho
+
+title a += " world";
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "a"
+	}
+}
+
+cloud "Heap" {
+	rectangle "String Pool" {
+		rectangle "hello"
+		rectangle "hello world" as helloworld
+	}
+
+	hello -[hidden]u- helloworld
+}
+
+Stack -[hidden]r-Heap
+a -r-> helloworld
+
+@enduml

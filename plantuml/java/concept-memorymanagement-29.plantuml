@@ -1,0 +1,31 @@
+@startuml
+skinparam linetype ortho
+
+title exam = methodA();
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "exam"
+	}
+}
+
+cloud "Heap" {
+	rectangle "Exam:1000" as Exam1000 {
+		rectangle "num = 1" as num1000
+		rectangle "str = "str1"" as str1000
+		num1000 -[hidden]d- str1000
+	}
+	rectangle "Exam:1001" as Exam1001 {
+		rectangle "num = 2" as num1001
+		rectangle "str = "str2"" as str1001
+		num1001 -[hidden]d- str1001
+	}
+
+	Exam1000 -[hidden]u- Exam1001
+}
+
+Stack -[hidden]right-Heap
+
+exam -right-> Exam1001
+
+@enduml

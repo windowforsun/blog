@@ -1,0 +1,49 @@
+@startuml
+skinparam linetype ortho
+
+title list.add(new Exam(3, "str3"));
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "exam"
+		rectangle "list"
+	}
+
+	exam -[hidden]u-list
+}
+
+cloud "Heap" {
+	rectangle "Exam:1000" as Exam1000 {
+		rectangle "num = 1" as num1000
+		rectangle "str = "str1"" as str1000
+		num1000 -[hidden]d- str1000
+	}
+
+	rectangle "List:1001" as List1001 {
+		rectangle "0"
+		rectangle "1"
+	}
+
+	rectangle "Exam:1002" as Exam1002 {
+		rectangle "num = 2" as num1002
+		rectangle "str = "str2"" as str1002
+		num1002 -[hidden]d- str1002
+	}
+
+	rectangle "Exam:1003" as Exam1003 {
+		rectangle "num = 3" as num1003
+		rectangle "str = "str3"" as str1003
+		num1003 -[hidden]d- str1003
+	}
+
+	Exam1000 -[hidden]u- List1001
+	0 --> Exam1002
+	1 --> Exam1003
+}
+
+Stack -[hidden]r-Heap
+
+exam -r-> Exam1000
+list -r-> List1001
+
+@enduml

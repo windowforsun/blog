@@ -1,0 +1,32 @@
+@startuml
+skinparam linetype ortho
+
+title List<Exam> list = new ArrayList();
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "exam"
+		rectangle "list"
+	}
+
+	exam -[hidden]u-list
+}
+
+cloud "Heap" {
+	rectangle "Exam:1000" as Exam1000 {
+		rectangle "num = 1" as num1000
+		rectangle "str = "str1"" as str1000
+		num1000 -[hidden]d- str1000
+	}
+
+	rectangle "List:1001" as List1000
+
+	Exam1000 -[hidden]u- List1000
+}
+
+Stack -[hidden]r-Heap
+
+exam -r-> Exam1000
+list -r-> List1000
+
+@enduml

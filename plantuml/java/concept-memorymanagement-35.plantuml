@@ -1,0 +1,49 @@
+@startuml
+skinparam linetype ortho
+
+title b = tmp;
+
+rectangle "Stack" {
+	rectangle "methodA" {
+		rectangle "tmp"
+		rectangle "a"
+		rectangle "b"
+
+		tmp -[hidden]d- a
+		a -[hidden]d- b
+	}
+	rectangle "main" {
+		rectangle "exam2"
+		rectangle "exam1"
+
+		exam2 -[hidden]d- exam1
+	}
+
+	b -[hidden]d- exam2
+}
+
+cloud "Heap" {
+	rectangle "Exam:1000" as Exam1000 {
+		rectangle "num = 1" as num1000
+		rectangle "str = "str1"" as str1000
+		num1000 -[hidden]d- str1000
+	}
+
+	rectangle "Exam:1001" as Exam1001 {
+		rectangle "num = 2" as num1001
+		rectangle "str = "str2"" as str1001
+		num1001 -[hidden]d- str1001
+	}
+
+	Exam1000 -[hidden]l- Exam1001
+}
+
+Stack -[hidden]r-Heap
+
+exam1 -r-> Exam1000
+exam2 -r-> Exam1001
+a -r-> Exam1001
+b -r-> Exam1000
+tmp -r-> Exam1000
+
+@enduml
