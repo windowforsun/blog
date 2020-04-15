@@ -25,10 +25,10 @@ cloud "Heap" {
 	}
 }
 
-Stack -[hidden]right-Heap
+Stack -[hidden]r-Heap
 
-exam -right-> Exam1000
-exam2 -right-> Exam1000
-param -right-> Exam1000
+exam -up-> Exam1000
+exam2 --> Exam1000
+param --> Exam1000
 
 @enduml

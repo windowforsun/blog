@@ -40,10 +40,10 @@ cloud "Heap" {
 
 Stack -[hidden]r-Heap
 
-exam1 -r-> Exam1000
+exam1 -u-> Exam1000
 exam2 -r-> Exam1001
-a -r-> Exam1000
+a -u-> Exam1000
 b -r-> Exam1001
-tmp -r-> Exam1000
+tmp -u-> Exam1000
 
 @enduml
