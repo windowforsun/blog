@@ -1,0 +1,12 @@
+@startuml
+
+title methodA(mainNum);
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "mainNum = 10" as mainNum
+	}
+}
+
+
+@enduml

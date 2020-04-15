@@ -1,0 +1,18 @@
+@startuml
+
+title mainNum *= 2;
+
+rectangle "Stack" {
+	rectangle "methodA" {
+		rectangle "mainNum = 20" as methodAMainNum
+	}
+
+	rectangle "main" {
+		rectangle "mainNum = 10" as mainNum
+	}
+
+	methodAMainNum -[hidden]d- mainNum
+}
+
+
+@enduml

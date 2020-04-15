@@ -1,0 +1,78 @@
+@startuml
+
+'package "Stack" <<Node>> {
+'	package "reference1" <<Rectangle>> {
+'	}
+'	package "reference2" <<Rectangle>> {
+'	}
+'	package "list" <<Rectangle>> {
+'	}
+'	package "num" <<Rectangle>> {
+'	}
+'
+'	"reference1" -[hidden]- "reference2"
+'	"reference2" -[hidden]- "list"
+'	"list" -[hidden]- "num"
+'}
+'
+'package "Heap" <<Cloud>> {
+'	package "Object1" <<Rectangle>> {
+'	}
+'	package "Object2" <<Rectangle>> {
+'	}
+'	package "Object3" <<Rectangle>> {
+'	}
+'
+'	package "String1" <<Rectangle>> {
+'	}
+'	package "String2" <<Rectangle>> {
+'	}
+'	package "List" <<Rectangle>> {
+'	}
+'
+'	"List" -[hidden]- "String1"
+'	"Object1" -[hidden]- "Object2"
+'}
+'
+'"reference1" --> "String1"
+'"reference2" --> "String2"
+'"list" --> "List"
+
+rectangle "Stack" {
+	rectangle "reference1"
+	rectangle "reference2"
+	rectangle "list"
+	rectangle "num = 10" as num
+
+	reference1 -[hidden]- reference2
+	reference2 -[hidden]- list
+	list -[hidden]- num
+}
+
+cloud "Heap" {
+	rectangle "Object1"
+	rectangle "Object2"
+	rectangle "List"
+	rectangle "Object3"
+	rectangle "Object4"
+	rectangle "Object5"
+
+	Object1 -[hidden]- Object2
+	Object2 -[hidden]- List
+	Object3 -[hidden]- Object4
+	Object4 -[hidden]- Object5
+
+	List -up-> Object3
+	List -right-> Object4
+	List --> Object5
+}
+
+Stack -[hidden]- Heap
+reference1 --> Object1
+reference2 --> Object2
+list --> List
+
+'aaa -right- bbb
+
+
+@enduml

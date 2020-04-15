@@ -1,0 +1,21 @@
+@startuml
+
+title int methodNum = param + 1;
+
+rectangle "Stack" {
+	rectangle "methodA" {
+		rectangle "methodNum = 11" as methodNum
+		rectangle "param = 10" as param
+
+		methodNum -[hidden]down- param
+	}
+	rectangle "main" {
+		rectangle "mainNum = 10" as mainNum
+	}
+
+	methodA -[hidden]d-main
+	param -[hidden]d- mainNum
+}
+
+
+@enduml

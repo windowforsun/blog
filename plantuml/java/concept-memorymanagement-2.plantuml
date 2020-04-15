@@ -1,0 +1,13 @@
+@startuml
+
+title int mainNum = 10;
+
+rectangle "Stack" {
+	rectangle "main" {
+		rectangle "mainNum = 10"
+	}
+}
+
+
+
+@enduml
