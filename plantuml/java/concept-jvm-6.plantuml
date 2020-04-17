@@ -1,4 +1,5 @@
 @startuml
+skinparam linetype ortho
 
 package "Runtime Data Area" <<Node>> {
 	package "Method Area" <<Rectangle>> {
@@ -7,32 +8,30 @@ package "Runtime Data Area" <<Node>> {
 	}
 	package "JVM Language Stacks" <<Rectangle>> {
 		package "Thread_1" <<Rectangle>> {
-			package "Stack Frame_1" <<Rectangle>> {
-			}
-			package "Local Variable Array_1" <<Rectangle>> {
-			}
-			package "Operand stack_1" <<Rectangle>> {
-			}
-			package "Frame data_1" <<Rectangle>> {
-			}
+			rectangle "Stack Frame_1" as sk1{
+						rectangle "Local Variable Array_1" as lva1{
+            			}
+            			rectangle "Operand stack_1" as os1{
+            			}
+            			rectangle "Frame data_1" as fa1{
+            			}
 
-			"Stack Frame_1" -[hidden]-> "Local Variable Array_1"
-			"Local Variable Array_1" -[hidden]-> "Operand stack_1"
-			"Operand stack_1" -[hidden]-> "Frame data_1"
+						lva1 -[hidden]- os1
+						os1 -[hidden]- fa1
+			}
 		}
 		package "Thread_2" <<Rectangle>> {
-			package "Stack Frame_2" <<Rectangle>> {
-			}
-			package "Local Variable Array_2" <<Rectangle>> {
-			}
-			package "Operand stack_2" <<Rectangle>> {
-			}
-			package "Frame data_2" <<Rectangle>> {
-			}
+			rectangle "Stack Frame_2" as sk2{
+						rectangle "Local Variable Array_2" as lva2{
+            			}
+            			rectangle "Operand stack_2" as os2{
+            			}
+            			rectangle "Frame data_2" as fa2{
+            			}
 
-			"Stack Frame_2" -[hidden]-> "Local Variable Array_2"
-			"Local Variable Array_2" -[hidden]-> "Operand stack_2"
-			"Operand stack_2" -[hidden]-> "Frame data_2"
+						lva2 -[hidden]- os2
+						os2 -[hidden]- fa2
+			}
 		}
 
 '		"Thread_1" .[hidden].> "Thread_2"
