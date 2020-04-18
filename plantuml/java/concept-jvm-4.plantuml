@@ -1,5 +1,4 @@
 @startuml
-
 package "Class file" <<Node>> {
 }
 
@@ -10,7 +9,7 @@ package JVM <<Node>> {
 	package "Runtime Data Area" <<Rectangle>> {
 		package "Method Area" <<Rectangle>> {
 		}
-		package "Heap" <<Rectangle>> {
+		package "Heap" <<Rectangle>> #Orchid {
 		}
 		package "JVM Language Stacks" <<Rectangle>> {
 		}
@@ -23,9 +22,9 @@ package JVM <<Node>> {
 	package "Execution Engine" <<Rectangle>> {
 		package "Interpreter" <<Rectangle>> {
 		}
-		package "JIT Compiler" <<Rectangle>> {
+		package "JIT Compiler" <<Rectangle>> #Orchid {
 		}
-		package "Garbage Collector" <<Rectangle>> {
+		package "Garbage Collector" <<Rectangle>> #Orchid {
 		}
 	}
 
@@ -39,9 +38,9 @@ package JVM <<Node>> {
 
 "Class file" -right-> "Class Loader"
 
-"Class Loader" <--> "Runtime Data Area"
+"Class Loader" <-[thickness=2]-> "Runtime Data Area" #Orchid
 
-"Runtime Data Area" <--> "Execution Engine"
+"Runtime Data Area" <-[thickness=2]-> "Execution Engine" #Orchid
 
 "Runtime Data Area" <--> "Native Method Interface"
 

@@ -1,0 +1,10 @@
+@startsalt
+skinparam Fontsize 20
+
+{#
+
+Young Generation | *  | * | Old Generation | Permanent
+eden | s0 | s1| old | perm
+
+}
+@endsalt
