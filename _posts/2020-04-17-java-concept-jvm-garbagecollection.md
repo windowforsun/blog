@@ -71,7 +71,6 @@ Hotspot JVM 의 Heap Memory 는 아래와 같이 크게 `Young Generation`, `Old
 
 ```plantuml
 @startsalt
-
 {#
 
 Java Heap | * | * | * | Native  Memory | * | *
