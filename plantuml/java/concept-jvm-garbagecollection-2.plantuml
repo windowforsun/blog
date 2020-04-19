@@ -1,0 +1,11 @@
+@startsalt
+
+{#
+
+Java Heap | * | * | *
+Young Gen | *  | *  | Old Gen
+Eden | S0 | S1 | Tensured
+Minor GC | * | * | Major GC
+
+}
+@endsalt

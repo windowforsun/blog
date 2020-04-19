@@ -68,18 +68,7 @@ use_math: true
 ## Garbage Collection 의 구조
 Hotspot JVM 의 Heap Memory 는 아래와 같이 크게 `Young Generation`, `Old Generation`, `Permanent Generation` 으로 구성된다.  
 
-
-```plantuml
-@startsalt
-{#
-
-Java Heap | * | * | * | Native  Memory | * | *
-Young Gen | *  | *  | Old Gen | OS Level | * | *
-Eden | S0 | S1 | Tensured | Metaspace | C Heap | Thread Stack
-
-}
-@endsalt
-```  
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_garbagecollection_1.png)
 
 ### Young Generation
 - `Young Generation` 은 `Eden`, `Survivor0`, `Survivor1` 영역으로 나뉜다.
@@ -111,19 +100,7 @@ Constant Object(String) | Permanent | Heap
 
 ## Garbage Collection 의 동작
 
-```plantuml
-@startsalt
-
-{#
-
-Java Heap | * | * | * 
-Young Gen | *  | *  | Old Gen
-Eden | S0 | S1 | Tensured 
-Minor GC | * | * | Major GC
-
-}
-@endsalt
-```  
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_garbagecollection_2.png)
 
 ![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-1-0.PNG)
 
@@ -223,23 +200,65 @@ Minor GC | * | * | Major GC
 - `Java 7` 부터 추가된 서버형 `GC` 로 대량의 힙과 멀티 프로세서 환경에서 사용되도록 만들어진 `GC` 이다.
 - `CMS GC` 의 대체하기 위해 만들어 졌다.
 - 메모리를 바둑판과 같은 논리적 단위(`Region`)로 나눠 각 영역에 객체를 할당하고 `GC` 를 실행한다. 한 영역이 꽉 차면 다른 영역에 객체를 할당하고 `GC` 를 수행한다.
-- `Region` 이라는 논리적인 단위를 통해 메모리를 관리하기 때문에 `Compaction` 단계를 진행을 통해 메모리 단편화를 해결하고, 짧은 `STW` 와 빠른 `GC` 수행이 가능하다.
-- `Initial Mark` 단계르 멀티 스레드로 수행하고, 어느 `Region` 에서 많은 메모리 해제가 일어나는지 파악해서 먼저 수집하기 때문에 `Garbage First GC` 라는 이름이 지어졌다.
+- `Region` 이라는 논리적인 단위를 통해 메모리를 관리하기 때문에 `Region` 단위의 `Compaction` 단계를 진행을 통해 메모리 단편화를 해결하고, 짧은 `STW` 와 빠른 `GC` 수행이 가능하다.
+- `Initial Mark` 단계를 멀티 스레드로 수행하고, 어느 `Region` 에서 많은 메모리 해제가 일어나는지 파악해서 먼저 수집하기 때문에 `Garbage First GC` 라는 이름이 지어졌다.
 - 살아남은 객체를 하나의 `Region` 으로 옮기는 과정에서 `Compaction` 을 멀티 스레드로 수행해서 시간을 단축한다.
 - `-XX:+UseG1GC` 옵션을 통해 설정 할 수 있다.
-<!--- `G1 GC` 의 `Young Generation` 의 `GC` 동작과정은 아래와 같다.-->
-	<!--1. 메모리 공간을 고정된 크기의 `Region` 단위로 나눈다.-->
+- `G1 GC` 의 기본 구조와 `Young Generation` 의 `GC` 동작과정은 아래와 같다.
+	1. 메모리 공간을 고정된 크기의 `Region` 단위로 나눈다.
 
-		<!--![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-8.PNG)-->
-		<!---->
-		<!--- `Region` 의 크기는 `JVM` 이 실행될 때 결정되는데, 1~32Mb 의 크기의 2000 개로 구성한다.-->
-		<!---->
-	<!--1. 나눠진 `Region` 의 각각의 공간은 `Eden`, `Survivor`, `Old` 로 설정되어 사용되고 기존 흐름과 같이 살아남은 객체들은 알맞은 영역으로 이동되면서 관리된다.-->
-	<!---->
-		<!--![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-9.PNG)-->
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-8.PNG)
 		
+		- `Region` 의 크기는 `JVM` 이 실행될 때 결정되는데, 1~32Mb 의 크기의 2000 개로 구성한다.
+		
+	1. 나눠진 `Region` 의 각각의 공간은 `Eden`, `Survivor`, `Old` 로 설정되어 사용되고 기존 `GC` 흐름과 같이 살아남은 객체들은 알맞은 영역으로 이동되면서 관리된다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-9.PNG)
+		
+		- `Region` 은 애플리케이션 스레드를 중지하지 않고 병렬로 수집되도록 설계 되었다.
+	1. `Heap` 에 할당된 모습을 보면 아래 그림과 같이 초록색은 `Young Generation`, 파란색은 `Old Generation` 으로 연속되지 않은 상태인것을 확인 할 수 있다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-10.PNG)
+	
+		- `Regoin` 이 연속적이지 않게 할당되고 사용되는 것은 `GC` 이후 `Region` 의 크기를 재할당 할때 쉽게 계산하기 위함이다.
+	1. `Minor GC`(`Young GC`) 가 발생한 `Young Generation Region`(`Eden`) 에 있던 객체들은 `Survivor Regieon` 으로 이동하거나, `Age` 가 `Threshold` 에 도달한 객체는 `Old Generation Region` 으로 이동하게 된다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-11.PNG)
+		
+		- 이 과정에서 `STW` 가 발생하게 되는데, `Eden` 과 `Survivor` 의 크기를 통해 다음 `GC` 이후 할당될 `Region` 의 크기와 `STW` 의 시간을 계산할 수 있다.
+		- 멀티 스레드를 사용해서 `STW` 의 시간을 최소화 한다.
+		
+	1. `Minor GC` 발생 후 아래와 같이 `Young Generation Region` 에서 살아 남은 객체는 `Old Generation Region` 혹은 `Survivor Regoin` 으로 이동 및 `Compaction` 된것을 확인 할 수 있다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-12.PNG)
+		
+- `G1 GC` 에서 `Old Generation` 의 `GC` 동작과정은 아래와 같다.
+	1. `Initial Mark` : `Young Generation GC` 에서 살아남은 객체를 `Mark` 단계와 같이 수행되며 `Survivor Region` 중 `Old Generation Region` 의 객체를 참조하고 있는 `Regoin` 을 식별하고 `STW` 가 발생한다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-13.PNG)
+	
+	1. `Root Region Scanning` : `Initial Mark` 단계에서 식별된 `Region` 중 `Old Generation Region` 의 객체를 참조하고 있는 객체를 스캔한다. 이 과정은 애플리케이션 스레드와 함께 수행된다.
+		- `Young GC` 가 발생하기 전에 이 작업은 완료된다.
+	1. `Concurrent Marking` : `Heap` 전체를 대상으로 살아 있는 객체를 찾는 과정으로 애플리케이션 스레드와 함께 동작하고, `Young GC` 를 통해 인터럽트 될 수 있다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-14.PNG)
 
-
+	1. `Remark` : `Heap` 전체에서 살아있는 객체에 대한 과정의 마무리 단계로 `STW` 가 발생한다. 
+	`Concurrent Marking` 단계에서 찾은 비어있는 `Regoin` 을 삭제하는 등의 전체적으로 `Regoin` 을 정리하는 작업을 수행한다. 
+	`snapshot-at-the-beginning`(`SATB`) 라는 알고리즘을 사용하는데, 이는 `CMS` 에서 사용하는 콜렉터보다 훨씬 빠르다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-15.PNG)
+	
+	1. `Copying/Cleanup` : 살아있는 객체를 새로운 `Regoin` 으로 복사하게(`Reclaim`) 되는데, `G1 GC` 는 가장 생존력이 낮은 `Regoin` 으로 복사를 수행한다. 
+	해당 `Regoin` 을 선택함으로써 이후 빠른 수집이 가능하기 때문이다. 
+	선택된 `Regoin` 에 대해서 이후 `Young GC` 와 동시에 수집을 수행한다. 
+	이는 `Young Generation` 과 `Old Generation` 의 수집이 동시에 진행된다는 것을 의미한다.
+	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-16.PNG)
+	
+	1. `After Copying/Cleanup` : `G1 GC` 가 선택한 `Regoin` 으로 살아남은 객체를 `Collected and Compacted` 를 수행한다.
+	
+	
 ---
 ## Reference
 [Java Garbage Collection](https://d2.naver.com/helloworld/1329)  

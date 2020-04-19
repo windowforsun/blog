@@ -1,10 +1,9 @@
 @startsalt
-skinparam Fontsize 20
-
 {#
 
-Young Generation | *  | * | Old Generation | Permanent
-eden | s0 | s1| old | perm
+Java Heap | * | * | * | Native  Memory | * | *
+Young Gen | *  | *  | Old Gen | OS Level | * | *
+Eden | S0 | S1 | Tensured | Metaspace | C Heap | Thread Stack
 
 }
 @endsalt
