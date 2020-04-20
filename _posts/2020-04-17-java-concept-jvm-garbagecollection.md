@@ -256,8 +256,9 @@ Constant Object(String) | Permanent | Heap
 	
 		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-16.PNG)
 	
-	1. `After Copying/Cleanup` : `G1 GC` 가 선택한 `Regoin` 으로 살아남은 객체를 `Collected and Compacted` 를 수행한다.
+	1. `After Copying/Cleanup` : `G1 GC` 가 선택한 `Regoin` 으로 살아남은 객체들에 대해서 `Collected and Compacted` 를 수행한다.
 	
+		![그림 1]({{site.baseurl}}/img/java/concept-jvm-garbagecollection-17.PNG)
 	
 ---
 ## Reference
