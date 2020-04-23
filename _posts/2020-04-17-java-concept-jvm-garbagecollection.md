@@ -80,7 +80,7 @@ Hotspot JVM 의 Heap Memory 는 아래와 같이 크게 `Young Generation`, `Old
 ### Old Generation
 - `Minor GC` 이후에도 생존한 객체는 `Old Generation` 으로 이동된다. 
 - `Young Genration` 보다 큰 크기를 가지고 있고, `GC` 도 적게 발생한다.
-- `Old Generation` 에서 발생하는 `GC` 를 `Major GC` 혹은 `Full GC` 라고 한다.
+- `Old Generation` 에서 발생하는 `GC` 를 `Major GC` 라고 한다.
 
 ### Native Memory
 - Java 8 이전 에는(Java 7까지) `Permanent Generation` 이라는 공간이 있고, 이또한 `GC` 영역이였지만 아래 이슈들로 인해 사라지게 되었다.
@@ -148,14 +148,14 @@ Constant Object(String) | Permanent | Heap
 	- `Compact` : 삭제 동작으로 발생한 빈공간을 채우기위해 살아남은 객체가 연속되게 구성한다.	
 
 ## GC 방식의 종류
-- `Minor GC` : `Young Generation` 에서 발생하는 `GC` 를 의미하고, 
-- `Major GC` : 
-- `Full GC` :
-- `Serial GC`
-- `Parallel GC`
-- `Parallel Old GC` (`Parallel Compacting GC`)
-- `Concurrent Mark & Sweep GC` (`CMS`)
-- `G1 GC` (`Garbage First GC`)
+<!--- `Minor GC` : `Young Generation` 에서 발생하는 `GC` 를 의미하고, -->
+<!--- `Major GC` : -->
+<!--- `Full GC` :-->
+<!--- `Serial GC`-->
+<!--- `Parallel GC`-->
+<!--- `Parallel Old GC` (`Parallel Compacting GC`)-->
+<!--- `Concurrent Mark & Sweep GC` (`CMS`)-->
+<!--- `G1 GC` (`Garbage First GC`)-->
 	
 ### Serial GC
 - 싱글 스레드를 사용해서 `GC` 작업을 수행한다.
