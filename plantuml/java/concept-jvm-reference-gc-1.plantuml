@@ -1,0 +1,36 @@
+@startuml
+
+title JVM Runtime Data Area
+
+rectangle Thread_1 {
+	rectangle "Java Stack" {
+
+	}
+}
+
+rectangle Thread_2 {
+	rectangle "Native Stack(JNI)" {
+
+	}
+}
+
+rectangle Heap {
+	card Object_1 {
+	}
+	card Object_2 {
+	}
+	card Object_2 {
+	}
+	card Object_4 {
+	}
+	card Object_5 {
+	}
+	card Object_6 {
+	}
+}
+
+Thread_1 -[hidden]down- Thread_2
+Thread_1 -[hidden]right- Heap
+"Java Stack" -right-> Object_1
+
+@enduml
