@@ -154,6 +154,7 @@ PhantomReference<Object> weak = new PhantomReference<Object>(new Object(), rQueu
 
 ## PhantomReference(phantom reachable)
 
+## LRU 구현
 
 
 
@@ -204,3 +205,5 @@ PhantomReference<Object> weak = new PhantomReference<Object>(new Object(), rQueu
 [Strong, Soft, Weak and Phantom References (Java)](http://neverfear.org/blog/view/150/Strong_Soft_Weak_and_Phantom_References_Java)  
 [Weak, Soft, and Phantom References in Java (and Why They Matter)](https://dzone.com/articles/weak-soft-and-phantom-references-in-java-and-why-they-matter)  
 [Difference between WeakReference vs SoftReference vs PhantomReference vs Strong reference in Java](https://javarevisited.blogspot.com/2014/03/difference-between-weakreference-vs-softreference-phantom-strong-reference-java.html)  
+[Java Garbage Collection - Understanding Phantom Reference with examples](https://www.logicbig.com/tutorials/core-java-tutorial/gc/phantom-reference.html)  
+[Class Object finalize](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html#finalize())  
