@@ -23,7 +23,7 @@ use_math: true
 ---  
 
 ## java.lang.ref
-- [GC]()
+- [GC]({{site.baseurl}}{% link _posts/2020-04-17-java-concept-jvm-garbagecollection.md %})
 의 역할은 `Heap` 내의 객체중 `Garbage` 를 찾아서 메모리를 회수하는 역할을 수행하고, 이는 사용자 애플리케이션과는 독립된 영역이면서 역할이였다.
 - `JDK 1.2` 부터는 애플리케이션에서 `java.lang.ref` 패키지로 `GC` 와 상호작용을 통해 어느정도 관여할 수 있게 되었다.
 - `java.lang.ref` 패키지에는 사용자 애플리케이션에서 일반적으로 사용하는 `strong reference` 와 `soft`, `weak`, `phantom` 참조 방식을 클래스로 제공한다.
@@ -147,6 +147,9 @@ PhantomReference<Object> weak = new PhantomReference<Object>(new Object(), rQueu
 ```  
 
 ## 예제관련 소스코드
+- `java.lang` 패키지 `Object` 클래스의 `finalize()` 메소드는 Java 9 부터 `Deprecated` 되었다.
+- `finalize()` 메소드의 사용은 주의해야 되는데, 잘못된 동작으로 인해 `Strong Reference` 를 갖도록 하면 해당 객체는 다시 살아나는`Resurrect` 현상이 발생한다.
+
 ### Util
 
 ```java
@@ -347,7 +350,9 @@ public class StrongReferenceTest {
 ## SoftReference(softly reachable)
 - `SoftReference` 클래스를 통해 생성할 수 있는 참조이다.
 - `SoftReference` 는 `Heap` 메모리가 부족할때 `GC` 의 대상으로 선정된다.
-- 참조가 `null` 이더라도 `GC` 의 대상이 되지 않는다.
+- `Heap` 메모리가 충분할 떄는, 참조가 `null` 이더라도 `GC` 의 대상이 되지 않는다.
+- `get()` 메소드를 통해 참조하고 있는 객체를 리턴 받을 수 있고, `GC` 대상으로 선정되었다면 `null` 을 반환하게 된다.
+- 위와 같은 특징으로 `SoftReference` 를 사용하게 될경우 계속해서 메모리 사용량이 높아지게 되고, `GC` 도 더 빈번하게 수행될 수 있어 주의해야 한다.
 - `JVM` 옵션에서는 `SoftReference` 의 `GC` 를 조절할 수 있는 옵션을 제공한다.
 
 	```
@@ -483,52 +488,218 @@ public class SoftReferenceTest {
 ```  
 
 ## WeakReference(weakly reachable)
+- `WeakReference` 클래스를 통해 생성할 수 있는 참조이다.
+- `GC` 가 수행될 떄마다 회수 대상으로 선정된다.
+- `get()` 메소드를 통해 참조하고 있는 객체를 리턴 받을 수 있고, `GC` 대상으로 선정되었다면 `null` 을 반환하게 된다.
+- `WeakReference` 내의 참조가 `null` 로 설정되고 `weakly reachable` 객체는 `unreachable` 와 같은 상태가 되어 `GC` 에 의해 메모리 회수 대상이된다.
+- `GC` 에 의해 메모리 회수 대상이 되었다고 해도 바로 메모리 회수가 되는 것이 아니라, 실제 회수 시점은 `GC` 알고리즘에 따라 다르고 한번에 모든 메모리를 회수하지도 않는다.
+- `LRU` 캐시를 구현 할때 적합한 참조 방식이다.
+
+```java
+public class WeakReferenceTest {
+    @Before
+    public void setUp() {
+        Util.log.clear();
+    }
+
+    @Test
+    public void Referred_NullReferenceAndGC_Finalized() throws InterruptedException {
+        Util.addLog("Create reference");
+        Referred strong = new Referred();
+        Referred.StaticReferred staticStrong = new Referred.StaticReferred();
+        WeakReference<Referred> weak = new WeakReference<Referred>(strong);
+        WeakReference<Referred.StaticReferred> staticWeak = new WeakReference<Referred.StaticReferred>(staticStrong);
+
+        assertThat(weak.get(), is(strong));
+        assertThat(staticWeak.get(), is(staticStrong));
+
+        Util.collect();
+
+        Util.addLog("Remove reference");
+        strong = null;
+        staticStrong = null;
+        Util.collect();
+
+        assertThat(weak.get(), nullValue());
+        assertThat(staticWeak.get(), nullValue());
+        assertThat(Util.log, contains(
+                is("Create reference"),
+                is("Referred.Referred"),
+                is("StaticReferred.StaticReferred"),
+                is("Util.collect"),
+                is("Sleep"),
+                is("Remove reference"),
+                is("Util.collect"),
+                is("Sleep"),
+                isOneOf("Referred.finalize", "StaticReferred.finalize"),
+                isOneOf("Referred.finalize", "StaticReferred.finalize")
+        ));
+    }
+
+    @Test
+    public void ImmortalReferredReferred_NullReferenceAndGC_Resurrected() throws InterruptedException {
+        Util.addLog("Create reference");
+        ImmortalReferred strong = new ImmortalReferred();
+        ImmortalReferred.StaticImmortalReferred staticStrong = new ImmortalReferred.StaticImmortalReferred();
+        int strongReferredHash = strong.hashCode();
+        int staticStrongReferredHash = staticStrong.hashCode();
+        WeakReference<ImmortalReferred> weak = new WeakReference<ImmortalReferred>(strong);
+        WeakReference<ImmortalReferred.StaticImmortalReferred> staticWeak = new WeakReference<ImmortalReferred.StaticImmortalReferred>(staticStrong);
+
+        assertThat(weak.get(), is(strong));
+        assertThat(staticWeak.get(), is(staticStrong));
+
+        Util.collect();
+
+        Util.addLog("Remove reference");
+        strong = null;
+        staticStrong = null;
+        Util.collect();
+
+        assertThat(weak.get(), nullValue());
+        assertThat(staticWeak.get(), nullValue());
+        assertThat(Util.log, contains(
+                is("Create reference"),
+                is("ImmortalReferred.ImmortalReferred"),
+                is("StaticImmortalReferred.StaticImmortalReferred"),
+                is("Util.collect"),
+                is("Sleep"),
+                is("Remove reference"),
+                is("Util.collect"),
+                is("Sleep"),
+                isOneOf("ImmortalReferred.finalize", "StaticImmortalReferred.finalize"),
+                isOneOf("ImmortalReferred.finalize", "StaticImmortalReferred.finalize")
+        ));
+        assertThat(ImmortalReferred.immortal.hashCode(), is(strongReferredHash));
+        assertThat(ImmortalReferred.StaticImmortalReferred.immortal.hashCode(), is(staticStrongReferredHash));
+    }
+}
+```  
+
 
 ## PhantomReference(phantom reachable)
-
-## LRU 구현
-
-
-
-
-
-
-
+- `PhantomReference` 클래스를 통해 생성할 수 있는 참조이다.
+- `SoftReference`, `WeakReference` 와는 다르게 `finalize()` 수행 후와 실제 메모리 회수 사이와 관련된 참조이다.
+	- `GC` 대상을 선정하고, `GC` 대상 객체를 처리(`finalize()`)한 이후에 메모리를 회수한다.
+- `PhantomReference` 를 생성할 때는 항상 `ReferenceQueue` 가 필요하다.
+- `PhantomReference` 에 참조되는 객체는 `finalize()` 까지 수행된 이후의 객체이므로 메모리가 회수되는 시점에 대한 후처리 작업이 가능하다.
+- `get()` 메소드를 통해 참조하고 있는 객체를 리턴 받게되면 항상 `null` 을 리턴한다.
+	- 한번 `phantom reachable` 로 선정된 객체는 더 이상 사용할 수 없다.
 
 
+```java
+public class PhantomReferenceTest {
+    @Before
+    public void setUp() {
+        Util.log.clear();
+    }
 
+    @Test
+    public void Referred_NullReferenceAndGC_Finalized_Resurrected() throws InterruptedException {
+        Util.addLog("Create reference");
+        ReferenceQueue dead = new ReferenceQueue();
+        Referred strong = new Referred();
+        Referred.StaticReferred staticStrong = new Referred.StaticReferred();
+        PhantomReference<Referred> phantom = new PhantomReference<Referred>(strong, dead);
+        PhantomReference<Referred.StaticReferred> staticPhantom = new PhantomReference<Referred.StaticReferred>(staticStrong, dead);
 
+        assertThat(phantom.get(), nullValue());
+        assertThat(staticPhantom.get(), nullValue());
 
+        Util.collect();
 
+        Util.addLog("Remove reference");
+        strong = null;
+        staticStrong = null;
+        Util.collect();
 
+        assertThat(Util.log, contains(
+                is("Create reference"),
+                is("Referred.Referred"),
+                is("StaticReferred.StaticReferred"),
+                is("Util.collect"),
+                is("Sleep"),
+                is("Remove reference"),
+                is("Util.collect"),
+                is("Sleep"),
+                isOneOf("Referred.finalize", "StaticReferred.finalize"),
+                isOneOf("Referred.finalize", "StaticReferred.finalize")
+        ));
+        assertThat(dead.poll(), nullValue());
+        assertThat(dead.poll(), nullValue());
+    }
 
+    @Test
+    public void NotFinalizeReferred_NullReferenceAndGC_Cleanup() throws InterruptedException {
+        Util.addLog("Create reference");
+        ReferenceQueue dead = new ReferenceQueue();
+        NotFinalizeReferred strong = new NotFinalizeReferred();
+        NotFinalizeReferred.StaticNotFinalizeReferred staticStrong = new NotFinalizeReferred.StaticNotFinalizeReferred();
+        PhantomReference<NotFinalizeReferred> phantom = new PhantomReference<NotFinalizeReferred>(strong, dead);
+        PhantomReference<NotFinalizeReferred.StaticNotFinalizeReferred> staticPhantom = new PhantomReference<NotFinalizeReferred.StaticNotFinalizeReferred>(staticStrong, dead);
 
+        assertThat(phantom.get(), nullValue());
+        assertThat(staticPhantom.get(), nullValue());
 
+        Util.collect();
 
+        Util.addLog("Remove reference");
+        strong = null;
+        staticStrong = null;
+        Util.collect();
 
+        assertThat(Util.log, contains(
+                is("Create reference"),
+                is("NotFinalizeReferred.NotFinalizeReferred"),
+                is("StaticNotFinalizeReferred.StaticNotFinalizeReferred"),
+                is("Util.collect"),
+                is("Sleep"),
+                is("Remove reference"),
+                is("Util.collect"),
+                is("Sleep")
+        ));
+        assertThat(dead.poll(), isOneOf(phantom, staticPhantom));
+        assertThat(dead.poll(), isOneOf(phantom, staticPhantom));
+    }
 
+    @Test
+    public void ImmortalReferred_NullReferenceAndGC_Resurrected() throws InterruptedException {
+        Util.addLog("Create reference");
+        ReferenceQueue dead = new ReferenceQueue();
+        ImmortalReferred strong = new ImmortalReferred();
+        ImmortalReferred.StaticImmortalReferred staticStrong = new ImmortalReferred.StaticImmortalReferred();
+        int strongReferredHash = strong.hashCode();
+        int staticStrongReferredHash = staticStrong.hashCode();
+        PhantomReference<ImmortalReferred> phantom = new PhantomReference<ImmortalReferred>(strong, dead);
+        PhantomReference<ImmortalReferred.StaticImmortalReferred> staticPhantom = new PhantomReference<ImmortalReferred.StaticImmortalReferred>(staticStrong, dead);
 
+        assertThat(phantom.get(), nullValue());
+        assertThat(phantom.get(), nullValue());
 
+        Util.collect();
 
+        Util.addLog("Remove reference");
+        strong = null;
+        staticStrong = null;
+        Util.collect();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        assertThat(Util.log, contains(
+                is("Create reference"),
+                is("ImmortalReferred.ImmortalReferred"),
+                is("StaticImmortalReferred.StaticImmortalReferred"),
+                is("Util.collect"),
+                is("Sleep"),
+                is("Remove reference"),
+                is("Util.collect"),
+                is("Sleep"),
+                isOneOf("ImmortalReferred.finalize", "StaticImmortalReferred.finalize"),
+                isOneOf("ImmortalReferred.finalize", "StaticImmortalReferred.finalize")
+        ));
+        assertThat(ImmortalReferred.immortal.hashCode(), is(strongReferredHash));
+        assertThat(ImmortalReferred.StaticImmortalReferred.immortal.hashCode(), is(staticStrongReferredHash));
+    }
+}
+```  
 
 ---
 ## Reference
