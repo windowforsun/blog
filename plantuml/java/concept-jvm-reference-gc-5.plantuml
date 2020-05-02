@@ -1,0 +1,80 @@
+@startuml
+'skinparam nodesep 10
+'skinparam ranksep 20
+skinparam linetype ortho
+
+title
+	Reachable object and Unreachable object
+	<color:DodgerBlue>Blue is Reachable, <color:Crimson>Red is Unreachable, <color:ForestGreen>Green is Weakly reachable
+end title
+
+rectangle "Root Set of Reference" {
+	rectangle Reference_A {
+	}
+	rectangle Reference_B {
+	}
+	rectangle Reference_C {
+	}
+
+	Reference_A -[hidden]d- Reference_B
+	Reference_B -[hidden]d- Reference_C
+
+'	hide a
+'	hide b
+'	hide c
+}
+
+rectangle Heap {
+	card Object_1 #Crimson {
+	}
+	card Object_2 #Crimson {
+	}
+	card Object_3 #Crimson {
+	}
+	card WeakReference_1 #DodgerBlue {
+	}
+	card Object_5 #Crimson {
+	}
+	card Object_6 #ForestGreen {
+	}
+	card Object_7 #Crimson {
+	}
+	card Object_8 #ForestGreen{
+	}
+	card WeakReference_2 #DodgerBlue{
+	}
+	card Object_10 #Crimson{
+	}
+	card Object_11 #DodgerBlue{
+	}
+	card Object_12 #DodgerBlue{
+	}
+
+	Object_1 --> Object_3 #Crimson
+
+	Object_2 --> Object_5 #Crimson
+	Object_5 --> Object_7 #Crimson
+	Object_7 --> Object_2 #Crimson
+
+	WeakReference_1 --> Object_6 #DodgerBlue
+	Object_6 --> Object_8 #DodgerBlue
+	Object_10 --> Object_8 #Crimson
+
+	WeakReference_2 --> Object_11 #DodgerBlue
+	Object_11 --> Object_12 #DodgerBlue
+
+	Object_1 -[hidden]d-> Object_2
+
+	Object_2 -[hidden]d-> WeakReference_1
+
+	WeakReference_1 -[hidden]d-> WeakReference_2
+}
+
+"Root Set of Reference" -[hidden]r- Heap
+
+Reference_A -r-> WeakReference_1 #DodgerBlue
+Reference_B -r-> WeakReference_2 #DodgerBlue
+Reference_C -r-> Object_11 #DodgerBlue
+
+
+@enduml

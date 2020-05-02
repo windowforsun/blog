@@ -1,0 +1,66 @@
+@startuml
+'skinparam nodesep 10
+skinparam ranksep 20
+skinparam linetype ortho
+
+title JVM Runtime Data Area
+rectangle "Stack Area" {
+	rectangle Thread_1 {
+		rectangle "Java Stack" {
+
+		}
+	}
+
+	rectangle Thread_2 {
+		rectangle "Native Stack(JNI)" {
+
+		}
+	}
+
+	Thread_1 -[hidden]d- Thread_2
+}
+
+rectangle Heap {
+	card Object_1 {
+	}
+	card Object_2 {
+	}
+	card Object_3 {
+	}
+	card Object_4 {
+	}
+	card Object_5 {
+	}
+	card Object_6 {
+	}
+
+	Object_1 -[hidden]d- Object_2
+	Object_2 -[hidden]d- Object_3
+	Object_4 -[hidden]d- Object_5
+	Object_5 -[hidden]d- Object_6
+	Object_2 --> Object_6
+	Object_4 --> Object_5
+}
+
+rectangle "Method Area" {
+	card a {
+	}
+	card b {
+	}
+	card c {
+	}
+
+	a -d-> b
+	b -d-> c
+
+	hide a
+	hide b
+	hide c
+}
+
+Thread_1 -[hidden]right- Heap
+"Java Stack" -r-> Object_2
+"Native Stack(JNI)" -r-> Object_3
+"Method Area" -l-> Object_4
+
+@enduml
