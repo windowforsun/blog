@@ -32,7 +32,7 @@ use_math: true
 
 ## Java Reference 의 Reachability
 
-![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-1.png)
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_1.png)
 
 - `GC` 는 `Heap` 에 있는 객체 중 `Garbage` 를 판별하기 위해 `reachability` 라는 개념을 사용한다.
 - 객체에 유효한 참조가 있으면 `reachable` 없으면, `unreachable` 로 판별한다.
@@ -44,7 +44,7 @@ use_math: true
 	- `Native Stack`(JNI) 에서 사용하는 객체에 의한 참조
 	- `Method Area` 의 전적 변수에 의한 참조
 	
-![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-2.png)
+![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_2.png)
 	
 - 위 4가지 참조 중 `Heap` 내의 다른 객체에 의한 참조를 제외한 3가지가 `root set` 에 대한 참조로, `reachability` 의 판정 기준이 된다.
 	- `root set` 에서 참조 사슬이 이어지는 객체를 `reachable` 객체라고 한다.
@@ -67,7 +67,7 @@ use_math: true
 	Simple simple = weak.get();
 	```  
 	
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-3.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_3.png)
 	
 	- `weak` 은 참조는 `weak reference` 의 참조이고, `simple` 의 참조는 `strong reference` 의 참조이다.
 	- `root set` 에는 `weak` 과 `simple` 이 존재한다.
@@ -83,7 +83,7 @@ use_math: true
 	simple = null;
 	```  
 	
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-4.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_4.png)
 	
 	- `simple` 참조에 `null` 을 대입하게 되면 생성한 `Simple` 객체의 인스턴스는 `weak` 에 의해서만 참조 된다.
 	- 위와 같이 `weak`(`WeakReference`) 에 대해서만 참조되는 객체를 `weakly reachable` 이라고 한다.
@@ -94,7 +94,7 @@ use_math: true
 - `Reference` 클래스를 이용한 참조에 대한 `Reachability` 에 대해 알아본다.
 - `WeakReference` 의 참조를 추가해서 `root set` 과 `Heap` 의 참조를 그리면 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-5.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_5.png)
 
 - 그림에서 참조는 3가지 종류로 구성돼 있다.
 	- `root set` 에 의한 참조되는 객체 (Strong Reachable)
@@ -111,7 +111,7 @@ use_math: true
 - 여기서 결정되는 `reachability` 는 같은 5가지 종류가 있다.
 - 객체가 생성되고 `GC` 를 통해 메모리가 해제되기까지 `Reachability` 에 의한 생명 주기는 아래와 같다.
 
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-6.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_6.png)
 
 ### Strong reachable
 - `root set` 으로 시작해서 참조 사슬에 `reference object` 가 존재하지 않는 객체를 의미한다.
@@ -133,11 +133,11 @@ use_math: true
 - 아래 그림에서 `Object` 의 `reachability` 는 `softly reachability` 이다.
 	- `root set` 에서 바로 `SoftReference` 를 참조 할 수 있기 때문
 	
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-7.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_7.png)
 	
 - `root set` 에서 `SoftReference` 의 참조가 사라지게 되면 `reachability` 는 `phantomly reachability` 가 된다.
 
-	![그림 1]({{site.baseurl}}/img/java/concept-jvm-reference-gc-8.png)
+	![그림 1]({{site.baseurl}}/img/java/concept_jvm_reference_gc_8.png)
 
 ## ReferenceQueue
 - `ReferenceQueue` 는 `java.lang.ref` 패키지에서 제공하는 클래스이다.
