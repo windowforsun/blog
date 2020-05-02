@@ -4,7 +4,7 @@ classes: wide
 title: "[Java 개념] Reference 와 GC"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java 참조 방식에 대해 알아보고, GC 의 선정과 처리 과정에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
