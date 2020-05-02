@@ -320,6 +320,65 @@ public class OperationNode implements Node {
 - `parse()` 는 현재 토큰이 정의된 연산자와 일치할 경우 `operation` 에 문자를 설정하고, 설정된 문자를 `skipToken()` 을 통해 건너뛴다.
 - `execute()` 는 해석된 연산자에 맞춰 인자값 `Context` 의 `result` 와 `operand` 의 값으로 수행하고 다시 `result` 에 설정한다.
 
+### Context
+
+```java
+public class Context {
+    private StringTokenizer tokenizer;
+    private String currentToken;
+    private int result;
+    private int operand;
+
+    public Context(String exp) {
+        this.tokenizer = new StringTokenizer(exp);
+        this.nextToken();
+    }
+
+    public String nextToken() {
+        if(this.tokenizer.hasMoreTokens()) {
+            this.currentToken = this.tokenizer.nextToken();
+        } else {
+            this.currentToken = null;
+        }
+
+        return this.currentToken;
+    }
+
+    public void skipToken(String token) throws ParseException {
+        if(!token.equals(this.currentToken)) {
+            throw new ParseException();
+        }
+        this.nextToken();
+    }
+
+    public int getCurrentNumber() throws ParseException {
+        int number = 0;
+
+        try {
+            number = Integer.parseInt(this.currentToken);
+        } catch(NumberFormatException e) {
+            throw new ParseException();
+        }
+
+        return number;
+    }
+
+    // getter, setter
+}
+```  
+
+- `Context` 는 구문해석을 위해 필요한 메소드나, 기능을 위해 필요한 메소드가 구현된 클래스이다.
+- `Interceptor` 패턴에서 `Context` 역할을 수행한다.
+- `tokenizer` 는 `StringTokenizer` 클래스를 사용해서 입력된 문자열을 구문단위로 나눠 처리할 수 있도록 제공하는 필드이다.
+- `currentToken` 은 `tokenizer` 를 통해 현재 처리할 토큰을 저장하는 필드이다.
+- `result` 는 계산의 중간 결과나 결과를 저장하는 필드이다.
+- `operand` 는 계산해야할 피연산자의 값을 저장하는 필드이다.
+- `nextToken()` 는 `tokenizer` 에서 다음 처리할 토큰을 리턴하는 메소드이다.
+- `skipToken()` 은 인자값으로 받은 토큰이 현재 토큰과 같으면 다음 스킵하고 다음 `nextToken()` 을 호출한다.
+- `getCurrentNumber()` 은 현재 토큰이 숫자일 경우 이를 숫자형식으로 파싱해 리턴한다.
+- `setDefaultNumber()` 는 계산 수식에서 첫 피연산자를 설정하는 메소드이다.
+
+
 ### Calculator
 
 ```java
