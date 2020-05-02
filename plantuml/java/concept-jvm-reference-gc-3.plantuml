@@ -1,0 +1,35 @@
+@startuml
+'skinparam nodesep 10
+'skinparam ranksep 20
+skinparam linetype ortho
+
+title
+	WeakReference ex 1
+end title
+
+rectangle "Root Set of Reference" {
+	rectangle weak {
+	}
+	rectangle simple {
+	}
+
+	weak -[hidden]d- simple
+
+}
+
+rectangle Heap {
+	card WeakReferenceObject #DodgerBlue{
+	}
+	card SimpleObject #DodgerBlue{
+	}
+
+	WeakReferenceObject -[hidden]d-> SimpleObject
+}
+
+"Root Set of Reference" -[hidden]r- Heap
+weak -r-> WeakReferenceObject #DodgerBlue
+WeakReferenceObject --> SimpleObject #DodgerBlue
+simple -l-> SimpleObject #DodgerBlue
+
+
+@enduml

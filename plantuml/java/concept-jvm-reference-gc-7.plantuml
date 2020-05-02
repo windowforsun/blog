@@ -1,0 +1,40 @@
+@startuml
+'skinparam nodesep 10
+'skinparam ranksep 20
+skinparam linetype ortho
+
+title
+	Object is softly reachability
+end title
+
+rectangle "Root Set of Reference" {
+	rectangle Reference_A {
+	}
+	rectangle Reference_B {
+	}
+
+	Reference_A -[hidden]d- Reference_B
+
+}
+
+rectangle Heap {
+	card PhantomReference #DodgerBlue{
+	}
+	card WeakReference #DodgerBlue{
+	}
+	card SoftReference #DodgerBlue{
+	}
+
+	card Object #ForestGreen {
+	}
+
+	PhantomReference -d-> WeakReference #DodgerBlue
+	WeakReference -d-> SoftReference #DodgerBlue
+	SoftReference -d-> Object #DodgerBlue
+}
+
+"Root Set of Reference" -[hidden]r- Heap
+Reference_A -l-> PhantomReference #DodgerBlue
+Reference_B --> SoftReference #DodgerBlue
+
+@enduml
