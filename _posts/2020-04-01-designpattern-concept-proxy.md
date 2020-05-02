@@ -12,6 +12,7 @@ categories :
 tags:
   - Design Pattern
   - Proxy
+toc: true
 use_math : true
 ---  
 

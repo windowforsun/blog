@@ -19,7 +19,9 @@ cloud "Heap" {
 		num1000 -[hidden]d- str1000
 	}
 
-	rectangle "List:1001" as List1001
+	rectangle "List:1001" as List1001 {
+		rectangle "0"
+	}
 
 	rectangle "Exam:1002" as Exam1002 {
 		rectangle "num = 2" as num1002
@@ -28,7 +30,7 @@ cloud "Heap" {
 	}
 
 	Exam1000 -[hidden]u- List1001
-	List1001 -d-> Exam1002
+	0 -d-> Exam1002
 }
 
 Stack -[hidden]r-Heap

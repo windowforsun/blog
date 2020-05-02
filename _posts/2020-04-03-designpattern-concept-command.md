@@ -12,6 +12,7 @@ categories :
 tags:
   - Design Pattern
   - Command
+toc: true
 use_math : true
 ---  
 

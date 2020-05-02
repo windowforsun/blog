@@ -12,6 +12,7 @@ categories :
 tags:
   - Design Pattern
   - Interpreter
+toc: true
 use_math : true
 ---  
 
