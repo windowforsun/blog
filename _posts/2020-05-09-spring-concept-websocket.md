@@ -21,7 +21,7 @@ toc: true
 규격의 프로토콜을 제공하는 표준화된 통신방식이다.
 - 서버-클라이언트 간의 `full-duplex`, 양방향 통신, 채널 등을 `TCP` 연결을 통해 제공한다.
 - 기본적인 `TCP` 의 프로토콜과는 달리 `HTTP` 기반을 사용해 연결(`Handshake`) 및 통신 을 수행한다.(80 및 443 포트 사용)
-- `WebSocket` 연결(`Handshake`) 이후 `HTTP` 처럼 `Connection` 을 끊지 않고, 유지한다.
+- `WebSocket` 은 `HTTP` 를 통해 연결(`Handshake`) 을 수행하는 과정에서, `HTTP Upgrade` 헤더를 통해 업그러드를 한 후 `WebSocket` 프로토콜로 전환되어 연결(`TCP Connection`)을 유지한다.
 
 ### WebSocket Handshake 와 Message
 - 앞서 언급한것과 같이 `WebSocket` 은 `HTTP` 프로토콜을 사용해서 `Handshake` 를 수행한다.
