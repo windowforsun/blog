@@ -89,14 +89,226 @@ toc: true
 	- 이러한 방식으로 서버는 구독하지 않은 클라이언트에게 메시지를 전송할 수 없다.
 	
 ### STOMP 장점
+- `STOMP` 프로토콜 사용시 `Spring` 프레임워크의 기능과 보안에 대해서 원시적인 `WebSocket` 을 사용하는 것보다 활용성이 높다.
+- 이는 원시적인 `TCP` 프로토콜에 비해 `HTTP` 프로토콜을 사용하면 `Spring MVC` 와 같은 다양한 프레임워크를 활용하고 기능을 사용할 수 있는 것과 같다.
+- 사용자가 별도로 메세지 포맷 및 프로토콜을 정의할 필요 없다.
+- `Spring` 프레임워크에서는 `STOMP` 클라이언트를 제공하기 때문에 이를 다양하게 활용 가능하다.
+- 외부 메시지 브로커(`RabbitMQ`, `ActiveMQ`)를 사용해서 확장 가능한 `Pub/Sub` 구현이 가능하다.
+- `WebSocket` 은 하나의 목적지에 대해 `WebSocketHandler` 구현을 통해 라우팅을 수행하지만, `STOMP` 는 하나 이상의 `@Controller` 와 헤더를 통해 메시지 라우팅을 정의할 수 있다.
+- `Spring Security` 를 사용해서 `STOMP` 목적지와 메시지 타입을 바탕으로 메시지 보안이 가능하다.
 
 ### Enable STOMP
+- `WebSocket` 상에서 `STOMP` 지원은 `spring-messaging`, `spring-websocket` 모듈을 통해 사용 가능하다.
+- 모듈에 대한 의존성만 있으면 `WebSocket` 에 접속가능한 `SockJS` 상에서 `STOMP` 의 엔드포인트를 설정할 수 있다.
+
+	```java
+	@Configuration
+	@EnableWebSocketMessageBroker
+	public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+	
+	    @Override
+	    public void registerStompEndpoints(StompEndpointRegistry registry) {
+	        registry.addEndpoint("/portfolio").withSockJS();  
+	    }
+	
+	    @Override
+	    public void configureMessageBroker(MessageBrokerRegistry config) {
+	        config.setApplicationDestinationPrefixes("/app"); 
+	        config.enableSimpleBroker("/topic", "/queue"); 
+	    }
+	}
+	```  
+	
+	- `addEndpoint()` 를 통해 `/portfolio` 엔드포인트를 설정했고, 이는 `WebSocket`(`SockJS`) 를 통해 연결(`Handshake`) 할 `HTTP URL` 이다.
+	- `setApplicationDestinationPrefixes()` 를 통해 `/app` 접두사 설정을 통해, `destination` 헤더가 `/app` 으로 시작하는 메시지는 `@Controller` 클래스 안에 있는 `@MessageMapping` 메소드로 라우팅 된다.
+	- `enableSimpBroker()` 를 통해 인메모리 브로커(`SimpleBroker`)에 `/topic`, `/queue` 경로 설정을 통해, `destination` 헤더가 `/topic`, `/queue` 로 시작하는 메시지는 브로커에게 라우팅 한다.
+	- 브로커 설정에서 `/topic`, `/queue` 는 특별한 의미를 가진 경로가 아닌 `pub-sub` 과 `point-to-point` 를 구분하기 위한 차이만있고, 외부 브로커를 사용할 경우 지원하는 경로 확인후 사용이 필요하다.
+- 브라우저에서 `sockjs-client` 를 사용해서 `STOMP` 서버에 접속하기 위해서는 `STOMP` 클라이언트가 필요하다.
+	- 많은 애플리케이션에서 [jmesnil/stomp-websocket] 
+	(https://github.com/jmesnil/stomp-websocket) 를 사용해 왔지만, 요즘 관리가 되지 않고 있다.
+	- 최근에는 [JSteunou/webstomp-client]
+	(https://github.com/JSteunou/webstomp-client) 도 많이 사용되고, 관리도 지속적으로 되고 있다.
+- `SockJS` 를 사용해서 `STOMP` 에 접속하는 코드는 아래와 같다.
+
+	```javascript
+	var socket = new SockJS("/spring-websocket-portfolio/portfolio");
+	var stompClient = webstomp.over(socket);
+	
+	stompClient.connect({}, function(frame) {
+	}
+	```  
+	
+- `WebSocket` 를 사용한다면 코드는 아래와 같다.
+
+	```javascript
+	var socket = new WebSocket("/spring-websocket-portfolio/portfolio");
+	var stompClient = Stomp.over(socket);
+	
+	stompClient.connect({}, function(frame) {
+	}
+	```  
+	
+- `STOMP` 예제 관련 링크는 아래와 같다.
+	- [Using WebSocket to build an interactive web application](https://spring.io/guides/gs/messaging-stomp-websocket/)
+	- [spring-websocket-portfolio](https://github.com/rstoyanchev/spring-websocket-portfolio)
 
 ### WebSocket Server
+- 원시 `WebSocket` 서버 [설정]({{site.baseurl}}{% link _posts/2020-05-09-spring-concept-websocket.md#server-configuration %})
+을 기반으로 `Jetty` 를 사용한 `WebSocket` 서버 설정은 아래와 같이, `StompEndpointRegistry` 에 `WebSocketPolicy` 및 `HandshakeHandler` 설정이 추가로 필요하다.
+	
+	```java
+	@Configuration
+	@EnableWebSocketMessageBroker
+	public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+	
+	    @Override
+	    public void registerStompEndpoints(StompEndpointRegistry registry) {
+	        registry.addEndpoint("/portfolio").setHandshakeHandler(handshakeHandler());
+	    }
+	
+	    @Bean
+	    public DefaultHandshakeHandler handshakeHandler() {
+	
+	        WebSocketPolicy policy = new WebSocketPolicy(WebSocketBehavior.SERVER);
+	        policy.setInputBufferSize(8192);
+	        policy.setIdleTimeout(600000);
+	
+	        return new DefaultHandshakeHandler(
+	                new JettyRequestUpgradeStrategy(new WebSocketServerFactory(policy)));
+	    }
+	}
+	```  
 
-### Flow Messages
+### Flow of Messages
+- `STOMP` 의 엔드포인트를 설정하게 되면 `Spring` 애플리케이션은 연결된 클라이언트를 위한 `STOMP` 브로커가 되는데, 이때 클라이언트 부터 브로커를 통한 메시지 흐름에 대해서 알아본다.
+- 앞서 언금한 것과 같이 `STOMP` 는 `spring-messaging` 모듈을 사용하는데, 이는 `Spring Integration` 에서 시작되었고 이후 더 광범위한 사용을 위해 `Spring` 프레임워크의 메시징 애플리케이션에서 사용 가능하도록 지원한다.
+- 아래는 `spring-messaging` 모듈에서 사용가능한 추상체이다.
+	- [Message](https://docs.spring.io/spring-framework/docs/5.2.6.RELEASE/javadoc-api/org/springframework/messaging/Message.html)
+	: 메시지를 간단하게 `header` 와 `payload` 로 표현한다.
+	- [MessageHandler](https://docs.spring.io/spring-framework/docs/5.2.6.RELEASE/javadoc-api/org/springframework/messaging/MessageHandler.html)
+	: `handleMessage()` 메소드를 통해 인자값의 `Message` 를 핸들링 한다.
+	- [MessageChannel](https://docs.spring.io/spring-framework/docs/5.2.6.RELEASE/javadoc-api/org/springframework/messaging/MessageChannel.html)
+	: 메시지 생산자와 소비자 사이에 느슨한 결합을 기반으로 메시지를 전송할 수 있도록 한다.
+	- [SubscribableChannel](https://docs.spring.io/spring-framework/docs/5.2.6.RELEASE/javadoc-api/org/springframework/messaging/SubscribableChannel.html)
+	: `MessageHandler` 를 구독하는 `MessageChannel` 로  `MessageHandler` 가 구독자들에게 메시지를 헨들링 할 수 있도록 한다.
+	- [ExecutorSubscribableChannel](https://docs.spring.io/spring-framework/docs/5.2.6.RELEASE/javadoc-api/org/springframework/messaging/support/ExecutorSubscribableChannel.html) 
+	: `SubscribeChannel` 를 통해 실제로 구독자들에게 메시지를 보낼 때 사용하는 `Executor` 이다.
+- `Spring` 프레임워크에서는 `Java Configuration`(`@EnableWebSocketMessageBroker`), `XML`(`<websocket:message-broker>`) 를 통해 `STOMP` 관련 설정이 가능하다.
+- 아래는 내장 브로커를 사용할 때 메시지 흐름에 대한 그림이다.
+
+	![그림 1]({{site.baseurl}}/img/spring/concept-websocket-stomp-1.png)
+	
+	- 위 그림에서는 3개의 채널이 존재한다.
+	- `clientInboundChannel`(request channel) : `WebSocket` 클라이언트로 부터 메시지를 받을 때 사용하는 채널이다.
+	- `clientOutboundChannel`(response channel) : 서버가 `WebSocket` 클라이언트에게 메시지를 보낼 때 사용하는 채널이다.
+	- `brokerChannel`(broker channel) : 서버에서 브로커에게 메시지를 보낼 때 사용하는 채널이다.
+- 아래는 외부 브로커(`RabbitMQ`, `ActiveMQ`) 를 사용할 때 메시지 흐름에 대한 그림이다.
+
+	![그림 1]({{site.baseurl}}/img/spring/concept-websocket-stomp-2.png)
+
+	- 내장 브로커를 사용한 그림과의 가장 큰 차이는 `TCP` 연결을 통해 외부 `STOMP` 브로커에게 메시지를 전달하고, 브로커로 부터 메시지를 받아 클라이언트에게 전달하는 방식인 `broker relay` 를 사용한다는 점이다.
+- `WebSocket` 연결을 통해 메시지를 받으면 `STOMP` 메시지로 디코딩처리를 통해 `Spring` 의 메시지 표현으로 변환되고 이후 처리를 위해 `clientInboundChannel` 로 보내진다.
+- 목적지 헤더가 `/app` 로 시작하는 `STOMP` 메시지는 매칭되는 `@MessageMapping` 메소드로 전달되고, `/topic`, `/queue` 와 같은 구독관련 메시지는 브로커에게 전달된다.
+- `@Controller` 클래스는 클라이언트가 전송한 `STOMP` 메시지를 `brokerChannel` 을 통해 브로커에게 전달하고, 브로커는 메시지의 목적지와 매칭되는 구독자들에게 `clientOutBoundChannel` 을 통해 브로드캐스트 한다.
+- 위와 같은 컨트롤러는 `HTTP` 요청에 대한 매핑도 가능하기 때문에, `HTTP POST` 요청을 통해 구독자들에게 메시지를 브로드캐스트 하는 방식도 가능하다.
+- 아래와 같은 `STOMP` 관련 설정과 `@Controller` 클래스가 있다고 할때 처리흐름은 다음과 같다.
+
+	```java
+	@Configuration
+	@EnableWebSocketMessageBroker
+	public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+	
+	    @Override
+	    public void registerStompEndpoints(StompEndpointRegistry registry) {
+	        registry.addEndpoint("/portfolio");
+	    }
+	
+	    @Override
+	    public void configureMessageBroker(MessageBrokerRegistry registry) {
+	        registry.setApplicationDestinationPrefixes("/app");
+	        registry.enableSimpleBroker("/topic");
+	    }
+	}
+	
+	@Controller
+	public class GreetingController {
+	
+	    @MessageMapping("/greeting") {
+	    public String handle(String greeting) {
+	        return "[" + getTimestamp() + ": " + greeting;
+	    }
+	}
+	```  
+	
+	1. 클라이언트가 `http://localhost:8080/portfolio` 주소를 통해 연결을 시도하면 연결이 맺어지고, 해당 연결을 통해 `STOMP` 메시지를 주고 받을 수 있다.
+	1. 클라이언트가 `SUBSCRIBE` 프레임을 목적지 헤더 `/topic/greeting` 과 함께 전송하게 되면, 해당 메시지는 디코딩되고 `clientInboundChannel` 에 전송된다. 그리고 메시지 브로커에게 전달되서 클라이언트의 구독정보를 저장한다.
+	1. 클라이언트가 `SEND` 프레임을 목적지 헤더 `/app/greeting` 과 함께 전송하면 설정된 `/app` 접두사를 통해 해당 메시지는 `@Controller` 클래스(`GreetingController`)에게 전달된다. 이후 접두사 `/app` 을 제외한 `/greeting` 은 매칭되는 `@MessageMapping` 메소드(`handle()`)에게 전달된다.
+	1. `GreetingController` 의 `handle()` 메소드에서 리턴한 값은 `Spring` 메시지의 `payload` 로 설정되고, 목적지 헤더의 접두사가 `/app` 에서 `/topic` 으로 변경된 `/topic/greeting` 으로 목적지를 기본 목적지로 설정한다. 만들어진 메시지는 `brokerChannel` 에 전달되고 브로커에 의해 처리 된다.
+	1. 메시지 브로커는 전달 받은 메시지의 목적지를 구독하는 구독자들에게 `childOutboundChannel` 을 통해 메시지를 전송한다. 전송하려는 메시지는 `STOMP` 프레임으로 인코딩되고 `WebSocket` 연결에 의해 전송된다.
 
 ### Annotated Controllers
+- 클라이언트로부터 전송된 메시지는 `@Controller` 클래스로 매핑되 처리되는데, 해당 클래스에서는 `@MessageMapping`, `@SubscribeMapping`, `@ExceptionHandler` 를 통해 메시지 처리가 가능하다.
+
+#### @MessageMapping
+- `@MessageMapping` 은 목적지를 매핑하는 용도로 사용된다.
+- 메소드 레벨, 타입 레벨에 사용될 수 있는데, 타입 레벨에 사용되면 하나의 컨트롤러에 있는 모든 메소드에 공통으로 매핑되는 경로로 사용 된다.
+- 목적지 매핑은 기본적으로 `Ant-style` 을 사용한다. (`/thing*`, `/thing/**`)
+- 목적지의 값에는 `template variables` 사용 가능하다. (`/thing/{id}`)
+- 목적지의 값에 사용된 `template variables` 는 메소드 인자에서 `@DestinationVariables` 통해 참조 가능하다.
+- `/` 외에도 설정을 통해 `.` 구분자(`dot-separated`) 사용이 가능하다.
+- `@MessageMapping` 이 선언된 메소드는 아래와 같은 인자를 사용할 수 있다.
+	- `Message` : 전달된 메시지에 대해 접근할 수 있다.
+	- `MessageHeader` : 전달된 `Message` 의 헤더에 접근 할 수 있다.
+	- `MessageHeaderAccessor`, `SimpMessageHeaderAccessor`, `StompHeaderAccessor` : 헤더를 `strongly type` 으로 받을 수 있고 수정 가능하다.
+	- `@Payload` : `전달된 `Message` 의 `payload` 를 설정된 `MessageConverter` 에 의해 변환된 값으로 접근 할 수 있다. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
