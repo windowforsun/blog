@@ -247,7 +247,7 @@ toc: true
 	1. 메시지 브로커는 전달 받은 메시지의 목적지를 구독하는 구독자들에게 `childOutboundChannel` 을 통해 메시지를 전송한다. 전송하려는 메시지는 `STOMP` 프레임으로 인코딩되고 `WebSocket` 연결에 의해 전송된다.
 
 ### Annotated Controllers
-- 클라이언트로부터 전송된 메시지는 `@Controller` 클래스로 매핑되 처리되는데, 해당 클래스에서는 `@MessageMapping`, `@SubscribeMapping`, `@ExceptionHandler` 를 통해 메시지 처리가 가능하다.
+- 클라이언트로부터 전송된 메시지는 `@Controller` 클래스로 매핑되 처리되는데, 해당 클래스에서는 `@MessageMapping`, `@SubscribeMapping`, `@ExceptionHandler`(`@MessageExceptionHandler`) 를 통해 메시지 처리가 가능하다.
 
 #### @MessageMapping
 - `@MessageMapping` 은 목적지를 매핑하는 용도로 사용된다.
@@ -257,58 +257,232 @@ toc: true
 - 목적지의 값에 사용된 `template variables` 는 메소드 인자에서 `@DestinationVariables` 통해 참조 가능하다.
 - `/` 외에도 설정을 통해 `.` 구분자(`dot-separated`) 사용이 가능하다.
 - `@MessageMapping` 이 선언된 메소드는 아래와 같은 인자를 사용할 수 있다.
-	- `Message` : 전달된 메시지에 대해 접근할 수 있다.
-	- `MessageHeader` : 전달된 `Message` 의 헤더에 접근 할 수 있다.
+	- `Message` : 메시지에 대해 접근할 수 있다.
+	- `MessageHeader` : `Message` 의 헤더에 접근 할 수 있다.
 	- `MessageHeaderAccessor`, `SimpMessageHeaderAccessor`, `StompHeaderAccessor` : 헤더를 `strongly type` 으로 받을 수 있고 수정 가능하다.
-	- `@Payload` : `전달된 `Message` 의 `payload` 를 설정된 `MessageConverter` 에 의해 변환된 값으로 접근 할 수 있다. 
+	- `@Payload` : `Message` 의 `payload` 를 설정된 `MessageConverter` 에 의해 변환된 값으로 접근 할 수 있다. 인자에 맞춰 자동으로 수행하기 때문에 필수가 아니다. `@javax.validation,Valid`, `@Validated` 와 함께 사용해서 `payload` 에 대한 검증을 수행할 수 있다.
+	- `@Header` : `Message` 의 특정 헤더에 접근할 수 있다. 헤더는 `org.springframework.core.convert.converter` 를 통해 타입에 맞게 변환된다.
+	- `@Headers` : `Message` 의 다수 헤더에 접근 할 수 있다. 타입은 `java.util.Map` 을 사용한다.
+	- `@DestinationVariable` : 목적지 값에 사용된 `template variables` 를 인자값으로 추출해 값을 설정하는 역할을 한다. 선언된 타입에 맞춰 타입 변환된다.
+	- `java.security.Principal` : `WebSocket Handshake` 시점을 기준으로 로그인된 사용자의 권한을 의미하는 인자이다.
+- `@MessageMapping` 에서 리턴된 값은 아래와 같은 특징을 갖는다.
+	- 리턴된 값은 `MessageConverter` 에 의해 `Message` 변환되어 `brokerChannel` 로 보내져 구독자들에게 브로드캐스트 된다.
+	- `outbound` 메시지의 목적지는 `inbound` 의 메시지 목적지에서 접두사가 `/app` 에서 `/topic` 으로 변경된다.
+	- `@SendTo` 와 `@SendToUser` 를 사용해서 `outbound` 메시지의 목적지를 커스텀하게 설정할 수 있다.
+	- `@SendTo` 는 여러 목적지를 지정해서 전송할 때 사용된다.
+	- `@SendToUser` 는 `inbound` 메시지와 관련된 사용자에게 보내는 용도로 사용된다.
+	- `@SendTo` 와 `@SendToUser` 는 같은 메소드에서 동시에 사용 가능하다.
+	- 클래스 레벨에서 `@SendTo`, `@SendToUser` 를 사용하게 될 경우 이는 클레스에 포함된 메소드에 공통으로 적용된다.
+	- 클래스 레벨과 메소드 레벨에 함께 사용될 경우 메소드 레벨의 `@SendTo`, `@SendToUser` 은 클래스 레벨의 것을 무시한다.
+	- 메시지는 비동기로 처리할 수 있는데, `@MessageMapping` 메소드에서 `ListenableFuture`, `CompleteFuture`, `CompleteStage` 리턴하면 된다.
+	- `@SendTo`, `@SendToUser` 은 `SimpMessagingTemplate` 을 사용해서 메시지를 보내는 것을 자동화해주는 역할이다. 필요시 `@MessageMapping` 메소드에서 `SimpMessageTemplate` 를 직접 사용해서 메시지를 전송 할 수 있다.
+
+#### @SubscribeMapping
+- `@SubscribeMapping` 은 `@MessageMapping` 과 비슷하지만, 이는 구독에 대한 메시지를 맵핑한다는 차이가 있다.
+- 메소드의 인자관련 설명은 `@MessageMapping` 과 동일하다.
+- `@SubscribeMapping` 에서 리턴된 값은 브로커(`brokerChannel`)에게 전달되는 것이 아니라, 직접 클라이언트(`clientOutboundChannel`)에게 전달된다.
+	-  `@SendTo`, `@SendToUser` 를 사용하게 되면, 목적지를 재정의 할 수 있고 메시지는 브로커를 통해 전달된다.
 
 
+#### @MessageExceptionHandler
+- `@MessageMapping` 메소드에서 발생하는 예외는 `@MessageExceptionHandler` 를 통해 처리할 수 있다.
+- `@MessageExceptionHandler` 메소드의 인자에 처리하고 싶은 예외를 명시하면 예외가 발생했을 때 인스턴스를 인자값으로 전달 받을 수 있다.
+	
+	```java
+	@Controller
+    public class MyController {
+    
+        // ...
+    
+        @MessageExceptionHandler
+        public ApplicationError handleException(MyException exception) {
+            // ...
+            return appError;
+        }
+    }
+	```  
+	
+	- `@MessageExceptionHandler` 메소드는 `@MessageMapping` 메소드처럼 값을 리턴해 메시지를 전달 할 수 있다.
+- `@MessageExceptionHandler` 는 `@Controller` 가 선언된 클래스에서만 사용할 수 있기 때문에, 예외처리에 대해서 보다 전역적인 적용이 필요할 경우 `Spring MVC` 에서 사용하는 [@ControllerAdvice](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-ann-controller-advice)
+을 사용할 수 있다.
+
+### SendingMessages
+- `Spring STOMP` 는 빈 주입이 가능한 부분이라면 애플리케이션의 어느 곳에서든 메시지를 `brokerChannel` 에게 보낼 수 있다.
+- 위와 같은 동작은 `SimpMessagingTemplate` 를 선언하고 빈을 주입하는 것을 통해 가능하다.
+
+	```java
+	@Controller
+    public class GreetingController {
+    
+        private SimpMessagingTemplate template;
+    
+        @Autowired
+        public GreetingController(SimpMessagingTemplate template) {
+            this.template = template;
+        }
+    
+        @RequestMapping(path="/greetings", method=POST)
+        public void greet(String greeting) {
+            String text = "[" + getTimestamp() + "]:" + greeting;
+            this.template.convertAndSend("/topic/greetings", text);
+        }
+    
+    }
+	```  
+	
+### Simple Broker
+- 내장 `simple broker` 는 클라이언트의 구독정보를 메모리 저장하고, 목적지를 구독하는 클라이언트에게 메시지를 브로드캐스트 한다.
+- 브로커의 목적지와 구독의 경로는 `Ant-style` 패턴을 지원한다.
+	- 커스텀을 통해 `dot-separated` 도 사용 가능하다.
+- 기본적인 [STOMP Heartbeat](https://stomp.github.io/stomp-specification-1.2.html#Heart-beating)
+ 외에 `TaskScheduler` 를 등록해 커스텀한 `Heartbeat` 를 수행 할 수 있다.
+
+	```java
+	@Configuration
+    @EnableWebSocketMessageBroker
+    public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+        private TaskScheduler messageBrokerTaskScheduler;
+    
+        @Autowired
+        public void setMessageBrokerTaskScheduler(TaskScheduler taskScheduler) {
+            this.messageBrokerTaskScheduler = taskScheduler;
+        }
+    
+        @Override
+        public void configureMessageBroker(MessageBrokerRegistry registry) {
+    
+            registry.enableSimpleBroker("/queue/", "/topic/")
+                    .setHeartbeatValue(new long[] {10000, 20000})
+                    .setTaskScheduler(this.messageBrokerTaskScheduler);
+    
+            // ...
+        }
+    }
+	```  
+	
+### External Broker
+- `simple broker` 는 간단하게 구성이 가능하지만 `STOMP` 명령(`ack`, `receipts`, .. 지원 불가)만 지원하고, 단순한 메시지 흐름에 적합하고 클러스터링에는 적합하지 않다.
+- 이러한 대안으로 외부 메시지 브로커를 설정해서 완전한 기능지원이 가능하도록 구성할 수 있다.
+- [STOMP 문서](https://stomp.github.io/implementations.html)
+를 보면 지원가능한 메시지 브로커관련 설명이 있고 적합한 솔루션을 선택해 사용할 수 있다.
+- 선택한 솔루션을 설치하고, 관련 설정에서 `STOMP` 지원이 가능하도록 설정한다.
+- `Spring` 설정에서는 아래와 같이 `StompBrokerRelay` 를 통해 설정이 가능하다.
+
+	```java
+	@Configuration
+    @EnableWebSocketMessageBroker
+    public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+        @Override
+        public void registerStompEndpoints(StompEndpointRegistry registry) {
+            registry.addEndpoint("/portfolio").withSockJS();
+        }
+    
+        @Override
+        public void configureMessageBroker(MessageBrokerRegistry registry) {
+            registry.enableStompBrokerRelay("/topic", "/queue");
+            registry.setApplicationDestinationPrefixes("/app");
+        }
+    
+    }
+	```  
+	
+	- `enableStompBrokerRelay` 는 외부 브로커와의 메시지를 처리하는 `Spring` 의 `MessageHandler` 이다.
+	- 외부 브로커와의 메시지 처리를 위해 `TCP` 연결을 맺고, 모든 메시지는 이 연결을 통해 외부 브로커에게 전달된다. 그리고 외부 브로커에게 수신된 메시지는 `WebSocket` 의 세션을 통해 클라이언트에게 전달 된다.
+	- 즉, `Relay` 이름 그대로 양방향으로 메시지를 전달하는 역할을 수행한다.
+	- `io.projectreactor.netty:reactor-netty`, `io.netty:netty-all` 의존성을 통해 `TCP` 연결을 관리할 수 있다.
+- 이러한 외부 메시지 브로커를 설정하게 되면 보다 확장가능한 `STOMP` 애플리케이션을 구성 할 수 있다.
+
+### Connecting to a Broker
+- `StompBrokerRelay` 는 각 애플리케이션마다 브로커와의 시스템 `TCP` 연결을 유지한다.
+- 위 연결은 브로커로 부터 메시지를 수신하기 위한 연결이 아닌, 애플리케이션에서 발생한 메시지를 브로커에게 보내는 용도로만 사용된다.
+- 연결을 위해 `STOMP` 프레임 헤더에 로그인 및 암호 등의 인증관련 설정을 할 수 잇다.
+	- 로그인과 암호의 기본 값은 `guest` 이다.
+- 또한 `StompBrokerRelay` 는 연결되는 `WebSocket` 클라이언트 들과도 개별적인 `TCP` 연결을 생성하게 되는데, 클라이언트가 브로커를 사용할 때는 애플리케이션의 `STOMP` 인증 정보(이미 연결된 `TCP`)를 통해 사용한다.
+- 애플리케이션과 브로커는 주기적으로(기본 10초) `Heartbeat` 를 주고 받고 이는 필요에따라 설정할 수 있다. 브로커와의 연결이 끊기게 되면 5초 간격으로 성공할떄까지 계속해서 연결을 시도한다.
+- `ApplicationListener<BrokerAvailabilityEvent>` 구현을 통해 시스템 `TCP` 연결이 성공했을 때 이벤트를 받을 수 있다. 
+- 기본적으로 `StompBrokerRelay` 는 설정된 하나의 호스트와 포트를 통해 연결을 시도하는데, 재연결 시 여려 호스트와 포트를 통해 연결을 시도하기 위해서는 아래와 같은 설정이 필요하다.
+
+	```java
+	@Configuration
+    @EnableWebSocketMessageBroker
+    public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
+    
+        // ...
+    
+        @Override
+        public void configureMessageBroker(MessageBrokerRegistry registry) {
+            registry.enableStompBrokerRelay("/queue/", "/topic/").setTcpClient(createTcpClient());
+            registry.setApplicationDestinationPrefixes("/app");
+        }
+    
+        private ReactorNettyTcpClient<byte[]> createTcpClient() {
+            return new ReactorNettyTcpClient<>(
+                    client -> client.addressSupplier(() -> ... ),
+                    new StompReactorNettyCodec());
+        }
+    }
+	```  
+	
+	- 위와 같은 설정대신 `virtualHost` 를 사용해서 구현할 수도 있다.
+	- `virtualHost` 를 구성하게 되면 설정된 호스트, 포트의 정보들이 각 연결 헤더에 포함된다.
+	
+### Dots as Separators
+- `@MessagingMapping` 를 통해 메시지를 매핑할 때 `AntPathMatcher` 을 사용하는데, 이는 기본적으로 `/` 를 구분자로 한다.
+- `/` 는 `HTTP URLs` 에서는 매우 유용한 구분자이지만, 메시지 규칙에 더 익숙한 경우 `.` 을 구분사로 사용 할 수 있다.
+
+	```java
+	@Configuration
+    @EnableWebSocketMessageBroker
+    public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+    
+        // ...
+    
+        @Override
+        public void configureMessageBroker(MessageBrokerRegistry registry) {
+            registry.setPathMatcher(new AntPathMatcher("."));
+            registry.enableStompBrokerRelay("/queue", "/topic");
+            registry.setApplicationDestinationPrefixes("/app");
+        }
+    }
+	```  
+	
+- `.` 을 구분자로 설정한 경우 `@MessageMapping` 은 아래와 같다.
+
+	```java
+	@Controller
+    @MessageMapping("red")
+    public class RedController {
+    
+        @MessageMapping("blue.{green}")
+        public void handleGreen(@DestinationVariable String green) {
+            // ...
+        }
+    }
+	```  
+	
+	- `/app/red.blue.green123` 을 통해 메시지를 보낼 수 있다.
+- 외부 브로커를 사용할 경우 브로커의 접두사는 외부 브로커에 의존하게 된다. 그러므로 접두사 설정시에 외부 브로커의 `STOMP` 관련 문서에서 목적지 헤더관련 확인이 필요히다.
 
 
+### Authentication
+- `WebSocket` 을 통한 `STOMP` 메시지의 세션은 `HTTP` 요청으로 부터 시작하는데, 이 요청은 `WebSocket` 으로 업그레이드를 위한 요청이거나 `SockJS` 를 사용할 경우 `HTTP` 전송 요청일 수도 있다.
+- `HTTP` 요청을 통해 세션이 시작하게 되므로 `STOMP` 또한 `Spring Security` 기반의 인증과 권한 관리가 가능하다.
+- `WebSocket` 이나 `SockJS` 를 통해 요청을 했다면 `HttpServletRequest` 의 `getUserPrincipal()` 을 통해 인증된 사용자의 정보를 가져올 수 있고, 자동으로 연결된 세션과 `STOMP` 메시지를 연결한다.
+- 기존 `Web Application` 에서 인증과 권한관리를 하는 것과 동일하게 처리 및 구성이 가능하다.
+- `STOMP` 프로토콜에서는 자체적으로 관련 기능을 위해 `CONNECT` 프레임의 `login` , `passcode` 정보가 헤더에 있지만, `WebSocket` 을 통해 `STOMP` 를 사용할 경우 관련 헤더는 무시하고 `HTTP` 요청의 정보를 사용한다.
+- `Spring Security` 는 `ChannelInterceptor` 를 통해 [WebSocket sub-protocol authorization](https://docs.spring.io/spring-security/site/docs/current/reference/html5/#websocket)
+ 에 대한 인증기능을 제공한다. 그리고 `WebSocket` 연결이 활성화 돼있는 동안 세션이 만료되지 않도록 관리한다.
 
+### Token Authentication
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### User Destination
+- `Spring STOMP` 애플리케이션은 특정 사용자에게 메시지를 전송하는 기능을 제공하는데, 접두사가 `/user` 인 목적지를 통해 가능하다.
+- 클라이언트는 `/user/queue/position-updates` 와 같이 `/user` 로 시작하는 경로를 구독할 수 있고, 이 경로는 `UserDestinationMessageHandler` 를 통해 처리되는데 세션을 통해 고유한 목적지로 생성된다.(`/queue/position-updates-user123`)
+- 이러한 기능을 통해 각 사용자는 고유한 정보를 받을 수 있으면서, 다른 사용자와의 충돌하지 않고 동시에 같은 경로를 구독할 수 있도록 제공한다.
+- 송신측에서는 `/user/{username}/queue/position-updates` 와 같은 목적지에 메시지를 보낼 수 있고, 이는 `UserDestinationMessageHandler` 를 통해 사용자 세션마다 하나씩 다수개의 목적지가 매핑된다.
+- 이러한 구조를 통해 애플리케이션에서는 사용자 이름외의 다른 정보가 없더라도 특정 사용자에게 메시지를 전송할 수 있고, 이는 `Annotation` 과 메시지 템플릿을 통해서도 지원된다.
 
 
 ---
