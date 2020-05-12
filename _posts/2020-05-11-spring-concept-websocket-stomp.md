@@ -482,7 +482,7 @@ toc: true
 - 클라이언트는 `/user/queue/position-updates` 와 같이 `/user` 로 시작하는 경로를 구독할 수 있고, 이 경로는 `UserDestinationMessageHandler` 를 통해 처리되는데 세션을 통해 고유한 목적지로 생성된다.(`/queue/position-updates-user123`)
 - 이러한 기능을 통해 각 사용자는 고유한 정보를 받을 수 있으면서, 다른 사용자와의 충돌하지 않고 동시에 같은 경로를 구독할 수 있도록 제공한다.
 - 송신측에서는 `/user/{username}/queue/position-updates` 와 같은 목적지에 메시지를 보낼 수 있고, 이는 `UserDestinationMessageHandler` 를 통해 사용자 세션마다 하나씩 다수개의 목적지가 매핑된다.
-- 이러한 구조를 통해 애플리케이션에서는 사용자 이름외의 다른 정보가 없더라도 특정 사용자에게 메시지를 전송할 수 있고, 이는 `Annotation` 과 메시지 템플릿을 통해서도 지원된다.
+- 이러한 구조를 통해 애플리케이션에서는 사용자 이름외의 다른 정보가 없더라도 특정 사용자에게 메시지를 전송할 수 있고, 이는 `Annotation` 과 `MessagingTemplate`(`SimpMessagingTemplate`)을 통해서도 지원된다.
 
 
 ---
