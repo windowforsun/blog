@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] WebSocket STOMP"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring WebSocket 을 기반으로 STOMP 프로토콜과 사용에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
