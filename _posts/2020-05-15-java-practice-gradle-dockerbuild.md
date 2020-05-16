@@ -119,17 +119,24 @@ public class GradledockerbuildApplication {
 ## palantir/gradle-docker
 - 사용할 플러그인은 `com.palantir.docker` 이고, 이외에도 `com.palantir.docker-compose`, `com.palantir.docker-run` 등을 지원한다.
 - 기본적으로 `Gradle` 을 통해 빌드의 결과물을 만들어내고 별도로 구성한 `Dockerfile` 을 빌드해 프로젝트의 `Docker` 이미지를 만들어 내는 방식이다.
+- 실제로는 설치된 `Docker Engine` 을 사용해서 빌드작업을 수행한다.
 
 ### Dockerfile
 
 ```dockerfile
-FROM openjdk:8-jdk-alpine
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java","-jar","/app.jar"]
+FROM openjdk:8-jre-alpine
+ARG DEPENDENCY=target/dependency
+COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
+COPY ${DEPENDENCY}/META-INF /app/META-INF
+COPY ${DEPENDENCY}/BOOT-INF/classes /app
+ENTRYPOINT ["java","-cp","app:app/lib/*","com.windowforsun.gradledockerbuild.GradledockerbuildApplication"]
 ```  
 
-- `openjdk:8-jdk-alpine` 이미지를 사용해서 빌드로 만들어진 `jar` 파일을 복사하고 `ENTRYPOINT` 를 지정해 주고 있다.
+- `Dockerfile` 은 프로젝트 루트에 위치시킨다.
+- `COPY ${JAR_FILE} app.jar` 과 같이 `jar` 파일을 복사해서 이미지를 구성할 수도 있다. 하지만 이러한 방식은 `Docker` 이미지를 계속해서 여러 버전으로 생성할 때 `Docker Layer Caching` 을 잘 활용하지 못하는 방법이다.
+- 위와 같은 이유로 `jar` 파일을 복사해서 이미지를 빌드하는 것이 아니라, 빌드된 파일에서 앱 구성에 필요한 의존성을 분리해서 `Dockerizing` 을 수행한다. 
+- `openjdk:8-jdk-alpine` 이미지를 사용하고, 빌드로 만들어진 의존성관련 파일을 복사하고 `ENTRYPOINT` 를 지정해 주고 있다.
+- 이전 이미지 버전에서 캐시된 `layer` 를 재사용하고 변경된 부분만 추가 `layer` 가 생성된다는 장점이 있다.
 
 ### build.gradle
 
@@ -146,21 +153,170 @@ ext {
     BUILD_VERSION = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 }
 
+// for palantir/gradle-docker
+task unpack(type: Copy) {
+    dependsOn bootJar
+    from(zipTree(tasks.bootJar.outputs.files.singleFile))
+    into("build/dependency")
+}
 docker {
     name "windowforsun/gradletest-simple"
-    tag "${project.version}", "${BUILD_VERSION}"
-    files tasks.bootJar.outputs.files
-    buildArgs(['JAR_FILE': tasks.bootJar.outputs.files.singleFile.name])
+    tag 'projectVersion', "${name}:${project.version}"
+    tag 'buildVersion', "${name}:${BUILD_VERSION}"
+    copySpec.from(tasks.unpack.outputs).into("dependency")
+    buildArgs(['DEPENDENCY' : "dependency"])
 }
 ```  
 
 - `com.palantir.docker` 플러그인을 추가해 준다.
 - `ext` 변수를 사용해서 빌드 버전인 `BUILD_VERSION` 을 시간을 기준으로 생성해 준다.
-- `docker` 변수에 위와 같이 이미지 이름, 태그 등 필요한 설정을 해준다.
+- `unpack` 에서는 빌드로 생성된 `jar` 파일에서 의존성 파일을  추출해 복사한다.
+- `docker` 에서는 이미지 이름, 태그 등 필요한 설정을 하고 `unpack` 에서 추출한 의존성 파일을 `Dockerfile` 에서 사용할 수 있도록 복사한다.
+	- `tag` 를 통해 이미지에 태깅을 별도로 할 수 있는데 형식은 `tag <tag-name>, <imagename:tagname>` 형식이다. `tag` 부분은 `dockerPush` 명령어에서만 태깅작업을 수행한다.
 
+### 빌드
+- 빌드 명령어는 `./gradlew docker` 와 `./gradlew dockerPush` 로 할 수 있다.
+	- `docker` 은 단순히 로컬에 빌드만 수행한다. 이경우 태깅은 기본적으로 `latest` 가 붙게 된다.
+	- `dockerPush` 는 `docker` 를 수행해서 로컬에서 빌드를 수행하고 그 결과물에 대해서 `tag` 에 설정된 이름 대로 태깅을 한 수 저장소에 푸쉬까지 한다.
+- `docker` 를 통해 빌드하면 이미지는 아래와 같이 `latest` 태그의 이미지만 생성되는 것을 확인 할 수 있다.
 
+	```bash
+	$ ./gradlew docker
+    > Task :dockerClean
+    > Task :compileJava UP-TO-DATE
+    > Task :processResources UP-TO-DATE
+    > Task :classes UP-TO-DATE
+    > Task :bootJar UP-TO-DATE
+    > Task :unpack UP-TO-DATE
+    > Task :dockerPrepare
+    > Task :docker
+    
+    BUILD SUCCESSFUL in 46s
+    7 actionable tasks: 3 executed, 4 up-to-date
+	```  
+	
+	```bash
+	$ docker image ls | grep gradletest
+    windowforsun/gradletest-simple   latest              bc3b4101c47e        30 seconds ago      102MB
+	```  
+	
+- `dockerPush` 를 통해 빌드하면 아래와 같이 `latest` 뿐만아니라 `tag` 를 통해 설정한 이미지까지 생성되고, 모든 이미지는 저장소에 푸쉬 된다.
 
+	```bash
+	$ ./gradlew dockerPush
+	> Task :dockerClean
+	> Task :compileJava UP-TO-DATE
+	> Task :processResources UP-TO-DATE
+	> Task :classes UP-TO-DATE
+	> Task :bootJar UP-TO-DATE
+	> Task :unpack UP-TO-DATE
+	> Task :dockerPrepare
+	> Task :docker
+	> Task :dockerTagBuildVersion
+	> Task :dockerTagProjectVersion
+	> Task :dockerTag
+	
+	> Task :dockerPush
+	The push refers to repository [docker.io/windowforsun/gradletest-simple]
+	0b63558fe75e: Preparing
+	18beca3d9847: Preparing
+	8387800690aa: Preparing
+	edd61588d126: Preparing
+	9b9b7f3d56a0: Preparing
+	f1b5933fe4b5: Preparing
+	f1b5933fe4b5: Waiting
+	edd61588d126: Layer already exists
+	9b9b7f3d56a0: Layer already exists
+	f1b5933fe4b5: Layer already exists
+	0b63558fe75e: Pushed
+	18beca3d9847: Pushed
+	8387800690aa: Pushed
+	0.0.1-SNAPSHOT: digest: sha256:f163184f8cdb5218ba5d0a80c83b028520bacba2b513e35a88f37064ed643e35 size: 1573
+	0b63558fe75e: Preparing
+	18beca3d9847: Preparing
+	8387800690aa: Preparing
+	0b63558fe75e: Layer already exists
+	18beca3d9847: Layer already exists
+	edd61588d126: Preparing
+	9b9b7f3d56a0: Preparing
+	f1b5933fe4b5: Preparing
+	8387800690aa: Layer already exists
+	edd61588d126: Layer already exists
+	9b9b7f3d56a0: Layer already exists
+	f1b5933fe4b5: Layer already exists
+	20200516190636: digest: sha256:f163184f8cdb5218ba5d0a80c83b028520bacba2b513e35a88f37064ed643e35 size: 1573
+	0b63558fe75e: Preparing
+	18beca3d9847: Preparing
+	8387800690aa: Preparing
+	edd61588d126: Preparing
+	9b9b7f3d56a0: Preparing
+	f1b5933fe4b5: Preparing
+	0b63558fe75e: Layer already exists
+	18beca3d9847: Layer already exists
+	8387800690aa: Layer already exists
+	edd61588d126: Layer already exists
+	9b9b7f3d56a0: Layer already exists
+	f1b5933fe4b5: Waiting
+	f1b5933fe4b5: Layer already exists
+	latest: digest: sha256:f163184f8cdb5218ba5d0a80c83b028520bacba2b513e35a88f37064ed643e35 size: 1573
+	
+	BUILD SUCCESSFUL in 33s
+	10 actionable tasks: 6 executed, 4 up-to-date
+	```  
+	
+	```bash
+	$ docker image ls | grep gradletest
+	windowforsun/gradletest-simple   0.0.1-SNAPSHOT      bc3b4101c47e        3 minutes ago       102MB
+	windowforsun/gradletest-simple   20200516190636      bc3b4101c47e        3 minutes ago       102MB
+	windowforsun/gradletest-simple   latest              bc3b4101c47e        3 minutes ago       102MB
+	```  
+	
+## GoogleContainerTools/jib
+- `palantir/gradle-docker` 를 사용한 빌드 방식을 정리하면, `jar` 파일을 만들고 다시 압축을 해제한다음 의존성을 분리하는 등의 순서로 이미지를 생성한다.
+- 또한 `palantir/gradle-docker` 는 `Docker Engine` 을 사용하기 때문에 빌드 환경에서 `Docker` 설치는 필수 적이다.
+- 다른 방법 중 하나는 `GoogleContainerTools/jib` 을 사용하는 방법으로 `Gradle`, `Maven` 에서 모두 사용가능하고 간단하게 `Docker` 이미지를 생성해주는 도구이다.
+- `palantir/gradle-docker` 와 또 다른 점은 `GoogleContainerTools/jib` 은 좀더 `Java Application` 에 최적화된 방식으로 `Dockerizing` 을 수행하기 때문에 별도로 의존성을 분리하는 등의 작업을 필요하지 않다.
+- 또한 빌드를 위해 `Docker` 를 설치할 필요도 없고, 별도의 `Dockerfile` 을 작성할 필요도 없다.
 
+### build.gradle
+
+```groovy
+plugins {
+	.. 생략 ..
+	
+    // for GoogleContainerTools/jib
+    id 'com.google.cloud.tools.jib' version '1.6.0'
+}
+
+.. 생략 ..
+
+ext {
+    BUILD_VERSION = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+}
+
+// for GoogleContainerTools/jib
+jib {
+    from {
+        image = "openjdk:8-jre-alpine"
+    }
+    to {
+        image = "windowforsun/gradletest-simple"
+        tags = ["${project.version}".toString(), "${BUILD_VERSION}".toString()]
+        auth {
+            username = 'windowforsun'
+            password = 'Thsml*1001'
+        }
+    }
+    container {
+        mainClass = "com.windowforsun.gradletestsimple.GradletestSimpleApplication"
+        ports = ["8080"]
+        // defence for created 50 years ago
+        useCurrentTimestamp = true
+    }
+}
+```  
+
+- 
 
 ---
 ## Reference
