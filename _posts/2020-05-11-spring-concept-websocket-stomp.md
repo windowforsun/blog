@@ -20,7 +20,7 @@ toc: true
 ## STOMP
 - [WebSocket]({{site.baseurl}}{% link _posts/2020-05-09-spring-concept-websocket.md %})
 은 `Text`, `Binary` 두 가지 방식의 메시지를 사용 할 수 있지만 이는 정의되지 않은 메시지 포맷이라는 특징이 있다.
-- `STOMP` 는 `high-level messaging protocol` 지원을 통해 서버-클라이언트 간 특정 포멧을 통해 메시지를 주고 받을 수 있다.
+- `STOMP` 는 `high-level messaging protocol` 지원을 통해 서버-클라이언트 간 특정 포맷으로 메시지를 주고 받을 수 있다.
 - 또한 `sub-protocol` 정의를 통해 서버-클라이언트 간의 약속된 동작 수행이 가능하도록 설계할 수 있다.
 - `STOMP` 는 `Simple Text Oriented Messaging Protocol` 의 약자로 원래는 스크립트 언어(`Ruby`, `Python`, ..) 에서 메시지 브로커와의 연결을 위해 만들어 졌다.
 - 일반적으로 사용되는 메시지 패턴에서 최소한의 동작을 수행 할 수 있도록 설계되었다.
@@ -153,7 +153,7 @@ toc: true
 	- [spring-websocket-portfolio](https://github.com/rstoyanchev/spring-websocket-portfolio)
 
 ### WebSocket Server
-- 원시 `WebSocket` 서버 [설정]({{site.baseurl}}{% link _posts/2020-05-09-spring-concept-websocket.md#server-configuration %})
+- 원시 `WebSocket` 서버 [설정](https://windowforsun.github.io/blog/spring/spring-concept-websocket/#server-configuration)
 을 기반으로 `Jetty` 를 사용한 `WebSocket` 서버 설정은 아래와 같이, `StompEndpointRegistry` 에 `WebSocketPolicy` 및 `HandshakeHandler` 설정이 추가로 필요하다.
 	
 	```java
