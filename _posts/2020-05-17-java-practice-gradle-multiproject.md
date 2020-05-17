@@ -226,6 +226,52 @@ use_math: true
 	
 	- 웹 애플리케이션을 기반으로 하기 때문에 `core` 프로젝트와 필요한 의존성을 추가하고 있다.
 	
+- 실행되는 프로젝트인 `web-read` 와 `web-save` 에  `entry point` 클래스와 메소드를 설정한다.
+
+	```java
+	package com.windowforsun.websave;
+    
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    
+    @SpringBootApplication
+    public class WebSaveApplication {
+        public static void main(String[] args) {
+            SpringApplication.run(WebSaveApplication.class, args);
+        }
+    }
+	```  
+	
+	```java
+	package com.windowforsun.websave;
+	
+	import org.springframework.boot.SpringApplication;
+	import org.springframework.boot.autoconfigure.SpringBootApplication;
+	
+	@SpringBootApplication
+	public class WebSaveApplication {
+		public static void main(String[] args) {
+			SpringApplication.run(WebSaveApplication.class, args);
+		}
+	}
+	```  
+	
+- `@SpringBootApplication` 을 사용하지 않을 경우, `build.gradle` 에서 `bootJar` 설정을 통해 가능하다.
+	
+	```groovy
+	bootJar {
+		mainClassName = 'com.windowforsun.webread.WebReadApplication'
+	}
+	```  
+	
+	```groovy
+	bootJar {
+		mainClassName = 'com.windowforsun.websave.WebSaveApplication'
+	}
+	```  
+	
+- `entry pint` 까지 구성이 완료된 상태에서 테스트 빌드를 수행한다.
+	
 	
 ---
 ## Reference
