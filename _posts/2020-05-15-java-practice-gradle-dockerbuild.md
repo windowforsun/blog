@@ -450,8 +450,7 @@ jib {
 	
 	```bash
 	$ docker image ls | grep gradletest
-	REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-	.. NONE ...
+	.. NONE ..
 	```  
 	
 - 빌드된 이미지를 아래 명령어를 통해 컨테이너로 실행하고 확인하면 아래와 같이 정상적으로 애플리케이션이 실행되는 것을 확인 할 수 있다.
