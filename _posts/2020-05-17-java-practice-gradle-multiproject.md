@@ -27,6 +27,7 @@ use_math: true
 
 
 ## Mutli-Project 만들기
+- 아래 작성되는 예제는 단순 예제에 불과하다는걸 미리 알리고 시작한다.
 
 ### Root 프로젝트 생성
 - `Intellij` 를 기준으로 `Gradle` 기반 `Multi-Project` 를 구성하는 방법에 대해 알아본다.
@@ -176,6 +177,21 @@ use_math: true
 	- `root` 프로젝트의 경우 실행 가능한 `jar` 파일 생성이 필요하지 않기 때문에 비활성화 시킨다.
 	- `allprojects` 를 통해 모든 프로젝트에서 적용되는 설정을 할 수 있다.
 	- `subprojects` 에서는 `sub` 프로젝트에서만 적용되는 설정을 할 수 있다.
+	- `sub` 프로젝트의 의존성이나 관련 설정은 아래와 같은 형식으로 `root` 프로젝트의 `build.gradle` 에서도 가능하다.
+	
+		```groovy
+		project(':web-read') {
+            dependencies {
+                implementation project(':core')
+            }
+        }
+        
+        project(':web-save') {
+            dependencies {
+                implementation project(':core')
+            }
+        }
+		```  
 	
 - 공통으로 사용되는 코드가 위치하는 `core` 프로젝트의 `build.gradle` 은 아래와 같다.
 
@@ -196,7 +212,7 @@ use_math: true
 	}
 	
 	dependencies {
-		compile('org.springframework.boot:spring-boot-starter-data-jpa')
+		implementation('org.springframework.boot:spring-boot-starter-data-jpa')
 		runtime('com.h2database:h2')
 		testImplementation('org.springframework.boot:spring-boot-starter-test') {
 				exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
@@ -205,6 +221,13 @@ use_math: true
 	```  
 	
 	- `core` 프로젝트 또한 실행 가능한 `jar` 파일은 필요하지 않기 때문에 비활성화 시키고, 대신 외부에서 의존성을 추가해서 사용할 수 있도록 `jar` 파일을 활성화 한다.
+		- `Spring Boot` 2.0 버전 보다 낮다면 아래와 같이 설정 가능하다.
+				
+			```groovy
+			bootRepackage {
+				enabled = false
+			}
+			```  
 
 - 실제로 애플리케이션으로 실행되는 `web-read` 프로젝트와 `web-save` 프로젝트의 `build.gradle` 은 아래와 같다.
 
@@ -270,8 +293,189 @@ use_math: true
 	}
 	```  
 	
-- `entry pint` 까지 구성이 완료된 상태에서 테스트 빌드를 수행한다.
+- `entry point` 까지 구성이 완료된 상태에서 테스트 빌드를 수행한다.
 	
+	```bash
+	$ ./gradlew build
+    > Task :compileJava NO-SOURCE
+    > Task :processResources NO-SOURCE
+    > Task :classes UP-TO-DATE
+    > Task :bootJar SKIPPED
+    > Task :jar SKIPPED
+    > Task :assemble UP-TO-DATE
+    > Task :compileTestJava NO-SOURCE
+    > Task :processTestResources NO-SOURCE
+    > Task :testClasses UP-TO-DATE
+    > Task :test NO-SOURCE
+    > Task :check UP-TO-DATE
+    > Task :build UP-TO-DATE
+    > Task :core:compileJava NO-SOURCE
+    > Task :core:processResources NO-SOURCE
+    > Task :core:classes UP-TO-DATE
+    > Task :core:bootJar SKIPPED
+    > Task :core:jar
+    > Task :core:assemble
+    > Task :core:compileTestJava NO-SOURCE
+    > Task :core:processTestResources NO-SOURCE
+    > Task :core:testClasses UP-TO-DATE
+    > Task :core:test NO-SOURCE
+    > Task :core:check UP-TO-DATE
+    > Task :core:build
+    > Task :web-read:compileJava
+    > Task :web-read:processResources NO-SOURCE
+    > Task :web-read:classes
+    > Task :web-read:bootJar
+    > Task :web-read:dockerfileZip NO-SOURCE
+    > Task :web-read:jar SKIPPED
+    > Task :web-read:assemble
+    > Task :web-read:compileTestJava NO-SOURCE
+    > Task :web-read:processTestResources NO-SOURCE
+    > Task :web-read:testClasses UP-TO-DATE
+    > Task :web-read:test NO-SOURCE
+    > Task :web-read:check UP-TO-DATE
+    > Task :web-read:build
+    > Task :web-save:compileJava
+    > Task :web-save:processResources NO-SOURCE
+    > Task :web-save:classes
+    > Task :web-save:bootJar
+    > Task :web-save:dockerfileZip NO-SOURCE
+    > Task :web-save:jar SKIPPED
+    > Task :web-save:assemble
+    > Task :web-save:compileTestJava NO-SOURCE
+    > Task :web-save:processTestResources NO-SOURCE
+    > Task :web-save:testClasses UP-TO-DATE
+    > Task :web-save:test NO-SOURCE
+    > Task :web-save:check UP-TO-DATE
+    > Task :web-save:build
+    
+    BUILD SUCCESSFUL in 19s
+    5 actionable tasks: 5 executed
+	```  
+	
+	- 빌드가 성공하게 되고, 각 모듈(`core`, `web-read`, `web-save`) 의 `build/libs` 경로에 `jar` 파일이 생성된 것을 확인 할 수 있다.
+
+### core 프로젝트 구현
+- 이름에서 알수 있듯이, 다른 프로젝트 구현에 필요한 기본적이면서 공통적인 부분을 모아놓은 프로젝트이다.
+
+```
+core
+│  build.gradle
+│
+└─src
+    ├─main
+    │  └─java
+    │      └─com
+    │          └─windowforsun
+    │              └─core
+    │                  ├─domain
+    │                  │      Account.java
+    │                  │
+    │                  └─repository
+    │                          AccountRepository.java
+    │
+    └─test
+        └─java
+            └─com
+                └─windowforsun
+                    └─core
+                        │  CoreApplicationTest.java
+                        │
+                        └─repository
+                                AccountRepositoryTest.java
+```  
+
+- `Account` 클래스
+
+	```java
+	@Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    @Entity
+    public class Account {
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
+        private long id;
+        private String name;
+        private int age;
+    }
+	```  
+	
+- `AccountRepository` 클래스
+
+	```java
+	@Repository
+    public interface AccountRepository extends JpaRepository<Account, Long> {
+    
+    }
+	```  
+	
+- `CoreApplicationTest` 클래스는 `core` 프로젝트의 경우 별도의 `entry point`(main 클래스)를 지정하지 않았기 때문에, 테스트 시에 `entry point` 역할을 수행한다.
+	- 테스트시에 필요한 `Spring Context` 를 불러오기 위함.
+
+	```java
+	@SpringBootApplication
+    public class CoreApplicationTest {
+        public void contextLoads(){}
+    }
+	```  
+	
+- `AccountRepositoryTest` 클래스
+
+	```java
+	@RunWith(SpringRunner.class)
+    @DataJpaTest
+    public class AccountRepositoryTest {
+        @Autowired
+        private AccountRepository accountRepository;
+    
+        @BeforeEach
+        public void setUp() {
+            this.accountRepository.deleteAll();
+        }
+    
+        @Test
+        public void save_저장된객체를리턴받으면_Id가생성된다() {
+            // given
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+    
+            // when
+            Account actual = this.accountRepository.save(account);
+    
+            // then
+            assertThat(actual, notNullValue());
+            assertThat(actual.getId(), greaterThan(0l));
+        }
+    
+        @Test
+        public void save_저장된객체가_저장소에존재한다() {
+            // given
+            Account account = Account.builder()
+                    .age(1)
+                    .name("name")
+                    .build();
+            account = this.accountRepository.save(account);
+    
+            // when
+            Account actual = this.accountRepository.findById(account.getId()).orElse(null);
+    
+            // then
+            assertThat(actual, notNullValue());
+            assertThat(actual.getId(), is(account.getId()));
+        }
+    }
+	```  
+	
+### web-read 프로젝트 구현
+- `core` 프로젝트를 사용해서 REST API 형식으로 읽기 관련 기능을 제공하는 웹 애플리케이션 프로젝트이다.
+
+```
+```  
+
 	
 ---
 ## Reference
