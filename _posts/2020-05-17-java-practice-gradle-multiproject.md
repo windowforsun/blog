@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] Gradle Multi-Project"
+title: "[Java 실습] Gradle Multi-Project(Multi-Module)"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Gradle 을 사용해서 멀티 프로젝트를 구성하고 빌드해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,7 @@ tags:
     - Java
     - Gradle
     - Multi-Project
+    - Multi-Module
 toc: true
 use_math: true
 ---  
@@ -366,7 +367,9 @@ core
     │  └─java
     │      └─com
     │          └─windowforsun
-    │              └─core
+    │               └─multiproject
+    │                  │  Init.java
+    │                  │
     │                  ├─domain
     │                  │      Account.java
     │                  │
@@ -377,12 +380,39 @@ core
         └─java
             └─com
                 └─windowforsun
-                    └─core
+                    └─multiproject
                         │  CoreApplicationTest.java
                         │
                         └─repository
                                 AccountRepositoryTest.java
 ```  
+
+- `Init` 클래스는 `build` 프로파일로 실행될 경우 초기 더미데이터를 설정한다.
+
+	```java
+	@Component
+	@Profile("build")
+	@RequiredArgsConstructor
+	public class Init {
+	    private final AccountRepository accountRepository;
+	
+	    @PostConstruct
+	    public void init() {
+	        this.accountRepository.save(
+	                Account.builder()
+	                        .age(1)
+	                        .name("name1")
+	                        .build()
+	        );
+	        this.accountRepository.save(
+	                Account.builder()
+	                        .age(2)
+	                        .name("name2")
+	                        .build()
+	        );
+	    }
+	}
+	```  
 
 - `Account` 클래스
 
@@ -474,8 +504,707 @@ core
 - `core` 프로젝트를 사용해서 REST API 형식으로 읽기 관련 기능을 제공하는 웹 애플리케이션 프로젝트이다.
 
 ```
+web-read
+│  build.gradle
+│
+└─src
+    ├─main
+    │  └─java
+    │      └─com
+    │          └─windowforsun
+    │              └─multiproject
+    │                  │  Init.java
+    │                  │  WebReadApplication.java
+    │                  │
+    │                  └─controller
+    │                          AccountReadController.java
+    │
+    └─test
+        └─java
+            └─com
+                └─windowforsun
+                    └─multiproject
+                        └─controller
+                                AccountReadControllerTest.java
+```   
+
+- `AccountReadController` 클래스는 `core` 프로젝트의 `Account` 도메인과 `AccountRepository`  저장소를 사용해서 읽기관련 Web API 가 구현되어 있다. 
+
+	```java
+	@RestController
+	@RequestMapping("/account")
+	@RequiredArgsConstructor
+	public class AccountReadController {
+	    private final AccountRepository accountRepository;
+	
+	    @GetMapping("/{id}")
+	    public ResponseEntity<Account> getById(@PathVariable long id) {
+	        Account account = this.accountRepository.findById(id).orElse(null);
+	        ResponseEntity responseEntity;
+	
+	        if(account == null) {
+            	responseEntity = ResponseEntity.notFound().build();
+	        } else {
+	            responseEntity = ResponseEntity.ok(account);
+	        }
+	
+	        return responseEntity;
+	    }
+	
+	    @GetMapping
+	    public ResponseEntity<List<Account>> getAll() {
+	        return ResponseEntity.ok(this.accountRepository.findAll());
+	    }
+	}
+	```  
+	
+- `AccountReadControllerTest` 클래스
+
+	```java
+	@RunWith(SpringRunner.class)
+	@WebMvcTest(AccountReadController.class)
+	@ContextConfiguration(classes = WebReadApplication.class)
+	public class AccountReadControllerTest {
+	    @Autowired
+	    private MockMvc mockMvc;
+	    @MockBean
+	    private AccountRepository accountRepository;
+	
+	    @Test
+	    public void getById_ExistsId_ResponseAccount() throws Exception {
+	        // given
+	        Account account = Account.builder()
+	                .id(1000)
+	                .age(100000)
+	                .name("name")
+	                .build();
+	        when(this.accountRepository.findById(account.getId())).thenReturn(Optional.of(account));
+	
+	        // when
+	        this.mockMvc
+	                .perform(get("/account/{id}", account.getId()))
+	                .andExpect(status().isOk())
+	                .andDo(print())
+	                .andExpect(jsonPath("$.id", is((int) account.getId())))
+	                .andExpect(jsonPath("$.name", is(account.getName())))
+	                .andExpect(jsonPath("$.age", is(account.getAge())))
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).findById(account.getId());
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void getById_NotExistsId_NotFound() throws Exception {
+	        // given
+	        long id = 111111111;
+	        when(this.accountRepository.findById(id)).thenReturn(Optional.empty());
+	
+	        // when
+	        this.mockMvc
+	                .perform(get("/account/{id}", id))
+	                .andExpect(status().isNotFound())
+	                .andDo(print())
+	                .andExpect(jsonPath("$").doesNotExist())
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).findById(id);
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void getAll_DataExist_ResponseArray() throws Exception {
+	        // given
+	        List<Account> list = new ArrayList<Account>() {{
+	            add(Account.builder()
+	                    .id(1000)
+	                    .age(100000)
+	                    .name("name")
+	                    .build());
+	            add(Account.builder()
+	                    .id(1001)
+	                    .age(100001)
+	                    .name("name1")
+	                    .build());
+	        }};
+	        when(this.accountRepository.findAll()).thenReturn(list);
+	
+	        // when
+	        this.mockMvc
+	                .perform(get("/account"))
+	                .andExpect(status().isOk())
+	                .andDo(print())
+	                .andExpect(jsonPath("$.[*].id", everyItem(greaterThan(1))))
+	                .andExpect(jsonPath("$.[*].name", everyItem(not(isEmptyOrNullString()))))
+	                .andExpect(jsonPath("$.[*].age", everyItem(greaterThan(1))))
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).findAll();
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void getAll_DataEmpty_ResponseEmptyArray() throws Exception {
+	        // given
+	        when(this.accountRepository.findAll()).thenReturn(new ArrayList<>());
+	
+	        // when
+	        this.mockMvc
+	                .perform(get("/account"))
+	                .andExpect(status().isOk())
+	                .andDo(print())
+	                .andExpect(jsonPath("$", empty()))
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).findAll();
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	}
+	```  
+	
+### web-save 프로젝트 구현
+- `core` 프로젝트를 사용해서 REST API 형식으로 쓰기 관련 기능을 제공하는 웹 애플리케이션 프로젝트이다.
+
+```
+web-save
+│  build.gradle
+│
+└─src
+    ├─main
+    │  └─java
+    │      └─com
+    │          └─windowforsun
+    │              └─multiproject
+    │                  │  WebSaveApplication.java
+    │                  │
+    │                  └─controller
+    │                          AccountSaveController.java
+    │
+    └─test
+        └─java
+            └─com
+                └─windwoforsun
+                    └─multiproject
+                        └─controller
+                                AccountSaveControllerTest.java
+
 ```  
 
+- `AccountSaveController` 클래스는 `core` 프로젝트의 `Account` 도메인과 `AccountRepository`  저장소를 사용해서 쓰기관련 Web API 가 구현되어 있다. 
+	
+	```java
+	@RestController
+	@RequestMapping("/account")
+	@RequiredArgsConstructor
+	public class AccountSaveController {
+	    private final AccountRepository accountRepository;
+	
+	    @PostMapping
+	    public ResponseEntity<Account> create(@RequestBody Account account) throws URISyntaxException {
+	        ResponseEntity responseEntity;
+	
+	        if(account == null) {
+	            responseEntity = ResponseEntity.badRequest().build();
+	        } else {
+	            account = this.accountRepository.save(account);
+	            responseEntity = ResponseEntity.created(new URI("/account/" + account.getId())).body(account);
+	        }
+	
+	        return responseEntity;
+	    }
+	
+	    @PutMapping("/{id}")
+	    public ResponseEntity<Void> update(@RequestBody Account account, @PathVariable long id) {
+	        ResponseEntity responseEntity;
+	        boolean isExists = this.accountRepository.existsById(id);
+	
+	        if(account == null) {
+	            responseEntity = ResponseEntity.badRequest().build();
+	        } else if(isExists) {
+	            account.setId(id);
+	            this.accountRepository.save(account);
+	            responseEntity = ResponseEntity.ok().build();
+	        } else {
+	            responseEntity = ResponseEntity.notFound().build();
+	        }
+	
+	        return responseEntity;
+	    }
+	}
+	```  
+	
+- `AccountSaveControllerTest` 클래스
+
+	```java
+	@RunWith(SpringRunner.class)
+	@WebMvcTest(AccountSaveController.class)
+	@ContextConfiguration(classes = WebSaveApplication.class)
+	public class AccountSaveControllerTest {
+	    @Autowired
+	    private MockMvc mockMvc;
+	    @MockBean
+	    private AccountRepository accountRepository;
+	    private ObjectMapper objectMapper = new ObjectMapper();
+	
+	    @Test
+	    public void create_AccountBody_ResponseAccountAndId() throws Exception {
+	        // given
+	        Account account = Account.builder()
+	                .age(100000)
+	                .name("name")
+	                .build();
+	        Account saved = Account.builder()
+	                .id(100000)
+	                .age(100000)
+	                .name("name")
+	                .build();
+	
+	        // when
+	        when(this.accountRepository.save(any(Account.class))).thenReturn(saved);
+	        this.mockMvc
+	                .perform(post("/account")
+	                        .content(this.objectMapper.writeValueAsString(account))
+	                        .contentType(MediaType.APPLICATION_JSON)
+	                        .accept(MediaType.APPLICATION_JSON))
+	                .andExpect(status().isCreated())
+	                .andDo(print())
+	                .andExpect(jsonPath("$.id", is((int) saved.getId())))
+	                .andExpect(jsonPath("$.age", is(saved.getAge())))
+	                .andExpect(jsonPath("$.name", is(saved.getName())))
+	                .andExpect(header().string("Location", is("/account/" + saved.getId())))
+	                .andExpect(redirectedUrl("/account/" + saved.getId()))
+	        ;
+	
+	        verify(this.accountRepository, times(1)).save(any(Account.class));
+	    }
+	
+	    @Test
+	    public void create_EmptyBody_BadRequest() throws Exception {
+	        // when
+	        this.mockMvc
+	                .perform(post("/account")
+	                        .content("")
+	                        .contentType(MediaType.APPLICATION_JSON)
+	                        .accept(MediaType.APPLICATION_JSON))
+	                .andExpect(status().isBadRequest())
+	                .andDo(print())
+	                .andExpect(jsonPath("$").doesNotExist())
+	        ;
+	
+	        verifyNoInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void update_ExistsIdAndAccountBody_ResponseOk() throws Exception {
+	        // given
+	        Account account = Account.builder()
+	                .id(100000)
+	                .age(100000)
+	                .name("name")
+	                .build();
+	        when(this.accountRepository.existsById(account.getId())).thenReturn(true);
+	
+	        // when
+	        this.mockMvc
+	                .perform(put("/account/{id}", account.getId())
+	                        .content(this.objectMapper.writeValueAsString(account))
+	                        .contentType(MediaType.APPLICATION_JSON)
+	                        .accept(MediaType.APPLICATION_JSON))
+	                .andExpect(status().isOk())
+	                .andDo(print())
+	                .andExpect(jsonPath("$").doesNotExist())
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).existsById(account.getId());
+	        verify(this.accountRepository, times(1)).save(any(Account.class));
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void update_NotExistsId_NotFound() throws Exception {
+	        // given
+	        Account account = Account.builder()
+	                .id(100000)
+	                .age(100000)
+	                .name("name")
+	                .build();
+	        when(this.accountRepository.existsById(account.getId())).thenReturn(false);
+	
+	        // when
+	        this.mockMvc
+	                .perform(put("/account/{id}", account.getId())
+	                        .content(this.objectMapper.writeValueAsString(account))
+	                        .contentType(MediaType.APPLICATION_JSON)
+	                        .accept(MediaType.APPLICATION_JSON))
+	                .andExpect(status().isNotFound())
+	                .andDo(print())
+	                .andExpect(jsonPath("$").doesNotExist())
+	        ;
+	
+	        // then
+	        verify(this.accountRepository, times(1)).existsById(account.getId());
+	        verifyNoMoreInteractions(this.accountRepository);
+	    }
+	
+	    @Test
+	    public void update_EmptyBody_BadRequest() throws Exception {
+	        // given
+	        long id = 10000;
+	        when(this.accountRepository.existsById(id)).thenReturn(true);
+	
+	        // when
+	        this.mockMvc
+	                .perform(put("/account/{id}", id)
+	                        .content("")
+	                        .contentType(MediaType.APPLICATION_JSON)
+	                        .accept(MediaType.APPLICATION_JSON))
+	                .andExpect(status().isBadRequest())
+	                .andDo(print())
+	                .andExpect(jsonPath("$").doesNotExist())
+	        ;
+	
+	        // then
+	        verifyNoInteractions(this.accountRepository);
+	    }
+	}
+	```  
+	
+### 빌드
+- `root` 프로젝트 경로에서 `./gradlew build` 를 통해 전체 프로젝트 구성을 빌드할 수 있다.
+
+	```bash
+	$ ./gradlew build
+	> Task :compileJava NO-SOURCE
+	> Task :processResources NO-SOURCE
+	> Task :classes UP-TO-DATE
+	> Task :bootJar SKIPPED
+	> Task :jar SKIPPED
+	> Task :assemble UP-TO-DATE
+	> Task :compileTestJava NO-SOURCE
+	> Task :processTestResources NO-SOURCE
+	> Task :testClasses UP-TO-DATE
+	> Task :test NO-SOURCE
+	> Task :check UP-TO-DATE
+	> Task :build UP-TO-DATE
+	> Task :core:compileJava UP-TO-DATE
+	> Task :core:processResources NO-SOURCE
+	> Task :core:classes UP-TO-DATE
+	> Task :core:bootJar SKIPPED
+	> Task :core:jar UP-TO-DATE
+	> Task :core:assemble UP-TO-DATE
+	> Task :core:compileTestJava UP-TO-DATE
+	> Task :core:processTestResources NO-SOURCE
+	> Task :core:testClasses UP-TO-DATE
+	> Task :core:test UP-TO-DATE
+	> Task :core:check UP-TO-DATE
+	> Task :core:build UP-TO-DATE
+	
+	.. 생략 ..
+	
+	BUILD SUCCESSFUL in 20s
+	12 actionable tasks: 2 executed, 10 up-to-date
+	```  
+	
+- `web-read` 프로젝트를 실행할 때 파라미터를 통해 `build` 프로파일을 활성화 시킨다.
+
+	```bash
+	$ java -jar -Dspring.profiles.active=build web-read/build/libs/web-read-1.0-SNAPSHOT.jar
+	
+	  .   ____          _            __ _ _
+	 /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+	( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+	 \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+	  '  |____| .__|_| |_|_| |_\__, | / / / /
+	 =========|_|==============|___/=/_/_/_/
+	 :: Spring Boot ::        (v2.2.1.RELEASE)
+	
+	2020-05-17 20:55:26.348  INFO 51692 --- [           main] c.w.multiproject.WebReadApplication      : Starting WebReadApplication on windowforsun-1 with PID 51692 (C:\gradlemultiproject-exam\web-read\build\libs\web-read-1.0-SNAPSHOT.jar s
+	tarted by  in C:\gradlemultiproject-exam)
+	2020-05-17 20:55:26.353  INFO 51692 --- [           main] c.w.multiproject.WebReadApplication      : The following profiles are active: build
+	
+	.. 생략 ..
+	
+	2020-05-17 20:55:32.797  INFO 51692 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+	2020-05-17 20:55:33.100  INFO 51692 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+	2020-05-17 20:55:33.105  INFO 51692 --- [           main] c.w.multiproject.WebReadApplication      : Started WebReadApplication in 7.247 seconds (JVM running for 7.892)
+	2020-05-17 20:55:36.302  INFO 51692 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+	2020-05-17 20:55:36.302  INFO 51692 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+	2020-05-17 20:55:36.310  INFO 51692 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 7 ms
+	2020-05-17 20:55:39.117  INFO 51692 --- [extShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+	2020-05-17 20:55:39.118  INFO 51692 --- [extShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+	2020-05-17 20:55:39.119  INFO 51692 --- [extShutdownHook] .SchemaDropperImpl$DelayedDropActionImpl : HHH000477: Starting delayed evictData of schema as part of SessionFactory shut-down'
+	2020-05-17 20:55:39.127  INFO 51692 --- [extShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+	2020-05-17 20:55:39.152  INFO 51692 --- [extShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+	```  
+	
+	- `GET /account` 테스트
+	
+		```http request
+		# Requeset
+		GET http://localhost:8080/account
+		Content-Type: application/json
+		
+		# Response
+		GET http://localhost:8080/account
+
+		HTTP/1.1 200 
+		Content-Type: application/json
+		Transfer-Encoding: chunked
+		Date: Mon, 17 May 2020 11:55:37 GMT
+		
+		[
+		  {
+		    "id": 1,
+		    "name": "name1",
+		    "age": 1
+		  },
+		  {
+		    "id": 2,
+		    "name": "name2",
+		    "age": 2
+		  }
+		]
+		
+		Response code: 200; Time: 31ms; Content length: 65 bytes
+		```  
+		
+	- `GET /account/1` 테스트
+	
+		```http request
+		# Request
+		GET http://localhost:8080/account/1
+		Content-Type: application/json
+
+		# Response
+		GET http://localhost:8080/account/1
+
+		HTTP/1.1 200 
+		Content-Type: application/json
+		Transfer-Encoding: chunked
+		Date: Mon, 17 May 2020 12:04:15 GMT
+		
+		{
+		  "id": 1,
+		  "name": "name1",
+		  "age": 1
+		}
+		
+		Response code: 200; Time: 1271ms; Content length: 31 bytes
+		```  
+		
+- `web-save` 프로젝트도 실행할 때 파라미터를 통해 `build` 프로파일을 활성화 시킨다.
+
+	```bash
+	$ java -jar -Dspring.profiles.active=build web-save/build/libs/web-save-1.0-SNAPSHOT.jar
+	
+	  .   ____          _            __ _ _
+	 /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+	( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+	 \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+	  '  |____| .__|_| |_|_| |_\__, | / / / /
+	 =========|_|==============|___/=/_/_/_/
+	 :: Spring Boot ::        (v2.2.1.RELEASE)
+	
+	2020-05-17 21:07:34.953  INFO 32504 --- [           main] c.w.multiproject.WebSaveApplication      : Starting WebSaveApplication on windowforsun-1 with PID 32504 (C:\gitrepos\dummyProject\java\spring\gradlemultiproject-exam\web-save\build\libs\web-save-1.0-SNAPSHOT.jar started by  in C:\gitrepos\dummyProject\java\spring\gradlemultiproject-exam)
+	2020-05-17 21:07:34.958  INFO 32504 --- [           main] c.w.multiproject.WebSaveApplication      : The following profiles are active: build
+	
+	.. 생략 ..
+	
+	2020-05-17 21:07:42.222  INFO 32504 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+	2020-05-17 21:07:42.520  INFO 32504 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+	2020-05-17 21:07:42.523  INFO 32504 --- [           main] c.w.multiproject.WebSaveApplication      : Started WebSaveApplication in 8.066 seconds (JVM running for 8.736)
+	2020-05-17 21:07:49.452  INFO 32504 --- [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+	2020-05-17 21:07:49.453  INFO 32504 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+	2020-05-17 21:07:49.460  INFO 32504 --- [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 7 ms
+	```  
+	
+	- `POST /account` 테스트
+	
+		```http request
+		# Request
+		POST http://localhost:8080/account
+		Content-Type: application/json
+		
+		{
+		    "name" : "name",
+		    "age" : 1111
+		}
+		
+		# Response
+		POST http://localhost:8080/account
+		
+		HTTP/1.1 201 
+		Location: /account/3
+		Content-Type: application/json
+		Transfer-Encoding: chunked
+		Date: Mon, 17 May 2020 12:08:18 GMT
+		
+		{
+		  "id": 3,
+		  "name": "name",
+		  "age": 1111
+		}
+		
+		Response code: 201; Time: 35ms; Content length: 33 bytes
+		```  
+		
+	- `PUT /account/3` 테스트
+	
+		```http request
+		# Request
+		PUT http://localhost:8080/account/3
+		Content-Type: application/json
+		
+		{
+		    "name" : "name2",
+		    "age" : 22222
+		}
+		
+		# Response
+		PUT http://localhost:8080/account/3
+		
+		HTTP/1.1 200 
+		Content-Length: 0
+		Date: Mon, 18 May 2020 08:22:29 GMT
+		
+		<Response body is empty>
+		
+		Response code: 200; Time: 21ms; Content length: 0 bytes
+		```  
+		
+## Multi-Project Docker 빌드와 이미지 생성
+- `Gradle` 기반으로 `Docker` 이미지 빌드는 [여기]({{site.baseurl}}{% link _posts/2020-05-15-spring-practice-gradle-dockerbuild.md %})
+에서 더 자세한 정보를 확인 할 수 있다.
+- 예제에서는 `GoogleContainerTools/jib` 을 사용해서 `Docker` 이미지를 생성한다.
+- 실행가능한 `jar` 를 빌드하는 `web-read`, `web-save` 프로젝트의 `build.gradle` 에 아래 내용을 추가해 준다.
+
+	```groovy
+	// web-read
+	
+	plugins {
+		.. 생략 ..
+	
+	    // for GoogleContainerTools/jib
+	    id 'com.google.cloud.tools.jib' version '1.6.0'
+	}
+	
+	// for GoogleContainerTools/jib
+	jib {
+	    from {
+	        image = "openjdk:8-jre-alpine"
+	    }
+	    to {
+	        image = "windowforsun/gradlemultiproject-web-read"
+	        tags = ["${project.version}".toString()]
+	    }
+	    container {
+	        mainClass = "com.windowforsun.multiproject.WebReadApplication"
+	        ports = ["8080"]
+	        
+	        creationTime = Instant.now()
+	        jvmFlags = [
+	        		// Spring 프로파일 지정
+	                '-Dspring.profiles.active=build'
+	        ]
+	    }
+	}
+
+	.. 생략 ..
+	```  
+
+	```groovy
+	// web-save	
+
+	plugins {
+		.. 생략 ..
+	
+	    // for GoogleContainerTools/jib
+	    id 'com.google.cloud.tools.jib' version '1.6.0'
+	}
+	
+	// for GoogleContainerTools/jib
+	jib {
+	    from {
+	        image = "openjdk:8-jre-alpine"
+	    }
+	    to {
+	        image = "windowforsun/gradlemultiproject-web-save"
+	        tags = ["${project.version}".toString()]
+	    }
+	    container {
+	        mainClass = "com.windowforsun.multiproject.WebSaveApplication"
+	        ports = ["8080"]
+	        
+	        creationTime = Instant.now()
+	        jvmFlags = [
+	        		// Spring 프로파일 지정
+	                '-Dspring.profiles.active=build'
+	        ]
+	    }
+	}
+	
+	.. 생략 ..
+	```  
+	
+- 빌드는 `root` 프로젝트에서 `./gradlew jibDockerBuild` 명령어로 수행한다.
+
+	```bash
+	$ ./gradlew jibDockerBuild
+	> Task :core:compileJava UP-TO-DATE
+	> Task :core:processResources NO-SOURCE
+	> Task :core:classes UP-TO-DATE
+	> Task :core:bootJar SKIPPED
+	> Task :core:jar UP-TO-DATE
+	> Task :core:assemble UP-TO-DATE
+	> Task :web-read:compileJava UP-TO-DATE
+	> Task :web-read:processResources NO-SOURCE
+	> Task :web-read:classes UP-TO-DATE
+	
+	Containerizing application to Docker daemon as windowforsun/gradlemultiproject-web-read, windowforsun/gradlemultiproject-web-read:1.0-
+	SNAPSHOT...
+	The base image requires auth. Trying again for openjdk:8-jre-alpine...
+	
+	Container entrypoint set to [java, -Dspring.profiles.active=build, -cp, /app/resources:/app/classes:/app/libs/*, com.windowforsun.mult
+	iproject.WebReadApplication]
+	
+	Built image to Docker daemon as windowforsun/gradlemultiproject-web-read, windowforsun/gradlemultiproject-web-read:1.0-SNAPSHOT
+	Executing tasks:
+	[==============================] 100.0% complete
+	
+	> Task :web-read:jibDockerBuild
+	> Task :web-save:compileJava UP-TO-DATE
+	> Task :web-save:processResources NO-SOURCE
+	> Task :web-save:classes UP-TO-DATE
+	
+	Containerizing application to Docker daemon as windowforsun/gradlemultiproject-web-save, windowforsun/gradlemultiproject-web-save:1.0-
+	SNAPSHOT...
+	The base image requires auth. Trying again for openjdk:8-jre-alpine...
+	
+	Container entrypoint set to [java, -Dspring.profiles.active=build, -cp, /app/resources:/app/classes:/app/libs/*, com.windowforsun.mult
+	iproject.WebSaveApplication]
+	
+	Built image to Docker daemon as windowforsun/gradlemultiproject-web-save, windowforsun/gradlemultiproject-web-save:1.0-SNAPSHOT
+	Executing tasks:
+	[==============================] 100.0% complete
+	
+	> Task :web-save:jibDockerBuild
+	
+	BUILD SUCCESSFUL in 47s
+	6 actionable tasks: 2 executed, 4 up-to-date
+	```  
+	
+	```bash
+	$ docker image ls | grep gradlemultiproject
+	windowforsun/gradlemultiproject-web-save   1.0-SNAPSHOT        60c5cf80f7cf        3 minutes ago       124MB
+	windowforsun/gradlemultiproject-web-save   latest              60c5cf80f7cf        3 minutes ago       124MB
+	windowforsun/gradlemultiproject-web-read   1.0-SNAPSHOT        ae282157947e        3 minutes ago       124MB
+	windowforsun/gradlemultiproject-web-read   latest              ae282157947e        3 minutes ago       124MB
+	```  
 	
 ---
 ## Reference
