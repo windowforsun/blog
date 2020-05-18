@@ -1,16 +1,18 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] Gradle Multi-Project(Multi-Module)"
+title: "[Spring 실습] Gradle Multi-Project(Multi-Module)"
 header:
-  overlay_image: /img/java-bg.jpg
+  overlay_image: /img/spring-bg.jpg
 excerpt: 'Gradle 을 사용해서 멀티 프로젝트를 구성하고 빌드해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Java
+  - Spring
 tags:
     - Concept
+    - Spring
+    - Spring Boot
     - Java
     - Gradle
     - Multi-Project
