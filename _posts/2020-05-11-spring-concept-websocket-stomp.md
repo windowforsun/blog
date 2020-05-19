@@ -483,7 +483,71 @@ toc: true
 - 이러한 기능을 통해 각 사용자는 고유한 정보를 받을 수 있으면서, 다른 사용자와의 충돌하지 않고 동시에 같은 경로를 구독할 수 있도록 제공한다.
 - 송신측에서는 `/user/{username}/queue/position-updates` 와 같은 목적지에 메시지를 보낼 수 있고, 이는 `UserDestinationMessageHandler` 를 통해 사용자 세션마다 하나씩 다수개의 목적지가 매핑된다.
 - 이러한 구조를 통해 애플리케이션에서는 사용자 이름외의 다른 정보가 없더라도 특정 사용자에게 메시지를 전송할 수 있고, 이는 `Annotation` 과 `MessagingTemplate`(`SimpMessagingTemplate`)을 통해서도 지원된다.
+- 메시지 전송은 아래와 같이 `@SendToUser` 를 통해 경로와 관련된 사용자에게 전송 할 수 있다.
 
+	```java
+	@Controller
+    public class PortfolioController {
+    
+        @MessageMapping("/trade")
+        @SendToUser("/queue/position-updates")
+        public TradeResult executeTrade(Trade trade, Principal principal) {
+            // ...
+            return tradeResult;
+        }
+    }
+	```  
+	
+- `@SendToUser` 를 사용해서 경로를 통해 메시지를 전송할때, 해당 유저가 하나이상의 세션을 유지하고 있을 경우 모든 세션에 대해 메시지가 전송된다. 메시지를 전송한 세션에만 전송을 해야 할때는 아래와 같이 `broadcast` 속성에 `false` 를 설정하면 된다.
+
+	```java
+	@Controller
+    public class MyController {
+    
+        @MessageMapping("/action")
+        public void handleAction() throws Exception{
+            // raise MyBusinessException here
+        }
+    
+        @MessageExceptionHandler
+        @SendToUser(destinations="/queue/errors", broadcast=false)
+        public ApplicationError handleException(MyBusinessException exception) {
+            // ...
+            return appError;
+        }
+    }
+	```  
+
+- `SimpMessageTemplate` 를 사용하면 `@SendToUser` 를 사용해서 메시지를 전송한 것과 동일하게 동작을 수행할 수 있다.
+
+	```java
+	@Service
+    public class TradeServiceImpl implements TradeService {
+    
+        private final SimpMessagingTemplate messagingTemplate;
+    
+        @Autowired
+        public TradeServiceImpl(SimpMessagingTemplate messagingTemplate) {
+            this.messagingTemplate = messagingTemplate;
+        }
+    
+        // ...
+    
+        public void afterTradeExecuted(Trade trade) {
+            this.messagingTemplate.convertAndSendToUser(
+                    trade.getUserName(), "/queue/position-updates", trade.getResult());
+        }
+    }
+	```  
+	
+	- 외부 브로커를 사용할 경우, 각 사용자마다 고유한 대기열(`queue`)를 사용해서 1:1 메시지를 관리 할 수 있다.
+	- 사용자의 세션이 종료될 경우 해당되는 고유 대기열을 정리하는 방식으로 구성할 수 있다.
+	- `RabbitMq` 의 경우 `/exchange/amq.direct/position-update` 의 고유 대기열을 사용할 때, 사용자는 `/user/exchange/amq.direct/position-update` 경로를 구톡해서 메시지를 받을 수 있다.
+- 다중 애플리케이션과 같은 상황에서 각 유저경로에 대한 관리는 `MessageBrokerRegistry` 의 `userDestinationBroadcast` 속성을 통해 할 수 있다.
+
+### Order of Messages
+
+	
 
 ---
 ## Reference
