@@ -178,7 +178,7 @@ docker {
 ### 빌드
 - 빌드 명령어는 `./gradlew docker` 와 `./gradlew dockerPush` 로 할 수 있다.
 	- `docker` 은 단순히 로컬에 빌드만 수행한다. 이경우 태깅은 기본적으로 `latest` 가 붙게 된다.
-	- `dockerPush` 는 `docker` 를 수행해서 로컬에서 빌드를 수행하고 그 결과물에 대해서 `tag` 에 설정된 이름 대로 태깅을 한 수 저장소에 푸쉬까지 한다.
+	- `dockerPush` 는 `docker` 를 수행해서 로컬에서 빌드를 수행하고 그 결과물에 대해서 `tag` 에 설정된 이름 대로 태깅을 한 수 저장소에 푸시까지 한다.
 - `docker` 를 통해 빌드하면 이미지는 아래와 같이 `latest` 태그의 이미지만 생성되는 것을 확인 할 수 있다.
 
 	```bash
@@ -201,7 +201,7 @@ docker {
     windowforsun/gradletest-simple   latest              bc3b4101c47e        30 seconds ago      102MB
 	```  
 	
-- `dockerPush` 를 통해 빌드하면 아래와 같이 `latest` 뿐만아니라 `tag` 를 통해 설정한 이미지까지 생성되고, 모든 이미지는 저장소에 푸쉬 된다.
+- `dockerPush` 를 통해 빌드하면 아래와 같이 `latest` 뿐만아니라 `tag` 를 통해 설정한 이미지까지 생성되고, 모든 이미지는 저장소에 푸시 된다.
 
 	```bash
 	$ ./gradlew dockerPush
@@ -359,7 +359,7 @@ jib {
 
 ### 빌드
 - 빌드 명령어는 `./gradlew jib` 또는 `./gradlew jibDockerBuild` 등으로 할 수 있다.
-	- `jib` 는 `target image` 를 빌드하고 태깅 후 설정된 저장소에 푸쉬까지 수행하지만, `Docker daemon` 을 사용하지 않기 때문에 로컬에서는 빌드된 이미지를 확인 할 수 없다
+	- `jib` 는 `target image` 를 빌드하고 태깅 후 설정된 저장소에 푸시까지 수행하지만, `Docker daemon` 을 사용하지 않기 때문에 로컬에서는 빌드된 이미지를 확인 할 수 없다
 	- `jibDockerBuild` 는 `target image` 를 빌드하고 태깅 까지만 수행하고, `Docker daemon` 을 사용해서 수행하기때문에 로컬에서 확인이 가능하다.
 - `./gradlew jibDockerBuild` 로 빌드를 수행하면 `target image` 생성 후 설정된 태깅까지만 수행한다.
 
@@ -408,7 +408,7 @@ jib {
 	```  
 	
 
-- `./gradlew jib` 를 통해 빌드를 수행하면 아래와 같이 `target image` 의 빌드를 수행하고, 설정된 태깅 수행 후 저장소에 푸쉬하게 된다.
+- `./gradlew jib` 를 통해 빌드를 수행하면 아래와 같이 `target image` 의 빌드를 수행하고, 설정된 태깅 수행 후 저장소에 푸시하게 된다.
 
 	```bash
 	$ ./gradlew jib
