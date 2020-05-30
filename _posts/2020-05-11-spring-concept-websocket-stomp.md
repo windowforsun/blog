@@ -546,8 +546,33 @@ toc: true
 - 다중 애플리케이션과 같은 상황에서 각 유저경로에 대한 관리는 `MessageBrokerRegistry` 의 `userDestinationBroadcast` 속성을 통해 할 수 있다.
 
 ### Order of Messages
+- 브로커가 전달하는 메시지는 `WebSocket` 세션에 등록된 `clientOutboundChannel` 을 통해 발송된다.
+- 발송에 사용하는 `clientOutboundChannel` 은 `ThreadPoolExecutor` 을 통해 별도의 스레드로 처리 되기 때문에, 브로커가 발송한 순서와 클라이언트가 실제로 수신한 순서는 다를 수 있다.
+- 브로커의 발송 순서와 클라이언트가 수신한 순서를 일치시키고 싶을 경우 아래와 같이 `setPreservePublisherOrder` 를 활성화 해준다.
 
+	```java
+	@Configuration
+	@EnableWebSocketMessageBroker
+	public class MyConfig implements WebSocketMessageBrokerConfigurer {
 	
+	    @Override
+	    protected void configureMessageBroker(MessageBrokerRegistry registry) {
+	        // ...
+	        registry.setPreservePublishOrder(true);
+	    }
+	
+	}
+	```  
+	
+	- 위와 같이 설정하게 될 경우, 각 `WebSocket` 세션당 하나의 `clientOutboundChannel` 에 한번에 하나씩 전달되기 때문에, 순서를 일치 시킬수 있다.
+	- 하지만 위 설정의 경우 일련의 동작으로 인해 퍼포먼스 이슈가 발생할 수 있기 때문에, 필요한 경우에만 사용하는게 좋다.
+	
+### Events
+- `WebSocket STOMP` 를 사용하며 발생되는 몇 가지 이벤트는 `ApplicationContext` 에 의해 실행되고, `ApplicationListner` 구현을 통해 이벤트 사용이 가능하다. 아래부턴 사용가능한 이벤트에 대해 설명한다.
+
+
+
+
 
 ---
 ## Reference

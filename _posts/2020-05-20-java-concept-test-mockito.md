@@ -471,6 +471,223 @@ public void mockObject_실제객체를통해생성_mockObject처럼사용가능(
 
 ### ArgumentCaptor 로 호출된 메소드 인자값 검증하기
 
+```java
+@Test
+public void mockObject_호출메소드파라미터검증() {
+    // given
+    ArrayList<String> mockList = mock(ArrayList.class);
+    ArgumentCaptor<Integer> argumentCaptor = ArgumentCaptor.forClass(Integer.class);
+    // stubbing
+    when(mockList.get(0)).thenReturn("a");
+
+    // then
+    assertThat(mockList.get(0), is("a"));
+    verify(mockList).get(argumentCaptor.capture());
+    assertThat(0, is(argumentCaptor.getValue()));
+}
+```  
+
+- 테스트 검증 과정에서 `ArgumentCaptor` 를 사용해서 호출된 메소드의 인자값에 대해 다양한 방식으로 검증을 수행할 수 있다.
+- 이러한 방식으로 통해 인자값에 대한 검증을 좀더 깔끔하고, 쉽게 수행할 수 있어 추천하는 방식이다.
+- `ArgumentCaptor` 는 호출된 메소드의 인자값에 대한 검증을 하는 역할이기 때문에, `stub` 의 인자값에는 사용하지 않는게 좋다.
+	- `ArgumentCaptor` 의 검증 부분은 외부에서 별도로 검증문을 작성하는 방식이기 때문에, `stub` 사용에 있어서는 가독성을 떨어뜨릴 수 있다.
+- `ArgumentCaptor` 비슷한 기능을 하는 `ArgumentMatcher` 와 비교될 수 있지만, 호출된 메소드의 인자 검증에는 `ArgumentCaptor` 가 적합하고 `verify` 에는 `ArgumentMatcher` 가 적합하다.
+- 1.8 버전부터 지원한다.
+
+### 실제 객체의 메소드 호출하기
+
+```java
+@Test
+public void mockObject_특정메소드_실제호출() {
+    // given
+    ArrayList<String> mockList = mock(ArrayList.class);
+    when(mockList.get(0)).thenReturn("a");
+    when(mockList.size()).thenCallRealMethod();
+
+    // then
+    assertThat(mockList.get(0), is("a"));
+    assertThat(mockList.size(), is(0));
+    verify(mockList).get(0);
+    verify(mockList).size();
+}
+```  
+
+- 객체에 대해서 `mocking` 을 부분적으로 적용하는 방법은 앞서 설명한 `spy` 가 있다. 같은 기능을 제공하지만 좀 더 간단하고 명시적인 사용을 위해 `partial mocking` 이 있다.
+- `Mock` 객체를 생성하는 것처럼 생성후, `stub` 을 할때 실제 메소드를 호출할 부분에서 `thenCallRealMethod()` 를 지정해 주면된다.
+- 1.8 버전부터 지원한다.
+
+### Mock 객체 리셋
+
+```java
+@Test
+public void mockObject_설정리셋() {
+    // given
+    ArrayList<String> mockList = mock(ArrayList.class);
+    when(mockList.get(0)).thenReturn("a");
+    when(mockList.get(1)).thenReturn("b");
+
+    // when
+    reset(mockList);
+
+     // then
+    assertThat(mockList.get(0), nullValue());
+    assertThat(mockList.get(1), nullValue());
+}
+```  
+
+- 테스트를 위해 다양한 다양한 설정을 한 `Mock` 객체는 특정 시점에 깔끔하게 리셋을 해야하는 경우가 있다면 `reset()` 을 통해 이를 수행하 수 있다.
+- `reset()` 을 사용하기 전에 너무 많은 행동을 한개의 테스트에서 검증하려 하는건 아닌지 등의 수행하려는 테스트에 대해서 한번 더 고민이 필요할 수 있다. 
+- 1.8 버전부터 지원한다.
+
+
+### 메소드 타임아웃 검증
+
+```java
+@Test
+public void mockObject_타임아웃_검증() {
+    // given
+    ArrayList<String> mockList = mock(ArrayList.class);
+    when(mockList.get(0)).thenReturn("a");
+    when(mockList.get(1)).thenReturn("b");
+
+    // then
+    assertThat(mockList.get(0), is("a"));
+    assertThat(mockList.get(1), is("b"));
+    verify(mockList, timeout(5).times(2)).get(anyInt());
+}
+```  
+
+- 메소드가 실행될 때 소요되는 타임아웃 시간을 검증 할 수 있다.
+- 동시성을 가진 테스트에서 유용할 수있다.
+
+### BDD 스타일 테스트
+
+```java
+@Test
+public void mockObject_BDD형식테스트() {
+    // org.mockito.BDDMockito
+    // given
+    ArrayList<String> mockList = mock(ArrayList.class);
+    given(mockList.get(0)).willReturn("a");
+
+    // when
+    String actual = mockList.get(0);
+
+    // then
+    then(mockList).should().get(0);
+    assertThat(actual, is("a"));
+}
+```  
+
+- `org.mockito.BDDMockito` 패키지를 사용해서 `BDD(Behavior Driven Development)` 스타일의 테스트를 할 수 있다.
+
+### @Capture
+
+```java
+@Captor
+ArgumentCaptor<Integer> captor;
+
+@Test
+public void mockObject_CaptureAnnotation() {
+    // given
+    MockitoAnnotations.initMocks(this);
+    ArrayList<String> mockList = mock(ArrayList.class);
+    when(mockList.get(0)).thenReturn("a");
+    when(mockList.get(1)).thenReturn("b");
+
+    // then
+    assertThat(mockList.get(0), is("a"));
+    assertThat(mockList.get(1), is("b"));
+    verify(mockList, times(2)).get(this.captor.capture());
+    assertThat(this.captor.getAllValues(), containsInAnyOrder(0, 1));
+}
+```  
+
+- `ArgumentCaptor` 의 객체를 자동설정 해준다.
+- 사용을 위해서는 `MockitoAnnotations.initMocks()` 과 같은 `@Mock` 과 동일 한 설정이 필요하다.
+
+### @Spy
+
+```java
+@Spy
+ArrayList<String> spyList;
+
+@Test
+public void mockObject_SpyAnnotation_실제객체생성() {
+    // given
+    MockitoAnnotations.initMocks(this);
+    this.spyList.add("a");
+    when(this.spyList.size()).thenReturn(999);
+
+    // then
+    assertThat(this.spyList.get(0), is("a"));
+    assertThat(this.spyList, hasSize(999));
+    verify(this.spyList).get(0);
+    verify(this.spyList).size();
+}
+```  
+
+- `spy()` 대신 사용할 수 있다.
+- 사용을 위해서는 `MockitoAnnotations.initMocks()` 과 같은 `@Mock` 과 동일 한 설정이 필요하다.
+
+### @InjectMock
+
+```java
+class PlusOperation {
+    public int execute(int a, int b) {
+        return a + b;
+    }
+}
+class MinusOperation {
+    public int execute(int a, int b) {
+        return a - b;
+    }
+}
+class Calculator {
+    private PlusOperation plus;
+    private MinusOperation minus;
+
+    public Calculator(PlusOperation plus, MinusOperation minus) {
+        this.plus = plus;
+        this.minus = minus;
+    }
+
+    // or setter
+    // getter
+
+
+    public PlusOperation getPlus() {
+        return plus;
+    }
+
+    public MinusOperation getMinus() {
+        return minus;
+    }
+}
+
+@Mock
+PlusOperation plus;
+@Mock
+MinusOperation minus;
+@InjectMocks
+Calculator calculator;
+@Test
+public void mockObject_InjectMocksAnnotation_자동주입() {
+    // given
+    MockitoAnnotations.initMocks(this);
+    when(this.plus.execute(1, 1)).thenReturn(11);
+    when(this.minus.execute(2, 2)).thenReturn(22);
+
+    // when
+    assertThat(this.calculator.getPlus().execute(1, 1), is(11));
+    assertThat(this.calculator.getMinus().execute(2,2), is(22));
+    verify(this.plus).execute(1, 1);
+    verify(this.minus).execute(2, 2);
+}
+
+```  
+
+- 객체의 필드에 사용자가 정의한 객체가 있을 때 `@InjectMock` 을 사용하면 쉽고 한번에 `Mock` 혹은 `Spy` 객체를 설정할 수 있다.
 
 
 ---
