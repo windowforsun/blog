@@ -205,7 +205,7 @@ Bean Type | Explanation
 	기본적인 속성 연결은 `DispatcherServlet.WEB_APPLICATION_CONTEXT_ATTRIBUTE` 키의 값을 사용한다.
 	1. `Locale Resolver` 는 프로세스의 요소들이 요청을 처리할 때 사용할 `Locale` 해결할 수 있도록 요청에 바인딩 된다.
 	`Locale` 관련 처리가 필요하지 않다면, `Locale Resolver` 또한 필요하지 않다.
-	
+	1. `Theme Resolver` 는 `View` 요소들이 사용할 테마를 결정할 수 있도록 요청과 연결되는데, 테마를 사용하지 않을 경우 무시해도 된다.
 
 
 ---
