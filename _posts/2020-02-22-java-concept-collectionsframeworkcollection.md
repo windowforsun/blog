@@ -175,11 +175,12 @@ use_math: true
 	peek()|peekFirst()
 
 #### ArrayDeque
-- `Dequeue` 를 구현한 클래스로, 배열을 사용한 `deck`(Linked List) 의 구현체이다.
+- `Dequeue` 를 구현한 클래스로, 배열을 사용한 `deck`(배열을 이용한 LinkedList) 의 구현체이다.
 - 내부에서 사용한 배열의 크기는 자동으로 조정 된다.
 - 동기화에 대한 처리가 돼있지 않다.
 - `null` 원소를 허용하지 않는다.
 - 스택 자료구조처럼 사용될때는 `Stack` 구현체 클래스 보다 빠르고, 큐 자료구조로 사용될 때는 `LinkedList` 구현체 클래스보다 빠른 성능을 보인다.
+- 배열에서 `head`, `tail` 포인터를 사용해서 `LinkedList` 를 구현했고, 데이터 추가 과정에서 `head` 와 `tail` 이 만날 때 사이즈를 2배로 늘린다.
 - `ArrayDeque` 에서 제공하는 메소드들은 대부분 `Amortized Constant time` 임을 보장한다. 제외 되는 메소드는 removeFirstOccurrence, removeLastOccurrence, contains, iterator, remove 들이 있고, 대부분의 모든 메소드들도 선형시간을 보장한다.
 	>- Amortized Constant time(분활 상환 상수 시간)
 	>   - 동적 배열(ArrayList)에서 발생할 수 있는 시간 복잡도 이다.
