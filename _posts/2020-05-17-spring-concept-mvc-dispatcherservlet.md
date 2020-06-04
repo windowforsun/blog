@@ -206,6 +206,58 @@ Bean Type | Explanation
 	1. `Locale Resolver` 는 프로세스의 요소들이 요청을 처리할 때 사용할 `Locale` 해결할 수 있도록 요청에 바인딩 된다.
 	`Locale` 관련 처리가 필요하지 않다면, `Locale Resolver` 또한 필요하지 않다.
 	1. `Theme Resolver` 는 `View` 요소들이 사용할 테마를 결정할 수 있도록 요청과 연결되는데, 테마를 사용하지 않을 경우 무시해도 된다.
+	1. `Multipart File Resolver` 를 명시하게 되면, `Multipart` 요청일 경우 요청을 `MultipartHttpServletRequest` 로 랩핑해서 이후 처리부터 사용하게 된다. `Multipart` 요청에 대한 처리는 [ Multipart Resolver](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-multipart)
+	에서 보다 자세히 확인 할 수 있다.
+	1. 요청을 처리할 적절한 핸들러가 발견되면 모델 렌더링을 준비하기 위한 핸들러(preprocessor, postprocessor, controller)와 관련된 체인이 실행된다. 
+	`Annotation` 이 설정된 `Controller` 일 경우, `View` 렌더링 대신 `HandlerAdapter` 에서 응답을 만들어 전달해 줄 수 있다.
+	1. 모델이 리턴될 경우 `View` 를 렌더링하고, 그렇지 않을 경우 요청이 이미 수행되었을 수 있기때문에 `View` 에 대한 처리를 하지 않는다.
+		- 모델이 리턴되지 않았을 경우는 보안상 이슈나, 전처리, 후처리에서 요청을 가로챈 상황이 될 수 있다.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ---
