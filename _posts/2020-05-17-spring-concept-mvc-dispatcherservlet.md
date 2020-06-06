@@ -286,11 +286,20 @@ Bean Type | Explanation
 	}
 	```  
 	
-- `Servlet API` 에서는 `Java Config` 를 통해 기본 에러 페이지에 대한 설정을 제공하지 않는다. 하지만 `WebApplicationIntiailizer` 와 최소한의 `web.xml` 을 사용하는 방법으로는 가능하다.
+- `Servlet API` 에서는 `Java Config` 를 통해 기본 에러 페이지에 대한 설정을 제공하지 않는다. 하지만 `WebApplicationInitializer` 와 최소한의 `web.xml` 을 사용하는 방법으로는 가능하다.
 
 
-
-
+## View Resolution
+- `Spring MVC` 는 특정 뷰관련 기술에 종속되지 않고, 브라우저에서 모델을 렌더링할 수 있는 `ViewResolver` 와 `View` 인터페이스를 정의한다. 여기서 `ViewResolver` 는 뷰 이름과 실제 뷰를 매핑하는 작업을 제공하고, `View` 는 특정 뷰 기술을 수행하기 전에 준비된 데이터를 전달한다.
+- 아래 표는 `ViewResolver` 계층관련 자세한 내용에 대해 설명한다.
+	
+	ViewResolver|Description
+	---|---
+	`AbstractCachingViewResolver`|`AbstractCachingViewResolver` 의 하위 클래스는 뷰 인스턴스를 캐싱한다. 캐싱은 특정 뷰 기술에 대한 성능향상을 가져올 수 있다. `cache` 프로퍼티를 `false` 로 설정할 경우 해당 캐싱기능을 끌 수 있다. 런타임에서 특정 뷰를 갱신해야 할 경우 `removeFromCache(String viewName, Locale loc)` 를 사용할 수 있다.
+	`XmlViewResolver`|`Spring` 의 `XML` 빈 팩토리와 같은 `DTD` 로 `XML` 로 작성된 설정 파일을 사용하는 `ViewResolver` 의 구현체이다. 기본 설정파일은 `/WEB-INF/views.xml` 이다.
+	`ResourceBundleViewResolver`|번들 기본이름으로 명시된 `ResourceBundle` 의 빈 정의를 사용하는 `ViewResolver` 의 구현체이다. 렌더링이 필요한 각 뷰에 대해서, `[viewname].(class)` 는 뷰 클래스, `[viewname].url` 은 뷰 `URL` 로 사용된다. 더욱 자세한 관련예제는 [`View Technologies`](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-view) 에서 확인 가능하다.
+	`UrlBaseViewResolver`|뷰에 대한 명시적인 매핑 정의 없이 논리적인 뷰 이름인 `URL` 을 기반으로 렌더링을 수행하는 `ViewResolver` 의 간단한 구현체이다. 논리적인 뷰 이름은 별도의 매핑 필요없이 뷰관련 리소스의 이름과 일치할 경우 사용하기 적절하다.
+	`InternalResourceViewResolver`|
 
 
 
