@@ -212,22 +212,81 @@ Bean Type | Explanation
 	`Annotation` 이 설정된 `Controller` 일 경우, `View` 렌더링 대신 `HandlerAdapter` 에서 응답을 만들어 전달해 줄 수 있다.
 	1. 모델이 리턴될 경우 `View` 를 렌더링하고, 그렇지 않을 경우 요청이 이미 수행되었을 수 있기때문에 `View` 에 대한 처리를 하지 않는다.
 		- 모델이 리턴되지 않았을 경우는 보안상 이슈나, 전처리, 후처리에서 요청을 가로챈 상황이 될 수 있다.
+- `WebApplicationContext` 에 선언된 `HandlerExceptionResolver` 빈은 요청을 처리하는 과정에서 발생하는 예외를 해결하기 위해 사용되는데, 예외 햬결은 커스텀하게 관련 로직을 사용자가 정의 할 수 있다.
+	- 관련된 더 자세한 내용은 [여기](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-exceptionhandlers)
+	 에서 확인 가능하다.
+- `Spring` 의 `DispatcherServlet` 은 `Servlet API` 에서 명시된 `last-modification-date` 의 반환을 지원하는데,
+ 이는 `DispatcherServlet` 이 `HandlerMapping` 을 통해 적절한 핸들러를 찾은 다음 
+ 해당 핸들러가 `LastModified` 인터페스르를 구현하는지 검사하고 
+ 구현하고 있다면 `getLastModified(request)` 메소드를 통해 클라이언트에게 반환한다.
+- `web.xml` 설정 중 `Servlet` 선언 부분에서 `Servlet` 초기화 파라미터(`init-param`) 을 통해 개별로 구성되는 `DispatcherServlet` 을 추가할 수 있다.
 
+	Parameter|Explaination
+	---|---
+	`contextClass`|설정하는 `Servlet` 에 의해 로컬로 설정되는 `ConfiguredWebApplicationContext` 의 구현체 클래스로 `XmlWebApplication` 이 기본으로 사용된다.
+	`contextConfigLocation`|`Context` 의 인스턴스의 위치를 나타내는 문자열로, 구분자(`,`) 를 통해 하나 이상으로도 설정 가능하다. 두번이상 정의된 빈의 위치의 경우에는 최신위치를 우선해서 사용한다.
+	`namespace`|`WebApplicationContext` 의 네임스페이스관련 설정으로 기본으로는 `[servlet-name]-servlet` 이 사용된다.
+	`throwExceptionIfNotHandlerFound`|요청을 처리할 핸들러를 찾지 못했을 때 `NoHandlerFoundException` 을 던질디에 대한 여부의 설정으로, `HandlerExceptionResolver`(컨트롤러 사용시 `@ExceptionHandler`) 에서 발생한 예외를 적절한 방법으로 처리할 수 있다. 기본 값은 `false` 로 설정되고 `DispatcherServlet` 은 예외를 발생시키지 않고 응답 상태값을 `404 Not Found` 로만 설정한다. [기본 servlet handler](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-default-servlet-handler) 사용시 처리할 수 없는 요청은 항상 기본 `Servlet` 에 전달되고 `404` 는 발생하지 않는다.
+	
+## Interception
+- 모든 `HandlerMapping` 은 특정 요청에(권한 검사 등) 대해 특정 기능을 수행해야하는 경우에 `handler interceptor` 기능을 제공한다. `Interceptor` 를 구현하기 위해서는 `org.springframework.web.servlet` 패키지의 `HandlerInterceptor` 를 구현해야 하는데 이는 관련처리를 위해 아래와 같은 3가지 메소드를 제공한다.
+	- `preHandler(..)` : 요청을 처리할 핸들러 실행 전 호출 된다.
+	- `postHandler(..)` : 요청을 처리하는 핸들러 실행 후 호출 된다.
+	- `afterCompletion(..)` : 요청 처리가 완료되고 나서 호출 된다. (응답 전송 후)
+- `preHandler()` 메소드는 `boolean` 을 리턴하게 되는데, 이후 `execution chain` 을 계속해서 실행 할지에 대한 여부를 결정할 수 있다. `true` 를 리턴하면 계속해서 실행을 수행하고, `false` 를 리턴하면 `DispatcherServlet` 에서는 요청을 모두 처리했다고 가정하고 이후 `execution chain` 은 실행하지 않는다.
+- [Interceptors](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-config-interceptors)
+에서 구성하는 방법에 대한 설명이 있다. 개별 `HandlerMapping` 구현체에 `setter` 를 통해 직접 등록하는 것도 가능하다.
+- 요청을 처리하는 핸들러를 실행하는 `HandlerAdapter` 에서 `postHandler` 호출 전에 응답이 작성되고 커밋되기 때문에 `@ResponseBody` 또는 `ResponseEntity` 관련 메소드에서 공통 처리에 대한 부분이 유용하지 않을 수 있다.
+`postHandler()` 을 사용해서 헤더 및 응답을 추가한다던가, 변경은 적용되지 않는다. 해당 동작을 위해서는 `ResponseBodyAdvice` 를 구현하고 [Controller Advice](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-ann-controller-advice)
+빈으로 설정하는 방법과 직접 `RequestMappingHandlerAdapter` 를 구성하는 방법이 있다.
 
+## Exception
+- 요청 매핑(`HandlerMapping`) 중 에러 및 요청 처리(`HandlerAdapter`, `@Controller`) 중 에러가 발생하면, `DispatcherServlet` 은 체인으로 구성된 `Handler ExceptionRevolver` 빈에게 위임해서 예외 처리 및 오류 응답에 대한 처리를 수행한다.
+- 사용가능한 `HandlerExceptionResolver` 의 구현체는 아래와 같다.
 
+	`HandlerExceptionResolver`|Description
+	---|---
+	`SimpleMappingExceptionResolver`|예외 클래스이름과 에러 페이지의 이름을 매핑한다. 브라우저에서 에러페이지에 대한 처리에 유용하다.
+	`DefaultHandlerExceptionResolver`|`Spring MVC` 에서 발생한 예외를 처리하고 `HTTP` 상태코드에 매핑한다. 관련된 다른 구현체로는 `ResponseEntityExceptionHandler` 와 [REST API exception](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-ann-rest-exceptions) 이 있다.
+	`ResponseStatusExceptionResolver`|`@ResponseStatus` 를 사용해서 예외를 해결하고, `Annotation` 에 설정된 값으로 `HTTP` 상태코드를 매핑한다.
+	`ExceptionHandlerExceptionResolver`|`@Controller` 및 `@ControllerAdvice` 클래스에 선언된 `@ExceptionHandler` 메소드를 호출해서 예외를 처리르한다. [@ExceptionHandler methods](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-ann-exceptionhandler)
 
+### Chain of Resolvers
+- `Spring` 설정을 통해 `HandlerExceptionResolver` 관련 설정을 하나 이상 설정할 수 있는데, 각 빈은 `order` 프로퍼티를 통해 우선순위를 설정할 수 있다. `order` 가 높을 수록 해당 `exception resolver` 는 늦게 호출된다.
+- `HandlerExceptionResolver` 는 아래와 같은 값을 반환할 수 있다.
+	- 에러 페이지를 위한 `ModelAndView`
+	- 이미 에러 처리가 된 상태인 경우 비어있는 `ModelAndView`
+	- 예외가 처리되지 않은 상태이고 체인으로 연결된 상태에서 다음 `resolver` 에게 넘기고 싶을 경우 `null`
+- [Spring MVC Config](https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#mvc-config) 
+는  `Spring MVC` 예외와 `@ResponseStatus`, `@ExceptionHandler` 메소드 에외 처리를 하기위해서는 내장된 기본 `resolver` 를 자동으로 선언해서 사용한다. 관련 설정은 사용자가 커스텀하게 변경 할 수 있다.
 
+### Container Error Page
+- 예외가 `HandlerExceptionResolver` 에 의해 처리되지 못하거나, 응답 상태가 에러(4xx, 5xx) 일 경우 `Servlet container` 는 `HTML` 에 기본 에러 페이지를 렌더링 한다. 
+기본 에러 페이지에 대한 설정은 `web.xml` 에서 에러 페이지를 매핑을 선언하면 가능하다.
 
+	```xml
+	<error-page>
+		<location>/error</location>
+	</error-page>
+	```  
+	
+- 예외 처리가 계속 전파되어 에러 상태일경우 `Servlet container` 에 설정된 `Error URL`(`/error`) 로 에러를 전송한다. 그리고 에러 경로는 `DispatcherServlet` 에 의해 처리 되기 때문에 `@Controller` 를 통해 에러 경로를 매핑해서 처리 가능하고 `ModelAndView` 반환하거나 `JSON` 응답을 반환 할 수 있다.
 
-
-
-
-
-
-
-
-
-
+	```java
+	@RestController
+	public class ErrorController {
+	
+		@RequestMapping(path = "/error")
+		public Map<String, Object> handle(HttpServletRequest request) {
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("status", request.getAttribute("javax.servlet.error.status_code"));
+			map.put("reason", request.getAttribute("javax.servlet.error.message"));
+			return map;
+		}
+	}
+	```  
+	
+- `Servlet API` 에서는 `Java Config` 를 통해 기본 에러 페이지에 대한 설정을 제공하지 않는다. 하지만 `WebApplicationIntiailizer` 와 최소한의 `web.xml` 을 사용하는 방법으로는 가능하다.
 
 
 
