@@ -102,7 +102,7 @@ use_math: true
 	```  
 	
 ## Memcached 상태 관리
-- `memcached-tool` 을 통해 사용중인 메모리와 관련 상태 정보를 조회 할 수 있다.
+- `memcached-tool` 을 통해 `Memcached` 의 상태 정보와 사용중인 메모리관련 정보를 조회 할 수 있다.
 	
 	```bash
 	$ memcached-tool
