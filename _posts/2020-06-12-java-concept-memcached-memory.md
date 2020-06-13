@@ -193,6 +193,8 @@ use_math: true
           worker_logbuf_size       65536
 	```  
 	
+## Memcached 명령어
+	
 ## Memcached 메모리 할당과 사용
 
 ## Memcached LRU
