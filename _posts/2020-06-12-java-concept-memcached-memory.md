@@ -18,6 +18,129 @@ use_math: true
 ## Memcached
 - `Memcached` 에 대한 기본 설정은 [여기]({{site.baseurl}}{% link _posts/2019-03-25-memcached-intro.md %})
 에 기술 돼있다.
+	
+## Memcached 명령어
+- 명령어 표준 프로토콜은 `item` 에 대한 동작을 수행하고, `item` 은 아래와 같은 구성을 갖는다.
+	- `key` : `ASCII` 포맷으로 최대 250 byte 길이의 문자열을 가질 수 있다.
+	- `flag` : 32 bit 플래그 데이터로 조회시 함께 반환된다.
+	- `expired time` : `item` 의 만료 시간(초)으로 0 값일 경우 만료되지 않고, 최대 30일 까지 설정 가능하다. `unixtimestamp` 로 처리된다.
+	- `cas` : `cas` 라는 동작에 사용되는 64 bit 의 유니크한 값이다.
+	- `data` : 실제로 저장하려는 데이터이다.
+- `cas` 는 옵션으로 `item` 을 구성하는데 더 많은 필드를 구성하고, `-c` 를 통해 완전히 비활성화 할 수 있다.
+- `Memcached` 명령어 프로토콜관련 더 자세한 내용은 [여기](https://github.com/memcached/memcached/wiki/Protocols)
+에서 확인 가능하다.
+
+### No Replay
+- `Memcached` 는 명령어 수행에 대해 [Text Protocol](https://github.com/memcached/memcached/blob/master/doc/protocol.txt)
+과 [Binary Protocol](https://github.com/memcached/memcached/wiki/BinaryProtocolRevamped) 
+을 제공한다.
+- `Text Protocol`(ASCII) 에서 대부분의 명령어는 `no reply` 기능을 제공하지만, 
+요청에 대한 오류를 대응 시킬 수 없기 때문에 권장하는 방식은 아니다. 
+해당 프로토콜에서는 `set`, `add` 명령과 같은 수행에서 결과에 대한 반환 패킷을 기다리지 않는 것을 목적으로 한다.
+- `Binary Protocol` 은 `no reply` 기능을 알맞게 제공하기 때문에 기능을 활용할 수 있다.
+
+### Storage Command (저장)
+
+Command|Description|Example
+---|---|---
+set|데이터를 저장하는 명령어로, 존재할 경우 덮어쓰고 새로운 데이터의 경우 `LRU` 의 최상단에 위치하게 된다.|set <key> <flags> <ttl> <size>
+add|새로운 데이터를 저장하는 명령어로, 새로운 데이터는 `LRU` 의 최상단에 위치하고 이미 존재할 경우 실패한다.|add <key> <flags> <ttl> <size>
+replace|기존 데이터를 교체하는 명령어이다.|replace <key> <flags> <ttl> <size>
+append|기존 데이터의 마지막 바이트 이후에 데이터를 추가하는 명령어로, `item` 크기 제한을 초과 할 수 없다.|append <key> <flag> <ttl> <size>
+prepend|`append` 와 수행하는 동작이 같지만, 기존 데이터의 앞쪽에 추가한다.|prepend <key> <flags> <ttl> <size>
+cas|`check and set`, `compare and swap` 의 동작을 수행하는 명령어로, 기존 데이터를 마지막에 읽은 클라이언트외 다른 클라이언트는 갱신하지 못한다. `race condition` 이 발생할 수 있는 데이터에 적접한 동작이다.|하단에서 별도로 설명
+
+- `cas` 명령어는 `cas <key> <flags> <ttl> <size> <unique_cas_key> [noreply]` 의 구성을 갖는다.
+	- `unique_cas_key` : 해당하는 `key` 에 대한 데이터를 조회(`gets`) 했을 때 얻은 64 bit 고유한 키이다.
+	- `noreply` : 명령어 수행 후 서버에서 응답을 받을지 여부
+
+### Retrieval Command (조회)
+
+Command|Description|Example
+---|---|---
+get|저장된 데이터를 조회하는 명령어로, 하나 이상의 키를 전달해 조회 가능하다.|get <key key ...>
+gets|`cas` 와 함께 사용한 `get` 명령어로, 데이터와 `cas` 식별자(`unique_cas_key`) 를 반환한다. 이후 `cas` 명령어에서 해당 식별자를 사용 할 수 있다.|gets <key>
+
+### Delete Command (삭제)
+
+Command|Description|Example
+---|---|---
+delete|존재하는 데이터를 삭제한다.|delete <key>
+
+### Increase/Decrease Command (증가/감소)
+
+Command|Description|Example
+---|---|---
+incr|저장된 숫자 형식 값을 증가시킨다.|incr <key> <value>
+decr|저장된 숫자 형식 값을 감소시킨다.|decr <key> <value>
+
+- 저장된 데이터가 64 bit 정수의 문자열 표현인 경우 사용가능하다.
+- 두 명령어 모두 양수만 값으로 지정가능하고, 음수는 불가능하다.
+- 저장되지 데이터의 경우 명령어는 실패한다.
+
+### Statistics
+- 현재 상태에 대한 통계 데이터를 조회 할 수 있는 명령어이다.
+- 조회된 데이터 관련 설명은 [여기](https://github.com/memcached/memcached/blob/master/doc/protocol.txt)
+에서 확인 할 수 있다.
+
+Command|Description|Example
+---|---|---
+stats|기본적인 통계 데이터를 반환한다.|stats
+stats items|저장된 `item` 관련 통계로, `slabs` 분류 별로 저장된 상태를 반환한다.|stats items
+stats slabs|`slabs` 에 저장된 상태 통계로, 데이터의 수보다는 성능관련 데이터를 반환한다.|stats slabs
+stats sizes|`slabs` 에 저장되 데이터를 `slabs` 수가 아닌 32 bit 버킷으로 분할 할 경우 항목의 분배를 보여준다. `slabs` 사이징의 효율정에 대해 파악할 수 있다.|stats sizes
+
+- 추가적으로 `stats sizes` 는 아래와 같은 주의할 점이 있다.
+	- 해당 명령어는 개발 명령어이므로, 실 서비스에 영향을 줄 수 있다.
+	- 데이터가 많은 상태에서 명령어를 수행하게 되면 몇 분 동안 반응이 없을 수 있다.
+	
+### flush_all
+
+Command|Description|Example
+---|---|---
+flush_all|즉시 모든 데이터를 삭제한다.|flush_all
+flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush_all <sec>
+
+- `flush_all` 명령어가 수행 할때 서버는 멈추지 않는다.
+- 실제로 데이터를 모두 삭제하는 방식이 아닌, 모든 데이터를 `expire` 시키는 방식으로 수행된다.
+	
+	
+## Memcached 메모리 할당과 사용
+
+
+
+
+
+## Memcached LRU
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Memcached 설정
 - `Memcached` 구동시 커스텀한 설정을 적용할 때는 아래 경로에 내용을 작성해주면 된다.
@@ -192,12 +315,6 @@ use_math: true
          watcher_logbuf_size      262144
           worker_logbuf_size       65536
 	```  
-	
-## Memcached 명령어
-	
-## Memcached 메모리 할당과 사용
-
-## Memcached LRU
 
 
 
