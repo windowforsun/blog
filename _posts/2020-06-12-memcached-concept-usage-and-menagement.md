@@ -107,8 +107,32 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 	
 ## Memcached 메모리 할당과 사용
 
+![그림 1]({{site.baseurl}}/img/memcached/concept-usage-and-management-1.png)
 
+- `Memcached` 는 메모리 할당을 위해서 `slabs`, `pages`, `chunks` 라는 개념을 사용한다.
+- 빠른 `key-value` 저장 방식을 제공하지만, 잘못하면 메모리 효율이 안좋아지고 지속적으로 `eviction` 이 발생할 수 있다.
+- 저장되는 데이터 단위인 `item` 의 기본 설정 크기는 1MB 이다.
 
+### Slabs
+- `slabs` 는 `Memcached` 의 메모리를 구성하는 단위를 의미한다.
+- 저장공간의 최소 단위인 `chunks` 의 크기를 결정한다.
+- 미리 연산된 고정된 특정 크기로 생성되고, 저장되는 데이터는 크기가 가장 비슷한 `slabs` 에 저장된다.
+- `memory fragmentation` 을 줄이기 위해 다수개의 고정된 크기의 `slabs` 을 활용한다.
+- `slabs` 의 크기는 기본 설정 일때 최소 96 byte(64 architecture) 를 시작으로 설정된 `growth_factor`(1.25) 의 곱만큼 증가한다.
+- 하나의 `slabs` 은 여러개의 `pages` 를 갖는다.
+
+### Pages
+- `pages` 는 1MB(기본) 단위의 메모리 저장공간을 의미한다.
+- 하나의 `pages` 는 여러개의 `chunks` 를 포함한다.
+- 각 `pages` 는 1MB 크기를 `chunks` 의 크기로 나눈 수 만큼의 `chunks` 를 포함한다.
+
+### Chunks
+- `chunks` 는 `Memcached` 에서 저장되는 데이터의 단위인 `item` 하나를 저장하는 최소 단위이다.
+- `slabs` 의 최소 크기가 96 byte 인것 처럼 `chunks` 의 최소 크기또한 96 byte 이다.
+- 저장하는 `item` 의 크기가 60 byte 이면 가장 가까운 96 byte 의 `chunks` 에 저장되고, 나머지 36 byte 는 낭비되는 공간으로 남게 된다.
+- `chunks` 는 `key` + `value` + `flag` 로 구성된다.
+
+### 기본적인 동작
 
 
 ## Memcached LRU
@@ -215,6 +239,22 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
                               use only in ram disks or persistent memory mounts!
                               enables restartable cache (stop with SIGUSR1)
 	```  
+	
+- 아래는 몇가 옵션을 적용한 예이다.
+
+	```
+	PORT="11211"
+    USER="memcached"
+    MAXCONN="1024"
+    CACHESIZE="9000"
+    OPTIONS="-e /mem/file -vv 2>> /mem/memcached.log -f 1.25 -I 5m -n 200"
+	```  
+	
+	- `-e` 옵션을 통해 `SIGUSR1` 으로 중지됐을 때 사용할 덤프파일 저장 경로 설정
+	- `-vv` 옵션으로 구동 중 클라이언트로 부터 실행되는 요청 응답 로그 경로 설정
+	- `-f` 옵션으로 `slabs` 크기를 증가시키는 `growth_factor` 설정
+	- `-I` 옵션으로 `item` 의 최대 크기 설정
+	- `-n` 옵션으로 `chunks` 의 최소 크기 설정
 	
 - 작성한 설정내용을 적용하고 싶다면, `Memcached` 를 재시작하면 된다.
 
