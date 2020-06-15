@@ -4,13 +4,14 @@ classes: wide
 title: "Memcached 사용과 관리"
 header:
   overlay_image: /img/memcached-bg.jpg
-excerpt: ''
+excerpt: 'Memcached 관련 명령어와 설정 및 관리에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
   - Memcached
 tags:
     - Concept
+    - Memcached
 toc: true
 use_math: true
 ---  
@@ -29,6 +30,7 @@ use_math: true
 - `cas` 는 옵션으로 `item` 을 구성하는데 더 많은 필드를 구성하고, `-c` 를 통해 완전히 비활성화 할 수 있다.
 - `Memcached` 명령어 프로토콜관련 더 자세한 내용은 [여기](https://github.com/memcached/memcached/wiki/Protocols)
 에서 확인 가능하다.
+- 저장되는 데이터 단위인 `item` 의 최대 기본 설정 크기는 1MB 이다.
 
 ### No Replay
 - `Memcached` 는 명령어 수행에 대해 [Text Protocol](https://github.com/memcached/memcached/blob/master/doc/protocol.txt)
@@ -111,7 +113,7 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 
 - `Memcached` 는 메모리 할당을 위해서 `slabs`, `pages`, `chunks` 라는 개념을 사용한다.
 - 빠른 `key-value` 저장 방식을 제공하지만, 잘못하면 메모리 효율이 안좋아지고 지속적으로 `eviction` 이 발생할 수 있다.
-- 저장되는 데이터 단위인 `item` 의 기본 설정 크기는 1MB 이다.
+
 
 ### Slabs
 - `slabs` 는 `Memcached` 의 메모리를 구성하는 단위를 의미한다.
@@ -133,41 +135,79 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 - `chunks` 는 `key` + `value` + `flag` 로 구성된다.
 
 ### 기본적인 동작
+
+![그림 1]({{site.baseurl}}/img/memcached/concept-usage-and-management-2.png)
+
 - 앞서 설명한 것과 같이 `Memcached` 는 미리 정해진 다수개의 공간인 `slabs` 를 할당 받은 상태에서 데이터 크기에 따라 적절한 공간을 선택해 저장하게 된다.
 - `slabs` 는 하나 이상의 `pages` 를 관리하고 다시 `pages` 는 하나 이상의 `chunks` 를 괸라하게 되고, 
 `slabs` 크기만큼 정해진 `chunks` 의 공간에 저장하는 데이터인 `item` 이 저장된다.
 - 계속해서 데이터가 추가되면 하나의 `pages` 에 저장할 수 있는 `chunks` 개수가 다 차게 되면 `slabs` 는 새로운 페이지를 만들어 데이터를 저장한다.
 - 위와 같이 한번 할당된 공간은 서버가 재시작하기 전까진 계속해서 유지된다.
 
-## Memcached LRU
+### 테스트
+- 테스트를 위해 설정된 메모리 크기는 64MB 이다.
+- 아래와 같은 3개의 `slabs` 가 있다고 가정해보자
+
+	```
+	slab 1:chunk_size 96
+	slab 2:chunk_size 120
+	slab 3:chunk_size 152
+	```  
+	
+- 100bytes 크기의 데이터를 추가하게 되면, $ slab 2:chunk_size < 100bytes < slab 3:chunk_size $ 이기 때문에 `slab 3` 에 들어가게 된다.
+- 하나의 `slabs` 는 여러 `pages` 관리하고 `pages` 의 크기는 기본 설정일 경우 1MB 이기 때문에, 각 `slabs` 에서 하나의 `pages` 가 가지는 `chunks` 의 개수는 $ pages 크기 / chunk_size $ 가 된다.
+- `pages` 파악에 필요한 정보를 추가하면 아래와 같다.
+
+	```	
+	slab 1:chunk_size 100
+	slab 1:chunk_per_page 10922
+	slab 1:total_pages 1
+	slab 1:free_chunks 10922
+	
+	slab 2:chunk_size 120
+	slab 2:chunk_per_page 8738
+	slab 2:total_pages 1
+	slab 2:free_chunks 8738
+	
+	slab 3:chunk_size 152
+	slab 3:chunk_per_page 6898
+	slab 3:total_pages 1
+	slab 3:free_chunks 6898
+	```  
+	
+- `slab 2` 에 해당하는 8738 개의 데이터를 추가하게 되면 아래와 같이 `slab 2` 의 `free_chunks` 가 0으로 변하게 된다.
+
+	```	
+	slab 2:chunk_size 120
+	slab 2:chunk_per_page 8738
+	slab 2:total_pages 1
+	slab 2:free_chunks 0
+	```  
+	
+- `slab 2` 에서 하나의 `pages` 가 가득 찬 상태에서 1개의 데이터를 추가하면 아래와 같이 `pages` 수가 늘어난다.
 
 
+	```	
+	slab 2:chunk_size 120
+	slab 2:chunk_per_page 8738
+	slab 2:total_pages 2
+	slab 2:free_chunks 8737
+	```  
+	
+- 위에서 언급한 바가 여기서 주의해야 할점은 `slab 2` 에 저장가능한 최대 공간은 나와있는 것과같이 120bytes 인데, 100bytes 데이터를 추가할 경우 20bytes 는 낭비되는 공간이다.
+	- 즉 100 bytes 로 8738 개의 `items`(대략 1MB) 의 데이터를 저장했다고 하면, 1MB 저장 공간에서 데이터 효율이 83% 이고 나머지 17% 가량은 사용하지 못하는 공간이다.
+- 100K 데이터로 해당하는 `slab 32` 의 데이터가 꽉찰 때까지 넣어보면 아래와 같은 상태를 확인 할 수 있다.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+	```
+	slab 32:chunk_size 103496
+    slab 32:chunks_per_page 10
+    slab 32:total_pages 24
+    slab 32:total_chunks 240
+    slab 32:free_chunks 0
+	```  
+	
+- `pages` 의 크기로만 계산해보면 24MB 만 사용 중이고 가용공간이 있지만 `eviction` 이 발생해, 더 이상 `slab 32` 의 `chunks` 개수는 늘어나지 않는다.
+- 위 결과로 알 수 있는 것은 `Memcached` 의 `eviction` 은 글로벌하지 않고, 각 `slabs` 에 별도로 동작한다는 것을 확인 할 수 있다.
 
 
 ## Memcached 설정
@@ -359,10 +399,57 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
          watcher_logbuf_size      262144
           worker_logbuf_size       65536
 	```  
+	
+- 오픈소스인 [davidfoliveira/memcached-tool-ng](https://github.com/davidfoliveira/memcached-tool-ng)
+을 사용하면 더욱 자세한 정보를 확인 할 수 있다.
 
-
-
-
+	```bash
+	$ ./memcached-tool-ng 127.0.0.1:11211
+    127.0.0.1:11211:
+       #  Item_Size    Max_age   Pages     Count   Used Mem     To Store   Efficiency              Evicted  Evict_Time          OOM
+       1        96B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       2       120B         0s       2         0   10.00 MB          0 b       0.00 %                    0           0            0
+       3       152B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       4       192B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       5       240B         0s       2         0   10.00 MB          0 b       0.00 %                    0           0            0
+       6       304B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       7       384B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       8       480B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+       9       600B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      10       752B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      11       944B         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      12       1.2K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      13       1.4K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      14       1.8K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      15       2.3K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      16       2.8K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      17       3.5K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      18       4.4K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      19       5.5K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      20       6.9K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      21       8.7K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      22      10.8K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      23      13.6K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      24      16.9K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      25      21.2K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      26      26.5K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      27      33.1K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      28      41.4K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      29      51.7K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      30      64.7K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      31      80.9K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      32     101.1K       809s      24       240  120.00 MB     22.91 MB      19.09 %                 2347           2            0
+      33     126.3K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      34     157.9K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      35     197.4K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      36     246.8K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      37     308.5K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      38     385.6K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+      39     512.0K         0s       1         0    5.00 MB          0 b       0.00 %                    0           0            0
+    
+    Total used memory: 320.00 MB (for 22.91 MB of data)
+    Global efficiency:  7.16 %
+	```  
 
 
 ---
