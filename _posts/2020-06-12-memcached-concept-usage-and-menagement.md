@@ -45,7 +45,7 @@ use_math: true
 
 Command|Description|Example
 ---|---|---
-set|데이터를 저장하는 명령어로, 존재할 경우 덮어쓰고 새로운 데이터의 경우 `LRU` 의 최상단에 위치하게 된다.|`set <key> flags> <ttl> <size> [noreply[`
+set|데이터를 저장하는 명령어로, 존재할 경우 덮어쓰고 새로운 데이터의 경우 `LRU` 의 최상단에 위치하게 된다.|`set <key> flags> <ttl> <size> [noreply]`
 add|새로운 데이터를 저장하는 명령어로, 새로운 데이터는 `LRU` 의 최상단에 위치하고 이미 존재할 경우 실패한다.|`add <key> <flags> <ttl> <size> [noreply]`
 replace|기존 데이터를 교체하는 명령어이다.|`replace <key> <flags> <ttl> <size> [noreply]`
 append|기존 데이터의 마지막 바이트 이후에 데이터를 추가하는 명령어로, `item` 크기 제한을 초과 할 수 없다.|`append <key> <flag> <ttl> <size> [noreply]`
@@ -88,9 +88,9 @@ decr|저장된 숫자 형식 값을 감소시킨다.|`decr <key> <value>`
 Command|Description|Example
 ---|---|---
 stats|기본적인 통계 데이터를 반환한다.|stats
-stats items|저장된 `item` 관련 통계로, `slabs` 분류 별로 저장된 상태를 반환한다.|stats items
-stats slabs|`slabs` 에 저장된 상태 통계로, 데이터의 수보다는 성능관련 데이터를 반환한다.|stats slabs
-stats sizes|`slabs` 에 저장되 데이터를 `slabs` 수가 아닌 32 bit 버킷으로 분할 할 경우 항목의 분배를 보여준다. `slabs` 사이징의 효율정에 대해 파악할 수 있다.|stats sizes
+stats items|저장된 `item` 관련 통계로, `slabs` 분류 별로 저장된 상태를 반환한다.|`stats items`
+stats slabs|`slabs` 에 저장된 상태 통계로, 데이터의 수보다는 성능관련 데이터를 반환한다.|`stats slabs`
+stats sizes|`slabs` 에 저장되 데이터를 `slabs` 수가 아닌 32 bit 버킷으로 분할 할 경우 항목의 분배를 보여준다. `slabs` 사이징의 효율정에 대해 파악할 수 있다.|`stats sizes`
 
 - 추가적으로 `stats sizes` 는 아래와 같은 주의할 점이 있다.
 	- 해당 명령어는 개발 명령어이므로, 실 서비스에 영향을 줄 수 있다.
@@ -100,8 +100,8 @@ stats sizes|`slabs` 에 저장되 데이터를 `slabs` 수가 아닌 32 bit 버�
 
 Command|Description|Example
 ---|---|---
-flush_all|즉시 모든 데이터를 삭제한다.|flush_all
-flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush_all <sec>
+flush_all|즉시 모든 데이터를 삭제한다.|`flush_all`
+flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|`flush_all <sec>`
 
 - `flush_all` 명령어가 수행 할때 서버는 멈추지 않는다.
 - 실제로 데이터를 모두 삭제하는 방식이 아닌, 모든 데이터를 `expire` 시키는 방식으로 수행된다.
@@ -132,7 +132,7 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 - `chunks` 는 `Memcached` 에서 저장되는 데이터의 단위인 `item` 하나를 저장하는 최소 단위이다.
 - `slabs` 의 최소 크기가 96 byte 인것 처럼 `chunks` 의 최소 크기또한 96 byte 이다.
 - 저장하는 `item` 의 크기가 60 byte 이면 가장 가까운 96 byte 의 `chunks` 에 저장되고, 나머지 36 byte 는 낭비되는 공간으로 남게 된다.
-- `chunks` 는 `key` + `value` + `flag` 로 구성된다.
+- `chunks` 는 $key + value + flag$ 로 구성된다.
 
 ### 기본적인 동작
 
@@ -154,7 +154,7 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 	slab 3:chunk_size 152
 	```  
 	
-- 100bytes 크기의 데이터를 추가하게 되면, $ slab 2:chunk_size < 100bytes < slab 3:chunk_size $ 이기 때문에 `slab 3` 에 들어가게 된다.
+- 100bytes 크기의 데이터를 추가하게 되면, $ slab 2:chunksize < 100bytes < slab 3:chunksize $ 이기 때문에 `slab 3` 에 들어가게 된다.
 - 하나의 `slabs` 는 여러 `pages` 관리하고 `pages` 의 크기는 기본 설정일 경우 1MB 이기 때문에, 각 `slabs` 에서 하나의 `pages` 가 가지는 `chunks` 의 개수는 $ pages 크기 / chunk_size $ 가 된다.
 - `pages` 파악에 필요한 정보를 추가하면 아래와 같다.
 
