@@ -45,11 +45,11 @@ use_math: true
 
 Command|Description|Example
 ---|---|---
-set|데이터를 저장하는 명령어로, 존재할 경우 덮어쓰고 새로운 데이터의 경우 `LRU` 의 최상단에 위치하게 된다.|set <key> <flags> <ttl> <size>
-add|새로운 데이터를 저장하는 명령어로, 새로운 데이터는 `LRU` 의 최상단에 위치하고 이미 존재할 경우 실패한다.|add <key> <flags> <ttl> <size>
-replace|기존 데이터를 교체하는 명령어이다.|replace <key> <flags> <ttl> <size>
-append|기존 데이터의 마지막 바이트 이후에 데이터를 추가하는 명령어로, `item` 크기 제한을 초과 할 수 없다.|append <key> <flag> <ttl> <size>
-prepend|`append` 와 수행하는 동작이 같지만, 기존 데이터의 앞쪽에 추가한다.|prepend <key> <flags> <ttl> <size>
+set|데이터를 저장하는 명령어로, 존재할 경우 덮어쓰고 새로운 데이터의 경우 `LRU` 의 최상단에 위치하게 된다.|`set <key> flags> <ttl> <size> [noreply[`
+add|새로운 데이터를 저장하는 명령어로, 새로운 데이터는 `LRU` 의 최상단에 위치하고 이미 존재할 경우 실패한다.|`add <key> <flags> <ttl> <size> [noreply]`
+replace|기존 데이터를 교체하는 명령어이다.|`replace <key> <flags> <ttl> <size> [noreply]`
+append|기존 데이터의 마지막 바이트 이후에 데이터를 추가하는 명령어로, `item` 크기 제한을 초과 할 수 없다.|`append <key> <flag> <ttl> <size> [noreply]`
+prepend|`append` 와 수행하는 동작이 같지만, 기존 데이터의 앞쪽에 추가한다.|`prepend <key> <flags> <ttl> <size> [noreply]`
 cas|`check and set`, `compare and swap` 의 동작을 수행하는 명령어로, 기존 데이터를 마지막에 읽은 클라이언트외 다른 클라이언트는 갱신하지 못한다. `race condition` 이 발생할 수 있는 데이터에 적접한 동작이다.|하단에서 별도로 설명
 
 - `cas` 명령어는 `cas <key> <flags> <ttl> <size> <unique_cas_key> [noreply]` 의 구성을 갖는다.
@@ -60,21 +60,21 @@ cas|`check and set`, `compare and swap` 의 동작을 수행하는 명령어로,
 
 Command|Description|Example
 ---|---|---
-get|저장된 데이터를 조회하는 명령어로, 하나 이상의 키를 전달해 조회 가능하다.|get <key key ...>
-gets|`cas` 와 함께 사용한 `get` 명령어로, 데이터와 `cas` 식별자(`unique_cas_key`) 를 반환한다. 이후 `cas` 명령어에서 해당 식별자를 사용 할 수 있다.|gets <key>
+get|저장된 데이터를 조회하는 명령어로, 하나 이상의 키를 전달해 조회 가능하다.|`get <key key ...>`
+gets|`cas` 와 함께 사용한 `get` 명령어로, 데이터와 `cas` 식별자(`unique_cas_key`) 를 반환한다. 이후 `cas` 명령어에서 해당 식별자를 사용 할 수 있다.|`gets <key>`
 
 ### Delete Command (삭제)
 
 Command|Description|Example
 ---|---|---
-delete|존재하는 데이터를 삭제한다.|delete <key>
+delete|존재하는 데이터를 삭제한다.|`delete <key> [noreply]`
 
 ### Increase/Decrease Command (증가/감소)
 
 Command|Description|Example
 ---|---|---
-incr|저장된 숫자 형식 값을 증가시킨다.|incr <key> <value>
-decr|저장된 숫자 형식 값을 감소시킨다.|decr <key> <value>
+incr|저장된 숫자 형식 값을 증가시킨다.|`incr <key> <value>`
+decr|저장된 숫자 형식 값을 감소시킨다.|`decr <key> <value>`
 
 - 저장된 데이터가 64 bit 정수의 문자열 표현인 경우 사용가능하다.
 - 두 명령어 모두 양수만 값으로 지정가능하고, 음수는 불가능하다.
@@ -465,4 +465,4 @@ flush_all|전달된 초만큼 대기 후 모든 데이터를 삭제한다.|flush
 [Journey to the centre of memcached](https://medium.com/@SkyscannerEng/journey-to-the-centre-of-memcached-b239076e678a)  
 [Memcached의 확장성 개선](https://d2.naver.com/helloworld/151047)  
 [Memcached Option](http://manpages.ubuntu.com/manpages/trusty/man1/memcached.1.html)  
-[[입 개발] memcached slabclass 에 대해서…](https://charsyam.wordpress.com/2014/02/16/%EC%9E%85-%EA%B0%9C%EB%B0%9C-memcached-slabclass-%EC%97%90-%EB%8C%80%ED%95%B4%EC%84%9C/)  
+[Memcached Tutorial](https://www.tutorialspoint.com/memcached/index.htm)  
