@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Linux 실습] CLI 로 성능 분석하기"
+title: "[Linux 실습] CLI 로 모니터링(서버 상황 파악)"
 header:
   overlay_image: /img/linux-bg-2.jpg
 excerpt: '리눅스에서 CLI 를 통해 성능을 분석하거나 상태를 파악해 보자'
@@ -131,7 +131,7 @@ For more details see dmesg(q).
 ## vmstats 1
 
 ```bash
-[root@localhost vagrant]# vmstat 1
+$ vmstat 1
 procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
  r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
  1  0      0 4721372   2068 4097580    0    0     1     7   36   26  0  0 100  0  0
