@@ -12,6 +12,7 @@ categories :
 tags:
   - Linux
   - Practice
+toc: true
 ---  
 
 ## 환경
