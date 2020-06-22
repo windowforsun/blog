@@ -204,7 +204,7 @@ Linux 3.10.0-957.27.2.el7.x86_64 (localhost.localdomain)        06/18/2020      
 - CPU 별로 불균형한 상태를 확인 할 수 있다.
 
 ```bash
-[root@localhost docker3]# mpstat --help
+$ mpstat --help
 Usage: mpstat [ options ] [ <interval> [ <count> ] ]
 Options are:
 [ -A ] [ -u ] [ -V ] [ -I { SUM | CPU | SCPU | ALL } ]
