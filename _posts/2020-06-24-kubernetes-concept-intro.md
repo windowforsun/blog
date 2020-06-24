@@ -12,6 +12,7 @@ categories :
 tags:
   - Kubernetes
   - Concept
+  - Docker
 toc: true
 use_math: true
 ---  
@@ -104,3 +105,4 @@ GitHub, Slack, Facebook 등을 통해 커뮤니티의 일원이 될 수 있다.
 
 ---
 ## Reference
+[쿠버네티스란 무엇인가?](https://kubernetes.io/ko/docs/concepts/overview/what-is-kubernetes/)
