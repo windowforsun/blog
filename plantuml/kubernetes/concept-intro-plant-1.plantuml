@@ -1,34 +1,31 @@
 @startuml
-'!include <cloudinsight/docker>
-'rectangle "<img:./../../img/docker-icon.png{scale=0.2}>\n개발환경" as dev_env
 
-!include <cloudinsight/tomcat>
-!include <cloudinsight/kafka>
-!include <cloudinsight/java>
-!include <cloudinsight/cassandra>
-!include <cloudinsight/docker>
+!include <tupadr3/common>
+!include <tupadr3/font-awesome/server>
+!include <tupadr3/font-awesome/database>
+!include <tupadr3/font-awesome-5/docker>
+!include <tupadr3/govicons/user>
 
-'!define SPRITESURL https://raw.githubusercontent.com/rabelenda/cicon-plantuml-sprites/v1.0/sprites
-'!includeurl SPRITESURL/tomcat.puml
-'!includeurl SPRITESURL/kafka.puml
-'!includeurl SPRITESURL/java.puml
-'!includeurl SPRITESURL/cassandra.puml
-'!includeurl SPRITESURL/docker.puml
 
-title Cloudinsight sprites example
+FA5_DOCKER(dev_docker, 개발환경, rectangle, DodgerBlue) #White
+FA5_DOCKER(repo_docker, 컨테이너 이미지 저장소, rectangle, DodgerBlue) #White
+FA5_DOCKER(server_docker1, 서버1, rectangle, DodgerBlue) #White
+FA5_DOCKER(server_docker2, 서버2, rectangle, DodgerBlue) #White
+FA5_DOCKER(server_docker3, 서버3, rectangle, DodgerBlue) #White
 
-skinparam monochrome true
+rectangle "Load Balancer" as lb #White
 
-rectangle "<$tomcat>\nwebapp" as webapp
-rectangle "<$docker>\ndockerddddd\nddddddd" as docker
-queue "<$kafka>" as kafka
-rectangle "<$java>\ndaemon" as daemon
-database "<$cassandra>" as cassandra
-database "<$cassandra>" as cassandra2
+GOV_USER(user, 사용자) #White
 
-webapp -> kafka
-kafka -> daemon
-daemon --> cassandra
-daemon --> cassandra2
-daemon --> docker
+dev_docker -right-> repo_docker : 이미지 업로드
+repo_docker -down-> server_docker1
+repo_docker -down-> server_docker2 : 배포
+repo_docker -down-> server_docker3
+
+lb -up-> server_docker1
+lb -up-> server_docker2
+lb -up-> server_docker3
+
+user -left-> lb
+
 @enduml

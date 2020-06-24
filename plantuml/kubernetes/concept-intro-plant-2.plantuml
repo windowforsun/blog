@@ -1,0 +1,55 @@
+@startuml
+
+skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+rectangle "Kuternetes Cluster" {
+	rectangle "Master" {
+		rectangle "kube-apiserver" as kubeapiserver
+		rectangle "Ingress"
+	}
+
+	rectangle "Ingress Node" as IngressNode {
+		rectangle "Ingress Controller"
+		rectangle nginx
+	}
+	rectangle "Service" as Service {
+		card a1 {
+		}
+		card a2 {
+		}
+		card a3 {
+		}
+
+		a1 -r-> a2
+		a2 -r-> a3
+
+		hide a1
+		hide a2
+		hide a3
+	}
+
+	rectangle "Node1" as Node1 {
+		rectangle "Pod1"
+		rectangle "Pod2"
+	}
+
+	rectangle "Node2" as Node2 {
+		rectangle "Pod3"
+	}
+}
+
+GOV_USER(user, 사용자) #White
+
+user -d-> nginx
+IngressNode -[hidden]d-> Service
+Service -[hidden]d-> Node1
+Service -[hidden]d-> Node2
+
+nginx -d-> Pod1
+nginx -d-> Pod2
+nginx -d-> Pod3
+
+
+@enduml
