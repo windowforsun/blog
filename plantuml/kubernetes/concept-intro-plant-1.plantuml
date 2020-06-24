@@ -1,0 +1,34 @@
+@startuml
+'!include <cloudinsight/docker>
+'rectangle "<img:./../../img/docker-icon.png{scale=0.2}>\n개발환경" as dev_env
+
+!include <cloudinsight/tomcat>
+!include <cloudinsight/kafka>
+!include <cloudinsight/java>
+!include <cloudinsight/cassandra>
+!include <cloudinsight/docker>
+
+'!define SPRITESURL https://raw.githubusercontent.com/rabelenda/cicon-plantuml-sprites/v1.0/sprites
+'!includeurl SPRITESURL/tomcat.puml
+'!includeurl SPRITESURL/kafka.puml
+'!includeurl SPRITESURL/java.puml
+'!includeurl SPRITESURL/cassandra.puml
+'!includeurl SPRITESURL/docker.puml
+
+title Cloudinsight sprites example
+
+skinparam monochrome true
+
+rectangle "<$tomcat>\nwebapp" as webapp
+rectangle "<$docker>\ndockerddddd\nddddddd" as docker
+queue "<$kafka>" as kafka
+rectangle "<$java>\ndaemon" as daemon
+database "<$cassandra>" as cassandra
+database "<$cassandra>" as cassandra2
+
+webapp -> kafka
+kafka -> daemon
+daemon --> cassandra
+daemon --> cassandra2
+daemon --> docker
+@enduml
