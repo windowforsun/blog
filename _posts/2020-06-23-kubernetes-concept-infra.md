@@ -11,6 +11,7 @@ categories :
   - Kubernetes
 tags:
   - Kubernetes
+  - Concept
   - Cloud
   - DevOps
   - Container

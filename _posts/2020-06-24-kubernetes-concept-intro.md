@@ -11,6 +11,7 @@ categories :
   - Kubernetes
 tags:
   - Kubernetes
+  - Concept
 toc: true
 use_math: true
 ---  
