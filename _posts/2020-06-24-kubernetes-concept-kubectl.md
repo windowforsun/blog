@@ -181,7 +181,135 @@ NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
 kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   3d8h
 ```  
 
-## POSIX/GNU 스타일 명령
+## 명령어 작성 규칙
+`kubectl` 은 POSIX/GNU 스타일의 명령 작성 규칙을 따른다. 
+POSIX/GNU 명령 작성 규칙은 아래와 같다.  
+- `-` 은 단일 알파벳/숫자를 사용하는 짧은 옵션이다. 
+- 다수개의 옵션을 줄 경우 `-abc` 와 `-a -b -c` 는 동일하다.
+- 옵션들은 필요에 따라 옵션에 해당하는 인자값을 가질 수 있다. `-o file`
+- 옵션과 인자값을 구분하는 구분자는 선택사항이다. 공백 구분자는 생략 가능하다. `-o file` 과 `-ofile` 은 같은 의미이다. 
+- 인자를 갖는 옵션은 인자를 갖지 않은 옵션보다 선행된다. 
+- `--` 은 모든 옵션을 종료한다. 이후에 존재하는 모든 옵션은 무시된다.
+- 옵션은 임의의 순서나 여러 번 사용할 수 있다.
+- `--` 로 시작하는 긴 옵션은 알파벳 두 글자 이상으로 구성되 있고, 단어와 단어사이에 하이폰사용도 가능하다. `--output file`
+
+아래와 같은 명령이 있다고 가정한다.
+
+```bash
+$ kubectl -n default exec my-pod -c my-container -- ls /
+```  
+
+작성된 명령어에서 각 옵션이 의미하는 바는 아래와 같다. 
+- `-n default` : `-n` 은 네임스페이스를 저장하는 옵션을 의미한다. 
+긴 옵션일 경우 `--namespace` 라고 표기한다. 
+`default` 는 기본 네임스페이스를 의미한다. 
+정리하면 해당 옵션은 쿠버네티스 클러스터 네임스페이스를 `default` 로 설정한다는 의미이다. 
+- `exec my-pod` : `my-pod` 이름의 파드에 뒤에 제시되는 명령을 실행해라 라는 의미이다. 
+- `-c my-container` : 컨테이너를 지정하는 옵션으로, 긴 옵션은 `--container` 이다. 
+하나의 파드에 여러 컨테이너가 실행된 상황일 때 특정 컨테이너를 지정하는 옵션이다. 
+여기서 `my-container` 는 지정하는 컨테이너를 의미한다. 
+- `--- ls /` : 쿠버네티스 관련 옵션들은 모두 종료하고, 컨테이너에서 실행할 `ls /` 이라는 명령을 설정한다.
+
+## 플래그
+`kubectl` 의 플래그는 아래와 같이 구분돼 있다.
+- 모든 명령에서 사용할 수 있는 전역 플래그
+- 각 명령에서만 사용할 수 있는 개발 플래그
+
+전역 플래그는 `kubectl options` 에서 확인 할 수 있고, 개별 플래그는 각 명령어 도움말에서 확인 가능하다.  
+
+자주 사용하는 전역 플래그는 아래와 같다. 
+- `-h` : 긴 옵션으로는 `--help` 로 개별 명령의 도움말을 출력한다. 
+- `-v <로그 레벨>` : 명령을 실행하는 과정의 로그를 출력하거나, 로그 레벨을 설정한다. 디버깅시 유용하다.
+
+## kubectl 환경 변수
+`kubectl` 은 기본적으로 `$HOME/.kube/config` 파일에 클러스터, 인증, 컨텍스트 정보를 설정한다. 
+이러한 클러스터 관련 설정 정보를 `kubeconfig` 라고 한다. 
+
+클러스터에서 사용가능한 자원은 `kubectl api-resources` 명령을 통해 확인 가능하다. 
+
+```bash
+$ kubectl api-resources
+NAME                              SHORTNAMES   APIGROUP                       NAMESPACED   KIND
+bindings                                                                      true         Binding
+componentstatuses                 cs                                          false        ComponentStatus
+configmaps                        cm                                          true         ConfigMap
+endpoints                         ep                                          true         Endpoints
+events                            ev                                          true         Event
+limitranges                       limits                                      true         LimitRange
+namespaces                        ns                                          false        Namespace
+nodes                             no                                          false        Node
+persistentvolumeclaims            pvc                                         true         PersistentVolumeClaim
+persistentvolumes                 pv                                          false        PersistentVolume
+pods                              po                                          true         Pod
+
+.. 생략 ..
+
+priorityclasses                   pc           scheduling.k8s.io              false        PriorityClass
+csidrivers                                     storage.k8s.io                 false        CSIDriver
+csinodes                                       storage.k8s.io                 false        CSINode
+storageclasses                    sc           storage.k8s.io                 false        StorageClass
+volumeattachments                              storage.k8s.io                 false        VolumeAttachment
+```  
+
+Docker Desktop 으로 쿠버네티스를 사용할 경우, 자동으로 `kubeconfig` 가 설정 된다. 아래 명령어를 통해 사용할 수 있다. 
+
+```bash
+$ kubectl config use-context docker-desktop
+Switched to context "docker-desktop".
+```  
+
+`--kubeconfig` 옵션을 사용하면 다른 설정 파일 적용이 가능하다.
+
+```bash
+$ kubectl --kubeconfig=AWSconfig get pods
+$ kubectl --kubeconfig=GCPconfig get pods
+```  
+
+다중 클러스터에 다른 인증/클러스터 정보로 접근 할때 사용 가능하다. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
