@@ -265,7 +265,11 @@ $ kubectl --kubeconfig=AWSconfig get pods
 $ kubectl --kubeconfig=GCPconfig get pods
 ```  
 
-다중 클러스터에 다른 인증/클러스터 정보로 접근 할때 사용 가능하다. 
+다중 클러스터에 다른 인증/클러스터 정보로 접근 할때 사용 가능하다.  
+
+`Kuberspray` 를 통해 직접 클러스터를 구성한 경우, 
+먼저 마스터 노드에서 `~/.kube/config` 내용을 클러스터 외부의 사용자 컴퓨터 `~/kube/config` 에 그대로 복사해 관리자 권한으로 클러스터 구성을 사용할 수 있다. 
+이는 이후에 별도의 사용자/권한 생성을 진행한 후 대체 가능하다. 
 
 
 
