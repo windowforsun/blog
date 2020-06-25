@@ -272,49 +272,19 @@ $ kubectl --kubeconfig=GCPconfig get pods
 이는 이후에 별도의 사용자/권한 생성을 진행한 후 대체 가능하다. 
 
 
+## 자동완성
+`kubectl` 은 `Bash`, `Zsh` 에서 자동 완성을 공식적으로 지원한다. 
+자동 완성 기능 활성화는 아래 명령어를 통해 가능하다. 
 
+```bash
+# Bash
+$ echo 'souce <(kubectl completion bash)' >>~/.bashrc
+```  
 
+자세한 설명은 `kubectl completion --help` 또는 [여기](https://kubernetes.io/docs/tasks/tools/install-kubectl/#enabling-shell-autocompletion)
+에서 확인 가능하다.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 쉘 실행하기
 
 
 ---
