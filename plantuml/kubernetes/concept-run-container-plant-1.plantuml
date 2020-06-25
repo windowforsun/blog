@@ -1,0 +1,24 @@
+@startuml
+
+'skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+GOV_USER(user) #White
+
+rectangle "Kubernetes Cluster" as kc {
+	card Container {
+	}
+}
+
+rectangle "Docker Hub" {
+	card "Nginx Container Image" as ni {
+	}
+}
+
+user -r-> kc : "kubectl run ..."
+ni -l-> Container : "    Pull Image"
+
+
+
+@enduml
