@@ -13,6 +13,8 @@ tags:
   - Kubernetes
   - Concept
   - kubectl
+  - Deployments
+  - Service
 toc: true
 use_math: true
 ---  
@@ -146,6 +148,74 @@ nginx-app   1/1     1            1           33s
 쿠버네티스 자원은 `YAML` 템플릿과 `kubectl apply` 명령을 통해 선언적으로 관리할 것을 권장한다. 
 자원 생성시에도 템플릿 파일을 사용해서 소스코드와 함께 버전관리(Git)을 통해 관리하는 것이 좋다.
 
+
+## 컨테이너 접근하기
+실행한 `Nginx` 컨테이너는 웹서버로 브라우저를 통해 외부에서 접근가능하지만, 
+현재 설정으로는 접근이 불가능하다. 
+컨테이너는 실행된 쿠버네티스 내부에서 사용하는 네트워크가 외부와 격리된 상태이기 때문이다. 
+쿠버네티스 내부에서 실행 중인 컨테이너를 외부에서 접근하기 위해서는 `Server`(서비스) 를 사용해야 한다. 
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept_run_container_plant_2.png)
+
+서비스 타입에는 아래와 같은 종류가 있다.
+- ClusterIP
+- NodePort
+- LoadBalancer
+- ExternalName
+
+외부에서 접근하기 위해 `NodePort` 를 사용해서 서비스에 지정된 모든 노드의 포트를 할당한다. 
+`kubectl expose deployment <컨테이너이름> --type=NodePort` 명령어를 사용한다.
+
+```bash
+$ kubectl expose deployment nginx-app --type=NodePort
+service/nginx-app exposed
+```  
+
+`kubectl get service` 를 통해 생성된 서비스를 확인하면 아래와 같다.
+
+```bash
+$ kubectl get service
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP        4d9h
+nginx-app    NodePort    10.107.233.66   <none>        80:30616/TCP   44s
+```  
+
+`PORT` 항목의 `80:30616/TCP` 에서 알 수 있듯이, 
+내부 80 포트가 외부 30616 포트와 연결된것을 확인할 수 있다.  
+
+`kubectl describe service <컨테이너이름>` 을 통해 서비스에 대해 더욱 자세한 내용을 확인 할 수 있다.
+
+```bash
+$ kubectl describe service nginx-app
+Name:                     nginx-app
+Namespace:                default
+Labels:                   app=nginx-app
+Annotations:              <none>
+Selector:                 app=nginx-app
+Type:                     NodePort
+IP:                       10.107.233.66
+LoadBalancer Ingress:     localhost
+Port:                     <unset>  80/TCP
+TargetPort:               80/TCP
+NodePort:                 <unset>  30616/TCP
+Endpoints:                10.1.0.13:80
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```  
+
+`Endpoints` 를 통해 1개의 컨테이너가 연결된 것을 확인 할 수 있다. 
+웹 브라우저 혹은 `curl` 을 사용해서 `http://localhost:30616` 에 접속하면 아래와 같은 결과를 확인 할 수 있다.
+
+```
+Welcome to nginx!
+If you see this page, the nginx web server is successfully installed and working. Further configuration is required.
+
+For online documentation and support please refer to nginx.org.
+Commercial support is available at nginx.com.
+
+Thank you for using nginx.
+```  
 
 ---
 ## Reference

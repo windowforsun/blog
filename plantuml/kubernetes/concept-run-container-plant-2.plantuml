@@ -1,0 +1,24 @@
+@startuml
+
+'skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+GOV_USER(user) #White
+
+rectangle "Kubernetes Cluster" as kc {
+	card Pod1 {
+	}
+	card Pod2 {
+	}
+	card Service {
+	}
+
+	Service -l-> Pod1
+	Service -l-> Pod2
+	Pod1 -[hidden]d-> Pod2
+}
+
+user -l-> Service
+
+@enduml
