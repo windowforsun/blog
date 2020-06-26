@@ -1,0 +1,57 @@
+@startuml
+
+'skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+rectangle "Controller Plane(Master)" as master {
+	card "kubelet" as master_kubelet {
+	}
+
+	card etcd {
+	}
+
+	rectangle "Docker" as master_docker {
+		card "kube-proxy" as master_kube_proxy {
+		}
+		card "kube-scheduler" as kube_scheduler {
+		}
+		card "kube-controller-manager" as kube_controller_manager {
+		}
+		card "kube-apiserver" as kube_apiserver {
+		}
+
+	}
+
+	master_kubelet <--> master_docker
+	kube_scheduler <--> kube_apiserver
+	kube_controller_manager <--> kube_apiserver
+	master_kube_proxy <--> kube_apiserver
+	kube_apiserver <--> etcd
+}
+
+rectangle Node {
+	card "kubelet" as node_kubelet {
+	}
+
+	card "Docker" as node_docker {
+	}
+
+	card "kube-proxy" as node_kube_proxy {
+	}
+
+	node_kubelet <--> node_docker
+}
+
+node_kubelet <--> kube_apiserver
+node_kube_proxy <--> kube_apiserver
+
+
+'master_kubelet --> master_docker
+'kube-scheduler --> kube-apiserver
+'kube-controller-manager --> kube-apiserver
+'master_kube-proxy --> kube-apiserver
+'kube-apiserver --> etcd
+
+
+@enduml
