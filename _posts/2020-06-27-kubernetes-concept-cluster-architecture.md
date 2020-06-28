@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kubernetes 개념] 킄러스터와 컴포넌트"
+title: "[Kubernetes 개념] 클러스터와 컴포넌트"
 header:
   overlay_image: /img/kubernetes-bg.jpg
 excerpt: '쿠버네티스의 클러스터와 컴포넌트를 구성하는 요소들에 대해 알아보자'
