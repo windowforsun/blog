@@ -1,0 +1,63 @@
+@startuml
+
+'skinparam linetype ortho
+'!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+rectangle "Master" as mastergroup {
+rectangle "Master" as master1 {
+}
+
+
+rectangle "Master" as master2 {
+}
+
+rectangle "Master" as master3 {
+}
+
+}
+rectangle "Node" as node1 {
+}
+
+rectangle "Node" as node2 {
+}
+
+rectangle "Node" as node3 {
+}
+
+rectangle "Node" as node4 {
+}
+
+master1 -[hidden]d-> master2
+master2 -[hidden]d-> master3
+
+node1 -[hidden]d-> node2
+node2 -[hidden]d-> node3
+node3 -[hidden]d-> node4
+
+mastergroup -r- node1
+mastergroup -r- node2
+mastergroup -r- node3
+mastergroup -r- node4
+'mastergroup -d- node1
+'mastergroup -d- node2
+'mastergroup -d- node3
+'mastergroup -d- node4
+
+'master1 -- node1
+'master1 -- node2
+'master1 -- node3
+'master1 -- node4
+'
+'master2 -- node1
+'master2 -- node2
+'master2 -- node3
+'master2 -- node4
+''
+'master3 -- node1
+'master3 -- node2
+'master3 -- node3
+'master3 -- node4
+
+
+@enduml

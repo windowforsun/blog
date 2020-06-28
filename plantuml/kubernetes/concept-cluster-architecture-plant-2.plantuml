@@ -1,0 +1,58 @@
+@startuml
+
+skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+rectangle "Node" as node1 {
+	rectangle "Docker" as docker1 {
+		card AppPod as appPod11
+		card AppPod as appPod12
+	}
+
+	card "kubelet(cAdvisor)" as kubelet1
+	docker1 -[hidden]d- kubelet1
+}
+
+rectangle "Node" as node2 {
+	rectangle "Docker" as docker2 {
+		card AppPod as appPod21
+		card AppPod as appPod22
+	}
+
+	card "kubelet(cAdvisor)" as kubelet2
+	docker2 -[hidden]d- kubelet2
+}
+
+
+rectangle "Node" as node3 {
+	rectangle "Docker" as docker3 {
+		card AppPod as appPod31
+		card AppPod as appPod32
+	}
+
+	card "kubelet(cAdvisor)" as kubelet3
+	docker3 -[hidden]d- kubelet3
+}
+
+rectangle "Node" as node4 {
+	rectangle "Docker" as docker4 {
+		card MonitoringPod
+	}
+
+	card "kubelet(cAdvisor)" as kubelet4
+	docker4 -[hidden]d- kubelet4
+}
+
+GOV_USER(user, User) #White
+
+kubelet1 -d-> MonitoringPod : Data collection
+kubelet2 -d-> MonitoringPod : Data collection
+kubelet3 -d-> MonitoringPod : Data collection
+
+user -u-> MonitoringPod : Monitoring
+
+
+
+
+@enduml

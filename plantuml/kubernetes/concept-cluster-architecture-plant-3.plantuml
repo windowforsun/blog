@@ -1,0 +1,55 @@
+@startuml
+
+skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+rectangle "Node" as node1 {
+	rectangle "Docker" as docker1 {
+		card AppPod as appPod11
+		card AppPod as appPod12
+	}
+
+	card "LogCollectionPod" as lcp1
+	docker1 -[hidden]d- lcp1
+}
+
+rectangle "Node" as node2 {
+	rectangle "Docker" as docker2 {
+		card AppPod as appPod21
+		card AppPod as appPod22
+	}
+
+	card "LogCollectionPod" as lcp2
+	docker2 -[hidden]d- lcp2
+}
+
+
+rectangle "Node" as node3 {
+	rectangle "Docker" as docker3 {
+		card AppPod as appPod31
+		card AppPod as appPod32
+	}
+
+	card "LogCollectionPod" as lcp3
+	docker3 -[hidden]d- lcp3
+}
+
+rectangle "Node" as node4 {
+	rectangle "Docker" as docker4 {
+		card LogAggregatorPod
+	}
+}
+
+GOV_USER(user, User) #White
+
+lcp1 -d-> LogAggregatorPod : Log collection
+lcp2 -d-> LogAggregatorPod : Log collection
+lcp3 -d-> LogAggregatorPod : Log collection
+
+user -u-> LogAggregatorPod : Check log
+
+
+
+
+@enduml
