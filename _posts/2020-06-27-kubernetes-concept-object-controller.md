@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kubernetes 개념] 오브젝트와 컨트롤러를 구분하고 정의하는 네임스페이스와 템플릿"
+title: "[Kubernetes 개념] 오브젝트와 컨트롤러, 네임스페이스와 템플릿"
 header:
   overlay_image: /img/kubernetes-bg.jpg
 excerpt: '쿠버네티스 클러스터를 구성하는 오브젝트와 컨트롤러를 구분하고 정의하는 네임스페이스와 템플릿에 대해 알아보자'
