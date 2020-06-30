@@ -392,11 +392,91 @@ $ git log --pretty=format:"%h %s" --graph
 이처럼 특정 범위에 해당하는 커밋 히스토리를 시간을 기준으로 조회하는 옵션으로 `--since`, `--until`, `--after`, `--before` 이 있다. 
 여기서 `--since=<기간>` 는 최근 ~ `최근 - <기간>`, `--until=<기간>` 은 `최근 - <기간>` ~ 시작점 을 의미한다. 
 
+`git log --since=1.housrs` 명령을 수행하면, `현재시간 ~ 1시간 이전` 까지의 커밋 히스토리를 확인 할 수 있다.
+
 ```bash
 $ date
 Mon Jun 29 21:35:13 KST 2020
 
-$ git log --since=2.hours
+$ git log --since=1.hours
+commit 4ff0ad3931b0a3feb62e3556c1fc2a4a4985760f (HEAD -> master)
+Author: root <root@windowforsun-1.localdomain>
+Date:   Mon Jun 29 21:30:19 2020 +0900
+
+    removed e-file
+
+commit 0245a50e158d61fdf7a1cda9d8a7935048f9f58d
+Author: root <root@windowforsun-1.localdomain>
+Date:   Mon Jun 29 21:00:17 2020 +0900
+
+    add e-file
+```  
+
+`git log --until=1.hours` 를 수행하면, `현재시간 1시간 이전 ~ 첫 커밋` 까지의 커밋 히스토리를 확인 할 수 있다. 
+
+```bash
+$ date
+Mon Jun 29 21:35:57 KST 2020
+
+$ git log --until=1.hours
+commit 148a5b415db7955ddc23023511a51d272edb77a4
+Author: root <root@windowforsun-1.localdomain>
+Date:   Mon Jun 29 20:01:00 2020 +0900
+
+    changed b-file
+
+commit ee6f58de0bf55d3fc2ea1254735e564d236ca282
+Merge: b1d8559 e8731bb
+Author: root <root@windowforsun-1.localdomain>
+Date:   Mon Jun 29 20:00:04 2020 +0900
+
+    Merge branch 'qa'
+
+commit b1d8559538fc1a6bf010d6b00bb4a2c654e6d2ca
+Merge: 0c7075b aa14476
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sun Jun 28 23:00:16 2020 +0900
+
+    Merge branch 'dev'
+
+commit e8731bb6a26770c2f0ec2afe531ef84bb9560119
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sun Jun 28 22:00:20 2020 +0900
+
+    add d-file
+
+commit 0c7075b565de38cf23bc7abd0fb82447b6f2c41c
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sun Jun 28 21:00:19 2020 +0900
+
+    changed a-file
+
+commit aa14476e1f94d3caa22ca4d33ee0585cdd37d3f6
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sun Jun 28 20:00:20 2020 +0900
+
+    add c-file
+
+commit 63ba625ef447dd36f79a22721f2d30693950712a
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sat Jun 27 22:00:20 2020 +0900
+
+    add b-file
+
+commit 1050d79b05d1eafcdd53acbdf5723500fb361a25
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sat Jun 27 20:00:19 2020 +0900
+
+    add a-file
+```  
+
+`git log --after="2020-06-28 00:00:00` 를 수행하면, `2020-06-28 00:00:00` 이후의 커밋 히스토리를 조회할 수 있다. 
+
+```bash
+$ date
+Mon Jun 29 21:36:35 KST 2020
+
+$ git log --after="2020-06-28 00:00:00"
 commit 4ff0ad3931b0a3feb62e3556c1fc2a4a4985760f (HEAD -> master)
 Author: root <root@windowforsun-1.localdomain>
 Date:   Mon Jun 29 21:30:19 2020 +0900
@@ -423,110 +503,13 @@ Date:   Mon Jun 29 20:00:04 2020 +0900
     Merge branch 'qa'
 ```  
 
-```bash
-$ date
-Mon Jun 29 21:35:57 KST 2020
-
-$ git log --until=2.hours
-commit b1d8559538fc1a6bf010d6b00bb4a2c654e6d2ca
-Merge: 0c7075b aa14476
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 23:00:16 2020 +0900
-
-    Merge branch 'dev'
-
-commit e8731bb6a26770c2f0ec2afe531ef84bb9560119
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 22:00:20 2020 +0900
-
-    add d-file
-
-commit 0c7075b565de38cf23bc7abd0fb82447b6f2c41c
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 21:00:19 2020 +0900
-
-    changed a-file
-
-commit aa14476e1f94d3caa22ca4d33ee0585cdd37d3f6
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 20:00:20 2020 +0900
-
-    add c-file
-
-commit 63ba625ef447dd36f79a22721f2d30693950712a
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sat Jun 27 22:00:20 2020 +0900
-
-    add b-file
-
-commit 1050d79b05d1eafcdd53acbdf5723500fb361a25
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sat Jun 27 20:00:19 2020 +0900
-
-    add a-file
-```  
-
-```bash
-$ date
-Mon Jun 29 21:36:35 KST 2020
-
-$ git log --after="2020-06-28"
-commit 4ff0ad3931b0a3feb62e3556c1fc2a4a4985760f
-Author: root <root@windowforsun-1.localdomain>
-Date:   Mon Jun 29 21:30:19 2020 +0900
-
-    removed e-file
-
-commit 0245a50e158d61fdf7a1cda9d8a7935048f9f58d
-Author: root <root@windowforsun-1.localdomain>
-Date:   Mon Jun 29 21:00:17 2020 +0900
-
-    add e-file
-
-commit 148a5b415db7955ddc23023511a51d272edb77a4
-Author: root <root@windowforsun-1.localdomain>
-Date:   Mon Jun 29 20:01:00 2020 +0900
-
-    changed b-file
-
-commit ee6f58de0bf55d3fc2ea1254735e564d236ca282
-Merge: b1d8559 e8731bb
-Author: root <root@windowforsun-1.localdomain>
-Date:   Mon Jun 29 20:00:04 2020 +0900
-
-    Merge branch 'qa'
-
-commit b1d8559538fc1a6bf010d6b00bb4a2c654e6d2ca
-Merge: 0c7075b aa14476
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 23:00:16 2020 +0900
-
-    Merge branch 'dev'
-
-commit e8731bb6a26770c2f0ec2afe531ef84bb9560119
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 22:00:20 2020 +0900
-
-    add d-file
-```  
+`git log --before="2020-06-28 00:00:00"` 를 수행하면, `2020-06-28 00:00:00` 이전 커밋 히스토리를 조회할 수 있다. 
 
 ```bash
 $ date
 Mon Jun 29 21:37:41 KST 2020
 
-$ git log --before="2020-06-28
-commit 0c7075b565de38cf23bc7abd0fb82447b6f2c41c
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 21:00:19 2020 +0900
-
-    changed a-file
-
-commit aa14476e1f94d3caa22ca4d33ee0585cdd37d3f6
-Author: root <root@windowforsun-1.localdomain>
-Date:   Sun Jun 28 20:00:20 2020 +0900
-
-    add c-file
-
+$ git log --before="2020-06-28 00:00:00"
 commit 63ba625ef447dd36f79a22721f2d30693950712a
 Author: root <root@windowforsun-1.localdomain>
 Date:   Sat Jun 27 22:00:20 2020 +0900
@@ -541,124 +524,83 @@ Date:   Sat Jun 27 20:00:19 2020 +0900
 ```  
 
 ## 수정된 내용을 바탕으로 커밋 히스토리 조회
-`-S` 를 사용하면 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-git log --since
-
-git log --until
-
-git log -S
-
-git log -- path1 path2
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`-S` 를 사용하면 변경이 수행된 내용 중 특정 텍스트가 포함되 있는지에 대해서 검색이 가능하다. 
+
+`git log -S a` 를 통해 변경 텍스트 중 `a` 라는 텍스트가 있는 로그만 확인할 수 있다. 
+
+```bash
+$ git log -S a
+commit 0c7075b565de38cf23bc7abd0fb82447b6f2c41c
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sun Jun 28 21:00:19 2020 +0900
+
+    changed a-file
+
+commit 1050d79b05d1eafcdd53acbdf5723500fb361a25
+Author: root <root@windowforsun-1.localdomain>
+Date:   Sat Jun 27 20:00:19 2020 +0900
+
+    add a-file
+```  
+
+## 조회 관련 범위 제한 옵션 정리
+
+옵션|설명
+---|---
+-(n)|최근 n 개의 커밋만 조회한다.
+--since, --after|명시한 날짜 이후의 커밋만 검색한다.
+--until, --before|명시한 날짜 이전의 커밋만 조회한다.
+--author|입력한 저자의 커밋만 보여준다.
+--committer|입력한 커미터의 커밋만 보여준다.
+--grep|커밋 메시지 안의 텍스트를 검색한다.
+-S|커밋 변경(추가/삭제) 내용 안의 텍스트를 검색한다.
+
+
+## 리비전 범위에 해당하는 커밋 히스토리 조회
+`git log <revision-range>` 와 같이 리비전의 범위를 정의해서 전달하면, 해당하는 커밋 히스토리 조회가 가능하다. 
+예를 들어 `git log qa..HEAD` 와 같이 수행하면, `qa` 브랜치 부터 현재 리비전 범위에 해당하는 커밋 히스토리 조회가 가능하다. 
+
+```bash
+$ git log qa..HEAD --graph --oneline
+* 4ff0ad3 (HEAD -> master) removed e-file
+* 0245a50 add e-file
+* 148a5b4 changed b-file
+* ee6f58d Merge branch 'qa'
+* b1d8559 Merge branch 'dev'
+* aa14476 (dev) add c-file
+```  
+
+리비전 관련 표현은 아래와 같은 것들이 있다.
+- `HEAD^` : 헌재 커밋의 부모
+- `HEAD^2` : 현재 커밋의 조부모
+- `HEAD^^` : 현재 커밋의 조부모
+- `HEAD^5` : 현재 커밋의 5번째 부모
+
+리비전 범위(`revision-range`)의 표현 예시는 아래와 같다.
+- `refA..refB` : `refA` 에는 포함되지 않고, `refB` 에만 포함되는 커밋 범위
+- `^refA refB` : `refA` 에는 포함되지 않고, `refB` 에만 포함되는 커밋 범위
+- `^refA refB refC` : `refA` 에는 포함되지 않고, `refB`, `refC` 에 포함되는 커밋 범위
+- `--not refA refB refC` : `refA` 에는 포함되지 않고, `refB`, `refC` 에 포함되는 커밋 범위
+- `refA...refB` : `refA`, `refB` 에 모두 포함되는 커밋
+
+위의 표현들을 활용해서 아래외 같은 예시를 만들보면 아래와 같다.
+- 자식 브랜치에서 작업을 하던 중, 
+부모 브랜치로 부터 시작한 현재 브랜치의 작업 로그 확인을 해야 할때는 부모 브랜치에 포함되는 부분을 현재 리비전에서 제외 하면 된다. 
+	- `git log <부모 브랜치>..HEAD`
+	- `git log ^<부모 브랜치> HEAD`
+	- `git log --not <부모 브랜치> HEAD`
+- 부모 브랜치에 머지된 다른 커밋 들을 조회하고 싶을 때는, 부모 브랜치에서 현재 리비전에 포함되는 부분을 제외 하면 된다. 
+	- `git log HEAD..<부모브랜치>`
+	- `git log ^HEAD <부모브랜치>`
+- 부모 자식관계 혹은 같은 부모를 둔 자식 브랜치의 관계에서, 두 브랜치의 공통 부분은 제외한(한 브랜치에만 해당하는 커밋) 히스토리 조회는 아래와 같다. 
+	- `git log <부모 브랜치>...<자식 브랜치>`
+	- `git log <자식 브랜치A>...<자식 브랜치B>`
+	- 출력되는 커밋이 어느 브랜치에 속하는지는 `--left-right` 옵션을 통해 가능하다. `git log --left-right <A>...<B>
+
+
+## 머지 커밋 표시하지 않기
+머지를 수행하게 되면 머지에 대한 커밋이 추가로 생성된다. 
+커밋 히스토리를 조회할때, `--no-merges` 옵션을 추가하면 머지 커밋는 제외하고 조회가 가능하다. 
 
 ---
  
