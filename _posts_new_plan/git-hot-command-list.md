@@ -15,10 +15,20 @@
 
 원격 브랜치 리스트$ git branch -r
 
-로컬 브랜치 리스트$ git branch
+로컬 브랜치 리스트$ git branchㅣ
 
 모든 브랜치 리스트$ git branch -a
 
 로컬에서 원격 브랜치 리스트 갱신$ git remote update, git fetch
 
 특정 커밋 시점으로 되돌리기$ git reset --soft <commit-hash>, git reset --hard <commit-hash>
+
+로그 조회 트리$ git log --graph
+
+로그 조회 한줄로$ git log --graph --oneline
+
+로그 조회 파일 내용$ git log --name-only
+
+로그 조회 최근 n개 커밋$ git log -<n>
+
+특정 commit 파일 변경 내용$ git show <commit-hash>
