@@ -1,0 +1,10 @@
+@startuml
+
+rectangle Pod {
+	card pause
+	card App
+	card "pause network"
+}
+
+
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+
+rectangle Pod {
+	card WebServer
+	card LogCollector
+	card VolumeContainer
+}
+
+
+@enduml
