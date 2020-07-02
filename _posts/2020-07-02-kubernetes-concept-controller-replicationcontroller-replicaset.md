@@ -238,7 +238,7 @@ replicaset-nginx-z7kmp   1/1     Running   0          4m44s
 ```  
 
 실행 중인 파드의 `.metadata.labels.app` 필드 설정을 확인하기 위해,
-`kubectl get pods -o=jsonpath="{range   .items[*]}{.metadata.name}{'\t'}{.metadata.labels}{'\n'}{end}"`` 실행하면 아래와 같다. 
+`kubectl get pods -o=jsonpath="{range   .items[*]}{.metadata.name}{'\t'}{.metadata.labels}{'\n'}{end}"` 실행하면 아래와 같다. 
 
 ```bash
 $ kubectl get pods -o=jsonpath="{range   .items[*]}{.metadata.name}{'\t'}{.metadata.labels}{'\n'}{end}"
