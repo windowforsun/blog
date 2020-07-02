@@ -160,6 +160,7 @@ pod/replicaset-nginx-stgj2   1/1     Running   0          13m
 
 `kubectl apply -f replicaset-nginx.yaml` 을 통해 다시 레플리카세트를 생성하면, 
 아래와 같이 생성된 레플라카세트에서 기존의 파드를 관리하는 것을 확인 할 수 있다. 
+레플리카세트에 대한 조회는 `kubectl get replicaset` 혹은 `kubectl get rs` 로 가능하다. 
 
 ```bash
 $ kubectl apply -f
