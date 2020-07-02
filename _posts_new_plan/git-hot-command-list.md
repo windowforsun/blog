@@ -32,3 +32,7 @@
 로그 조회 최근 n개 커밋$ git log -<n>
 
 특정 commit 파일 변경 내용$ git show <commit-hash>
+
+브랜치 이름 변경, 수정$ git branch -m <before-name> <new-name>
+
+리모트 브랜치 삭제$ git push <remote-name> :<branch-name>
