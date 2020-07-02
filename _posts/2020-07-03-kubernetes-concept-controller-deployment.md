@@ -358,7 +358,7 @@ deployment.apps/deployment-nginx paused
 그리고 `CAHNGE-CAUSE` 메시지 변경을 위해 `kubectl patch deployment/<디플로이먼트 이름> -p "{\"metadata\":{\"annotations\":{\"kubernetes.io/change-cause\":\"version 1.11\"}}}"` 
 명령을 수행한다. 
 
-```basn
+```bash
 $ kubectl set image deployment/deployment-nginx deployment-nginx=nginx:1.12
 deployment.apps/deployment-nginx image updated
 $ kubectl patch deployment/deployment-nginx -p "{\"metadata\":{\"annotations\":{\"kubernetes.io/change-cause\":\"version 1.12\"}}}"
@@ -396,7 +396,7 @@ REVISION  CHANGE-CAUSE
 디플로이먼트에서 수행한다면 예시는 `kubectl rollout restart deployment/<디플로이먼트 이름>` 과 같다. 
 
 
-## 디플로이먼트 상태
+### 디플로이먼트 상태
 디플로이먼트는 배포를 관리하면서 상태가 변하게 된다. 
 디플로이먼트에 존재하는 배포 상태는 아래와 같다.
 - 우선 진행(`Preprocessing`)
@@ -411,7 +411,7 @@ REVISION  CHANGE-CAUSE
 - 디플로이먼트가 예전 레플리카세트의 파드 개수를 줄일 때
 - 새로운 파드가 준비 상태가 되거나 이용 가능한 상태가 되었을 때
 
-배포가 이상없이 완료되면 상태는 완료가 되어 종료 코드를 0으로 표시한다.  
+배포가 이상없이 완료되면 상태는 완료가 되어 종료 코드를 0으로 표시한다. 
 이는 아래 조건을 만족한다는 의미이다. 
 - 디플로이먼트가 관리하는 모든 레플리카세트가 업데이트 완료되었을 때
 - 모든 레플리카세트가 사용 가능해졌을 때
