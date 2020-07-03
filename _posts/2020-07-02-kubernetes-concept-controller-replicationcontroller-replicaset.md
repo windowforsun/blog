@@ -88,8 +88,7 @@ spec:
 구성한 레플리카세트 템플릿은 `kubectl apply -f replicaset-nginx.yaml` 명령을 통해 실행 할 수 있다. 
 
 ```bash
-$ kubectl apply -f
- replicaset-nginx.yaml
+$ kubectl apply -f replicaset-nginx.yaml
 replicaset.apps/replicaset-nginx created
 $ kubectl get pods
 NAME                     READY   STATUS              RESTARTS   AGE

@@ -63,8 +63,7 @@ spec:
 `deploy` 는 `deployment` 를, `rs` 는 `replicaset` 를 의미한다.
 
 ```bash
-$ kubectl apply -f
- deployment-nginx.yaml
+$ kubectl apply -f deployment-nginx.yaml
 deployment.apps/deployment-nginx created
 $ kubectl get deploy,rs,pods
 NAME                               READY   UP-TO-DATE   AVAILABLE   AGE
@@ -79,7 +78,7 @@ pod/deployment-nginx-58cdfb8dc-ddfdl   1/1     Running   0          27s
 pod/deployment-nginx-58cdfb8dc-ts2xr   1/1     Running   0          27s
 ```  
 
-`eployment.apps/deployment-nginx` 이름으로 디플로이먼트가 생성되었고, 
+`deployment.apps/deployment-nginx` 이름으로 디플로이먼트가 생성되었고, 
 디플로이먼트가 관리하는 `replicaset.apps/deployment-nginx-58cdfb8dc` 레플리카세트가 생성된 것을 확인 할 수 있다. 
 그리고 레플리카세트에서 관리하는 `deployment-nginx-58cdfb8dc-` 프리픽스가 붙은 파드들도 생성되었다.  
 
