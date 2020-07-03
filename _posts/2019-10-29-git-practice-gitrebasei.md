@@ -233,6 +233,10 @@ tags:
 	
 	![그림 6]({{site.baseurl}}/img/git/practice-gitrebasei-6.png)
 	 
+## remote 저장소에 적용하기
+-  이미 원격 저장소에 적용된 커밋을 로컬 저장소에서 `rebase` 명령을 통해 수정 한경우 `git push <원격저장소이름> +<브랜치이름>` 을 통해 적용 가능하다. 
+- `+` 옵션은 `--force` 옵션과 동일한 역할을 한다. 
+	 
 ## rebase 주의 사항
 - rebase 는 이전 커밋에 대해서 변경작업이 수행되기 때문에 사용에 유의해야 한다.
 - 이미 remote 저장소에 push 된 커밋을 rebase 한다면, 이는 push 되지 않는다.

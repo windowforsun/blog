@@ -32,3 +32,7 @@
 로그 조회 최근 n개 커밋$ git log -<n>
 
 특정 commit 파일 변경 내용$ git show <commit-hash>
+
+track file to untrack$ git checkout <filename>, git rm --cache <filename>
+
+stage to unstate$ git reset HEAD <filename>, git reset HEAD 
