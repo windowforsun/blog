@@ -369,59 +369,255 @@ $ echo "this is a \$str"
 this is a $str
 ```  
 
+### 문자열 변경
+`sed` 를 사용하면 특정 문자열을 특정 문자열로 변경 할 수 있다. 
+`sed` 는 아주 많은 활용법이 있지만 그 중 몇가지만 간단하게 다뤄본다.  
+
+우선 자주 사용되는 연산자는 아래와 같은 것들이 있다. 
+- `d` : 행을 삭제한다. 
+- `p`: 행을 출력한다. 
+- `s` : 문자열을 치환한다. 
+- `g` : 모든 라인에 적용
+
+모든 명령이 수행하는 파일 내용은 아래와 같다. 
+
+```bash
+$ cat -n text
+     1  a
+     2  ab
+     3  abc
+     4  abcd
+     5
+     6  a
+     7  ab
+     8  abc
+     9  abcd
+    10
+    11  abcde
+    12  abcdef
+    13  abcdefg
+    14
+    15  A
+    16  AB
+    17  ABC
+```  
+
+```bash
+# 1 ~ 3 라인 제외하고 출력
+$ sed '1,3p' text
+a
+a
+ab
+ab
+abc
+abc
+abcd
+
+a
+ab
+abc
+abcd
+
+abcde
+abcdef
+abcdefg
+
+A
+AB
+ABC
+```  
+
+```bash
+# 1 ~ 3 라인만 출력
+$ sed -n '1,3p' text
+a
+ab
+abc
+```  
+
+```bash
+# 1 ~ 3, 11 ~ 13 라인만 출력
+$ sed -n -e '1,3p' -e '11,13p' text
+a
+ab
+abc
+abcde
+abcdef
+abcdefg
+```  
+
+```bash
+# 문자 a 를 문자 ! 로 치환해서 출력
+$ sed 's/a/!/g' text
+!
+!b
+!bc
+!bcd
+
+!
+!b
+!bc
+!bcd
+
+!bcde
+!bcdef
+!bcdefg
+
+A
+AB
+ABC
+```  
+
+```bash
+# 대소문자 구분하지 않고 문자 a 를 문자 !로 치환
+$ sed 's/a/!/gi' text
+!
+!b
+!bc
+!bcd
+
+!
+!b
+!bc
+!bcd
+
+!bcde
+!bcdef
+!bcdefg
+
+!
+!B
+!BC
+```  
+
+```bash
+# 1 ~ 4 라인에서만 문자 a 를 문자 ! 로 치환
+$ sed '1,4 s/a/!/g' text
+!
+!b
+!bc
+!bcd
+
+a
+ab
+abc
+abcd
+
+abcde
+abcdef
+abcdefg
+
+A
+AB
+ABC
+```  
+
+```bash
+# 공백라인 삭제 (정규식)
+$ sed '/^$/d' text
+a
+ab
+abc
+abcd
+a
+ab
+abc
+abcd
+abcde
+abcdef
+abcdefg
+A
+AB
+ABC
+```  
+
+```bash
+# 문자 A, a 를 문자 ! 로 치환(정규식)
+$ sed 's/[Aa]/!/g' text
+!
+!b
+!bc
+!bcd
+
+!
+!b
+!bc
+!bcd
+
+!bcde
+!bcdef
+!bcdefg
+
+!
+!B
+!BC
+```  
+
+```bash
+# 문자 c로 끝나는 라인 출력
+$ sed -n '/c$/p' text
+abc
+abc
+
+# 문자 a로 시작하는 라인 출력
+$ sed -n '/^a/p' text
+a
+ab
+abc
+abcd
+a
+ab
+abc
+abcd
+abcde
+abcdef
+abcdefg
+```  
+
+```bash
+# linux to windows 공백 라인(\r) 생성
+$ sed -i 's/$/\r/g' text
 
 
+a^M
+ab^M
+abc^M
+abcd^M
+^M
+a^M
+ab^M
+abc^M
+abcd^M
+^M
+abcde^M
+abcdef^M
+abcdefg^M
+^M
+A^M
+AB^M
+ABC^M
 
 
+# windows to linux 공백 라인(\r) 제거
+$ sed -i 's/\r//g' text
+a
+ab
+abc
+abcd
 
+a
+ab
+abc
+abcd
 
+abcde
+abcdef
+abcdefg
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+A
+AB
+ABC
+```  
 
 ---
 ## Reference
