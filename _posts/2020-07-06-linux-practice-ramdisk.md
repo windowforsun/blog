@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Linux 실습] RAM Disk"
+title: "[Linux 실습] RAM Disk(램디스크)"
 header:
   overlay_image: /img/linux-bg-2.jpg
 excerpt: '보조 메모리와 메인 메모리의 속도차이를 극복할 수 있는 RAM Disk 에 대해 알아보자'
@@ -116,59 +116,212 @@ $ df -h | grep /test/ramdisk
 
 ```  
 
-## 속도 테스트
+## 성능 비교
+일반적인 `Disk` 경로와 `RAM Disk` 로 마운트 한 경로의 성능 비교를 위해 `sysbench` 명령어와 `dd` 명령어를 사용한다. 
+
+### dd
+`dd` 명령어에 대해 간단하게 설명하면, 
+블록 단위로 파일을 복사하거나 파일 변환을 할 수 있는 명령어이다. 
+해당 명령을 활용하면 디스크의 성능 측정도 가능하다.  
+
+사용할 명령어의 예시는 아래와 같다. 
+
+```bash
+$ dd if=/dev/zero of=<테스트경로> bs=<데이터크기> count=<데이터개수>
+```  
+
+`RAM Disk` 에 마운트 된 경로에서 1M 데이터 1000회 테스트를 수행한 결과는 아래와 같다. 
+
+```bash
+$ dd if=/dev/zero of=/test/ramdisk/bench bs=1M count=1000; rm -f /test/ramd
+isk/bench
+1000+0 records in
+1000+0 records out
+1048576000 bytes (1.0 GB, 1000 MiB) copied, 0.45228 s, 2.3 GB/s
+```  
+
+일반 `Disk` 경로에서 동일한 테스트를 수행하면 아래와 같다. 
+
+```bash
+$ dd if=/dev/zero of=/test/notramdisk/bench bs=1M count=1000; rm -f /test/n
+otramdisk/bench
+1000+0 records in
+1000+0 records out
+1048576000 bytes (1.0 GB, 1000 MiB) copied, 0.828263 s, 1.3 GB/s
+```  
+
+`dd` 명령어를 사용한 테스트 결과로는 `RAM Disk` 가 일반 `Disk` 보다 2배 정도의 성능을 보이는 것을 확인 할 수 있다. 
 
 
+### sysbench
+`sysbench` 는 리눅스 성능 측정관련 툴로 다양한 종류의 성능 측정을 제공한다. 
+만약 설치가 돼있지 않다면 `yum install sysbench` 혹은 `apt install systench` 를 통해 설치 가능하다.  
+
+`sysbench` 에는 `fileio` 관련 여러 테스트 모드가 존재하는데,
+그 중 순차 쓰기(`seqwr`) 와 순차 읽기(`seqrd`) 를 사용해서 테스트를 한다. 
+테스트 과정은 1G 데이터를 순차 쓰기로 쓰기 테스트를 수행하고, 
+테스트 과정에서 만들어진 데이터를 순차 읽기로 수행해 읽기 테스트를 수행한다. 
+
+먼저 `RAM Disk` 에 마운트 된 경로에 대한 테스트이다. 
+앞에서 설명한  것과 같이 쓰기 테스트는 순차 쓰기를 이용한 `sysbench fileio --file-total-size=<데이터크기> --file-test-mode=seqwr run` 명령을 통해 가능하지만 좀더 편의성을 위해 아래 명령어를 사용한다. 
+`sysbench fileio --file-total-size=1G prepare`
+
+```bash
+$ pwd
+/test/ramdisk
+$ sysbench fileio --file-total-size=1G prepare
+sysbench 1.0.18 (using system LuaJIT 2.1.0-beta3)
+
+128 files, 8192Kb each, 1024Mb total
+Creating files for the test...
+Extra file open flags: (none)
+Creating file test_file.0
+Creating file test_file.1
+Creating file test_file.2
+
+.. 생략
+
+Creating file test_file.125
+Creating file test_file.126
+Creating file test_file.127
+1073741824 bytes written in 0.41 seconds (2473.96 MiB/sec).
+```  
+
+다음으로는 `RAM Disk` 의 읽기 테스트를 위해, 
+`sysbench fileio --file-total-size=<데이터크기> --file-test-mode=seqrd run` 를 수행한다. 
+
+```bash
+$ pwd
+/test/ramdisk
+$ sysbench fileio --file-total-size=1G --file-test-mode=seqrd run
+sysbench 1.0.18 (using system LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
 
 
+Extra file open flags: (none)
+128 files, 8MiB each
+1GiB total file size
+Block size 16KiB
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing sequential read test
+Initializing worker threads...
+
+Threads started!
 
 
+File operations:
+    reads/s:                      356747.23
+    writes/s:                     0.00
+    fsyncs/s:                     0.00
+
+Throughput:
+    read, MiB/s:                  5574.18
+    written, MiB/s:               0.00
+
+General statistics:
+    total time:                          10.0001s
+    total number of events:              3568104
+
+Latency (ms):
+         min:                                    0.00
+         avg:                                    0.00
+         max:                                    1.19
+         95th percentile:                        0.00
+         sum:                                 9314.50
+
+Threads fairness:
+    events (avg/stddev):           3568104.0000/0.00
+    execution time (avg/stddev):   9.3145/0.00
+```  
+
+이제 `Disk` 경로에서 동일한 `RAM Disk` 마운트 경로에서 수행했던 동일한 순서와 명령어를 수행한다.  
+
+`Disk` 쓰기 테스트
+
+```bash
+$ pwd
+/test/notramdisk
+$ sysbench fileio --file-total-size=1G prepare
+sysbench 1.0.18 (using system LuaJIT 2.1.0-beta3)
+
+128 files, 8192Kb each, 1024Mb total
+Creating files for the test...
+Extra file open flags: (none)
+Creating file test_file.0
+Creating file test_file.1
+Creating file test_file.2
+
+.. 생략 ..
+
+Creating file test_file.125
+Creating file test_file.126
+Creating file test_file.127
+1073741824 bytes written in 1.86 seconds (551.32 MiB/sec).
+```  
+
+`Disk` 읽기 테스트
+
+```bash
+$ pwd
+/test/notramdisk
+$ sysbench fileio --file-total-size=1G --file-test-mode=seqrd run
+sysbench 1.0.18 (using system LuaJIT 2.1.0-beta3)
+
+Running the test with following options:
+Number of threads: 1
+Initializing random number generator from current time
 
 
+Extra file open flags: (none)
+128 files, 8MiB each
+1GiB total file size
+Block size 16KiB
+Periodic FSYNC enabled, calling fsync() each 100 requests.
+Calling fsync() at the end of test, Enabled.
+Using synchronous I/O mode
+Doing sequential read test
+Initializing worker threads...
+
+Threads started!
 
 
+File operations:
+    reads/s:                      356297.70
+    writes/s:                     0.00
+    fsyncs/s:                     0.00
 
+Throughput:
+    read, MiB/s:                  5567.15
+    written, MiB/s:               0.00
 
+General statistics:
+    total time:                          10.0001s
+    total number of events:              3563584
 
+Latency (ms):
+         min:                                    0.00
+         avg:                                    0.00
+         max:                                    1.36
+         95th percentile:                        0.00
+         sum:                                 9282.64
 
+Threads fairness:
+    events (avg/stddev):           3563584.0000/0.00
+    execution time (avg/stddev):   9.2826/0.00
+```  
 
+테스트가 끝나고 생성된 파일은 `sysbench fileio --file-total-size=1G cleanup` 명령을 통해 정리할 수 있다.  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`sysbench` 를 이용한 테스트 결과를 확인하면, 
+우선 쓰기에서는 `RAM Disk` 가 `Disk` 에 비해 4배 이상 빠른 것을 확인 할 수 있다. 
+하지만 읽기에서는 큰 차이는 보이지 않았다. 
 
 ---
 ## Reference
- 
+[akopytov/sysbench](https://github.com/akopytov/sysbench)
 	
