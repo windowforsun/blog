@@ -128,7 +128,7 @@ Supported log levels (priorities):
 For more details see dmesg(q).
 ```  
 
-## vmstats 1
+## vmstat 1
 
 ```bash
 $ vmstat 1
@@ -211,7 +211,8 @@ Options are:
 [ -P { <cpu> [,...] | ON | ALL } ]
 ```  
 
-## pidstat 1
+## pidstat
+### pidstat 1
 
 ```bash
 $ pidstat 1
@@ -232,6 +233,39 @@ Linux 3.10.0-957.27.2.el7.x86_64 (localhost.localdomain)        06/18/2020      
 
 - `pidstat` 은 프로세스당 `top` 명령어를 수행한 것과 비슷한 결과를 보여주는 명령어이다.
 - `CPU` 필드의 값이 100 이면 1개 코어를 모두 사용 중인 것으로 파악할 수 있고, 1200 이라면 12 코어를 사용중이라고 판단할 수 있다.
+
+### pidstat -d -p ALL 1
+
+```bash
+04:21:13      UID       PID   kB_rd/s   kB_wr/s kB_ccwr/s  Command
+04:21:14        0         1      0.00      0.00      0.00  systemd
+04:21:14        0        16      0.00      0.00      0.00  systemd-journal
+04:21:14        0        28      0.00      0.00      0.00  systemd-udevd
+04:21:14       81        62      0.00      0.00      0.00  dbus-daemon
+04:21:14        0        68      0.00      0.00      0.00  systemd-logind
+04:21:14        0        69      0.00      0.00      0.00  sshd
+04:21:14        0        71      0.00      0.00      0.00  agetty
+04:21:14        0        73      0.00      0.00      0.00  bash
+04:21:14        0       148      0.00      0.00      0.00  bash
+04:21:14        0       759      0.00      0.00      0.00  pidstat
+04:21:14      999       938      0.00      0.00      0.00  memcached
+^C
+
+Average:      UID       PID   kB_rd/s   kB_wr/s kB_ccwr/s  Command
+Average:        0         1      0.00    931.74      0.00  systemd
+Average:        0        16      0.00      0.00      0.00  systemd-journal
+Average:        0        28      0.00      0.00      0.00  systemd-udevd
+Average:       81        62      0.00      0.00      0.00  dbus-daemon
+Average:        0        68      0.00      0.00      0.00  systemd-logind
+Average:        0        69      0.00      0.21      0.00  sshd
+Average:        0        71      0.00      0.00      0.00  agetty
+Average:        0        73      0.00      0.00      0.00  bash
+Average:        0       148      0.06      0.10      0.10  bash
+Average:        0       759      0.00      0.00      0.00  pidstat
+Average:      999       938      0.00      0.00      0.00  memcached
+```  
+
+- `pidstat` 명령에서 `-d -p` 옵션을 주면 프로세스별 `Disk I/O` 사용량을 확인 할 수 있다.
 
 ## iostat -xz 1
 
@@ -314,7 +348,7 @@ For more details see free(1).
 
 ```bash
 $ sar -n DEV 1
-Linux 3.10.0-1062.18.1.el7.x86_64 (cpb2015-qa-load-01.com2us.kr)        06/18/2020      _x86_64_        (2 CPU)
+Linux 3.10.0-1062.18.1.el7.x86_64 (windowforsun)        06/18/2020      _x86_64_        (2 CPU)
 
 03:20:00 PM     IFACE   rxpck/s   txpck/s    rxkB/s    txkB/s   rxcmp/s   txcmp/s  rxmcst/s
 03:20:01 PM veth85c98df     67.00     67.00      7.39      8.25      0.00      0.00      0.00
@@ -406,6 +440,62 @@ KiB Swap:  2097148 total,  2097148 free,        0 used.  8344504 avail Mem
 
 - `top` 명령어는 지금까지 언급되었던 부분들에 대해 시스템 전반적인 값을 확인할 수 있는 명령어이다.
 - 계속해서 화면의 값이 변경되기 때문에 `ctrl+s` 는 일지정지, `ctrl+q` 는 다시시작 단축키를 활용하면 더욱 편리하다.
+
+
+## ps
+### ps -aux
+- `ps` 명령에서 `-aux` 옵션을 사용하면 프로세스 별로 메모리 사용량을 확인 할 수 있다. 
+
+```bash
+$ ps -aux
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.0  43388  5184 ?        Ss   03:07   0:00 /sbin/init
+root        16  0.0  0.0  39096  7832 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-journald
+root        28  0.0  0.0  41692  3452 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-udevd
+dbus        62  0.0  0.0  58124  4328 ?        Ss   03:07   0:00 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfi
+root        68  0.0  0.0  26396  2916 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-logind
+root        69  0.0  0.0 112936  7892 ?        Ss   03:07   0:00 /usr/sbin/sshd -D
+root        71  0.0  0.0   9936  1844 tty1     Ss+  03:07   0:00 /sbin/agetty --noclear tty1 linux
+root        73  0.0  0.0  11840  3096 pts/0    Ss   03:08   0:00 /bin/bash
+root       148  0.0  0.0  11840  3072 pts/1    Ss+  03:16   0:00 /bin/bash
+memcach+  2365  0.0  0.4 967456 122072 ?       Ssl  04:48   0:00 /usr/bin/memcached -u memcached -p 11211 -m 512 -c 1024 -e /mem/ram
+root      2379  0.0  0.0  51768  3552 pts/0    R+   04:53   0:00 ps -aux
+```  
+
+- 각 필드의 의미는 아래와 같다. 
+	- `PID` : 프로세스 ID
+	- `%CPU` : CPU 사용 비율
+	- `%MEM` : 메모리 사용 비율
+	- `VSZ` : 가상 메모리 사용량(kb)
+	- `RSS` : 실제 메모리 사용량(kb)
+	- `STAT` : 현재 프로세스 상태
+	- `TIME` : 총 CPU 시간
+	- `COMMAND` : 실행된 명령어
+	
+
+## watch
+- `watch` 명령을 사용하면 `ps` 명령과 같이 자동으로 반복 수행이 불가한 명령에서 모니터링시에 유용하게 사용할 수 있다. 
+- `watch <명령어>` 를 수행하면 설정된 주기만큼(기본 2초) 반복해서 수행하게 되어 모니터링이 가능하다. 
+
+```bash
+$ watch -n 1 ps -aux
+Every 1.0s: ps -aux                                                                                         Mon Jul  6 15:02:52 2020
+
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.0  43388  5184 ?        Ss   03:07   0:00 /sbin/init
+root        16  0.0  0.0  39096  7844 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-journald
+root        28  0.0  0.0  41692  3452 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-udevd
+dbus        62  0.0  0.0  58124  4328 ?        Ss   03:07   0:00 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfiroot        68  0.0  0.0  26396  2916 ?        Ss   03:07   0:00 /usr/lib/systemd/systemd-logind
+root        69  0.0  0.0 112936  7892 ?        Ss   03:07   0:00 /usr/sbin/sshd -D
+root        71  0.0  0.0   9936  1844 tty1     Ss+  03:07   0:00 /sbin/agetty --noclear tty1 linux
+root        73  0.0  0.0  11840  3100 pts/0    Ss   03:08   0:00 /bin/bash
+root       148  0.0  0.0  11840  3072 pts/1    Ss+  03:16   0:00 /bin/bash
+memcach+  2423  0.7  0.3 967456 102688 ?       Ssl  04:59   0:01 /usr/bin/memcached -u memcached -p 11211 -m 512 -c 1024 -e /mem/ramroot      2503  0.0  0.0  53928  4208 pts/0    S+   05:02   0:00 watch -n 1 ps -aux
+root      2510  0.0  0.0  53924   800 pts/0    S+   05:02   0:00 watch -n 1 ps -aux
+root      2511  0.0  0.0  51768  3552 pts/0    R+   05:02   0:00 ps -aux
+```  
+
+- 위 명령은 `-n 1` 옵션을 주어 반복 주기를 1초로 설정하고 `ps -aux` 명령을 반복 수행한 결과이다. 
 
 	
 ---
