@@ -40,3 +40,7 @@ stage to unstate$ git reset HEAD <filename>, git reset HEAD
 브랜치 이름 변경, 수정$ git branch -m <before-name> <new-name>
 
 리모트 브랜치 삭제$ git push <remote-name> :<branch-name>
+
+로컬 브랜치 리모트 브랜치 트래킹$ git branch --set-upstream-to=<리모트이름>/<리모트브랜치이름> <로컬브랜치이름>
+
+로컬 브랜치와 리모트 브랜치 커밋 차이$ git branch -v
