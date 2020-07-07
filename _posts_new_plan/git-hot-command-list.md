@@ -43,4 +43,4 @@ stage to unstate$ git reset HEAD <filename>, git reset HEAD
 
 로컬 브랜치 리모트 브랜치 트래킹$ git branch --set-upstream-to=<리모트이름>/<리모트브랜치이름> <로컬브랜치이름>
 
-로컬 브랜치와 리모트 브랜치 커밋 차이$ git branch -v
+존재하는 브랜치 커밋확인$ git -v, 리모트까지 포함해서 확인$ git -va
