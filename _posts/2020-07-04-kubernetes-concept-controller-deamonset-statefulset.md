@@ -219,6 +219,7 @@ kube-scheduler-docker-desktop            1/1     Running   7          37
 ```yaml
 # statefulset-nginx.yaml
 
+# Service 설정 부분
 apiVersion: v1
 kind: Service
 metadata:
@@ -234,6 +235,8 @@ spec:
     app: statefulset-nginx-service
 
 ---
+
+# StatefulSet 설정 부분
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -258,50 +261,272 @@ spec:
               name: nginx-web
 ```  
 
+- 상단 `Service` 설정 부분 : 스테이트풀세트에서 사용하는 서비스를 정의한다. 
+클러스터에서는 `<스테이트풀세트파드이름>.<서비스이름>` 형식의 도메인을 사용한다. 
+- `.spec.metadata.name` : `nginx-web` 이라는 이름으로 스테이트풀세트 이름을 정의한다. 
+- `.spec.selector.matchLabels` : 필드의 값은 `.spec.template.metadata.labels` 와 같은 값이여야 한다. 
+- `.spec.template.spec.terminationGracePeriodSeconds` : 그레이스풀(`Graceful`) 대기시간으로 10초로 설정했다. 
+실행 중이던 프로세스를 종료 할때, 설정된 10초 정도 대기 후 종료시킨다. 
+
+구성한 템플릿은 `kubectl apply -f statefulset-nginx.yaml` 명령으로 실행한다. 
+실행 후 `kubect get svc,statefulset,pods` 명령으로 조회하면 아래와 같다. 
+
+```bash
+$ kubectl apply -f statefulset-nginx.yaml
+service/statefulset-nginx-service created
+statefulset.apps/nginx-web created
+$ kubectl get svc,statefulset,pods
+NAME                                TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes                  ClusterIP   10.96.0.1    <none>        443/TCP   8d
+service/statefulset-nginx-service   ClusterIP   None         <none>        80/TCP    18s
+
+NAME                         READY   AGE
+statefulset.apps/nginx-web   3/3     18s
+
+NAME                                    READY   STATUS    RESTARTS   AGE
+pod/nginx-web-0                         1/1     Running   0          18s
+pod/nginx-web-1                         1/1     Running   0          13s
+pod/nginx-web-2                         1/1     Running   0          7s
+```  
+
+스테이트풀세트에 생성되는 파드들은 `<스테이트풀세트이름>-<숫자>` 의 구조로 이름이 정해진다. 
+작은 숫자부터 순서대로 실행되고, 종료는 그 역순으로 수행된다.  
+
+`kubectl edit statefulset nginx-web` 명령으로 설정을 열고 `.spec.replicas` 필드 값을 2로 수정해 개수를 줄여본다. 
+그리고 `kubectl get pods` 로 확인해 보면 아래와 같다. 
+
+```bash
+$ kubectl edit statefulset nginx-web
+
+spec:
+  replicas: 2
+
+statefulset.apps/nginx-web edited
+
+$ kubectl get pods
+NAME          READY   STATUS    RESTARTS   AGE
+nginx-web-0   1/1     Running   0          6m14s
+nginx-web-1   1/1     Running   0          6m9s
+```  
+
+### 병렬로 파드 관리하기
+앞서 설명한 것처럼 스테이트풀세트는 파드를 관리할 때 기본적으로 순차적인 방식으로 관리한다. 
+만약 병렬로 스테이트풀세트의 파드를 관리하고 싶다면, 
+`.spec.podManagementPolicy` 필드를 기본값 `OrderReady` 에서 `Parallel` 로 수정해서 적용 할 수 있다.  
+
+실행 중인 스테이트풀세트에는 해당 변경사항을 적용할 수 없기 때문에, 비슷하지만 템플릿을 새로 구성한다. 
+
+```yaml
+# statefulset-parallel-nginx.yaml
+
+# Service 설정 부분
+
+.. 생략 ..
+
+---
+
+# StatefulSet 설정 부분
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: parallel-nginx-web
+spec:
+  podManagementPolicy: Parallel
+
+.. 생략 ..
+```  
+
+`Parallel` 간단한 예제를 위해 수정할 부분은 아래 2개이다. 
+- `.metadata.name` : 스테이트풀이름을 `parallel-nginx-web` 으로 수정한다. 
+- `.spec.podManagementPolicy` : 필드를 추가해서 `Parallel` 로 설정한다. 
+
+`kubectl apply -f` 를 통해 템플릿을 적용하고, 
+`kubectl get pods` 명령으로 조회하면 아래와 같다. 
 
 
+```bash
+$ kubectl pods
+NAME                       READY   STATUS    RESTARTS   AGE
+pod/nginx-web-0            1/1     Running   0          28m
+pod/nginx-web-1            1/1     Running   0          28m
+pod/parallel-nginx-web-0   1/1     Running   0          21s
+pod/parallel-nginx-web-1   1/1     Running   0          21s
+pod/parallel-nginx-web-2   1/1     Running   0          21s
+```  
 
+`parallel-nginx-web` 스테이트풀세트의 파드들은 생성과 삭제와 같은 파드 관리가 병렬로 수행된다. 
 
+### 업데이트
+스테이트풀세트의 업데이트는 `.spec.updateStrategy.tpye` 필드에 설정할 수 있다. 
+기본 설정값은 `RollingUpdate` 이므로 자동으로 파드를 삭제하고 새로운 파드를 실행한다.  
 
+`kubectl edit statefulset nginx-web` 명령을 실행해서 `.spec.template.spec.containers[].env[]` 에 아래와 같이 환경 변수를 추가한다. 
 
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        env:
+        - name: env1
+          value: value1
+```  
 
+저장하고 바로 파드를 확인해 보면 아래와 같이 기존 파드는 삭제하고 새로운 파드를 실행하는 것을 확인 할 수 있다. 
 
+```bash
+$ kubectl get pods
+NAME          READY   STATUS        RESTARTS   AGE
+nginx-web-0   1/1     Running       0          22s
+nginx-web-1   1/1     Running       0          32s
+nginx-web-2   0/1     Terminating   0          46s
+$ kubectl get pods
+NAME          READY   STATUS              RESTARTS   AGE
+nginx-web-0   1/1     Running             0          23s
+nginx-web-1   1/1     Running             0          33s
+nginx-web-2   0/1     ContainerCreating   0          1s
+$ kubectl get pods
+NAME          READY   STATUS    RESTARTS   AGE
+nginx-web-0   1/1     Running   0          9s
+nginx-web-1   1/1     Running   0          16s
+nginx-web-2   1/1     Running   0          34s
+```  
 
+스테이트풀세트에서 `.spec.updateStrategy.rollingUpdate.partition` 값을 수정하면, 
+업데이트를 수행할때 설정한 값 보다 큰 파드만 업데이트를 수행하고 작은 파드들은 수행하지 않난다.  
+ 
+`kubectl edit statefulset nginx-web` 을 통해 해당 값은 기본값 `0`에서 `1`로 수정고 저장한다. 
+그리고 다시 `kubectl edit` 명령을 통해 설정을 열어 환경 변수를 추가하고 저장한다. 
 
+```bash
+$ kubectl edit statefulset nginx-web
 
+spec:
+  updateStrategy:
+    rollingUpdate:
+      partition: 1
 
+statefulset.apps/nginx-web edited
 
+$ kubectl edit statefulset nginx-web
 
+spec:
+  template:
+    spec:
+      containers:
+      - env:
+        - name: env1
+          value: value1
+        - name: env2
+          value: value2
 
+statefulset.apps/nginx-web edited
+```  
 
+파드에 직접 환경 변수값을 조회하는 방식으로 업데이트 상태를 확인하면, 
+`.spec.updateStrategy.rollingUpdate.parition` 에 설정한 1보다 작은 파드인 0만 업데이트되지 않은 걸 확인 할 수 있다. 
 
+```bash
+$ kubectl get pods -o jsonpath="{range .items[*]}{.metadata.name}{.spec.containers[*].env}{'\n'}{end}"
+nginx-web-0[map[name:env1 value:value1]]
+nginx-web-1[map[name:env1 value:value1] map[name:env2 value:value2]]
+nginx-web-2[map[name:env1 value:value1] map[name:env2 value:value2]]
+```  
 
+여기서 주의할 점은 `.spec.updateStrategy.rollingUpdate.partition` 의 값이 `.spec.replicas` 값 보다 크면 템플릿이 수정되더라도 업데이트가 되지 않는다.  
 
+`kubectl describe` 를 통해 스테이트풀세트 파드중 하나를 확인해 보면, 
+아래와 같이 `Labels` 필드에 `statefulset.kubernetes.io/pod-name=nginx-web-0` 라는 값이 있다. 
+해당 값을 사용하면 스테이트풀세트의 전체 파드 중 특정 파드에만 서비스 연결이 가능하다. 
 
+```bash
+$ kubectl describe pod nginx-web-0
+Name:         nginx-web-0
+Namespace:    default
+Priority:     0
+Node:         docker-desktop/192.168.65.3
+Start Time:   Wed, 08 Jul 2020 00:11:14 +0900
+Labels:       app=statefulset-nginx
+              controller-revision-hash=nginx-web-6dccddfbdd
+              statefulset.kubernetes.io/pod-name=nginx-web-0
 
+.. 생략 ..
+```  
 
+그리고 `.spec.updateStrategy.type` 값을 `OnDelete` 로 하면 템플릿에 수정사항이 있더라도 바로 업데이트를 수행하지 않는다. 
+수동으로 파드를 삭제 하면 업데이트 된 파드가 새로 실행 된다. 
 
+```yaml
+# statefulset-nginx-ondelete.yaml
 
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx-web-ondelete
+spec:
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      app: statefulset-nginx
+  serviceName: "statefulset-nginx-service"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: statefulset-nginx
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: statefulset-nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+              name: nginx-web
+```  
 
+`kubectl apply -f` 명령으로 실행해서 클러스터에 적용한다. 
+파드가 모두 실행되면 `kubectl edit` 명령으로 환경 변수를 추가하고, 
+파드에 설정된 환경 변수 값을 `kubectl get pods -o jsonpath=""` 으로 확인해 본다. 
 
+```bash
+$ kubectl apply -f statefulset-nginx-ondelete.yaml
+statefulset.apps/nginx-web-ondelete created
+kubectl get pods
+NAME                   READY   STATUS    RESTARTS   AGE
+nginx-web-ondelete-0   1/1     Running   0          23s
+nginx-web-ondelete-1   1/1     Running   0          18s
+nginx-web-ondelete-2   1/1     Running   0          13s
+$ kubectl edit statefulset nginx-web-ondelete
 
+spec:
+  template:
+    spec:
+      containers:
+        env:
+        - name: env1
+          value: value1
 
+statefulset.apps/nginx-web-ondelete edited
 
+$ kubectl get pods -o jsonpath="{range .items[*]}{.metadata.name}{.spec.containers[*].env}{'\n'}{end}"
+nginx-web-ondelete-0
+nginx-web-ondelete-1
+nginx-web-ondelete-2
+```  
 
+모든 파드에서 추가한 환경 변수가 조회되지 않은 것을 확인 할 수 있다. 
+이제 0번 파드를 지우고 다시 확인하면, 
+새로운 템플릿이 적용된 파드가 다시 실행되어 0번 파드에만 환경 변수가 조회되는 것을 확인 할 수 있다. 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+```bash
+$ kubectl delete pods nginx-web-ondelete-0
+pod "nginx-web-ondelete-0" deleted
+$  kubectl get pods -o jsonpath="{range .items[*]}{.metadata.name}{.spec.containers[*].env}{'\n'}{end}"
+nginx-web-ondelete-0[map[name:env1 value:value1]]
+nginx-web-ondelete-1
+nginx-web-ondelete-2
+```  
 
 ---
 ## Reference
