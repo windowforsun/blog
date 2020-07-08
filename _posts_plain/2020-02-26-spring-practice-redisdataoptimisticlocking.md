@@ -18,7 +18,7 @@ tags:
 
 ## Spring Redis Data 에서 Optimistic Locking
 - Redis 에서 Transaction 이나 Optmistic Locking 을 구현하기 위해서는 `WATCH`, `MULTI`, `EXEC` 을 통해 가능하다.
-	- 더 자세한 [링크]({{site.baseurl}}{% link _posts/2019-04-24-redis-concept-redistransaction.md %})
+	- 더 자세한 [링크]({{site.baseurl}}{% link _posts/redis/2019-04-24-redis-concept-redistransaction.md %})
 - Spring Redis Data 에서는 이러한 동작을 `RedisCallback`, `SessionCallback` 인터페이스를 구현해서 수행 가능하다.
 	- Pipeline 동작, Transaction 동작도 구현 가능하다.
 
