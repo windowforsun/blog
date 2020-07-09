@@ -1,4 +1,4 @@
-e--- 
+--- 
 layout: single
 classes: wide
 title: "[Algorithm 실습] 가중치 기반 랜덤 선출"
