@@ -1,0 +1,31 @@
+@startuml
+
+rectangle "Node" {
+	rectangle "Client" as c {
+	}
+	rectangle "ClusterIP(iptables)" as ci {
+	}
+	rectangle "kube-proxy" as kp {
+	}
+
+	c --> ci
+	ci --> kp
+}
+
+rectangle "kube-apiserver" as ka {
+}
+
+rectangle "Pod" as p1 {
+}
+rectangle "Pod" as p2 {
+}
+rectangle "Pod" as p3 {
+}
+
+ka --> kp
+kp --> p1
+kp --> p2
+kp --> p3
+
+
+@enduml
