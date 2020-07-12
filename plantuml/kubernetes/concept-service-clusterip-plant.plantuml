@@ -1,0 +1,31 @@
+@startuml
+
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+GOV_USER(user) #White
+
+rectangle "Kubernetes Cluster" {
+	rectangle "Pod(nicolaka/netshoot)" as n {
+
+	}
+	rectangle "Service(service-clusterip)" as s {
+
+	}
+
+	rectangle "Pod(deployment-nginx)" as d1 {
+
+	}
+	rectangle "Pod(deployment-nginx)" as d2 {
+
+	}
+
+	n --> s
+	s -d-> d1
+	s -d-> d2
+}
+
+user -r-> n
+
+
+@enduml
