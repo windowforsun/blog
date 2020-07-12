@@ -197,6 +197,17 @@ spec:
 - `.spec.jobTemplate.spec.template.spec.containers[].image` : 스케쥴링을 수행할 이미지를 설정한다. 
 - `.spec.jobTemplate.spec.template.spec.containers[].args[]` : 사용하는 이미지인 `busybox` 에서 수행할 쉘을 작성해서 구체적인 동작을 지정한다. 
 
+>구성한 템플릿과 동일한 구성을 `kubectl run` 명령을 이용해서 크론잡을 생성하는 명령은 아래와 같다. 
+>
+>```bash
+>$ kubectl run hello \
+>> --schedule="*/1 * * * *" \
+>> --restart=OnFailure \
+>> --image=busybox \
+>> -- /bin/sh -c "date"
+>cronjob.batch/hello created
+>```  
+
 `kubectl apply -f cronjob-time.yaml` 명령으로 클러스터에 크론잡을 등록하면, 
 `kubectl get cronjobs` 명령으로 조회 할 수 있다. 
 
