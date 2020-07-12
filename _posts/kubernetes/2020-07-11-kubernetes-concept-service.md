@@ -92,6 +92,10 @@ deployment.apps/deployment-nginx created
 서비스에서 매칭시킬 레이블은 `app=deployment-nginx` 이다. 
 
 ### ClusterIP
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept_service_clusterip_plant.png)
+
+
 `ClusterIP` 테스트를 위해 아래와 같이 템플릿으로 `ClusterIP` 서비스를 구성한다.  
 
 ```yaml
@@ -211,6 +215,9 @@ deployment.apps "testnet" deleted
 ```  
 
 ### NodePort
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept_service_nodeport_plant.png)
+
 `NodePort` 테스트를 위해 아래와 같이 템플릿으로 `NodePort` 서비스를 구성한다.  
 
 ```yaml
@@ -280,6 +287,9 @@ service-nodeport    NodePort    10.110.183.164   <none>        8000:32222/TCP   
 
 
 ### LoadBalancer
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept_service_loadbalancer_plant.png)
+
 `LoadBalancer` 테스트를 위해 아래와 같이 템플릿으로 `LoadBalancer` 서비스를 구성한다.
 
 ```yaml
@@ -322,6 +332,9 @@ service-nodeport       NodePort       10.110.183.164   <none>        8000:32222/
 
 
 ### ExternalName
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept_service_externalname_plant.png)
+
 `ExternalName` 테스트를 위해 아래와 같이 템플릿으로 `ExternalName` 서비스를 구성한다.
 
 ```yaml

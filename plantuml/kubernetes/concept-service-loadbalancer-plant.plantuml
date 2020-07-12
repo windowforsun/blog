@@ -1,0 +1,29 @@
+@startuml
+
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+GOV_USER(user) #White
+
+
+rectangle "Service(service-loadbalancer) \n 로드 벨런서 장비" as s {
+
+}
+
+rectangle "Kubernetes Cluster" {
+	rectangle "Pod(deployment-nginx)" as d1 {
+
+	}
+	rectangle "Pod(deployment-nginx)" as d2 {
+
+	}
+
+	d1 -[hidden]d- d2
+}
+
+s -l-> d1
+s -l-> d2
+user -d-> s
+
+
+@enduml
