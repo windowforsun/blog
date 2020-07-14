@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Docker 실습] Dockerfile(도커파일) 구성과 작성법"
+title: "[Docker 실습] Dockerfile(도커파일) 명령 구성과 작성법"
 header:
   overlay_image: /img/docker-bg-2.jpg
-excerpt: ''
+excerpt: '도커파일의 명령 구성과 작성법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,7 +16,10 @@ toc: true
 use_math: true
 ---  
 
-# sfsdfsdfsdfsd
+## Context
+`Dockerfile` 이 있는 경로(디렉토리)를 컨텍스트(`Context`) 라고 한다. 
+`Dockerfile` 을 빌드하게 되면 컨텍스트에 있는 모든 파일이 빌드를 위해 `Docker Daemon` 에 전송된다. 
+만약 컨텍스트에 파일이 많거나 큰 파일이 있을 경우 빌드 준비과정에서 오랜 시간이 걸릴 수 있기 때문에 주의해야 한다. 
 
 ## Dockerfile
 `Dockerfile` 은 `Docker` 이미지를 설정하는 파일을 의미한다. 
@@ -361,22 +364,205 @@ ADD <복사할 호스트 경로> <추가할 이미지 경로>
 에서 확인 할 수 있다. 
 
 ### COPY
+`COPY` 는 파일을 이미지에 추가하는 명령이다. 
+`ADD` 와 차이점은 압축을 해제하지 않고, `URL` 을 사용할 수 없다는 점에 있다. 
+대부분의 기능은 비슷하고 `COPY` 는 복사할 때 파일 권한이 기존 파일의 권한을 따른다. 
+
+추가적인 정보는 [여기](({{site.baseurl}}{% link _posts/docker/2020-02-05-docker-practice-dockerfileaddcopy.md %}))
+에서 확인 할 수 있다. 
 
 ### VOLUME
+`VOLUME` 은 디렉토리의 내용은 컨테이너에 저장하지 않고, `docker run` 명령에서 마운트된 호스트 경로에 저장하는 명령이다.  
+
+명령을 사용하는 방식은 아래와 같다.
+
+```dockerfile
+VOLUME <컨테이너 디렉토리>
+VOLUME ["<컨테이너 디렉토리>", "<컨테이너 디렉토리>", ..]
+```  
+
+```dockerfile
+VOLUME /log
+VOLUME ["/tmp/data", "/tmp/log"]
+```  
+
+`Dockerfile` 에서 `VOLUME` 명령으로 특정 호스트 경로와 마운트는 시킬 수 없다. 
+호스트 경로와 마운트하기 위해서는 `docker run` 명령에서 `-v` 옵션을 아래와 같이 사용해서 가능하다. 
+
+```bash
+$ docker run -v /log:/log \
+-v /data:/data \
+-v /tmplog:/tmp/log
+```  
+
+`-v` 옵션은 `<호스트 디렉토리>:<컨테이너 디렉토리>` 구조 이다. 
 
 ### USER
+`USER` 는 `Dockerfile` 에서 수행하는 명령을 실행할 계정을 설정하는 명령이다. 
+`RUN`, `CMD`, `ENTRYPOINT` 명령을 수행할 때 권한 문제나 권한 관리를 설정 할 수 있다. 
+
+```dockerfile
+USER <계정명>
+```  
+
+`USER` 명령을 사용 예시는 아래와 같다. 
+
+```dockerfile
+USER deployer
+RUN touch /tmp/deploy.log
+
+USER root
+RUN touch /test.log
+```  
+
+`/tmp/deploy.log` 는 `deployer` 라는 유저가 파일을 생성하고, 
+`/test.log` 는 `root` 유저가 파일을 생성한다. 
 
 ### WORKDIR
+`WORKDIR` 는 명령이 실행되는 경로를 설정할 때 사용하는 명령이다. 
+`RUN, `CMD`, `ENTRYPOINT` 명령을 수행할 때 경로의 위치를 지정할 수 있다. 
+
+```dockerfile
+WORKDIR <경로>
+```  
+
+`WORKDIR` 의 사용 예시는 아래와 같다. 
+
+```dockerfile
+WORKDIR /tmp
+RUN touch deploy.log
+
+WORKDIR /
+RUN touch test.log
+```  
+
+만약 `WORKDIR` 경로에 상대경로를 입력하게 되면 현재 경로를 기준으로 경로이동이 수행된다. 
+
+```dockerfile
+WORKDIR tmp
+RUN touch test.log
+
+WORKDIR test
+RUN touch test.log
+```  
+
+첫 번째 `test.log` 는 `/tmp` 경로에 생성되고,
+두 번째 `test.log` 는 `/tmp/test` 경로에 생성된다. 
 
 ### ONBUILD
+`ONBUILD` 는 이미지 빌드시 현재 이미지를 빌드 할때 수행하는 명령이 아닌, 
+현재 이미지를 사용해서(`FROM`) 다른 이미지를 만드는 하위 이미지에서 수행할 명령어를 정의하는 명령이다. 
+`FROM`, `MAINTAINER`, `ONBUILD` 를 제외한 명령에 모두 사용 할 수 있다. 
+
+```dockerfile
+ONBUILD <Dockerfile 명령> <매개 변수>
+```  
+
+우선 부모 이미지의 `Dockerfile` 은 아래와 같이 `RUN` 명령으로 `parent` 파일을 생성하고, 
+`ONBUILD` 명령으로 `child` 파일을 생성한다. 
+
+```dockerfile
+FROM ubuntu:latest
+
+RUN touch parent
+ONBUILD RUN touch child
+```  
+
+`parent-test` 이름으로 이미지를 빌드한다. 
+
+```bash
+$ docker build -t parent-test .
+Sending build context to Docker daemon  2.048kB
+Step 1/3 : FROM ubuntu:latest
+ ---> adafef2e596e
+Step 2/3 : RUN touch parent
+ ---> Running in 120c70488ed4
+Removing intermediate container 120c70488ed4
+ ---> 84f3e975cfbd
+Step 3/3 : ONBUILD RUN touch child
+ ---> Running in 609d371b468f
+Removing intermediate container 609d371b468f
+ ---> fbc18ebb4b89
+Successfully built fbc18ebb4b89
+Successfully tagged parent-test:latest
+```  
+
+`parent-test` 를 실행시키고 생성된 파일 리스트를 출력하면 `parent` 파일만 생성된 것을 확인할 수 있다.
+
+```bash
+$ docker run --rm -it parent-test /bin/bash
+root@266c02de0cbd:/# ls
+bin  boot  dev  etc  home  lib  lib32  lib64  libx32  media  mnt  opt  parent  proc  root  run  sbin  srv  sys  tmp  usr  var
+```  
+
+`parent-test` 이미지를 사용하는 자식 이미지의 `Dockerfile` 은 아래와 같다.
+
+```dockerfile
+FROM parent-test:latest
+
+```  
+
+자식 이미지를 `child-test` 이름으로 빌드한다. 
+
+```bash
+docker build -t child-test .
+Sending build context to Docker daemon  2.048kB
+Step 1/1 : FROM parent-test:latest
+# Executing 1 build trigger
+ ---> Running in f32f6746cd48
+Removing intermediate container f32f6746cd48
+ ---> 10f7ba1426e5
+Successfully built 10f7ba1426e5
+Successfully tagged child-test:latest
+```  
+
+`child-test` 이미지를 실행시키고 생성된 파일 리스트를 출력하면 `parent`, `child` 파일 모두 생성된 것을 확인 할 수 있다. 
+
+```bash
+docker run --rm -it child-test /bin/bash
+root@4e97292a7eb6:/# ls
+bin   child  etc   lib    lib64   media  opt     proc  run   srv  tmp  var
+boot  dev    home  lib32  libx32  mnt    parent  root  sbin  sys  usr
+```  
+
+`ONBUILD` 명령은 자신의 자식 이미지에만 적용되는 명령이다. 
+자식의 자식(thswk) 이미지에는 적용되지 않는다.  
+
+사용하려는 이미지의 `ONBUILD` 명령을 확인 하기 위해서는 `docker inspect` 명령으로 가능하다. 
+
+```bash
+$ docker inspect -f "{{.ContainerConfig.OnBuild }}" parent-test
+[RUN touch child]
+```  
+
 
 ### .dockerignore
+`.dockerignore` 은 컨텍스트에 포함되는 파일 중 불필요한 파일을 제외시키는 파일이다. 
+컨텍스트 경로에 `.dockerignore` 이라는 파일을 만들고 그 안에 `.gitignore` 와 같이 파일 및 경로 리스트를 작성해 주면된다.  
+
+`.dockerignore` 에 사용하는 문법의 더 자세한 내용은 [여기](https://golang.org/pkg/path/filepath/#Match)
+에서 확인 할 수 있다. 
+
+```
+.git
+.gitignore
+build
+out
+*.class
+```  
 
 ### 주석
+`Dockerfile` 에서 주석은 `#` 문자를 사용한다. 
 
+```dockerfile
+FROM ubuntu:latest
 
+# make file
+RUN touch file
 
-
+# make dir
+RUN mkdir -p /tmp/a/b/c/d
+```  
 
 ---
 ## Reference
