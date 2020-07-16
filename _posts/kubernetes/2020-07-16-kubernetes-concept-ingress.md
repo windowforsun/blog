@@ -4,7 +4,7 @@ classes: wide
 title: "[Kubernetes 개념] 인그레스(Ingress)"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: ''
+excerpt: 'L7 레이어에서 클러스터와 외부와 통신을 담당하는 인그레스에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -269,7 +269,88 @@ tls.crt:  1123 bytes
 tls.key:  1704 bytes
 ```  
 
+`ssl` 인증서를 적용한 인그레스 템플릿은 아래와 같다. 
 
+```yaml
+# ingress-ssl.yaml
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: basic-ssl
+spec:
+  tls:
+    - hosts:
+      - www.basic-ssl.com
+      secretName: my-https
+  rules:
+    - host: www.basic-ssl.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: s1
+              servicePort: 80
+```  
+
+- `.spec.tls[].hosts[]` : `ssl` 인증서 관련 설정 중 사용할 호스트 이름을 설정하는 필드이다. 
+- `.spec.tls[].secretName` : 사용할 `ssl` 인증서를 등록하는 곳으로 앞서 생성한 인증서 이름을 설정한다. 
+
+`kubectl apply -f ingress-ssl.yaml` 명령으로 클러스터에 적용 한 후, 
+`kubectl get svc -n ingress-nginx` 로 서비스를 조회하면 아래와 같다. 
+
+```bash
+kubectl get svc -n ingress-nginx
+NAME            TYPE       CLUSTER-IP    EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx   NodePort   10.96.77.73   <none>        80:32339/TCP,443:31379/TCP   2m
+```  
+
+`ingress-nginx` 서비스의 `PORT` 필드에서 확인 할 수 있듯이, 
+`HTTPS` 요청을 담당하는 `443` 포트는 `31379` 로 매핑 됐기 때문에 해당 포트를 사용한다. 
+그리고 사용하는 호스트 이름이 `www.basic-ssl.com` 이기 때문에 `/etc/hosts` 파일에도 `www.basic1.com` 과 동일하게 추가해 준다. 
+
+```bash
+$ vi /etc/hosts
+
+127.0.0.1   www.basic-ssl.com
+```
+
+현재 생성한 `ssl` 인증서는 인증된 인증서가 아니기 때문에 테스트 시에 `curl -k` 명령어와 옵션을 사용해서 무시하도록 한다. 
+`curl -vI -k https://<호스트>:<포트>/` 를 사용해서 테스트를 수행한다. 
+
+```bash
+$ curl -vI -k https://www.basic-ssl.com:31379
+*   Trying 127.0.0.1:31379...
+* TCP_NODELAY set
+
+.. 생략 ..
+
+> Host: www.basic-ssl.com:31379
+> user-agent: curl/7.68.0
+> accept: */*
+
+.. 생략 ..
+
+* Connection #0 to host www.basic-ssl.com left intact
+```  
+
+위 출력 결과와 같이 `Host` 에 설정한 호스트와 포트가 출력 된다면, 
+인증서 설정이 정상적으로 수행 된 것이다. 
+
+```bash
+$ curl -vI -k https://www.basic-ssl.com:32339
+*   Trying 127.0.0.1:32339...
+* TCP_NODELAY set
+* Connected to www.basic-ssl.com (127.0.0.1) port 32339 (#0)
+
+.. 생략 ..
+
+* error:1408F10B:SSL routines:ssl3_get_record:wrong version number
+* Closing connection 0
+curl: (35) error:1408F10B:SSL routines:ssl3_get_record:wrong version number
+```  
+
+위와 같이 정상적이지 않은 포트로 요청을 하게 되면 인증서 관련 에러가 발생하는 것을 확인 할 수 있다. 
 
 
 ---
