@@ -1,0 +1,41 @@
+@startuml
+
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+
+rectangle "Kubernetes Cluster" {
+	rectangle "Master" {
+		card "kube-apiserver" as ka
+		card "Ingress" as mIngress
+
+		ka -[hidden]-> mIngress
+	}
+
+	rectangle "Ingress" {
+		card "Ingress Controller" as ic
+		card "Nginx" as nginx
+
+		ic -r-> nginx
+	}
+
+	rectangle "Node" as node1 {
+		card "Pod(v2)" as node1podv2
+	}
+
+	rectangle "Node" as node2 {
+		card "Pod(v2)" as node2podv2
+	}
+
+	ic -u-> ka
+	nginx -d-> node1podv2
+	nginx -d-> node2podv2
+}
+
+
+GOV_USER(user) #White
+
+user --> nginx
+
+
+@enduml
