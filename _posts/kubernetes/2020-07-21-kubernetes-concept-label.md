@@ -270,7 +270,7 @@ nginx-3-68788c656d-4fc4t   1/1     Running   0          16m
 하지만 레이블을 사용하면 카나리 배포와 같은 방식으로 배포를 진행할 수 있다.  
 
 테스트를 위해 2개의 디플로이먼트 템플릿과 하나의 서비스 템플릿을 구성한다. 
-사용하는 이미지는 [Ingress nonstop]({{site.baseurl}}{% link _posts/2020-07-17-kubernetes-concept-ingress-nonstop.md %})
+사용하는 이미지는 [Ingress nonstop]({{site.baseurl}}{% link _posts/kubernetes/2020-07-17-kubernetes-concept-ingress-nonstop.md %})
 에서 사용했던 이미지를 그대로 사용한다. 
 먼저 안정 버전인 디플로이먼트 템플릿은 아래와 같다. 
 
