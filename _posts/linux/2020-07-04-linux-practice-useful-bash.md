@@ -619,6 +619,109 @@ AB
 ABC
 ```  
 
+```bash
+# A 로 시작하는 라인 NewA 로 변경
+$ sed '/^A/ c\NewA' text
+a
+ab
+abc
+abcd
+
+a
+ab
+abc
+abcd
+
+abcde
+abcdef
+abcdefg
+
+NewA
+NewA
+NewA
+
+# c 로 끝나는 라인 NewC 로 변경
+$ sed '/c$/ c\NewC' text
+a
+ab
+NewC
+abcd
+
+a
+ab
+NewC
+abcd
+
+abcde
+abcdef
+abcdefg
+
+A
+AB
+ABC
+```  
+
+```
+# 대소문자 구분없이 a 로 시작하는 문자를 ! 로 수정한 결과를 text_2 파일에 저장
+$ sed 's/[Aa]/!/g' text > text_2
+$ cat text_2
+!
+!b
+!bc
+!bcd
+
+!
+!b
+!bc
+!bcd
+
+!bcde
+!bcdef
+!bcdefg
+
+!
+!B
+!BC
+
+# 1~4 라인에서 a 문자열을 ! 로 변경해서 동일한 text 파일에 저장
+$ sed '1,4 s/a/!/g' text | tee text
+!
+!b
+!bc
+!bcd
+
+a
+ab
+abc
+abcd
+
+abcde
+abcdef
+abcdefg
+
+A
+AB
+ABC
+$ cat text
+!
+!b
+!bc
+!bcd
+
+a
+ab
+abc
+abcd
+
+abcde
+abcdef
+abcdefg
+
+A
+AB
+ABC
+```  
+
 ---
 ## Reference
  
