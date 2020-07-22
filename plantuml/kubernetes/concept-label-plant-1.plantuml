@@ -1,0 +1,29 @@
+@startuml
+
+'skinparam linetype ortho
+!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+
+GOV_USER(user) #White
+
+rectangle "Kubernetes Cluster" as kc {
+	card "Pod(v1)\napp=canary-app\nversion=stable" as v11 {
+	}
+	card "Pod(v1)\napp=canary-app\nversion=stable" as v12 {
+	}
+	card "Pod(v2)\napp=canary-app\nversion=canary" as v21 {
+	}
+
+	card "Service(canary-app-service)" as s
+
+	s -u-> v11
+	s -u-> v12
+	s -u-> v21
+}
+
+user -u-> s
+
+
+
+
+@enduml
