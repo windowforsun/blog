@@ -13,6 +13,7 @@ tags:
   - Docker
   - EFK
   - concat
+  - Fluentd
 toc: true
 use_math: true
 ---  
@@ -237,6 +238,7 @@ use_math: true
     - 구성된 서비스들이 사용하는 네트워크는 `test-efk-net` 이다. 
     - `efk-spring` 에서 `logging` 필드를 사용해서 `fluentd` 로 로그를 전송하는 설정을 한다. 
     - 애플리케이션 서비스는 프로젝트에서 빌드한 이미지를 사용한다. 
+    - 애플리케이션 로그는 `web.log` 라는 태그와 함께 남겨진다. 
     - `Elasticsearch` 와 `Kibana` 의 구성은 [여기](https://www.elastic.co/guide/en/elastic-stack-get-started/current/get-started-docker.html)
     를 참고하면 더욱 자세한 내용을 확인 할 수 있다. 
     - `fluentd` 는 `Dockerfile` 을 통해 이미지를 빌드해서 사용하고, 설정파일을 마운트한다. 
@@ -319,11 +321,12 @@ curl localhost:8080/strlog/1
 ```  
 
 요청 후 `efk-fluentd` 로그를 확인하면 아래와 같다. 
+`efk-fluentd` 로그 확인은 `docker-compose.yaml` 경로에서 `docker-compose logs efk-fluentd` 명령으로 가능하다. 
 
 ```
 efk-fluentd_1        | 2020-07-21 20:22:43.000000000 +0000 web.info.log: {"container_id":"e3b23c06732244
 4c1a3e13739793015a5293e7779317c3ab2e5dc9a267a23273","container_name":"/efk-spring_efk-spring_1","source"
-:"stdout","log":"2020-07-21 10:22:43.036  INFO 1 --- [nio-8080-exec-1] com.windowforsun.efk.TestControll
+:"stdout","log":"2020-07-21 20:22:43.036  INFO 1 --- [nio-8080-exec-1] com.windowforsun.efk.TestControll
 er      : ~~~start~~~01234567890123456789012345678901234567890123456789012345678901234567890123456789012
 34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456
 78901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
@@ -333,8 +336,7 @@ er      : ~~~start~~~01234567890123456789012345678901234567890123456789012345678
 34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456
 78901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234
-5678901234567890123456789012345678901234567890123456789012345678901234567890123456789~~~end~~~","newfiel
-d":"newdata"}
+5678901234567890123456789012345678901234567890123456789012345678901234567890123456789~~~end~~~"}
 ```  
 
 브라우저에서 `http://localhost:5601` 로 접속하면 `Kibana` 에 접속해서도 해당 로그 확인이 가능하다. 
@@ -348,16 +350,16 @@ d":"newdata"}
 실제로 그러한지 `/strlog/20` 으로 요청을 보내 `16KB` 가 넘는 로그를 남겨 본다.  
 
 ```bash
-efk-fluentd_1        | 2020-07-21 10:34:54.000000000 +0000 web.log: {"partial_id":"cdb906ac6ceb2e2690c17
+efk-fluentd_1        | 2020-07-21 20:34:54.000000000 +0000 web.log: {"partial_id":"cdb906ac6ceb2e2690c17
 bf79c4009828425fb32d93c24e650e717a5e0d3a092","partial_ordinal":"1","partial_last":"false","container_id"
 :"e3b23c067322444c1a3e13739793015a5293e7779317c3ab2e5dc9a267a23273","container_name":"/efk-spring_efk-sp
-ring_1","source":"stdout","log":"2020-07-21 10:34:54.766  INFO 1 --- [nio-8080-exec-6] com.windowforsun.
+ring_1","source":"stdout","log":"2020-07-21 20:34:54.766  INFO 1 --- [nio-8080-exec-6] com.windowforsun.
 efk.TestController      : ~~~start~~~0123456789012345678901234567890123456789012345678901234567890123456
 
 .. 생략 ..
 
 789012345678901234567890123456789012345667812345678901234567890123456789012345","partial_message":"true"}
-efk-fluentd_1        | 2020-07-21 10:34:54.000000000 +0000 web.log: {"partial_id":"cdb906ac6ceb2e2690c17b
+efk-fluentd_1        | 2020-07-21 20:34:54.000000000 +0000 web.log: {"partial_id":"cdb906ac6ceb2e2690c17b
 f79c4009828425fb32d93c24e650e717a5e0d3a092","partial_ordinal":"2","partial_last":"true","container_id":"e
 3b23c067322444c1a3e13739793015a5293e7779317c3ab2e5dc9a267a23273","container_name":"/efk-spring_efk-spring
 _1","source":"stdout","log":"6789012345678901234567890123456789012345678901234567890123456789012345678901
@@ -380,64 +382,183 @@ _1","source":"stdout","log":"678901234567890123456789012345678901234567890123456
 사용할 플러그인은 [fluent-plugin-concat](https://github.com/fluent-plugins-nursery/fluent-plugin-concat) 
 라는 플로그인이다. 말 그대로 여러 줄로 출력된 로그를 한줄로 합치는 플러그인이다.  
 
-기존 `fluentd` `Dockerfile` 과 설정파일을 수정해 해당 플러그인을 적용하고 설정을 추가한다.  
+기존 `fluentd/Dockerfile` 과 설정파일(`fluent.conf`)을 수정해 해당 플러그인을 적용하고 관련설정을 추가한다.  
 
- 
+먼저 `Dockerfile` 에 해당 플러그인을 설치하는 스크립트를 아래와 같이 추가한다. 
 
+```Dockerfile
+FROM fluent/fluentd:v1.7
+USER root
+RUN ["gem", "install", "fluent-plugin-elasticsearch", "--no-rdoc", "--no-ri", "--version", "1.9.5"]
+RUN ["gem", "install", "fluent-plugin-rewrite-tag-filter"]
+# 플러그인 설치 스크립트 추가
+RUN ["gem", "install", "fluent-plugin-concat"]
+USER fluent
+```  
 
+그리고 `fluent.conf` 파일은 앞서 공유한 `Github` 레포에서 관련 문서를 확인할 수 있다. 
+현재 `Docker` 버전이 `19.03.8` 이므로 아래 설정을 사용한다. 
 
+```
+<filter>
+  @type concat
+  key log
+  use_partial_metadata true
+  separator ""
+</filter>
+```  
 
-    
+실제로 적용한 `fluent.conf` 파일의 내용은 아래와 같다. 
 
+```
+<source>
+    @type forward
+    port 24225
+    bind 0.0.0.0
+</source>
 
+## 추가한 플러그인 관련 설정
+<filter **>
+    @type concat
+    key log
+    use_first_timestamp true
+    use_partial_metadata true
+    separator ""
+</filter>
 
+<match web.**>
+    @type copy
 
+    # elaticsearch 로 해당 로그를 전송한다.
+    <store>
+      @type elasticsearch
+      # elasticsearch 호스트 설정
+      host efk-elasticsearch
+      port 9200
+      logstash_format true
+      logstash_prefix fluentd
+      logstash_dateformat %Y%m%d
+      include_tag_key true
+      type_name access_log
+      tag_key @log_name
+      flush_interval 1s
+    </store>
 
+    # 표준 출력으로 출력한다.
+    <store>
+        @type stdout
+    </store>
+</match>
+```  
 
+`ctrl + c` 를 누르거나 `docker-compose.yaml` 경로에서 `docker-compose stop` 명령으로 전에 실행 시켰던 것을 중지 시킨다. 
+그리고 다시 `docker-compose up --build` 명령으로 새로 추가한 플러그인과 설정을 다시 적용해 준다. 
+그리고 `curl localhost:8080/strlog/30` 으로 큰 로그를 남기면 `efk-fluentd` 로그에서 아래와 같은 결과를 확인 할 수 있다. 
 
+```
+efk-fluentd_1        | 2020-07-21 20:40:26.000000000 +0000 web.log: {"log":"6789012345678901234567890123
+45678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567
 
+.. 생략 ..
 
+89012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901
+~~~end~~~","container_id":"e3b23c067322444c1a3e13739793015a5293e7779317c3ab2e5dc9a267a23273","container_
+name":"/efk-spring_efk-spring_1","source":"stdout"}
+```  
 
+`30KB` 가 넘는 로그이지만 기존 처럼 2개의 로그로 나눠 찍히지 않고, 하나의 로그로 찍힌 것을 확인 할 수 있다. 
+그리고 `Elasticsearch` 에도 `stdout` 으로 출력 된 로그가 전송되기 때문에, 
+`Kibana` 에서도 나눠진 로그가 아닌 하나의 로그로 확인 할 수 있다.  
 
+추가로 `concat` 을 수행하면서, 기존에 사용하던 로그 필드 추가나, 
+리태깅이 가능한지 테스트 해본다. 
+`fluent.conf` 파일에 아래의 내용을 추가한다. 
 
+```
+<source>
+    @type forward
+    port 24225
+    bind 0.0.0.0
+</source>
 
+# https://github.com/fluent-plugins-nursery/fluent-plugin-concat
 
+<filter **>
+    @type concat
+    key log
+    use_first_timestamp true
+    use_partial_metadata true
+    separator ""
+</filter>
 
+# web.log 태그에서 INFO 라는 글자가 있으면, 해당 로그의 태그를 web.info.log 로 변경한다.
+<match web.log>
+    @type rewrite_tag_filter
+    <rule>
+        key log
+        pattern INFO
+        tag web.info.log
+    </rule>
+</match>
 
+# web. 으로 시작하는 태그일 경우 해당 로그에 newfield 라는 기로 newdata 를 추가한다.
+<filter web.**>
+    @type record_transformer
 
+    <record>
+        newfield newdata
+    </record>
+</filter>
 
+<match web.**>
+    @type copy
 
+    # elaticsearch 로 해당 로그를 전송한다.
+    <store>
+      @type elasticsearch
+      # elasticsearch 호스트 설정
+      host efk-elasticsearch
+      port 9200
+      logstash_format true
+      logstash_prefix fluentd
+      logstash_dateformat %Y%m%d
+      include_tag_key true
+      type_name access_log
+      tag_key @log_name
+      flush_interval 1s
+    </store>
 
+    # 표준 출력으로 출력한다.
+    <store>
+        @type stdout
+    </store>
+</match>
+```  
 
+`fluent.conf` 파일만 수정했으므로, `efk-fluentd` 만 재시작 해주면된다. 
+`docker-compose.yaml` 파일 경로에서 `docker-compose restart efk-fluentd` 명령으로 새시작을 수행한다. 
+그리고 `curl localhost:8080/strlog/30` 요청으로 로그를 남기고 `efk-fluentd` 로그를 확인하면 아래와 같다. 
 
+```
+efk-fluentd_1        | 2020-07-21 20:48:48.000000000 +0000 web.info.log: {"container_id":"e3b23c06732244
+4c1a3e13739793015a5293e7779317c3ab2e5dc9a267a23273","container_name":"/efk-spring_efk-spring_1","source"
+:"stdout","log":"2020-07-21 20:48:48.613  INFO 1 --- [nio-8080-exec-2] com.windowforsun.efk.TestControll
+er      : ~~~start~~~01234567890123456789012345678901234567890123456789012345678901234567890123456789012
+34567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456
 
+.. 생략 ..
 
+23456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345
+7890123456789012345678901234567890123456789012345678901234567890123456789~~~end~~~","newfield":"newdata"}
+```  
 
+로그를 보면 앞부분에 `web.info.log` 라는 태그와 마지막 부분에 `"newfield":"newdata"` 라는 값이 추가 된 것을 확인 할 수 있다.  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+이렇게 `concat` 을 수행해주는 플러그인을 사용하면 `Docker` 로그로 남겨지는 로그 중 로그의 크기가 커서 나눠 찍히던 로그들을 
+하나의 로그로 합쳐 기존과 동일하게 모니터링을 수행할 수 있다. 
 
 ---
 ## Reference
-	
+[Running the Elastic Stack on Docker](https://www.elastic.co/guide/en/elastic-stack-get-started/current/get-started-docker.html)  
+[fluent-plugin-concat](https://github.com/fluent-plugins-nursery/fluent-plugin-concat)  
+[How to fix ‘elasticsearch exited with code 78’](https://techoverflow.net/2019/03/11/how-to-fix-elasticsearch-exited-with-code-78/)  
