@@ -386,7 +386,7 @@ _1","source":"stdout","log":"678901234567890123456789012345678901234567890123456
 
 먼저 `Dockerfile` 에 해당 플러그인을 설치하는 스크립트를 아래와 같이 추가한다. 
 
-```Dockerfile
+```dockerfile
 FROM fluent/fluentd:v1.7
 USER root
 RUN ["gem", "install", "fluent-plugin-elasticsearch", "--no-rdoc", "--no-ri", "--version", "1.9.5"]
@@ -481,8 +481,6 @@ name":"/efk-spring_efk-spring_1","source":"stdout"}
     bind 0.0.0.0
 </source>
 
-# https://github.com/fluent-plugins-nursery/fluent-plugin-concat
-
 <filter **>
     @type concat
     key log
@@ -501,7 +499,7 @@ name":"/efk-spring_efk-spring_1","source":"stdout"}
     </rule>
 </match>
 
-# web. 으로 시작하는 태그일 경우 해당 로그에 newfield 라는 기로 newdata 를 추가한다.
+# web. 으로 시작하는 태그일 경우 해당 로그에 newfield 라는 키로 newdata 를 추가한다.
 <filter web.**>
     @type record_transformer
 
