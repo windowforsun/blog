@@ -108,9 +108,10 @@ public class EnvController {
             strBuilder.append(line);
         }
 
-        return new HashMap<String, String>(){{
-            put(path, strBuilder.toString());
-        }};
+        Map<String, String> envMap =  new HashMap<String, String>();
+        envMap.put(path, strBuilder.toString());
+
+        return envMap;
     }
 }
 ``` 
