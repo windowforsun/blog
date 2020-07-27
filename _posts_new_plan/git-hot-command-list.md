@@ -44,3 +44,7 @@ stage to unstate$ git reset HEAD <filename>, git reset HEAD
 로컬 브랜치 리모트 브랜치 트래킹$ git branch --set-upstream-to=<리모트이름>/<리모트브랜치이름> <로컬브랜치이름>
 
 존재하는 브랜치 커밋확인$ git branch -v, 리모트까지 포함해서 확인$ git branch -va
+
+변경 파일 전체 수정 이전 커밋으로 되돌리기$ git reset --hard
+
+변경한 특정 파일 수정 이전 커밋으로 되돌리기$ git checkout -- <파일경로 이름>
