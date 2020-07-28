@@ -60,7 +60,7 @@ toc: true
 #### MySQL Replication 설정파일
 
 ```
-# master.cnf
+# /master/master.cnf
 
 [mysqld]
 server-id=1
@@ -69,7 +69,7 @@ default-authentication-plugin=mysql_native_password
 ```  
 
 ```
-# slave.cnf
+# /slave/slave.cnf
 
 [mysqld]
 server-id=2
@@ -94,21 +94,20 @@ default-authentication-plugin=mysql_native_password
 
 ```bash 
 $ docker run \
-> --rm \
-> -d \
-> --name master-db \
-> -v master.cnf:/etc/mysql/conf.d/master.cnf \
-> -e MYSQL_ROOT_PASSWORD=root \
-> mysql:8
+--rm \
+-d \
+--name master-db \
+-v /master:/etc/mysql/conf.d \
+-e MYSQL_ROOT_PASSWORD=root \
+mysql:8
 1cc8354b6476e32f737153fb2e6446d1551e7b356ae4f2ccc8d6faa44e68afcb
 $ docker run \
-> --rm \
-> -d \
-> --name slave-db \
-> --hostname slave-db \
-> -v slave.cnf:/etc/mysql/conf.d/slave.cnf \
-MYSQ> -e MYSQL_ROOT_PASSWORD=root \
-> mysql:8
+--rm \
+-d \
+--name slave-db \
+-v /slave:/etc/mysql/conf.d \
+-e MYSQL_ROOT_PASSWORD=root \
+mysql:8
 64b739db1538a41af0c1aa9a8592d99d84db6eb4ea32782d492044c1713e8dd7
 ```  
 
