@@ -82,7 +82,7 @@ tags:
 	
 1. `transaction1`
 	
-	```
+	```bash
 	mysql> set session transaction isolation level read uncommitted;
 	Query OK, 0 rows affected (0.00 sec)
 	
@@ -103,7 +103,7 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> update info set name = 'nameupdated' where id = 1;
 	Query OK, 1 row affected (0.00 sec)
 	Rows matched: 1  Changed: 1  Warnings: 0
@@ -139,7 +139,7 @@ tags:
 
 1. `transaction1`
 
-	```
+	```bash
 	mysql> set session transaction isolation level read committed;
     Query OK, 0 rows affected (0.00 sec)
     
@@ -160,7 +160,7 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> start transaction;
 	Query OK, 0 rows affected (0.00 sec)
 	
@@ -174,7 +174,7 @@ tags:
 	
 1. `transaction1`
 
-	```
+	```bash
 	mysql> select * from info;
 	+----+-------+
 	| id | name  |
@@ -192,14 +192,14 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> commit;
     Query OK, 0 rows affected (0.03 sec)
 	```  
 	
 1. `transaction1`
 
-	```
+	```bash
 	mysql> select * from info;
     +----+-------------+
     | id | name        |
@@ -225,7 +225,7 @@ tags:
 
 1. `transaction1`
 
-	```
+	```bash
 	mysql> set session transaction isolation level repeatable read;
     Query OK, 0 rows affected (0.00 sec)
     
@@ -246,7 +246,7 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> start transaction;
     Query OK, 0 rows affected (0.00 sec)
     
@@ -260,7 +260,7 @@ tags:
 	
 1. `transaction1`
 
-	```
+	```bash
 	mysql> select * from info;
 	+----+-------+
 	| id | name  |
@@ -277,14 +277,14 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> commit;
 	Query OK, 0 rows affected (0.02 sec)
 	```  
 
 1. `transaction1`
 
-	```
+	```bash
 	mysql> select * from info;
 	+----+-------+
 	| id | name  |
@@ -314,7 +314,7 @@ tags:
 
 1. `transaction1`
 
-	```
+	```bash
 	mysql> update info set name = 'name5updated' where name = 'name5';
     Query OK, 1 row affected (0.00 sec)
     Rows matched: 1  Changed: 1  Warnings: 0
@@ -342,7 +342,7 @@ tags:
 
 1. `transaction1`
 
-	```
+	```bash
 	mysql> set session transaction isolation level serializable;
     Query OK, 0 rows affected (0.00 sec)
     
@@ -363,7 +363,7 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> start transaction;
 	Query OK, 0 rows affected (0.00 sec)
 	
@@ -383,7 +383,7 @@ tags:
 	
 1. `transaction2`
 
-	```
+	```bash
 	mysql> update info set name = 'nameupdated' where id = 1;
     ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction
 	```  

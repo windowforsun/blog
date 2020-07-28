@@ -155,7 +155,7 @@ Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 		```  
 	- `transaction1`
 	
-		```
+		```bash
 		mysql> set session transaction isolation level repeatable read;
         Query OK, 0 rows affected (0.00 sec)
         
@@ -175,7 +175,7 @@ Intention Shared Lock(IS)|Conflict|Compatible|Compatible|Compatible
 		
 	- `transaction2`
 	
-		```
+		```bash
 		mysql> start transaction;
         Query OK, 0 rows affected (0.00 sec)
         
