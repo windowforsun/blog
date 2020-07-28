@@ -57,6 +57,8 @@ toc: true
 ### Docker container 로 구성하기
 `MySQL` 컨테이너를 실행하기 전에 `Master`, `Slave` 에서 사용할 설정 파일을 아래와 같이 준비한다. 
 
+#### MySQL Replication 설정파일
+
 ```
 # master.cnf
 
@@ -87,6 +89,8 @@ default-authentication-plugin=mysql_native_password
 위 설정 파일을 정상적으로 적용하기 위해 `chmod 755 <설정파일이름>.cnf` 명령을 실행해 준다.  
 
 아래 `Docker` 명령어로 `master-db`, `slave-db` 컨테이너를 하나씩 실행 시킨다. 
+
+#### MySQL Container 실행
 
 ```bash 
 $ docker run \
@@ -189,6 +193,44 @@ mysql> select * from exam;
 +----+-------+---------------------+
 2 rows in set (0.00 sec)
 ```  
+
+#### Replication 계정 및 권한
+
+그리고 `Master` 에서 `Replication` 을 `Slave` 로 수행하는 `slaveuser` 라는 계정을 아래와 같이 생성하고, 
+`Replication` 관련 권한을 부여해준다. 
+
+```bash
+mysql> create user 'slaveuser'@'%' identified by 'slavepasswd';
+Query OK, 0 rows affected (0.05 sec)
+
+mysql> grant replication slave on *.* to 'slaveuser'@'%';
+Query OK, 0 rows affected (0.05 sec)
+```  
+
+이후 `Slave` 에서 `Replication` 설정을 할때 생성한 `slaveuser` 계정 이름과 `slavepasswd` 계정 비밀번호를 사용하게 된다.  
+
+#### DB dump 및 초기 동기화
+`Master` 는 데이터베이스, 테이블, 더미 데이터를 생성한 상태이다. 
+`Slave` 와 `Replication` 을 위해서는 초기에 `Master` 와 같은 데이터 상태를 `Slave` 에 구성해주어야 한다.  
+
+`Master` 에서 `dump` 파일을 만든 후, 
+이 파일을 `Slave` 에 적용하는 방법을 사용한다. 
+여기서 중요한 점은 `Master` 에서 `dump` 파일을 만든 후 변경이 일어나서는 안된다는 점이다. 
+변경을 막기 위해 먼저 `Master` 에서 아래 명령으로 테이블 락을 걸어 `INSERT`, `UPDATE`, `DELETE` 연산을 막는다. 
+서비스를 잠시 중단하는 것도 다른 방법이 될 수 있다.  
+
+```bash
+mysql> flush tables with read lock;
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> insert into exam(value) values('c');
+ERROR 1223 (HY000): Can't execute the query because you have a conflicting read lock
+mysql> update exam set value = 'ddd';
+ERROR 1223 (HY000): Can't execute the query because you have a conflicting read lock
+mysql> delete from exam;
+ERROR 1223 (HY000): Can't execute the query because you have a conflicting read lock
+```  
+
 
 
 
