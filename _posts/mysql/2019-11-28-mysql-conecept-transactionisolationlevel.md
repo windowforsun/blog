@@ -13,6 +13,8 @@ tags:
     - MySQL
     - Concept
     - Transaction
+toc: true
+use_math: true
 ---  
 
 ## 환경

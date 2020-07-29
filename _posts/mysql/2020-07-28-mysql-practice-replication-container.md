@@ -15,6 +15,7 @@ tags:
   - Replication
   - Docker
 toc: true
+use_math: true
 ---  
 
 ## Replication

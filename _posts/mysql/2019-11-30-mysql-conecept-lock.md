@@ -14,6 +14,8 @@ tags:
     - Concept
     - Lock
     - Dead Lock
+toc: true
+use_math: true
 ---  
 
 ## 환경
