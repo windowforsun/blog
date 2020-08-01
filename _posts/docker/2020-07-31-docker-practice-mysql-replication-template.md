@@ -200,8 +200,8 @@ default-authentication-plugin=mysql_native_password
 
 초기 설정과 `Replication` 을 자동으로 구성하는 스크립트인  하는 `slave/init/replication.sh` 의 파일 내용은 아래와 같다. 
 
-```shell script
-# /bin/bash
+```bash
+#!/bin/sh
 
 # function for query to master
 function doMasterQuery() {
