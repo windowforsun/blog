@@ -23,10 +23,10 @@ use_math: true
 ---  
 
 ## JPA Multiple DataSource
-보편적으로 `Database` 튜닝을 위해서 `Replication` 이나 `Sharding` 을 구성한다. 
-이를 통해 시스템 하나로 몰리던 부하를 여러 시스템으로 분산시킬 수 있다. 
+`Database` 는 `Replication` 이나 `Sharding` 을 구성해서, 
+시스템 하나에 몰리던 부하를 여러 시스템으로 분산시킬 수 있다. 
 이런 `Database` 구조를 사용하기 위해서는 별도의 `Proxy` 를 두거나, 
-애플리케이션에서 이런 구조에 대한 추가 처리가 필요하다.  
+애플리케이션에서 `Database` 커넥션을 알맞게 라우팅해주는 기능을 제공해야 한다.  
 
 애플리케이션에서 지원 가능하도록 하는 다양한 방법이 있겠지만, 
 그 중 `Spring` 애플리케이션에서 코드를 통해 적용하는 아래 3가지 방법에 대해 알아본다. 
@@ -34,7 +34,7 @@ use_math: true
 - 패키지를 분리해서 사용하는 방법
 - `Annotation` 을 사용하는 방법
 
-여러 `DataSource` 를 사용하는 상황은 많지만 그중, `Replication` 상황을 가정해서 예제를 진행한다.  
+여러 `DataSource` 를 사용하는 상황은 많지만 그 중, `Replication` 상황을 가정해서 예제를 진행한다.  
 
 ## Docker Swarm 기반 Database 구성
 테스트를 위해서 `Replication` 구조의 `Database` 는 [여기]({{site.baseurl}}{% link _posts/docker/2020-07-31-docker-practice-mysql-replication-template.md %})
