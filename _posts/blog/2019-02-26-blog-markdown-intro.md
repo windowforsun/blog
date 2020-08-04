@@ -445,8 +445,8 @@ _언더바(underscore)은 적용되지 않네요 ..
 
 ---
 ## Reference
-[Basic Syntax](https://www.markdownguide.org/basic-syntax)
-[Extended Syntax](http://www.rubycoloredglasses.com/2013/04/languages-supported-by-github-flavored-markdown/)
+[Basic Syntax](https://www.markdownguide.org/basic-syntax)  
+[Extended Syntax](http://www.rubycoloredglasses.com/2013/04/languages-supported-by-github-flavored-markdown/)  
 [존 그루버 마크다운 페이지 번역](https://nolboo.kim/blog/2013/09/07/john-gruber-markdown/)  
 [마크다운 사용법 - Quick Start](http://taewan.kim/post/markdown/#chapter-2)  
 [마크다운 markdown 작성법](https://gist.github.com/ihoneymon/652be052a0727ad59601)  
