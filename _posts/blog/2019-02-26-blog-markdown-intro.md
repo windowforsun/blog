@@ -431,6 +431,17 @@ _언더바(underscore)은 적용되지 않네요 ..
 </div>
 </details>
 
+## #특수문자
+마크다운은 `HTML` 으로 변환되기 때문에 특수문자또한 `HTML` 의 방식으로 사용할 수 있다. 
+
+```
+&<name>;
+&#<decimal>;
+&#<hexadecimal>;
+```  
+
+관련 문자 리스트는 [여기](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references)
+에서 확인 할 수 있다. 
 
 ---
 ## Reference
