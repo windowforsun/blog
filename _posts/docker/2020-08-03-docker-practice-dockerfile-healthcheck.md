@@ -437,6 +437,7 @@ c680161e0009        hc-compose:latest                            "/docker-entryp
 cfa59afe8cbb        hc-compose:latest                            "/docker-entrypoint.…"   About an hour ago   Up About an hour (healthy)         80/tcp                              hc_compose-curl.2.3wotmh3le20t846u0wfq1v88p
 ```  
 
+{% raw %}
 이전 1번에 해당하는 컨테이너 아이디는 `7642b1ad9c56` 이고, 새로 올라온 컨테이너 아이디는 `c680161e0009` 이다. 
 `docker inspect --format '{{.State.Health.Status}}' <컨테이너 아이디>` 명령으로 각각 상태 값을 조회하면 아래와 같다. 
 
@@ -446,6 +447,7 @@ unhealthy
 $ docker inspect --format '{{.State.Health.Status}}' c680161e0009
 healthy
 ```  
+{% endraw %}
 
 이렇게 `Healthcheck` 기능을 사용하면 애플리케이션에 맞는 방법으로 상태를 체크할 수 있다. 
 그리고 이는 자동으로 클러스터에서 관리를 해준다. 

@@ -120,6 +120,7 @@ tags:
 	
 - `docker-compose-app-real.yml`
 
+{% raw %}
 	```yaml
 	version: '3.7'
 
@@ -144,7 +145,6 @@ tags:
 	
 	- `hostname` 을 이름 + 클러스터링된 번호로(`app-real-{{.Task.Slot}}`) 설정한다.
 	- 서비스 업데이트를 할때 `update_config` 설정으로 컨테이너 1개씩 10초 딜레이를 주고 수행하도록 설정을 했다.
-	
 - `docker-compose-app-backup.yml`
 
 	```yaml
@@ -166,7 +166,7 @@ tags:
 	```  
 	
 	- `hostname` 을 이름 + 클러스터링된 번호로(`app-backup-{{.Task.Slot}}`) 설정한다.
-	
+{% endraw %}
 - 3개의 `docker-compose` 파일에서 `network` 는 모두 동일하게 `nginxdocker-net` 에 `external: true` 를 사용한다면, 따로 `nginxdocker-net` 네트워크를 생성해 주어야 한다.
 
 	```

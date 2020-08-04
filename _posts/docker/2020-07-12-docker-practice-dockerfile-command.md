@@ -530,10 +530,12 @@ boot  dev    home  lib32  libx32  mnt    parent  root  sbin  sys  usr
 
 사용하려는 이미지의 `ONBUILD` 명령을 확인 하기 위해서는 `docker inspect` 명령으로 가능하다. 
 
+{% raw %}
 ```bash
 $ docker inspect -f "{{.ContainerConfig.OnBuild }}" parent-test
 [RUN touch child]
 ```  
+{% endraw %}
 
 ### HEALTHCHECK
 `HEALTHCHECK` 는 빌드하는 이미지에서 실행되는 애플리케이션의 상태를 체크할 수 있는 명령이다. 

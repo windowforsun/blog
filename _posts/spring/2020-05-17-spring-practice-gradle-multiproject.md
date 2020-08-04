@@ -559,9 +559,9 @@ web-read
 	    }
 	}
 	```  
-	
-- `AccountReadControllerTest` 클래스
 
+- `AccountReadControllerTest` 클래스
+{% raw %}
 	```java
 	@RunWith(SpringRunner.class)
 	@WebMvcTest(AccountReadController.class)
@@ -667,7 +667,8 @@ web-read
 	    }
 	}
 	```  
-	
+{% endraw %}
+
 ### web-save 프로젝트 구현
 - `core` 프로젝트를 사용해서 REST API 형식으로 쓰기 관련 기능을 제공하는 웹 애플리케이션 프로젝트이다.
 
