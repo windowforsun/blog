@@ -535,6 +535,11 @@ $ docker inspect -f "{{.ContainerConfig.OnBuild }}" parent-test
 [RUN touch child]
 ```  
 
+### HEALTHCHECK
+`HEALTHCHECK` 는 빌드하는 이미지에서 실행되는 애플리케이션의 상태를 체크할 수 있는 명령이다. 
+관련 더 자세한 설명은 [여기]({{site.baseurl}}{% link _posts/docker/2020-08-03-docker-practice-dockerfile-healthcheck.md %})
+에서 확인할 수 있다. 
+
 
 ### .dockerignore
 `.dockerignore` 은 컨텍스트에 포함되는 파일 중 불필요한 파일을 제외시키는 파일이다. 
