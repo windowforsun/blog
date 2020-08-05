@@ -317,7 +317,7 @@ public enum EnumDB {
 각 방법이 정상적으로 동작하는 지에 대한 판단은 테스트 코드와 로그를 사용한다. 
 
 
-### Transaction
+## Transaction 방법
 `Transaction` 의 `readOnly` 필드를 사용하는 방법이다. 
 `Master` 에서는 `CRUD` 연산을 모두 할 수 있지만, `Slave` 에서는 `R` 연산만 수행한다는 특징을 사용한다. 
 `Transaciton` 의 `readOnly` 필드 값이 `true` 이면 `Slave` 의 `DataSource` 를 설정해 주는 방식이다.   
