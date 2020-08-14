@@ -34,11 +34,41 @@ use_math: true
 
 ```  
 
+## 전체 프로젝트
+`Database` 는 `MySQL` 을 사용하고 `Replication` 은 [여기]({{site.baseurl}}{% link _posts/docker/2020-07-31-docker-practice-mysql-replication-template.md %})
+와 방법과 동일하게 구성한다. 
+
+전체 프로젝트 디렉토리 구조는 아래와 같다. 
+
+```bash
+.
+├── db-replication
+│   ├── docker-compose-master.yaml
+│   ├── docker-compose-slave-1.yaml
+│   ├── docker-compose-slave-2.yaml
+│   ├── master
+│   │   ├── conf.d
+│   │   │   └── custom.cnf
+│   │   └── init
+│   │       └── _init.sql
+│   └── slave
+│       ├── conf.d
+│       │   └── custom.cnf
+│       └── init
+│           └── replication.sh
+├── use-haproxy
+|   .. 생략 ..
+└── use-nginx
+    .. 생략 ..
+```  
+
+`db-replication` 디렉토리는 `Master` 서비스와 2개의 `Slave` 서비스로 구성 된다. 
 
 
 
 
-
+docker network create --driver overlay lb-net
+o1q9v29su1nirmfndyn6zdfod
 
 
 
