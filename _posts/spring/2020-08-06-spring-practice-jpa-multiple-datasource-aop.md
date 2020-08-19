@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] HikariCP"
+title: "[Spring 실습] JPA Multiple DataSource(Database) AOP"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Replication, Sharding 에서 필요한 JPA 다중 Datasource 를 AOP 을 활용해서 구현해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,492 +13,726 @@ tags:
     - Concept
     - Spring
     - Spring Boot
-    - HikariCP
-    - MySQL
+    - JPA
+    - Replication
+    - Sharding
+    - DataSource
+    - AOP
 toc: true
 use_math: true
 ---  
 
-## HikariCP
-`HikariCP` 는 경량 `JDBC` 커넥션 풀 프레임워크로, 2012년도 처음으로 발표 되었다. 
-경랑 커넥션 풀인 만큼 기존에 많이 사용되던 `c3po`, `dbcp2`, `tomcat`, `vibur` 보다 뛰어난 성능을 보여준다고 한다. 
-아래는 [HikariCP-benchmark](https://github.com/brettwooldridge/HikariCP-benchmark) 
-에서 확인 할 수 있는 벤치마크 결과이다. 
+## JPA Multiple DataSource
+[여기]({{site.baseurl}}{% link _posts/spring/2020-08-01-spring-practice-jpa-multiple-datasource-transaction.md %})
+에서는 `Transaction`, 
+[여기]({{site.baseurl}}{% link _posts/spring/2020-08-05-spring-practice-jpa-multiple-datasource-package.md %})
+에서는 `Package` 를 사용해서 `Replication` 구성에서 다중 `DataSource` 를 활용하는 방법에 대해 알아봤다. 
+이번 글에서는 미리 소개한 3가지 방법 중 나머지인 `AOP` 를 사용해서 이를 활용하는 방법에 대해 알아본다. 
 
-![]()
+## AOP 방법
+이전에 설명했었던 `Transaction` 와 `Package` 를 사용하는 방법은 기존 `Spring` 의 큰 흐름에서 여러 `DataSource` 를 사용할 수 있는 구조를 만드는 방법이였다. 
+이를 위해 `Transaction` 은 `readOnly` 필드를 활용했고, `Package` 는 `DataSource` 별 사용하는 패키지를 명시하는 방법을 사용했다.  
 
-이러한 성능의 결과인지 `Spring Boot 2.0` 부터 기본 커넥션 풀로 채용 되었다. 
-본 포스트에서는 `Spring Boot` 프로젝트에서 `HikariCP` 를 설정하고 사용하는 기본적인 부분에 대해 알아보도록 한다. 
+`AOP` 는 기존 방법들과는 달리 `AOP` 를 통해 보다 사용자의 커스텀한 설정이 가능한 방법이다. 
+데이터베이스는 `Master` 1, 2와 `Slave` 1, 2 모두 사용한다. 
+프로젝트 디렉토리 구조는 아래와 같다.  
 
-## 의존성
-`Maven`, `Gradle` 에서 사용할 수 있는 의존성은 
-[여기](https://mvnrepository.com/artifact/com.zaxxer/HikariCP)
-에서 확인 할 수 있다.  
-
-`Spring Boot` 가 아니거나 버전이 낮다면 위 링크를 통해 의존성을 추가하고, 
-`Spring Boot 2.0` 버전대라면 아래 의존성에 `HikariCP` 의존성이 포함되어 있어 별도로 추가없이 사용할 수 있다. 
-
-```xml
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-jdbc</artifactId>
-</dependency>
+<!-- tree aop -I "build" -->
+```
+aop
+├── build.gradle
+└── src
+    ├── main
+    │   ├── java
+    │   │   └── com
+    │   │       └── windowforsun
+    │   │           └── aop
+    │   │               ├── AopApplication.java
+    │   │               ├── aop
+    │   │               │   ├── SetDataSource.java
+    │   │               │   └── SetDataSourceAspect.java
+    │   │               ├── compoment
+    │   │               │   └── RoutingDatasourceManager.java
+    │   │               ├── config
+    │   │               │   ├── DataSourceConfig.java
+    │   │               │   └── RoutingDataSource.java
+    │   │               ├── constant
+    │   │               │   └── EnumDB.java
+    │   │               ├── domain
+    │   │               │   ├── Exam.java
+    │   │               │   └── Exam2.java
+    │   │               ├── repository
+    │   │               │   ├── Exam2Repository.java
+    │   │               │   └── ExamRepository.java
+    │   │               └── service
+    │   │                   ├── Exam2MasterService.java
+    │   │                   ├── Exam2SlaveService.java
+    │   │                   └── ExamService.java
+    │   └── resources
+    │       └── application.yaml
+    └── test
+        └── java
+            └── com
+                └── windowforsun
+                    └── aop
+                        └── service
+                            ├── Exam2MasterServiceTest.java
+                            ├── Exam2SlaveServiceTest.java
+                            ├── ExamServiceTest.java
+                            └── MultipleDataSourceTest.java
 ```  
 
-```yaml
-compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jdbc'
-```  
-
-테스트 프로젝트에서 사용한 빌드 툴은 `Gradle` 이고 `build.gradle` 내용은 아래와 같다. 
-
-```yaml
-plugins {
-    id 'org.springframework.boot' version '2.2.10.BUILD-SNAPSHOT'
-    id 'io.spring.dependency-management' version '1.0.10.RELEASE'
-    id 'java'
-}
-
-allprojects {
-    apply plugin: 'java'
-    apply plugin: 'io.spring.dependency-management'
-    apply plugin: 'org.springframework.boot'
-
-    group = 'com.windowforsun'
-    version = '0.0.1-SNAPSHOT'
-    sourceCompatibility = '1.8'
-
-    configurations {
-        compileOnly {
-            extendsFrom annotationProcessor
-        }
-    }
-
-    repositories {
-        mavenCentral()
-        maven { url 'https://repo.spring.io/milestone' }
-        maven { url 'https://repo.spring.io/snapshot' }
-    }
-
-    dependencies {
-        implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
-        compileOnly 'org.projectlombok:lombok'
-        runtimeOnly 'mysql:mysql-connector-java'
-        annotationProcessor 'org.projectlombok:lombok'
-        testImplementation('org.springframework.boot:spring-boot-starter-test') {
-            exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
-        }
-        testImplementation group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
-    }
-
-    test {
-        useJUnitPlatform()
-    }
-}
-```  
-
-## 테스트 Database
-테스트 용도로 사용할 `Docker` 기반 `MySQL` 템플릿인 `docker-compose.yaml` 파일 내용은 아래와 같다. 
-
-```yaml
-version: '3.7'
-
-services:
-  mysql:
-    image: mysql:8
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - 22277:3306
-    volumes:
-      - ./init/:/docker-entrypoint-initdb.d/
-```  
-
-`root` 계정의 비밀번호는 `root` 로 설정하고, 서비스 포트인 `3306`은 외부 `22277` 로 포워딩한다. 
-그리고 초기 `DB` 및 테이블을 설정하는 `init/init.sql` 파일을 볼륨으로 마운트한다.  
-
-`init/init.sql` 파일 내용은 아래와 같다. 
-
-```sql
-create database test1;
-
-use test1;
-
-CREATE TABLE `exam1` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `value1` varchar(255) DEFAULT NULL,
-  `datetime` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-insert into exam1(value1) values('a');
-insert into exam1(value1) values('b');
-
-
-create database test2;
-use test2
-
-CREATE TABLE `exam2` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `value2` varchar(255) DEFAULT NULL,
-  `datetime` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-```  
-
-`test1`, `test2` 데이터베이스를 생성하고 각각 `exam1`, `exam2` 테이블을 생성한다. 
-그리고 `test1.exam1` 테이블에만 먼저 2개 `row` 를 추가해 준다.  
-
-서비스는 `docker-compose.yaml up --build` 또는 `docker-compose.yaml up` 명령으로 실행 할 수 있다. 
-
-## 기본 DataSource 설정
-`DataSource` 가 하나만 필요하다면 `application.yaml` 에서 기본 `DataSource` 설정 형식으로, 
-간단하게 `HikariCP` 를 설정할 수 있다. 테스트 `MySQL` 에 연결하는 설정이 작성된 `application.yaml` 파일 내용은 아래와 같다. 
-
-```yaml
-spring:
-  # datasource 설정 정보
-  datasource:
-    url: jdbc:mysql://localhost:22277/test1
-    username: root
-    password: root
-
-logging:
-  level:
-    # hikaricp 관련 로그 추가
-    com.zaxxer.hikari.HikariConfig: DEBUG
-    com.zaxxer.hikari: TRACE
-```  
-
-- `.spring.datasource.url` : `test1` 데이터베이스에 접속하는 `jdbc` 의 `URL` 정보이다. 
-- `.spring.datasource.username` : `MySQL` 의 계정명을 설정한다.
-- `.spring.datasource.password` : `MySQL` 의 계정 비밀번호를 설정한다.
-- `.logging.level.com.zaxxer.hikari.HikariConfig` : 해당 클래스의 `DEBUG` 로그를 출력한다.
-- `.logging.level.com.zaxxer.hikari` : 해당 패키지의 `TRACE` 로그를 출력한다.
-
-별도의 구현클래스는 존재하지 않는다. 
-바로 위 설정을 테스트하는 테스트 코드의 내용은 아래와 같다. 
+우선 별도 설명을 하지 않는 여타 클래스는 아래와 같다. 
 
 ```java
-@SpringBootTest
-public class SimpleHikariCpTest {
-    @Autowired
-    private DataSource dataSource;
-    private Connection con;
-    private PreparedStatement psmt;
-
-    @BeforeEach
-    public void setUp() throws Exception {
-        this.con = this.dataSource.getConnection();
-    }
-
-    @AfterEach
-    public void tearDown() throws Exception {
-        this.psmt.close();
-        this.con.close();
-    }
-
-    @Test
-    public void mySqlServerId() throws Exception {
-        // given
-        this.psmt = con.prepareStatement("show variables like 'server_id'");
-
-        // when
-        ResultSet rs = this.psmt.executeQuery();
-        rs.next();
-
-        // then
-        int actual = rs.getInt(2);
-        assertThat(actual, is(1));
-    }
-
-    @Test
-    public void exam1TableCount() throws Exception {
-        // given
-        this.psmt = this.con.prepareStatement("select count(1) from exam1");
-
-        // when
-        ResultSet rs = this.psmt.executeQuery();
-        rs.next();
-
-        // then
-        int actual = rs.getInt(1);
-        assertThat(actual, is(2));
+@SpringBootApplication
+@EnableAspectJAutoProxy
+public class AopApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(AopApplication.class, args);
     }
 }
 ```  
 
-테스트를 수행하면 정상적으로 `test1` 데이터베이스의 아이디를 가져오고, `test1.exam1` 테이블에 대한 정보를 가져오는 것을 확인할 수 있다. 
-그리고 출력되는 로그중 아래와 같이 `HikariCP` 관련 로그 내용도 확인 가능하다. 
-해당 내용은 `application.yaml` 에서 설정한 부분에 대한 로그 출력이다. 
+```java
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table(
+        name = "exam"
+)
+public class Exam {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+    @Column
+    private String value;
+    @Column
+    private LocalDateTime datetime;
 
-```
-.. Hikari 설정 정보 로그 ..
-2020-08-19 20:54:15.430 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - configuration:
-2020-08-19 20:54:15.433 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : allowPoolSuspension.............false
-2020-08-19 20:54:15.434 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : autoCommit......................true
-2020-08-19 20:54:15.434 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : catalog.........................none
-2020-08-19 20:54:15.434 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionInitSql...............none
-2020-08-19 20:54:15.435 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionTestQuery.............none
-2020-08-19 20:54:15.435 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionTimeout...............30000
-2020-08-19 20:54:15.435 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : dataSource......................none
-2020-08-19 20:54:15.437 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : dataSourceClassName.............none
-2020-08-19 20:54:15.437 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : dataSourceJNDI..................none
-2020-08-19 20:54:15.438 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : dataSourceProperties............{password=<masked>}
-2020-08-19 20:54:15.438 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : driverClassName................."com.mysql.cj.jdbc.Driver"
-2020-08-19 20:54:15.438 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : exceptionOverrideClassName......none
-2020-08-19 20:54:15.438 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : healthCheckProperties...........{}
-2020-08-19 20:54:15.439 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : healthCheckRegistry.............none
-2020-08-19 20:54:15.439 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : idleTimeout.....................600000
-2020-08-19 20:54:15.439 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : initializationFailTimeout.......1
-2020-08-19 20:54:15.439 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : isolateInternalQueries..........false
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : jdbcUrl.........................jdbc:mysql://localhost:22277/test1
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : leakDetectionThreshold..........0
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : maxLifetime.....................1800000
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : maximumPoolSize.................10
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : metricRegistry..................none
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : metricsTrackerFactory...........none
-2020-08-19 20:54:15.440 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : minimumIdle.....................10
-2020-08-19 20:54:15.441 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : password........................<masked>
-2020-08-19 20:54:15.441 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : poolName........................"HikariPool-1"
-2020-08-19 20:54:15.441 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : readOnly........................false
-2020-08-19 20:54:15.441 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : registerMbeans..................false
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : scheduledExecutor...............none
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : schema..........................none
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : threadFactory...................internal
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : transactionIsolation............default
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : username........................"root"
-2020-08-19 20:54:15.442 DEBUG 46772 --- [           main] com.zaxxer.hikari.HikariConfig           : validationTimeout...............5000
-
-.. Hikari 커넥션 풀 로그 ..
-2020-08-19 20:54:24.132 DEBUG 46772 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@459cfcca
-2020-08-19 20:54:24.250 DEBUG 46772 --- [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Pool stats (total=1, active=0, idle=1, waiting=0)
-2020-08-19 20:54:24.346 DEBUG 46772 --- [extShutdownHook] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Before shutdown stats (total=1, active=0, idle=1, waiting=0)
-2020-08-19 20:54:24.351 DEBUG 46772 --- [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@459cfcca: (connection evicted)
-2020-08-19 20:54:24.421 DEBUG 46772 --- [onnection adder] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@521dec92
-2020-08-19 20:54:24.422 DEBUG 46772 --- [nnection closer] com.zaxxer.hikari.pool.PoolBase          : HikariPool-1 - Closing connection com.mysql.cj.jdbc.ConnectionImpl@521dec92: (connection evicted)
-2020-08-19 20:54:24.424 DEBUG 46772 --- [extShutdownHook] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - After shutdown stats (total=0, active=0, idle=0, waiting=0)
+}
 ```  
-
-위 `HikariConfig` 로그를 보면 기본 옵션 설정 값에 대한 정보를 확인해 볼 수 있다.  
-
-기본 `DataSource` 를 사용해서 `HikariCP` 를 설정할 때, 옵션에 대한 설정은 아래와 같이 `application.yaml` 에 작성 할 수 있다. 
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:22277/test1
-    username: root
-    password: root
-    hikari:
-      maximumPoolSize: 2
-      connectionTimeout: 10000
-
-.. 생략 ..
-```  
-
-최대 커넥션 풀 크기를 2로 설정하고 커넥션 풀에 대한 타임아웃을 10초로 설정했다. 
-이 설정으로 다시 위 테스트 코드를 수행하고 로그를 확인하면 아래와 같이 설정내용이 적용된 것을 확인 할 수 있다. 
-
-```
-2020-08-19 20:59:25.356 DEBUG 54876 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - configuration:
-
-.. 생략 ..
-
-2020-08-19 20:59:25.364 DEBUG 54876 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionTimeout...............10000
-
-.. 생략 ..
-
-2020-08-19 20:59:25.369 DEBUG 54876 --- [           main] com.zaxxer.hikari.HikariConfig           : maximumPoolSize.................2
-
-.. 생략 ..
-```  
-
-## 다중 DataSource 설정
-애플리케이션 하나에서 여러 `Database` 를 사용하는 경우 여러개의 `DataSource` 설정이 필요하다. 
-앞서 살펴본 기본 `DataSource` 설정과 어느정도 비슷한 부분이 있지만, 
-다른 설정내용도 존재한다.  
-
-`test1` 데이터베이스, `test2` 데이터베이스정보를 설정한 `application.yaml` 내용은 아래와 같다. 
-기본 `DataSource` 를 사용해서 설정할 때와 가장 크게 다른 점은 `url` 의 키값을 사용하지 않고, `jdbc-url` 을 키값을 사용한다는 점이다. 
-
-```yaml
-spring:
-  datasource:
-    test1:
-      jdbc-url: jdbc:mysql://localhost:22277/test1
-      username: root
-      password: root
-
-    test2:
-      jdbc-url: jdbc:mysql://localhost:22277/test2
-      username: root
-      password: root
-
-logging:
-  level:
-    com.zaxxer.hikari.HikariConfig: DEBUG
-    com.zaxxer.hikari: TRACE
-```  
-
-- `.spring.datasource.test1` : `test1` 데이터베이스에 대한 설정내용을 기술한다. 
-- `.spring.datasource.test2` : `test2` 데이터베이스에 대한 설정내용을 기술한다. 
-
-`Spring Boot` 에서 제공하는 자동설정을 사용할 수 없기 때문에, 
-별도로 `DataSource` 를 설정하는 설정파일을 작성해야 한다. 
-각 `DataSource` 를 설정하는 `DataSourceConfig` 클래스는 아래와 같다. 
 
 ```java
+@Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+@Table(
+        name = "exam2"
+)
+public class Exam2 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private long id;
+    @Column
+    private String value2;
+    @Column
+    private LocalDateTime datetime;
+
+}
+```  
+
+```java
+@Repository
+public interface ExamRepository extends JpaRepository<Exam, Long> {
+}
+```  
+
+```java
+@Repository
+public interface Exam2Repository extends JpaRepository<Exam2, Long> {
+}
+```  
+
+`DataSource` 설정 관련 클래스의 내용은 대부분 `Transaction` 방법과 동일한 구성이 많다. 
+
+```java
+@EnableAspectJAutoProxy
 @Configuration
+@EnableAutoConfiguration(exclude = {DataSourceAutoConfiguration.class})
+@EnableJpaRepositories(basePackages = {"com.windowforsun.aop"})
 public class DataSourceConfig {
     @Bean
-    @ConfigurationProperties("spring.datasource.test1")
-    @Primary
-    public DataSource dataSource() {
+    @ConfigurationProperties(prefix = "spring.datasource.masterdb1")
+    public DataSource master1DataSource() {
         return DataSourceBuilder.create().type(HikariDataSource.class).build();
     }
 
     @Bean
-    @ConfigurationProperties("spring.datasource.test2")
-    public DataSource test2DataSource() {
+    @ConfigurationProperties(prefix = "spring.datasource.slavedb1")
+    public DataSource slave1DataSource() {
         return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.masterdb2")
+    public DataSource master2DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.slavedb2")
+    public DataSource slave2DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
+
+    @Bean
+    public DataSource routingDataSource(
+            @Qualifier("master1DataSource") DataSource masterDB1DataSource,
+            @Qualifier("slave1DataSource") DataSource slaveDB1DataSource,
+            @Qualifier("master2DataSource") DataSource masterDB2DataSource,
+            @Qualifier("slave2DataSource") DataSource slaveDB2DataSource
+    ) {
+        RoutingDataSource routingDataSource = new RoutingDataSource();
+        HashMap<Object, Object> dataSourceMap = new HashMap<>();
+        dataSourceMap.put(EnumDB.MASTER_DB_1, masterDB1DataSource);
+        dataSourceMap.put(EnumDB.SLAVE_DB_1, slaveDB1DataSource);
+        dataSourceMap.put(EnumDB.MASTER_DB_2, masterDB2DataSource);
+        dataSourceMap.put(EnumDB.SLAVE_DB_2, slaveDB2DataSource);
+
+        routingDataSource.setTargetDataSources(dataSourceMap
+                .entrySet()
+                .stream()
+                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        routingDataSource.setDefaultTargetDataSource(dataSourceMap.get(EnumDB.MASTER_DB_1));
+
+        return routingDataSource;
+    }
+
+
+    @Primary
+    @Bean
+    public DataSource dataSource(@Qualifier("routingDataSource") DataSource routingDataSource) {
+        return new LazyConnectionDataSourceProxy(routingDataSource);
     }
 }
 ```  
 
-`@ConfigurationProperties` 어노테이션을 사용해서 각 프로퍼티 값을 구분해 설정을 수행할 수 있다.  
+- `@EnableJpaAutoConfiguration` 의 `exclude` 필드에 `DataSourceAutoConfiguration` 를 설정해서 사이클로 의존성을 가지는 현상을 회피한다. 
+- `@EnableJpaRepositories` 에 `com.windowforsun.aop` 를 기본 패키지로 설정한다. 
+- 프로퍼티에 있는 정보를 읽어 총 4개(`master1DataSource`, `master2Datasource`, `slave1DataSource`, `slave2DataSource`) `DataSource` 를 각각 생성한다. 
+- `routingDataSource` 에서는 생성된 4개의 `DataSource` 빈을 `RoutingDataSource` 에 `Enum` 키와 함께 설정한다. 
+기본 값은 `master1DataSource` 로 설정한다. 
+- `dataSource` 빈은 `routingDataSource` 빈을 사용해서 `LazyConnectionDataSourceProxy` 를 통해 기본 `DataSource` 를 생성한다. 
+관련 좀 더 자세한 설명은 `Transaction` 방식에서 확인 할 수 있다. 
 
-구성한 2개의 `DataSource` 를 테스트하는 테스트 코드는 아래와 같다. 
+생성된 `DataSource` 빈을 라우팅 해주는 클래스의 내용은 아래와 같다. 
 
 ```java
+@Slf4j
+public class RoutingDataSource extends AbstractRoutingDataSource {
+    private static ThreadLocal<EnumDB> latestDB = new ThreadLocal<>();
+
+    @Override
+    protected Object determineCurrentLookupKey() {
+        EnumDB dataSource = RoutingDatasourceManager.getCurrentDataSource();
+
+        log.debug(dataSource.name());
+        latestDB.set(dataSource);
+
+        try {
+            Thread.sleep(100);
+        } catch(Exception e) {
+
+        }
+
+        return dataSource;
+    }
+
+    public static EnumDB getLatestDB() {
+        return latestDB.get();
+    }
+}
+```  
+
+- `Transaction` 방식과 동일하게 라우팅은 `AbstractRoutingDataSource` 의 `determineCurrentLookupKey()` 메소드의 구현으로, 
+설정 파일에서 생성한 `RoutingDataSource` 에 있는 적절한 키를 리턴하는 방법을 사용한다. 
+- `latestDB` 필드는 사용되는 실제 `DataSource` 의 로깅과 테스트를 위해 사용한다. 
+- `determineCurrentLookupKey()` 메소드에서는 `RoutingDataSourceManager` 의 `getCurrentDataSource()` 메소드로 리턴받은 `DataSource` 키를 리턴하는 역할을 수행한다. 
+
+`AOP` 를 통해 현재 사용하려는 `DataSource` 의 키를 관리하는 클래스의 내용은 아래와 같다. 
+
+```java
+public class RoutingDatasourceManager {
+    private static final ThreadLocal<EnumDB> currentDataSource = new ThreadLocal<>();
+
+    static {
+        currentDataSource.set(EnumDB.MASTER_DB_1);
+    }
+
+    public static void setCurrentDataSource(EnumDB enumDB) {
+        currentDataSource.set(enumDB);
+    }
+
+    public static EnumDB getCurrentDataSource() {
+        return currentDataSource.get();
+    }
+
+    public static void removeCurrentDataSource() {
+        currentDataSource.remove();
+    }
+}
+```  
+
+- `currentDataSource` 는 `ThreadLocal` 타입으로 현재 사용하는 `DataSource` 의 키를 저장하는 필드이다. 
+- 구현된 메소드는 `currentDataSource` 필드를 외부에서 사용할 수 있도록 구현된 인터페이스이다. 
+
+`AOP` 는 `Annotation` 을 사용해서 동작을 수행하도록 구현했다. 
+`Annotation` 과 이를 처리하는 `AOP` 의 구현 내용은 아래와 같다. 
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.METHOD, ElementType.TYPE})
+@Inherited
+@Documented
+public @interface SetDataSource {
+    EnumDB dataSource() default EnumDB.MASTER_DB_1;
+}
+```  
+
+- `SetDataSource` 라는 `Annotation` 은 메소드와 클래스 레벨에서 사용가능하다. 
+
+
+```java
+@Component
+@Aspect
+@Slf4j
+public class SetDataSourceAspect {
+    @Pointcut("@annotation(setDataSource)")
+    public void hasAnnotation(SetDataSource setDataSource) {
+
+    }
+
+    @Pointcut("@within(setDataSource)")
+    public void withinAnnotation(SetDataSource setDataSource) {
+
+    }
+
+    @Around("hasAnnotation(setDataSource)")
+    public Object aroundMethod(ProceedingJoinPoint joinPoint, SetDataSource setDataSource) throws Throwable {
+        return this.processAroundJoinPoint(joinPoint, setDataSource);
+    }
+
+    @Around("withinAnnotation(setDataSource)")
+    public Object aroundClass(ProceedingJoinPoint joinPoint, SetDataSource setDataSource) throws Throwable {
+        return this.processAroundJoinPoint(joinPoint, setDataSource);
+    }
+
+    public Object processAroundJoinPoint(ProceedingJoinPoint joinPoint, SetDataSource setDataSource) throws Throwable {
+        EnumDB dataSource = setDataSource.dataSource();
+        RoutingDatasourceManager.setCurrentDataSource(dataSource);
+
+        log.debug("aspect : {}", dataSource);
+
+        try {
+            return joinPoint.proceed();
+        } finally {
+            RoutingDatasourceManager.removeCurrentDataSource();
+        }
+    }
+}
+```  
+
+- `hasAnnotation()` 메소드는 메소드 레벨에 해당 `Annotation` 이 선언되었는지 판별한다. 
+- `withinAnnotation()` 메소드는 클래스 레벨에 해당 `Annotation` 이 선언되었는지 판별한다. 
+- `aroundMethod()` 는 메소드에 선언된 `Annotation` 의 `AOP` 동작을 수행한다. 
+- `aroundClass()` 는 클래스에 선언된 `Annotation` 의 `AOP` 동작을 수행한다. 
+
+`AOP` 와 `Annotation` 을 사용하는 서비스 클래스는 아래와 같다. 
+
+```java
+@Service
+public class ExamService {
+    private final ExamRepository examRepository;
+
+    public ExamService(ExamRepository examRepository) {
+        this.examRepository = examRepository;
+    }
+
+    @SetDataSource(dataSource = EnumDB.MASTER_DB_1)
+    public Exam save(Exam exam) {
+        return this.examRepository.save(exam);
+    }
+
+    @SetDataSource(dataSource = EnumDB.MASTER_DB_1)
+    public void delete(Exam exam) {
+        this.examRepository.delete(exam);
+    }
+
+    @SetDataSource(dataSource = EnumDB.MASTER_DB_1)
+    public void deleteById(long id) {
+        this.examRepository.deleteById(id);
+    }
+
+    @SetDataSource(dataSource = EnumDB.MASTER_DB_1)
+    public void deleteAll() {
+        this.examRepository.deleteAll();
+    }
+
+    @SetDataSource(dataSource = EnumDB.SLAVE_DB_1)
+    public Exam readById(long id) {
+        return this.examRepository.findById(id).orElse(null);
+    }
+
+    @SetDataSource(dataSource = EnumDB.SLAVE_DB_1)
+    public List<Exam> readAll() {
+        return this.examRepository.findAll();
+    }
+}
+```  
+
+```java
+@Service
+@SetDataSource(dataSource = EnumDB.MASTER_DB_2)
+public class Exam2MasterService {
+    private final Exam2Repository exam2Repository;
+
+    public Exam2MasterService(Exam2Repository exam2Repository) {
+        this.exam2Repository = exam2Repository;
+    }
+
+    public Exam2 save(Exam2 exam2) {
+        return this.exam2Repository.save(exam2);
+    }
+
+    public void delete(Exam2 exam2) {
+        this.exam2Repository.delete(exam2);
+    }
+
+    public void deleteById(long id) {
+        this.exam2Repository.deleteById(id);
+    }
+
+    public void deleteAll() {
+        this.exam2Repository.deleteAll();
+    }
+}
+```  
+
+```java
+@Service
+@SetDataSource(dataSource = EnumDB.SLAVE_DB_2)
+public class Exam2SlaveService {
+    private final Exam2Repository exam2Repository;
+
+    public Exam2SlaveService(Exam2Repository exam2Repository) {
+        this.exam2Repository = exam2Repository;
+    }
+
+    public Exam2 readById(long id) {
+        return this.exam2Repository.findById(id).orElse(null);
+    }
+
+    public List<Exam2> readAll() {
+        return this.exam2Repository.findAll();
+    }
+}
+```  
+
+### 테스트
+아래 테스트 코드를 확인해보면 `Annotation` 에 설정한 `DataSource` 에 따라 정상적인 동작이 수행되는 것을 확인 할 수 있다. 
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class ExamServiceTest {
+    @Autowired
+    private ExamService examService;
+
+    @Before
+    public void setUp() {
+        this.examService.deleteAll();
+    }
+
+    @Test
+    public void save_Master() {
+        // given
+        Exam exam = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+
+        // when
+        this.examService.save(exam);
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
+        assertThat(exam.getId(), greaterThan(0l));
+    }
+
+    @Test
+    public void delete_Master() {
+        // given
+        Exam exam = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam);
+
+        // when
+        this.examService.delete(exam);
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
+    }
+
+    @Test
+    public void readById_Slave() {
+        // given
+        Exam exam = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam);
+
+        // when
+        Exam result = this.examService.readById(exam.getId());
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_1));
+        assertThat(result.getId(), is(exam.getId()));
+    }
+
+    @Test
+    public void readAll_Slave() {
+        // given
+        Exam exam1 = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam1);
+        Exam exam2 = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam2);
+
+        // then
+        List<Exam> result = this.examService.readAll();
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_1));
+        assertThat(result, hasSize(2));
+    }
+}
+```  
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class Exam2MasterServiceTest {
+    @Autowired
+    private Exam2MasterService exam2MasterService;
+
+    @Before
+    public void setUp() {
+        this.exam2MasterService.deleteAll();
+    }
+
+    @Test
+    public void save_Master() {
+        // given
+        Exam2 exam = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+
+        // when
+        this.exam2MasterService.save(exam);
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
+        assertThat(exam.getId(), greaterThan(0l));
+    }
+
+    @Test
+    public void delete_Master() {
+        // given
+        Exam2 exam = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam);
+
+        // when
+        this.exam2MasterService.delete(exam);
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
+    }
+}
+```  
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBootTest
+public class Exam2SlaveServiceTest {
+    @Autowired
+    private Exam2SlaveService exam2SlaveService;
+    @Autowired
+    private Exam2MasterService exam2MasterService;
+
+    @Before
+    public void setUp() {
+        this.exam2MasterService.deleteAll();
+    }
+
+    @Test
+    public void readById_Slave() {
+        // given
+        Exam2 exam = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam);
+
+        // when
+        Exam2 result = this.exam2SlaveService.readById(exam.getId());
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_2));
+        assertThat(result.getId(), is(exam.getId()));
+    }
+
+    @Test
+    public void readAll_Slave() {
+        // given
+        Exam2 exam1 = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam1);
+        Exam2 exam2 = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam2);
+
+        // when
+        List<Exam2> result = this.exam2SlaveService.readAll();
+
+        // then
+        EnumDB actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_2));
+        assertThat(result, hasSize(2));
+    }
+}
+```  
+
+```java
+@RunWith(SpringRunner.class)
 @SpringBootTest
 public class MultipleDataSourceTest {
     @Autowired
-    private DataSource dataSource;
+    private ExamService examService;
     @Autowired
-    @Qualifier("test2DataSource")
-    private DataSource test2DataSource;
-    private Connection con;
-    private PreparedStatement psmt;
+    private Exam2MasterService exam2MasterService;
+    @Autowired
+    private Exam2SlaveService exam2SlaveService;
 
-    @AfterEach
-    public void tearDown() throws Exception {
-        if(this.con != null) {
-            this.con.close();
-        }
-        if(this.psmt != null) {
-            this.psmt.close();
-        }
+    @Before
+    public void setUp() {
+        this.examService.deleteAll();
+        this.exam2MasterService.deleteAll();
     }
 
     @Test
-    public void exam1TableCount() throws Exception {
-        // given
-        this.con = this.dataSource.getConnection();
-        this.psmt = this.con.prepareStatement("select count(1) from exam1");
+    public void insert_select_delete() {
+        EnumDB actual;
 
-        // when
-        ResultSet rs = this.psmt.executeQuery();
-        rs.next();
+        Exam exam = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam);
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
 
-        // then
-        int actual = rs.getInt(1);
-        assertThat(actual, is(2));
+        Exam2 exam2 = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam2);
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
+
+        this.examService.readAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_1));
+
+        this.exam2SlaveService.readAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_2));
+
+        this.examService.deleteAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
+
+        this.exam2MasterService.deleteAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
     }
 
     @Test
-    public void exam2TableCount() throws Exception {
-        // given
-        this.con = this.test2DataSource.getConnection();
-        this.psmt = this.con.prepareStatement("select count(1) from exam2");
+    public void insert_insert_select_select_delete_delete() {
+        EnumDB actual;
 
-        // when
-        ResultSet rs = this.psmt.executeQuery();
-        rs.next();
+        Exam exam = Exam.builder()
+                .value("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.examService.save(exam);
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
 
-        // then
-        int actual = rs.getInt(1);
-        assertThat(actual, is(0));
+        Exam2 exam2 = Exam2.builder()
+                .value2("a")
+                .datetime(LocalDateTime.now())
+                .build();
+        this.exam2MasterService.save(exam2);
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
+
+        this.examService.readAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_1));
+
+        this.exam2SlaveService.readAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_2));
+
+        this.examService.readById(exam.getId());
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_1));
+
+        this.exam2SlaveService.readById(exam2.getId());
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.SLAVE_DB_2));
+
+        this.examService.deleteAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_1));
+
+        this.exam2MasterService.deleteAll();
+        actual = RoutingDataSource.getLatestDB();
+        assertThat(actual, is(EnumDB.MASTER_DB_2));
     }
 }
 ```  
 
-테스트 코드를 실행하면 분리된 2개의 `DataSource` 에서 정상적으로 테이블 조회가 되는 것을 확인 할 수 있다. 
-출력 되는 로그를 확인하면, 아래와 같이 2개의 `DataSource` 에 대한 설정 로그가 출력 된다. 
-
-```
-2020-08-19 21:42:05.073 DEBUG 44400 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - configuration:
-
-.. 생략 ..
-
-2020-08-19 21:11:05.082 DEBUG 44400 --- [           main] com.zaxxer.hikari.HikariConfig           : validationTimeout...............5000
-2020-08-19 21:11:05.082  INFO 44400 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2020-08-19 21:11:10.648  INFO 44400 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-
-
-2020-08-19 21:11:10.723 DEBUG 44400 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-2 - configuration:
-
-.. 생략 ..
-
-2020-08-19 21:11:10.728 DEBUG 44400 --- [           main] com.zaxxer.hikari.HikariConfig           : validationTimeout...............5000
-2020-08-19 21:11:10.728  INFO 44400 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
-2020-08-19 21:11:10.788  INFO 44400 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
-
-2020-08-19 21:11:10.852  INFO 44400 --- [extShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Shutdown completed.
-2020-08-19 21:11:10.880  INFO 44400 --- [extShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
-```  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ---
 ## Reference
-[brettwooldridge/HikariCP](https://github.com/brettwooldridge/HikariCP)  
-[Introduction to HikariCP](https://www.baeldung.com/hikaricp)  
+[Use replica database for read-only transactions](https://blog.pchudzik.com/201911/read-from-replica/)  
