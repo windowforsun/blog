@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] HikariCP 기본 개념과 설정"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: '경량 JDBC 커넥션 풀인 HikariCP 와 구성법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
