@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] HikariCP"
+title: "[Spring 실습] HikariCP 기본 개념과 설정"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: ''
@@ -15,6 +15,7 @@ tags:
     - Spring Boot
     - HikariCP
     - MySQL
+    - JPA
 toc: true
 use_math: true
 ---  
@@ -25,7 +26,7 @@ use_math: true
 아래는 [HikariCP-benchmark](https://github.com/brettwooldridge/HikariCP-benchmark) 
 에서 확인 할 수 있는 벤치마크 결과이다. 
 
-![]()
+![그림1](({{site.baseurl}}/img/spring/practice-hikaricp-basic-1.png))
 
 이러한 성능의 결과인지 `Spring Boot 2.0` 부터 기본 커넥션 풀로 채용 되었다. 
 본 포스트에서는 `Spring Boot` 프로젝트에서 `HikariCP` 를 설정하고 사용하는 기본적인 부분에 대해 알아보도록 한다. 
@@ -51,7 +52,7 @@ compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-jdbc'
 
 테스트 프로젝트에서 사용한 빌드 툴은 `Gradle` 이고 `build.gradle` 내용은 아래와 같다. 
 
-```yaml
+```groovy
 plugins {
     id 'org.springframework.boot' version '2.2.10.BUILD-SNAPSHOT'
     id 'io.spring.dependency-management' version '1.0.10.RELEASE'
@@ -448,55 +449,412 @@ public class MultipleDataSourceTest {
 2020-08-19 21:11:10.880  INFO 44400 --- [extShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
 ```  
 
+구성한 각 `DataSource` 에 `HikariCP` 관련 옵션을 설정하고 싶을 경우 아래와 같은 방식으로 적용할 수 있다. 
+
+```yaml
+spring:
+  datasource:
+    test1:
+      jdbc-url: jdbc:mysql://localhost:22277/test1
+      username: root
+      password: root
+      maximumPoolSize: 1
+      connectionTimeout: 10000
+      
+
+    test2:
+      jdbc-url: jdbc:mysql://localhost:22277/test2
+      username: root
+      password: root
+      maximumPoolSize: 2
+      connectionTimeout: 20000
+```  
+
+옵션을 적용하고 다시 테스트 코드를 실행한 다음, 
+로그를 확인하면 아래와 같이 옵션 값이 각 `DataSource`에 적용된 것을 확인 할 수 있다. 
+
+```
+2020-08-20 20:28:51.368 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-1 - configuration:
+2020-08-20 20:28:51.371 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : allowPoolSuspension.............false
+
+.. 생략 ..
+
+2020-08-20 20:28:51.371 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionTimeout...............10000
+2020-08-20 20:28:51.375 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : jdbcUrl.........................jdbc:mysql://localhost:22277/test1
+2020-08-20 20:28:51.375 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : maximumPoolSize.................1
+
+.. 생략 ..
+
+2020-08-20 20:28:51.377  INFO 18120 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2020-08-20 20:28:57.769  INFO 18120 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
 
 
+2020-08-20 20:28:57.890 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : HikariPool-2 - configuration:
+
+.. 생략 ..
+
+2020-08-20 20:28:57.893 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : connectionTimeout...............2000
+2020-08-20 20:28:57.895 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : jdbcUrl.........................jdbc:mysql://localhost:22277/test2
+2020-08-20 20:28:57.896 DEBUG 18120 --- [           main] com.zaxxer.hikari.HikariConfig           : maximumPoolSize.................2
+
+.. 생략 ..
+
+2020-08-20 20:28:57.897  INFO 18120 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Starting...
+2020-08-20 20:28:57.944  INFO 18120 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-2 - Start completed.
+```  
+
+## JPA + DataSource 설정
+`JPA` 는 `Java Persistent API` 의 약자로 `Java ORM` 의 규격이다. 
+이를 구현한 구현체로는 `Hiernetes` ,` OpenJPA` 등이 있다.  
+
+`JPA` 가 사용하는 `DataSource` 를 `HikariCP` 로 설정하는 방법은 어렵지않다. 
+기본 케넥션 풀이 `HikariCP` 이기 때문에 `DataSource` 하나만 사용하는 경우 자동 설정을 사용해서 간편하게 구성할 수 있다.  
+
+아래는 `JPA` 에 대한 의존성으로 `build.gradle` 에 추가가 필요하다. 
+
+```groovy
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+}
+```  
+
+그리고 `application.yaml` 은 기본 `DataSource` 의 설정과 동일하다. 
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:22277/test1
+    username: root
+    password: root
+
+logging:
+  level:
+    com.zaxxer.hikari.HikariConfig: DEBUG
+    com.zaxxer.hikari: TRACE
+```  
+
+그리고 테이블과 매핑되는 엔티티 클래스와 `Repository` 클래스의 내용은 아래와 같다. 
+
+```java
+@Entity(name = "exam1")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Exam1 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String value1;
+    private LocalDateTime datetime;
+}
+```  
+
+```java
+@Repository
+public interface Exam1Repository extends JpaRepository<Exam1, Long> {
+
+}
+```  
+
+정상동작 여부를 확인하는 테스트 코드는 아래와 같다. 
+
+```java
+@SpringBootTest
+public class JpaHikariTest {
+    @Autowired
+    private Exam1Repository exam1Repository;
+
+    @Test
+    public void findById() {
+        // given
+        long id = 1;
+
+        // when
+        Exam1 actual = this.exam1Repository.findById(id).orElse(null);
+
+        // then
+        assertThat(actual, notNullValue());
+        assertThat(actual.getId(), is(id));
+    }
+
+    @Test
+    public void findAll() {
+        // when
+        List<Exam1> actual = this.exam1Repository.findAll();
+
+        // then
+        assertThat(actual, hasSize(2));
+    }
+}
+```  
+
+## 다중 JPA + DataSource 설정
+`JPA` 에서 다중 `DataSource` 를 구성하는 방법은 다양하게 존재한다. 
+이전 포스트인 [여기]({{site.baseurl}}{% link _posts/spring/2020-08-06-spring-practice-jpa-multiple-datasource-aop.md %})
+에서 몇가지 방법에 대해 다룬적이 있다. 
+이번 예제에서는 복잡한 설정 없이 구성할 수 있는, 패키지를 사용한 방법으로 설정을 진행한다.  
+
+`JPA` 의존성이 추가된 상태에서, 
+`application.yaml` 의 내용은 다중 `DataSource` 의 설정 내용과 비슷하다. 
+
+```yaml
+spring:
+  datasource:
+    test1:
+      jdbc-url: jdbc:mysql://localhost:22277/test1
+      username: root
+      password: root
+
+    test2:
+      jdbc-url: jdbc:mysql://localhost:22277/test2
+      username: root
+      password: root
 
 
+logging:
+  level:
+    com.zaxxer.hikari.HikariConfig: DEBUG
+    com.zaxxer.hikari: TRACE
+```  
 
+먼저 `test1` 데이터베이스에 대한 `DataSource` 를 설정하고 이를 `JPA` 관련 패키지와 연결하는 설정 내용은 아래와 같다. 
 
+```java
+@Configuration
+@EnableJpaRepositories(
+        basePackages = {"com.windowforsun.jpamultipledatasource.repository.test1"},
+        entityManagerFactoryRef = "test1EntityManagerFactory",
+        transactionManagerRef = "test1TransactionManager"
+)
+public class Test1DataSourceConfig {
+    private final JpaProperties jpaProperties;
+    private final HibernateProperties hibernateProperties;
 
+    public Test1DataSourceConfig(JpaProperties jpaProperties, HibernateProperties hibernateProperties) {
+        this.jpaProperties = jpaProperties;
+        this.hibernateProperties = hibernateProperties;
+    }
 
+    @Bean
+    @Primary
+    @ConfigurationProperties(prefix = "spring.datasource.test1")
+    public DataSource test1DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
 
+    @Bean
+    @Primary
+    public LocalContainerEntityManagerFactoryBean test1EntityManagerFactory(EntityManagerFactoryBuilder builder) {
+        Map<String, ?> properties = this.hibernateProperties.determineHibernateProperties(
+                this.jpaProperties.getProperties(), new HibernateSettings()
+        );
 
+        return builder
+                .dataSource(this.test1DataSource())
+                .properties(properties)
+                .packages("com.windowforsun.jpamultipledatasource.domain.test1")
+                .persistenceUnit("test1")
+                .build();
+    }
 
+    @Bean
+    @Primary
+    public PlatformTransactionManager test1TransactionManager(EntityManagerFactoryBuilder builder) {
+        return new JpaTransactionManager(Objects.requireNonNull(this.test1EntityManagerFactory(builder).getObject()));
+    }
+}
+```  
 
+`@EnableJpaRepositories` 의 `basePackages` 필드에 `test1` 에 해당하는 `Repository` 패키지를 설정한다. 
+그리고 구성에 필요한 `entityManagerFactoryRef` 의 빈이름, `transactionManagerRef` 빈이름을 각각 설정해 주면된다.  
 
+`test1` 설정의 각 빈은 `@Primary` 설정으로 타입에 디해 기본 빈으로 설정해 준다. 
+`@Primary` 가 없으면 `JPA` 초기화 작업 중 관련 빈을 찾지 못해 에러가 발생한다.  
 
+`entityManagerFactory` 빈을 생성할 때, `DataSource` 에서 사용하는 엔티티 패키지를 설정해야 한다. 
+그리고 생성한 `entityManagerFactory` 빈을 사용해서 `transactionManager` 빈을 생성해 주면 된다.  
 
+동일한 방식으로 `test2` 데이터베이스에 대한 설정 내용은 아래와 같다. 
 
+```java
 
+@Configuration
+@EnableJpaRepositories(
+        basePackages = {"com.windowforsun.jpamultipledatasource.repository.test2"},
+        entityManagerFactoryRef = "test2EntityManagerFactory",
+        transactionManagerRef = "test2TransactionManager"
+)
+public class Test2DataSourceConfig {
+    private final JpaProperties jpaProperties;
+    private final HibernateProperties hibernateProperties;
 
+    public Test2DataSourceConfig(JpaProperties jpaProperties, HibernateProperties hibernateProperties) {
+        this.jpaProperties = jpaProperties;
+        this.hibernateProperties = hibernateProperties;
+    }
 
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.test2")
+    public DataSource test2DataSource() {
+        return DataSourceBuilder.create().type(HikariDataSource.class).build();
+    }
 
+    @Bean
+    public LocalContainerEntityManagerFactoryBean test2EntityManagerFactory(EntityManagerFactoryBuilder builder) {
+        Map<String, ?> properties = this.hibernateProperties.determineHibernateProperties(
+                this.jpaProperties.getProperties(), new HibernateSettings()
+        );
 
+        return builder
+                .dataSource(this.test2DataSource())
+                .properties(properties)
+                .packages("com.windowforsun.jpamultipledatasource.domain.test2")
+                .persistenceUnit("test2")
+                .build();
+    }
 
+    @Bean
+    public PlatformTransactionManager test2TransactionManager(EntityManagerFactoryBuilder builder) {
+        return new JpaTransactionManager(Objects.requireNonNull(this.test2EntityManagerFactory(builder).getObject()));
+    }
+}
+```  
 
+이제 각 엔티티 클래스와 `Repository` 클래스는 아래와 같다. 
 
+```java
+package com.windowforsun.jpamultipledatasource.domain.test1;
 
+@Entity(name = "exam1")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Exam1 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String value1;
+    private LocalDateTime datetime;
+}
+```  
 
+```java
+package com.windowforsun.jpamultipledatasource.domain.test2;
 
+@Entity(name = "exam2")
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class Exam2 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private long id;
+    private String value2;
+    private LocalDateTime datetime;
+}
+```  
 
+```java
+package com.windowforsun.jpamultipledatasource.repository.test1;
 
+@Repository
+public interface Exam1Repository extends JpaRepository<Exam1, Long> {
+}
+```  
 
+```java
+package com.windowforsun.jpamultipledatasource.repository.test2;
 
+@Repository
+public interface Exam2Repository extends JpaRepository<Exam2, Long> {
+}
+```  
 
+각 `Repository` 클래스를 테스트하는 테스트 코드의 내용은 아래와 같다. 
 
+```java
+@SpringBootTest
+public class Test1JpaDataSourceTest {
+    @Autowired
+    private Exam1Repository exam1Repository;
 
+    @Test
+    public void findAll() {
+        // when
+        List<Exam1> actual = this.exam1Repository.findAll();
 
+        // then
+        assertThat(actual, hasSize(2));
+    }
 
+    @Test
+    public void findById() {
+        // given
+        long id = 1;
 
+        // when
+        Exam1 actual = this.exam1Repository.findById(id).orElse(null);
 
+        // then
+        assertThat(actual, notNullValue());
+        assertThat(actual.getId(), is(id));
+    }
+}
+```  
 
+```java
+@SpringBootTest
+public class Test2JpaDataSourceTest {
+    @Autowired
+    private Exam2Repository exam2Repository;
 
+    @AfterEach
+    public void tearDown() {
+        this.exam2Repository.deleteAll();
+    }
 
+    @Test
+    public void findAll() {
+        // when
+        List<Exam2> actual = this.exam2Repository.findAll();
 
+        // then
+        assertThat(actual, hasSize(0));
+    }
 
+    @Test
+    public void findById() {
+        // given
+        long id = 1;
 
+        // when
+        Exam2 actual = this.exam2Repository.findById(id).orElse(null);
 
+        // then
+        assertThat(actual, nullValue());
+    }
 
+    @Test
+    public void save() {
+        // given
+        Exam2 exam2 = Exam2.builder()
+                .value2("aa")
+                .build();
 
+        // when
+        this.exam2Repository.save(exam2);
 
-
+        // then
+        assertThat(exam2.getId(), greaterThan(0l));
+    }
+}
+```  
 
 ---
 ## Reference
