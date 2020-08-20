@@ -128,10 +128,83 @@ spec:
 아래는 `hostPath` 을 적용한 파드 템플릿의 예시이다. 
 
 ```yaml
+# pod-hostpath.yaml
 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-hostpath
+spec:
+  containers:
+    - name: test
+      image: nginx
+      volumeMounts:
+        - mountPath: /test-hostpath
+          name: hostpath-volume
+      ports:
+        - containerPort: 80
+  volumes:
+    - name: hostpath-volume
+      hostPath:
+        path: /var/lib/testdir
+        type: Directory
 ```  
- 
 
+- `.spec.containers[].volumeMounts[]` : `.mountPath` 필드에는 볼륨을 마운트할 컨테이너 경로를 설정한다. 
+그리고 `.name` 은 `.spec.volumes[]` 에 설정한 볼륨 이름을 설정해 준다. 
+- `.spec.volumes[]` : `.name` 필드에는 볼륨의 이름을 설정하고, 
+`.hostPath` 필드를 사용해서 호스트 경로에 대한 볼륨 설정을 한다. 
+`.hostPath.path` 는 볼륨을 마운트할 호스트 경로를 설정하고, 
+`.hostPath.type` 에는 디렉토리임을 명시한다. 
+
+>현재 docker desktop 이 `wsl2` 환경에서 구동중인 환경이다. 
+>그러므로 쿠버네티스 클러스터에서 실행되는 컨테이너와 호스트 경로를 마운트하기 위해서는 아래와 같은 경로를 사용한다.  
+>  
+>설정 Path|docker-desktop Distro 경로
+>---|---
+>/var/lib/<dir-or-file>|/mnt/wsl/docker-desktop-data/data/<dir-or-file>
+>/var/lib/docker/volumes|/mnt/wsl/docker-desktop-data/data/docker/volumes
+
+`.spec.volums[].hostPath.type` 은 `hostPath` 경로를 설정할 때 경로의 타입을 설정하는 필드이다. 
+해당 필드에 사용가능한 값은 아래와 같다. 
+
+Type|설명
+---|---
+none|볼륨을 마운트할때 확인 절차를 수행하지 않는다.
+DirectoryOrCreate|설정한 디렉토리 경로가 없으면 퍼미션 `755` 인 디렉토리를 생성한다.
+Directory|설정한 디렉토리 경로가 존재해야 한다. 존재하지 않으면 파드는 `ContainerCreating` 상태로 디렉토리 경로가 생성될때까지 대기한다. 
+FileOrCreate|설정한 경로에 파일이 없으면 퍼미션 `644` 인 파일을 생성한다. 
+File|설정한 경로에 파일이 존재해야 한다. 존재하지 않으면 파드는 생성되지 않는다.
+Socket|설정한 경로에 유닉스 소켓 파일이 존재해야 한다.
+CharDevice|설정한 경로에 문자 디바이스가 존재해야 한다.
+BlockDevice|설정한 경로에 블록 디바이스가 존재해야 한다.
+
+`kubectl apply -f pod-hostpath.yaml` 명령으로 구성한 템플릿을 클러스터에 적용한다. 
+그리고 `kubectl exec <파드이름> -it sh` 명령으로 컨테이너에 접속하고, 
+컨테이너 경로인 `/test-hostpath` 에 새로운 파일 하나를 생성한다. 
+
+```bash
+$ kubectl apply -f pod-hostpath.yaml
+pod/pod-hostpath created
+$ kubectl exec pod-hostpath -it sh
+# cd test-hostpath
+# touch thisisfile
+# ls
+thisisfile
+# exit
+```  
+
+그리고 호스트의 경로인 `/var/lib/testdir`(`/mnt/wsl/docker-desktop-data/data/testdir`) 로 이동해서 
+파일을 조회하면 아래와 같이 컨테이너에서 생성한 파일이 동일하게 존재하는 것을 확인 할 수 있다. 
+
+```bash
+$ cd /mnt/wsl/docker-desktop-data/data/testdir/
+$ ls
+thisisfile
+```  
+
+### nfs
+ 
 
 
 
