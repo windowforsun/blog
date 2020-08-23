@@ -1,0 +1,21 @@
+@startuml
+
+rectangle Pod1 {
+	card "nfs volume" as nv1
+}
+
+rectangle Pod2 {
+	card "nfs volume" as nv2
+}
+
+rectangle Pod3 {
+	card "nfs server" as ns
+	card "hostpath volume" as hv
+
+	ns -[hidden]d-> hv
+}
+
+nv1 -d-> ns
+nv2 -d-> ns
+
+@enduml
