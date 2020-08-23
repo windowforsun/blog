@@ -1,0 +1,17 @@
+@startuml
+
+title Connection 반환 과정
+
+:PoxyConnection.close();
+:ProxyConnection.closeStatements();
+:PoolEntry.recycle();
+:HikariPool.recycle();
+:ConnectionBag.requite();
+:PoolEntry.setStats(STATE_NOT_IN_USE);
+if(커넥션을 대기하고(handoffQueue) \n 있는 다른 스레드가 있는가 ?) then (yes)
+	:ConnectionBag.handoffQueue.offer(poolEntry);
+else (no)
+endif
+:ThreadLocal 로 관리하는 리스트에\n 현재 Connection 정보 추가;
+
+@enduml
