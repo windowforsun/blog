@@ -26,7 +26,7 @@ use_math: true
 아래는 [HikariCP-benchmark](https://github.com/brettwooldridge/HikariCP-benchmark) 
 에서 확인 할 수 있는 벤치마크 결과이다. 
 
-![그림1](({{site.baseurl}}/img/spring/practice-hikaricp-basic-1.png))
+![그림1]({{site.baseurl}}/img/spring/practice-hikaricp-basic-1.png)
 
 이러한 성능의 결과인지 `Spring Boot 2.0` 부터 기본 커넥션 풀로 채용 되었다. 
 본 포스트에서는 `Spring Boot` 프로젝트에서 `HikariCP` 를 설정하고 사용하는 기본적인 부분에 대해 알아보도록 한다. 

@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] HikariCP 더 알아보기"
+title: "[Spring 실습] HikariCP 및 설정 더 알아보기"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'HikariCP 에 설정 가능한 옵션을 포함해서 관련 상황에 대해 테스트를 통해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -27,6 +27,7 @@ use_math: true
 
 ## HikariCP Config
 `HikariCP` 는 여러 옵션 값을 제공하고, 이를 사용해서 애플리케이션과 환경에 적합한 설정을 할 수 있다. 
+기본적으로 시간관련 값의 경우 `milliseconds` 를 사용한다. 
 설정 값에 대한 필드와 관련 설명은 [여기](https://github.com/brettwooldridge/HikariCP#configuration-knobs-baby)
 에서 확인할 수 있다. 
 그리고 `JDBC` 드라이버에서 지원하는 드라이버에 대한 설정 이름은 [여기](https://github.com/brettwooldridge/HikariCP#popular-datasource-class-names)
@@ -124,30 +125,33 @@ public class SimpleTest {
 public class ConnectionTester {
     private DataSource dataSource;
     private int threadCount;
+    private int connectionCount;
     private int loopCount;
     private long sleepMillis;
     private Class exceptionClass;
 
-    public ConnectionTester(DataSource dataSource, int threadCount, int loopCount, long sleepMillis) {
+    public ConnectionTester(DataSource dataSource, int threadCount, int connectionCount, int loopCount, long sleepMillis) {
         this.dataSource = dataSource;
         this.threadCount = threadCount;
+        this.connectionCount = connectionCount;
         this.loopCount = loopCount;
         this.sleepMillis = sleepMillis;
     }
 
-    public ConnectionTester(DataSource dataSource, int threadCount, int loopCount, long sleepMillis, Class exceptionClass) {
-        this(dataSource, threadCount, loopCount, sleepMillis);
+    public ConnectionTester(DataSource dataSource, int threadCount, int connectionCount, int loopCount, long sleepMillis, Class exceptionClass) {
+        this(dataSource, threadCount, connectionCount, loopCount, sleepMillis);
         this.exceptionClass = exceptionClass;
     }
 
     public ConcurrentHashMap<Long, Integer> execute() {
         // 각 Thread 가 실제로 loopCount 를 어디까지 수행했는지 관리
         ConcurrentHashMap<Long, Integer> countMap = new ConcurrentHashMap<>();
+
         try {
             Thread[] threads = new Thread[this.threadCount];
             Runnable[] runnables = new Runnable[this.threadCount];
 
-            // Thread 에서 예외가 발생하면 모든 스레드 종료
+            // Thread 에서 지정된(exceptionClass) 예외가 발생하면 모든 스레드 종료
             Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
                 @Override
                 public void uncaughtException(Thread t, Throwable e) {
@@ -165,37 +169,68 @@ public class ConnectionTester {
                     @Override
                     public void run() {
                         long id = Thread.currentThread().getId();
-                        Connection con = null;
+                        Connection[] cons = null;
+
                         try {
                             countMap.put(id, 0);
+
                             // 각 Thread 는 loopCount 만큼 커넥션 획득 -> 슬립 -> 반환을 반복
                             for (int k = 0; k < loopCount && !Thread.currentThread().isInterrupted(); k++) {
-                                con = dataSource.getConnection();
-                                PreparedStatement psmt = con.prepareStatement("show variables like 'server_id'");
-                                ResultSet rs = psmt.executeQuery();
-                                rs.next();
+                                cons = new Connection[connectionCount];
 
-                                assertThat(rs.getInt(2), is(1));
+                                // 커넥션 획득
+                                for (int q = 0; q < connectionCount; q++) {
+                                    cons[q] = dataSource.getConnection();
+                                }
+
+                                // 커넥션 사용
+                                for (int q = 0; q < connectionCount; q++) {
+                                    PreparedStatement psmt = cons[q].prepareStatement("show variables like 'server_id'");
+                                    ResultSet rs = psmt.executeQuery();
+                                    rs.next();
+
+                                    assertThat(rs.getInt(2), is(1));
+                                    psmt.close();
+                                }
+
+                                // 현재 스레드 loopCount 수 갱신
                                 countMap.put(id, k + 1);
 
+                                // 슬립
                                 Thread.sleep(sleepMillis);
-                                psmt.close();
-                                con.close();
+
+                                // 커넥션 반납
+                                this.closeConnections(cons);
                             }
 
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
+                            // 예외가 발생한 스레드 커넥션 반납
+                            this.closeConnections(cons);
+
+                            // Thread.setDefaultUncaughtExceptionHandler 에서 캐치 가능하도록 지정된 예외는 다시 예외 발생
                             if (e.getClass() == exceptionClass) {
                                 throw new RuntimeException(e);
                             }
                         }
 
-                        try {
-                            if(con != null && !con.isClosed()) {
-                                con.close();
+                        // 인터럽트된 스레드 커넥션 반납
+                        this.closeConnections(cons);
+                    }
+
+                    public void closeConnections(Connection[] cons) {
+                        if (cons != null) {
+                            int size = cons.length;
+
+                            try {
+                                for (int i = 0; i < size; i++) {
+                                    if (cons[i] != null && !cons[i].isClosed()) {
+                                        cons[i].close();
+                                    }
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
-                        } catch(Exception e) {
-                            e.printStackTrace();
                         }
                     }
                 };
@@ -236,7 +271,7 @@ public class ConnectionTester {
         "spring.datasource.hikari.maximumPoolSize = 2",
         "spring.datasource.hikari.connectionTimeout = 10000"
 })
-public class ConnectionPoolTest {
+public class ThreadSingleConnectionTest {
     @Autowired
     private DataSource dataSource;
 
@@ -244,13 +279,16 @@ public class ConnectionPoolTest {
     public void thread_2_success() {
         // given
         int threadCount = 2;
+        int connectionCount = 1;
         int loopCount = 50;
         long sleepMillis = 2000;
         ConnectionTester tester = new ConnectionTester(
                 this.dataSource,
                 threadCount,
+                connectionCount,
                 loopCount,
-                sleepMillis
+                sleepMillis,
+                SQLTransientConnectionException.class
         );
 
         // when
@@ -265,11 +303,13 @@ public class ConnectionPoolTest {
     public void thread_10_timeout() {
         // given
         int threadCount = 10;
+        int connectionCount = 1;
         int loopCount = 50;
         long sleepMillis = 2000;
         ConnectionTester tester = new ConnectionTester(
                 this.dataSource,
                 threadCount,
+                connectionCount,
                 loopCount,
                 sleepMillis,
                 SQLTransientConnectionException.class
@@ -291,7 +331,7 @@ public class ConnectionPoolTest {
 
 최대 커넥션의 수가 2개이기 때문에 스레드 2개가 계속해서 커넥션을 획득하고 반납하는 동작에서는 `SQLTransientConnectionException` 예외가 발생하지 않을 것이다. 
 하지만 2개 보다 큰 스레드가 위 동작을 반복한다면 바로 발생하진 않겠지만, 
-스레드의 수와 커넥션 획득과 반납까지 소요 시간에 따라 예외가 발상하게 될것이다.  
+스레드의 수와 커넥션 획득과 반납까지 소요 시간에 따라 예외가 발생하게 될것이다.  
 
 실제로 테스트를 수행하면 `thread_2_success()` 테스트는 `loopCount` 를 늘려도 관련 에러가 발생하지 않는다. 
 하지만 `thread_10_timeout()` 테스는 설정된 타임아웃 시간인 10초 후에 에러가 발생하고 스레드가 모두 종료 된다.  
@@ -310,97 +350,302 @@ $$
 pool size = T_n \times (C_m - 1) + 1
 $$  
 
+여기서 $T_n$ 은 커넥션을 사용하는 최대 스레드의 수이고, $C_m$ 은 하나의 스레드에서 필요한 최대 커넥션 수를 의미한다.  
 
+$T_n$ 이 3이고, $C_m$ 이 2일때 계산하면 필요한 풀 사이즈는 4가 된다. 
+아래는 제시한 상황을 테스트하는 코드이다. 
 
+```java
+@SpringBootTest
+@TestPropertySource(properties = {
+        "spring.datasource.hikari.maximumPoolSize = 4",
+        "spring.datasource.hikari.connectionTimeout = 10000"
+})
+public class Thread3Connection2Test {
+    @Autowired
+    private DataSource dataSource;
+
+    @Test
+    public void thread_3_connection_2_success() {
+        // given
+        int threadCount = 3;
+        int connectionCount = 2;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(is(loopCount)));
+    }
+
+    @Test
+    public void thread_3_connection_3_timeout() {
+        // given
+        int threadCount = 3;
+        int connectionCount = 3;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(lessThan(loopCount)));
+    }
+
+    @Test
+    public void thread_4_connection_3_timeout() {
+        // given
+        int threadCount = 4;
+        int connectionCount = 3;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(lessThan(loopCount)));
+    }
+}
+```  
+
+풀 사이즈를 4로 설정했을 때 $T_n = 3, C_m = 2$ 일때는 정상적으로 모든 수행이 성공하지만, 
+$T_n = 3, C_m = 3$ 일때는 `SQLTransientConnectionException` 이 발생하는 것을 확인 할 수 있다.  
+
+이번에는 $T_n$ 이 5이고, $C_m$ 이 3일때 계산하면 필요한 풀 사이즈는 11이 된다. 
+아래는 제시한 상황을 테스트하는 코드이다.   
+
+```java
+@SpringBootTest
+@TestPropertySource(properties = {
+        "spring.datasource.hikari.maximumPoolSize = 11",
+        "spring.datasource.hikari.connectionTimeout = 10000"
+})
+public class Thread5Connection3Test {
+    @Autowired
+    private DataSource dataSource;
+
+    @Test
+    public void thread_5_connection_3_success() {
+        // given
+        int threadCount = 5;
+        int connectionCount = 3;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(is(loopCount)));
+    }
+
+    @Test
+    public void thread_5_connection_4_timeout() {
+        // given
+        int threadCount = 5;
+        int connectionCount = 4;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(lessThan(loopCount)));
+    }
+
+    @Test
+    public void thread_6_connection_4_timeout() {
+        // given
+        int threadCount = 6;
+        int connectionCount = 4;
+        int loopCount = 50;
+        long sleepMillis = 2000;
+        ConnectionTester tester = new ConnectionTester(
+                this.dataSource,
+                threadCount,
+                connectionCount,
+                loopCount,
+                sleepMillis,
+                SQLTransientConnectionException.class
+        );
+
+        // when
+        ConcurrentHashMap<Long, Integer> actual = tester.execute();
+
+        // then
+        assertThat(actual.size(), is(threadCount));
+        assertThat(actual.values(), everyItem(lessThan(loopCount)));
+    }
+}
+```  
+
+테스트 코드를 바탕으로 어느정도 풀 사이즈를 예측에 대한 검증을 수행했지만, 
+이는 `Deaed lock` 을 회피할 수 있는 최소한의 풀 사이즈이다. 
+실 환경에서는 이보다 더 다양한 변수가 있으므로, 그에 따른 상황을 고려해야 할것이다.    
 
 ## Connection 생존 시간
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-`HikariCP` 에는 여러 옵션 값을 설정해서 구성한 애플리케이션과 환경에 적합한 설정을 할 수 있다. 
-기본적으로 시간관련 값의 경우 `milliseconds` 를 사용한다. 
-
-### 필수
-#### dataSourceClassName
-`JDBC` 드라이버에서 지원하는 드라이버에 대한 클래스이름을 설정한다. 
-관련 리스트는 [여기](https://github.com/brettwooldridge/HikariCP#popular-datasource-class-names)
-에서 확인 할 수 있다. 
-기본값은 `none` 이고, 
-만약 `DriverManager-based`  사용하는 속성인 `jdbcUrl` 을 사용할 경우 해당 필드는 설정할 필요 없다. 
-
-#### jdbcUrl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`HikariCP` 는 다른 `Tomcat DBCP` 와 달리 `test-while-idle` 과 같은 커넥션 갱신 기능은 제공하지 않는다. 
+대신 `maxLifetime` 과 같은 옵션 값을 조정해서 커넥션 유지에 대한 관리를 할 수 있다.  
+그리고 커넥션을 계속해서 유지하는 방식이 아닌 옵션에 설정된 생존 시간만큼 커넥션을 유지하는 방식을 사용한다.  
+
+`HikariCP 2.3.2+` 부터 [Dropwizard HealthChecks](https://github.com/brettwooldridge/HikariCP/wiki/Dropwizard-HealthChecks
+기능을 사용해서 커넥션 갱신과 같은 동작을 수행할 수는 있다.  
+
+`HikariCP` 에서 `maxLifetime` 을 사용해서 커넥션을 관리하는 것은 `HikariPool` 클래스에서 `houseKeeper` 네이밍이 있는 변수들이다. 
+실제로 커넥션 랩퍼인 `PoolEntry` 를 생성하는 [HikariPool.createPoolEntry()](https://github.com/brettwooldridge/HikariCP/blob/c993ef099282c3fd3b830f6cf9950c8cfe2bd8fb/src/main/java/com/zaxxer/hikari/pool/HikariPool.java#L474)
+를 보면 `maxLifetime` 을 받아 `ScheduledFuture` 에 설정하는 것을 확인할 수 있다. 
+`maxLifetime` 연산에 `variance` 라는 변수값을 사용해서 커넥션 만료로 동시에 커넥션을 끊는 동작을 방지 한다.  
+
+그리고 스케쥴러에 등록되는 메소드인 [softEvictConnection()](https://github.com/brettwooldridge/HikariCP/blob/c993ef099282c3fd3b830f6cf9950c8cfe2bd8fb/src/main/java/com/zaxxer/hikari/pool/HikariPool.java#L611)
+을 확인하면 만료되면 커넥션에 `eviection` 을 설정하고, 상태가 `STATE_NOT_IN_USE` 라면 커넥션 종료 사용 중이라면 커넥션을 유지한다. 
+유지된 커넥션은 사용 후, `HikariPool.getConnection()` 메소드에서 [PoolEntry.isMarkedEviected()](https://github.com/brettwooldridge/HikariCP/blob/c993ef099282c3fd3b830f6cf9950c8cfe2bd8fb/src/main/java/com/zaxxer/hikari/pool/HikariPool.java#L186)
+메소드를 통해 걸러질 수 있다.  
+
+아래는 위 상황을 코드로 풀어낸 테스트 코드이다. 
+
+```java
+@SpringBootTest
+@TestPropertySource(properties = {
+        "spring.datasource.hikari.maxLifetime = 30000",
+        "spring.datasource.hikari.connectionTimeout = 10000"
+})
+public class MaxLifetimeTest {
+    @Autowired
+    private HikariDataSource dataSource;
+
+    @Test
+    public void get_twice_connection_same() throws Exception {
+        // given
+        Connection con = this.dataSource.getConnection();
+        long connectionId = con.unwrap(ConnectionImpl.class).getId();
+        con.close();
+
+        // when
+        con = this.dataSource.getConnection();
+        long actual = con.unwrap(ConnectionImpl.class).getId();
+        con.close();
+
+        // then
+        assertThat(actual, is(connectionId));
+    }
+
+    @Test
+    public void get_twice_connection_sleep_notsame() throws Exception {
+        // given
+        Connection con = this.dataSource.getConnection();
+        long connectionId = con.unwrap(ConnectionImpl.class).getId();
+        con.close();
+
+        // when
+        Thread.sleep(30100);
+        con = this.dataSource.getConnection();
+        long actual = con.unwrap(ConnectionImpl.class).getId();
+        con.close();
+
+        // then
+        assertThat(actual, not(connectionId));
+    }
+
+    @Test
+    public void connection_use_and_sleep_notevict() throws Exception {
+        // given
+        Connection con = this.dataSource.getConnection();
+        long waitingMillis = 30100;
+        long start = System.currentTimeMillis();
+        while(System.currentTimeMillis() - start >= waitingMillis) {
+            con.prepareStatement("show variables like 'server_id'").executeQuery();
+            Thread.sleep(100);
+        }
+
+        // when
+        PreparedStatement psmt = con.prepareStatement("show variables like 'server_id'");
+        ResultSet rs = psmt.executeQuery();
+        rs.next();
+        long actual = rs.getInt(2);
+        psmt.close();
+        con.close();
+
+        // then
+        assertThat(actual, is(1l));
+    }
+
+    @Test
+    public void connection_sleep_evict() throws Exception {
+        // given
+        Connection con = this.dataSource.getConnection();
+        Thread.sleep(30100);
+
+        // then
+        assertThrows(CommunicationsException.class, () -> {
+            PreparedStatement psmt = con.prepareStatement("show variables like 'server_id'");
+            ResultSet rs = psmt.executeQuery();
+            rs.next();
+            long actual = rs.getInt(2);
+            psmt.close();
+            con.close();
+        });
+    }
+}
+```  
+
+`maxLifetime` 옵션의 최소값은 30000(30초) 이다. 
+빠른 테스트 진행을 위해 30초로 설정하고 진행했다. 
+같은 스레드에서 연속해서 2번 커넥션을 가져오고, 
+`Connection.unwrap(ConnectionImpl.class).getId()` 을 통해 커넥션의 고유 아이디를 가져와 판별하면 같은 아이디인 것을 확인할 수 있다. 
+하지만 커넥션을 가져오는 사이에 `maxLifetime` 만큼 슬립을 걸고 수행하면 다른 아이디인것을 확인 가능하다.   
+
+그리고 하나의 커넥션을 `maxLifetime` 이 넘는 시간동안 계속 사용하는 것은 가능하지만, 
+커넥션을 가져온 후 사용하지 않은 상태로 `maxLifetime` 이 지나면 `CommunicationsException` 예외가 발생하는 것을 확인할 수 있다.  
 
 
 
@@ -412,4 +657,5 @@ $$
 ## Reference
 [HikariCP Configuration (knobs, baby!)](https://github.com/brettwooldridge/HikariCP#configuration-knobs-baby)  
 [HikariCP Dead lock에서 벗어나기 (이론편)](https://woowabros.github.io/experience/2020/02/06/hikaricp-avoid-dead-lock.html)  
+[HikariCP Dead lock에서 벗어나기 (실전편)](https://woowabros.github.io/experience/2020/02/06/hikaricp-avoid-dead-lock-2.html)  
 
