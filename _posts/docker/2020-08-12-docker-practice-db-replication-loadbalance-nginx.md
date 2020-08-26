@@ -182,6 +182,9 @@ okylfb9cft4o        slave2_slave-db     replicated          1/1                 
 먼저 `Nginx` 를 사용해서 `Slave` 를 로드밸런생 해본다. 
 `Nginx` 는 `Plus` 버전이 아니므로, `Healthcheck` 기능은 제외한다. 
 
+![그림 1]({{site.baseurl}}/img/docker/practice_db_replication_loadbalance_nginx_1.png)
+
+
 ### 구성 소개
 디렉토리 구조는 아래와 같다. 
 

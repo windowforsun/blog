@@ -1,0 +1,23 @@
+@startuml
+
+rectangle "Docker Swarm" as ds {
+	rectangle "Nginx Service(nginx_lb)" as ns {
+		card "3306 Port" as 3306
+		card "3307 Port" as 3307
+
+		3306 -[hidden]r- 3307
+	}
+	rectangle "Master DB" as mdb
+	rectangle "Slave1 DB" as s1db
+	rectangle "Slave2 DB" as s2db
+
+	mdb -[#blue]u- s1db : replication
+	mdb -[#blue]l- s2db : replication
+
+	3306 -d-> mdb : write
+	3307 -d-> s1db : read
+	3307 -d-> s2db :read
+}
+
+
+@enduml

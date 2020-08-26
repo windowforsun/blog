@@ -25,6 +25,8 @@ use_math: true
 에 이어 이번에는 `HAProxy` 를 사용해서 `Database Loadbalancing` 을 구성해 본다. 
 이전 글에서 소개한 `lb-net` 네트워크와 `Master-Slave` 구조를 사용해서 이번 예제도 진행한다. 
 
+![그림 1]({{site.baseurl}}/img/docker/practice_db_replication_loadbalance_haproxy_1.png)
+
 ### 구성 소개
 디렉토리 구조는 아래와 같다. 
 
@@ -616,7 +618,7 @@ haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:60356 [26/Aug/2020:13:09
 ```bash
 $ docker kill -s HUP <컨테이너아이디 혹은 이름>
 
-$ docker kill -s HUP `docker ps -q -f name=<컨테이너를 식별가능한 이름 혹은 문자열>
+$ docker kill -s HUP `docker ps -q -f name=<컨테이너를 식별가능한 이름 혹은 문자열>`
 ```  
 
 
