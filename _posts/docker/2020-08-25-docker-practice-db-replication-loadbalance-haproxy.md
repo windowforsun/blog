@@ -166,6 +166,7 @@ create user 'haproxy_user'@'%';
 모든 노드에 서버를 확인하면 `resolver docker` 를 등록해 서버의 주소를 찾을 때 명시한 `DNS` 주소를 사용하도록 한다.  
 
 `listen stats` 은 `HAProxy` 의 상태를 노드와 서버별로 확인할 수 있는 페이지이다. 
+`stats auth <계정명>:<비밀번호>` 로 페이지에 접속할 수 있는 계정을 설정한다. 
 이후 서비스 실행 후 웹브라우저를 사용해서 `localhost:8811` 주소로 접속하면 아래와 같은 페이지를 확인할 수 있다.  
 
 ![그림 1]({{site.baseurl}}/img/docker/practice-replication-loadbalance-haproxy-status.png)
@@ -350,50 +351,273 @@ haproxy_lb.1.9xv3jpwuhk3k@docker-desktop    | 10.0.1.8:53634 [25/Aug/2020:18:25:
 1. 컨테이너가 중지된 상황
 1. 서비스가 중지된 상황
 
+컨테이너 중지된 상황과 서비스가 중지된 상황의 차이점은 컨테이너만 재시작 되는 경우 아피는 변경되지 않지만, 
+서비스가 재시작 되면 `HAProxy` 에서 로드밸런싱으로 등록한 노드 아이피가 변경된다.  
+
 > 유지되는 커넥션(DBCP)와 관련된 테스트가 아닌, 단순이 커넥션이 `HAProxy` 를 통해 처리되는 상황을 보기 위함이다. 
 
+그리고 `HAProxy` 는 헬스체크 기능이 있기 때문에 `status` 페이지(`localhost:8811`) 에 접속해서 함께 확인해본다. 
+먼저 컨테이너가 중지된 상황은 서비스의 스케일을 0으로 만드는 방법으로 진행한다. 
+아래 명령어로 `slave1` 서비스의 스케일을 0으로 수정하고 상태페이지 및 `master` 컨테이너에서 명령을 수행하면 아래와 같다. 
+
+```bash
+$ docker service scale slave1_slave-db=0
+
+slave1_slave-db scaled to 0
+overall progress: 0 out of 0 tasks
+verify: Service converged
+```  
+
+![그림 1]({{site.baseurl}}/img/docker/practice-replication-loadbalance-haproxy-containerdown-1.png)  
+
+![그림 1]({{site.baseurl}}/img/docker/practice-replication-loadbalance-haproxy-containerdown-2.png)  
+
+우선 헬스체크가 실패하면 `down` 상태로 됐다가, `maint` 상태로 전환된다. 
+
+```bash
+docker exec -it `docker ps -q -f name=master` /bin/bash
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+```  
+
+`master` 컨테이너에 접속해서 명령을 수행하면, `slave2` 서비스에 해당하는 `server_id` 인 4반 출력하는 것을 확인 할 수 있다.  
+
+컨테이너가 종료된 시점부터 명령 수행까지 로그를 확인하면 아래와 같다. 
+`L4` 헬스체크에서 타입아웃이 발생한 이후에 `DOWN` 상태로 되고, 그 이후에 `MAINT` 상태로 전환된 것을 확인 할 수 있다. 
+그리고 이후에는 `slave2` 서비스로만 트래픽이 전달된다. 
+
+```
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/062605 (6) : Server slave-tcp-node/slave1 is DOWN, reason: Layer4 timeout, info: " at initial connection step of tcp-check", check duration: 2000ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 is DOWN, reason: Layer4 timeout, info: " at initial connection step of tcp-check", check duration: 2000ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/062606 (6) : Server slave-mysql-node/slave1 is DOWN, reason: Layer4 timeout, check duration: 2001ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 is DOWN, reason: Layer4 timeout, check duration: 2001ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/062612 (6) : Server slave-tcp-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/062612 (6) : Server slave-mysql-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:54756 [26/Aug/2020:12:37:07.405] slave-tcp-node slave-tcp-node/slave2 1/0/12 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:54766 [26/Aug/2020:12:37:08.686] slave-tcp-node slave-tcp-node/slave2 1/0/6 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:37686 [26/Aug/2020:12:37:15.297] slave-mysql-node slave-mysql-node/slave2 1/0/8 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:37694 [26/Aug/2020:12:37:15.930] slave-mysql-node slave-mysql-node/slave2 1/0/8 3200 -- 1/1/0/0/0 0/0
+```  
+
+다시 `slave1` 서비스의 스케일을 1로 설정한다. 
+`HAProxy` 는 현재 헬스체크를 수행 중이기 때문에, 
+`Nginx` 처럼 서비스가 다시 올라왔을 때 로드밸런서를 재시작하는 등의 수행 없이 헬스체크가 성공하면 자동으로 등록된다. 
+등록된 이후 `master` 컨테이너에서 명령을 수행하면 `slave1` 서비스에도 트래픽이 전달되는 것을 확인할 수 있다. 
+
+```bash
+$ docker service scale slave1_slave-db=1
+slave1_slave-db scaled to 1
+overall progress: 1 out of 1 tasks
+1/1: running   [==================================================>]
+```  
 
 
+![그림 1]({{site.baseurl}}/img/docker/practice-replication-loadbalance-haproxy-containerup-1.png)  
+
+![그림 1]({{site.baseurl}}/img/docker/practice-replication-loadbalance-haproxy-containerup-2.png)  
+
+`master` 컨테이너에서 명령을 수행하면 `slave1`, `slave2` 서비스에 해당하는 `server_id` 가 모두 조회되는 것을 확인 할 수 있다. 
+
+```bash
+$ docker exec -it `docker ps -q -f name=master` /bin/bash
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 3     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 3     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+```  
+
+마지막으로 로그를 확인하면 `MAINT` 상태에서 `DOWN` 상태로 전환되고, 
+헬스체크가 모두 성공하면 다시 `UP` 상태로 변경되면서 로드밸런싱 대상이 되는 것을 확인 할 수 있다. 
+
+```bash
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/065318 (6) : Server slave-mysql-node/slave1 is UP, reason: Layer7 check passed, code: 0, check duration: 8ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 is UP, reason: Layer7 check passed, code: 0, check duration: 8ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 is UP, reason: Layer4 check passed, check duration: 0ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/065320 (6) : Server slave-tcp-node/slave1 is UP, reason: Layer4 check passed, check duration: 0ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:37900 [26/Aug/2020:12:54:09.530] slave-tcp-node slave-tcp-node/slave1 1/0/9 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:37914 [26/Aug/2020:12:54:10.427] slave-tcp-node slave-tcp-node/slave2 1/0/9 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:49052 [26/Aug/2020:12:54:15.398] slave-mysql-node slave-mysql-node/slave1 1/0/7 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:49074 [26/Aug/2020:12:54:16.489] slave-mysql-node slave-mysql-node/slave2 1/0/5 3200 -- 1/1/0/0/0 0/0
+```  
+
+서비스가 재시작되는 상황을 `docker stack rm <서비스이름>` 명령을 사용해서 재연해본다. 
+테스트는 컨테이너가 재시작 되는 과정과 동일하다. 
+
+```bash
+$ docker stack rm slave1
+Removing service slave1_slave-db
+
+$ docker exec -it `docker ps -q -f name=master` /bin/bash
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# exit
+exit
+$ docker service logs --tail 12 haproxy_lb
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused", check duration: 1049ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070538 (6) : Server slave-mysql-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused", check duration: 1049ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070540 (6) : Server slave-tcp-node/slave1 is DOWN, reason: Layer4 timeout, info: " at initial connection step of tcp-check", check duration: 2000ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 is DOWN, reason: Layer4 timeout, info: " at initial connection step of tcp-check", check duration: 2000ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070547 (6) : Server slave-tcp-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070547 (6) : Server slave-mysql-node/slave1 was DOWN and now enters maintenance (DNS NX status).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:47018 [26/Aug/2020:13:06:01.986] slave-tcp-node slave-tcp-node/slave2 1/0/6 3200 -- 3/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:47032 [26/Aug/2020:13:06:02.957] slave-tcp-node slave-tcp-node/slave2 1/0/6 3200 -- 3/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:58154 [26/Aug/2020:13:06:07.329] slave-mysql-node slave-mysql-node/slave2 1/0/7 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:58168 [26/Aug/2020:13:06:08.203] slave-mysql-node slave-mysql-node/slave2 1/0/7 3200 -- 1/1/0/0/0 0/0
+$ docker stack deploy -c docker-compose-
+slave-1.yaml slave1
+Creating service slave1_slave-db
+$ docker exec -it `docker ps -q -f name=master` /bin/bash
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 3     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3317 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 3     |
++---------------+-------+
+root@4ac4613494d7:/# mysql -hhaproxy_lb -P3327 -uroot -proot -e "show variables like 'server_id'"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| server_id     | 4     |
++---------------+-------+
+root@4ac4613494d7:/# exit
+exit
+$ docker service logs --tail 24 haproxy_lb
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : slave-tcp-node/slave1 changed its IP from 10.0.7.64 to 10.0.7.120 by docker/dns1.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : Server slave-tcp-node/slave1 ('slave1_slave-db') is UP/READY (resolves again).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | slave-tcp-node/slave1 changed its IP from 10.0.7.64 to 10.0.7.120 by docker/dns1.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 ('slave1_slave-db') is UP/READY (resolves again).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : Server slave-tcp-node/slave1 administratively READY thanks to valid DNS answer.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 administratively READY thanks to valid DNS answer.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | slave-mysql-node/slave1 changed its IP from 10.0.7.64 to 10.0.7.120 by DNS cache.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : slave-mysql-node/slave1 changed its IP from 10.0.7.64 to 10.0.7.120 by DNS cache.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : Server slave-mysql-node/slave1 ('slave1_slave-db') is UP/READY (resolves again).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 ('slave1_slave-db') is UP/READY (resolves again).
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 administratively READY thanks to valid DNS answer.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : Server slave-mysql-node/slave1 administratively READY thanks to valid DNS answer.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070838 (6) : Server slave-tcp-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused at initial connection step of tcp-check", check duration: 0ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused at initial connection step of tcp-check", check duration: 0ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070840 (6) : Server slave-mysql-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused", check duration: 0ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 is DOWN, reason: Layer4 connection problem, info: "Connection refused", check duration: 0ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070902 (6) : Server slave-mysql-node/slave1 is UP, reason: Layer7 check passed, code: 0, check duration: 14ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-mysql-node/slave1 is UP, reason: Layer7 check passed, code: 0, check duration: 14ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | [WARNING] 238/070902 (6) : Server slave-tcp-node/slave1 is UP, reason: Layer4 check passed, check duration: 0ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | Server slave-tcp-node/slave1 is UP, reason: Layer4 check passed, check duration: 0ms. 2 active and 0 backup servers online. 0 sessions requeued, 0 total in queue.
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:49184 [26/Aug/2020:13:09:12.249] slave-tcp-node slave-tcp-node/slave1 1/0/8 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:49200 [26/Aug/2020:13:09:12.943] slave-tcp-node slave-tcp-node/slave2 1/0/7 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:60338 [26/Aug/2020:13:09:18.007] slave-mysql-node slave-mysql-node/slave1 1/0/7 3200 -- 1/1/0/0/0 0/0
+haproxy_lb.1.j0v5awcu7s9q@docker-desktop    | 10.0.7.14:60356 [26/Aug/2020:13:09:18.818] slave-mysql-node slave-mysql-node/slave2 1/0/6 3200 -- 1/1/0/0/0 0/0
+```  
+
+서비스가 다시 올라오고 난후 `haproxy_lb` 로그 부분만 좀 더 확인해본다. 
+로그를 보면 `HAProxy` 에 등록된 노드의 아이피가 변경된 것을 감지하고 설정된 `resolver` 의 `docker/dns1` 에서 새로운 아이피를 받아와 등록하는 절차를 먼저 수행한다. 
+실제 로그를 확인하면 원래 해당 노드에 등록된 아이피는 `10.0.7.64` 였는데 서비스가 재시작 되고 난후 `10.0.7.120` 으로 변경 되었다. 
+`DNS resolver` 관련 동작이 완료되면 `slave-tcp-node` 는 `L4` 레이어에서 헬스체크를 수행하고, 
+`slave-mysql-node` 는 `L4` 레이어 헬스체크가 성공하면 `L7` 레이어에서 헬스체크를 수행한 후 모두 성공하면 상태를 `UP` 으로 변경하고 로드밸런싱 대상으로 등록된다.  
 
 
+만약 실행 중인 `HAProxy` 의 설정파일을 변경 후 컨테이너 재시작 없이 적용하고 싶다면 아래 명령으로 가능하다. 
 
+```bash
+$ docker kill -s HUP <컨테이너아이디 혹은 이름>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+$ docker kill -s HUP `docker ps -q -f name=<컨테이너를 식별가능한 이름 혹은 문자열>
+```  
 
 
 ---
