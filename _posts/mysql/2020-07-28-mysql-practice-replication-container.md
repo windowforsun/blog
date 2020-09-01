@@ -50,7 +50,9 @@ use_math: true
 
 ## Replication 구성하기
 먼저 `MySQL` 에서 `Replication` 을 구성하는 방법에 대해 알아본다. 
-예제에서 진행하는 `Replication` 은 1 `Master`, 1 `Slave` 로 간단하게 구성한다.  
+예제에서 진행하는 `Replication` 은 한개의 `Master` 에  여러개의 `Slave` 로 간단하게 구성한다. 
+  
+![그림 1]({{site.baseurl}}/img/mysql/practice_replication_1_plantuml.png)
 
 ### MySQL Replication 설정파일
 `MySQL` 컨테이너를 실행하기 전에 `Master`, `Slave` 에서 사용할 설정 파일을 아래와 같이 준비한다. 
