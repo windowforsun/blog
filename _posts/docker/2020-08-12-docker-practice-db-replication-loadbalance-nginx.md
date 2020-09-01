@@ -181,6 +181,11 @@ okylfb9cft4o        slave2_slave-db     replicated          1/1                 
 ## Nginx
 먼저 `Nginx` 를 사용해서 `Slave` 를 로드밸런생 해본다. 
 `Nginx` 는 `Plus` 버전이 아니므로, `Healthcheck` 기능은 제외한다. 
+
+![그림 1]({{site.baseurl}}/img/docker/practice_db_replication_loadbalance_nginx_1.png)
+
+
+### 구성 소개
 디렉토리 구조는 아래와 같다. 
 
 ```bash
@@ -274,6 +279,7 @@ networks:
 - `.services.netshoot` : 네트워크 테스트용으로 사용할 서비스이다. 
 - `.networks.lb-net` : 외부에서 생성한 네트워크를 템플릿에서 사용할 수 있도록 설정해 준다. 없어도 무관하다.
 
+### 실행
 이제 템플릿을 `Docker Swarm` 클러스터에 적용한다. 
 
 ```bash
@@ -362,11 +368,12 @@ nginx_lb.1.ry8eezibwm9y@docker-desktop    | 10.0.1.7 44110 -> 3307 [14/Aug/2020:
 nginx_lb.1.ry8eezibwm9y@docker-desktop    | 10.0.1.7 44118 -> 3307 [14/Aug/2020:15:41:59 +0000] 3200 829 0.007 ==> 10.0.1.10:3306
 ```  
 
+### 테스트
 이번엔 중간에 `slave` 중 하나의 서비스가 내려가게 된 상황을 2가지 상황으로 분류해서 진행해 본다. 
 1. 컨테이너가 중지된 상황
 1. 서비스가 중지된 상황
 
-현재 테스트하고자하는 목적은 유지되는 커넥센(`DBCP`)에 대한 테스트가 아님을 밝힌다.   
+> 유지되는 커넥션(DBCP)와 관련된 테스트가 아닌, 단순이 커넥션이 `HAProxy` 를 통해 처리되는 상황을 보기 위함이다.
 
 컨테이너가 중지된 상황의 재현은 `docker servcie scale <서비스이름>=0` 으로 수행한다. 
 `slave1` 의 스케일을 0으로 설정하고 다시 `server_id` 를 가져오는 명령을 수행하면 아래와 같다. 

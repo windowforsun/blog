@@ -1,0 +1,32 @@
+@startuml
+
+rectangle "Docker Swarm" as ds {
+	rectangle "HAProxy Service(haproxy_lb)" as ns {
+		rectangle "TCP Check" {
+			card "3316 Port" as 3316
+			card "3317 Port" as 3317
+		}
+
+		rectangle "MySQL Check" {
+			card "3326 Port" as 3326
+			card "3327 Port" as 3327
+		}
+
+	}
+	rectangle "Master DB" as mdb
+	rectangle "Slave1 DB" as s1db
+	rectangle "Slave2 DB" as s2db
+
+	mdb -[#blue]u- s1db : replication
+	mdb -[#blue]l- s2db : replication
+
+	3316 -d-> mdb : write
+	3317 -d-> s1db : read
+	3317 -d-> s2db :read
+	3326 -d-> mdb : write
+	3327 -d-> s1db : read
+	3327 -d-> s2db :read
+}
+
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+
+title Connection 획득 과정
+
+:HikariDataSource.getConnection();
+:HikariPool.getConnection();
+:ConnectionBag.borrow();
+if(현재 Thread 가 Connection 사용 이력이 있는가 ?) then (yes)
+	if(Connection 이력 중 Idle Connection 이 있는가 ?) then (yes)
+		:return Connection;
+		stop
+	else (no)
+	endif
+else (no)
+endif
+if(전체 Connection Pool 중 Idle Connection 이 있는가 ?) then (yes)
+	:return Connection;
+	stop
+else (no)
+endif
+while (ConnectionTimeout 이 지났는가 ?) is (no)
+if(handoffQueue 에 Idle Connection 이 있는가 ?) then (yes)
+	:return Connection;
+	stop
+else (no)
+endif
+endwhile (yes)
+:return null;
+stop
+
+
+
+@enduml
