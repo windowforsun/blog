@@ -1,0 +1,39 @@
+@startuml
+
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.2.0
+
+
+!include <tupadr3/common>
+!includeurl ICONURL/common.puml
+!includeurl ICONURL/devicons/mysql.puml
+
+
+DEV_MYSQL(master1, Master-1) #White {
+	rectangle "test database" as mtb {
+		card "exam table" as met
+	}
+}
+
+DEV_MYSQL(master2, Master-2) #White {
+	rectangle "test2 database" as mt2b {
+		card "exam22 table" as met22
+	}
+}
+
+DEV_MYSQL(slave, Slave) #White {
+	rectangle "test database" as stb {
+		card "exam table" as set
+	}
+
+	rectangle "test2 database" as st2b {
+		card "exam22 table" as set22
+	}
+
+	stb -[hidden]d-> st2b
+}
+
+met -d-> set : master-1
+met22 -d-> set22 : master-2
+
+
+@enduml

@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[MySQL 개념] Multi Source Replication"
+title: "[MySQL 실습] Multi Source Replication"
 header:
   overlay_image: /img/mysql-bg.png
-excerpt: ''
+excerpt: 'MySQL 의 Multi Source Replication 구성과 테스트를 해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -48,6 +48,10 @@ kqfde1nswrssza9k04qdo6zpe
 ```  
 
 ### 데이터가 없는 상태에서 구성하기
+
+![그림 1]({{site.baseurl}}/img/mysql/practice_multi_source_replication_2_plantuml.png)
+
+
 먼저 `Master` 1개 `Slave` 1개를 사용해서 초기상태부터 구성하는 예제를 진행한다. 
 
 `master-1` 서비스를 구성하는 템플릿 파일인 `docker-compose-master-1.yaml` 의 내용은 아래와 같다. 
@@ -351,6 +355,9 @@ mysql> select * from exam;
 
 
 ### 다른 데이터베이스를 사용하는 Master 추가하기
+
+![그림 1]({{site.baseurl}}/img/mysql/practice_multi_source_replication_3_plantuml.png)
+
 구성된 `master-1`, `slave` 에서 `master-1` 과 다른 데이터베이스 이름을 사용하는 `master-2` 를 추가해본다.  
 
 `master-2` 서비스를 구성하는 `docker-compose-master-2.yaml` 템플릿 파일은 아래와 같다. 
@@ -614,6 +621,9 @@ mysql> select * from exam22;
 
 
 ### 같은 데이터베이스를 사용하는 Master 추가하기
+
+![그림 1]({{site.baseurl}}/img/mysql/practice_multi_source_replication_4_plantuml.png)
+
 `master-3` 서비스는 `master-1` 과 같은 데이터베이스, 다른 테이블을 사용한다. 
 `slave` 가 `master-3` 를 복제하게 되면 `test` 데이터베이스는 `master-1` 와 `master-3` 에서 복제를 수행하는 구조가 된다.  
 
@@ -910,6 +920,9 @@ mysql> select * from exam11;
 ```  
 
 ### 같은 데이터베이스, 같은 테이블을 사용하는 Master 추가하기
+
+![그림 1]({{site.baseurl}}/img/mysql/practice_multi_source_replication_5_plantuml.png)
+
 `master-4` 는 `master-2` 와 같은 데이터베이스, 같은 테이블을 사용한다. 
 대부분 내용이 앞서 수행한 사항들과 비슷하기 때문에 필요한 부분만 설명하고 그외 부분은 관련 코드만 나열하는 식으로 진행한다.  
 
