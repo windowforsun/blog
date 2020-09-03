@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[MySQL 실습] Multi Source Replication"
+title: "[MySQL 실습] Multi Source Replication 구성과 테스트"
 header:
   overlay_image: /img/mysql-bg.png
 excerpt: 'MySQL 의 Multi Source Replication 구성과 테스트를 해보자'
