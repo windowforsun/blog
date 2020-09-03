@@ -911,28 +911,75 @@ mysql> select * from exam11;
 
 ### 같은 데이터베이스, 같은 테이블을 사용하는 Master 추가하기
 `master-4` 는 `master-2` 와 같은 데이터베이스, 같은 테이블을 사용한다. 
-대부분 내용이 앞서 수행한 사항들과 비슷하기 때문에 필요한 부분만 설명하고 그외 부분은 관련 코드만 나열한다.  
+대부분 내용이 앞서 수행한 사항들과 비슷하기 때문에 필요한 부분만 설명하고 그외 부분은 관련 코드만 나열하는 식으로 진행한다.  
 
+아래는 `master-4` 서비스 구성에 필요한 파일들의 내용이다. 
 
+```yaml
+# docker-compose-master-4.yaml
 
+version: '3.7'
 
+services:
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      - multi-source-net
+    volumes:
+      - ./master-4.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./master-4-init.sql/:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 33003:3306
 
+networks:
+  multi-source-net:
+    external: true
+```  
 
+```
+# master-4.cnf
 
+[mysqld]
+server-id=4
+default-authentication-plugin=mysql_native_password
+log-bin=mysql-bin
+gtid-mode=on
+enforce-gtid-consistency=on
+```  
 
+```sql
+-- master-4-init.sql
 
+create user 'slaveuser2'@'%' identified by 'slavepasswd';
+grant replication slave on *.* to 'slaveuser2'@'%';
 
+flush privileges;
 
+create database test2;
 
+use test2;
 
+CREATE TABLE `exam22` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `value` varchar(255) DEFAULT NULL,
+  `datetime` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci AUTO_INCREMENT=100000;
 
+insert into exam22(value) values('aa');
+insert into exam22(value) values('bb');
+insert into exam22(value) values('cc');
+```  
 
+`master-4` 에서 사용하는 데이터베이스와 테이블은 `master-2` 에서 사용하는 것과 동일하다. 
+여기서 `AUTO_INCREMENT` 값이 `100000` 부터 시작하도록 해서 `master-2` 와 `PRIMARY KEY` 가 겹치지 않도록 설정해준다.  
 
-
-
+`docker stack deploy -c docker-compose-master-4.yaml master-4` 명령으로 클러스터에 적용하고 `MySQL` 정상동작 및 `gtid` 를 확인한다. 
+그리고 `master-4` 에 추가돼있는 데이터들은 복제 대상이 되지 않도록 `reset master` 를 수행해 준다.  
 
 ```bash
-.. master-4 ..
 $ docker stack deploy -c docker-compose-master-4.yaml master-4
 Creating service master-4_db
 $ docker exec -it `docker ps -q -f name=master-4` mysql -uroot -proot -e "show variables like 'server_id'"
@@ -946,30 +993,26 @@ mysql: [Warning] Using a password on the command line interface can be insecure.
 
 
 
+.. master-4 ..
 mysql> show master status\G
 *************************** 1. row ***************************
              File: mysql-bin.000003
          Position: 196
      Binlog_Do_DB:
  Binlog_Ignore_DB:
-Executed_Gtid_Set: 936e2786-ed03-11ea-9f8a-02420a00006f:1-13
+Executed_Gtid_Set: 6f6c4bdc-ed8b-11ea-b42d-02420a00000e:1-13
 1 row in set (0.00 sec)
 
 mysql> select * from mysql.gtid_executed;
 +--------------------------------------+----------------+--------------+
 | source_uuid                          | interval_start | interval_end |
 +--------------------------------------+----------------+--------------+
-| 936e2786-ed03-11ea-9f8a-02420a00006f |              1 |           13 |
+| 6f6c4bdc-ed8b-11ea-b42d-02420a00000e |              1 |           13 |
 +--------------------------------------+----------------+--------------+
 1 row in set (0.00 sec)
 
-
-
-
-
-
 mysql> reset master;
-Query OK, 0 rows affected (0.02 sec)
+Query OK, 0 rows affected (0.05 sec)
 
 mysql> show master status\G
 *************************** 1. row ***************************
@@ -978,39 +1021,28 @@ mysql> show master status\G
      Binlog_Do_DB:
  Binlog_Ignore_DB:
 Executed_Gtid_Set:
-1 row in set (0.01 sec)
+1 row in set (0.00 sec)
+```  
 
+이제 `slave` 에 접속해서 `mysqldump` 명령을 사용해서 `master-4` 의 `test2` 데이터베이스에 대한 덤프 파일을 만든다. 
+여기서 주의할 점은 DDL 관련 쿼리는 제외하고 데이터만 덤프 파일로 만들어야 한다. 
+그래서 `mysqldump` 명령에 `--database test2` 로 데이터베이스를 명시하고, `--no-create-info` 와 `--no-create-db` 를 통해 스키마 관련 생성 쿼리를 포함시키지 않도록 한다. 
+그리고 `slave` 의 `gtid_purged` 값이 변경되는 부분을 방지하기 위해 `--set-gtid-purged=OFF` 옵션도 추가해 준다.  
 
-
-
-
-
-
-
+```bash
 .. slave ..
-root@a5ffa0a360c9:/# mysqldump --all-databases -flush-privileges --single-transaction --flush-logs --triggers --routines --events -hex-blob --host=master-4_db --port=3306 --user=root  --password=root > master-4-dump.sql
+root@0923f17161bb:/# mysqldump --databases test2 --set-gtid-purged=OFF -flush-privileges --single-transaction --flush-logs --triggers --routines --events -hex-blob --host=master-4_db --port=3306 --user=root  --password=root --no-create-info --no-create-db > master-4-dump.sql
 mysqldump: [Warning] Using a password on the command line interface can be insecure.
-root@a5ffa0a360c9:/# mysql -uroot -proot < master-4-dump.sql
+root@0923f17161bb:/# mysql -uroot -proot < master-4-dump.sql
 mysql: [Warning] Using a password on the command line interface can be insecure.
-root@a5ffa0a360c9:/# mysql -uroot -proot
+root@0923f17161bb:/# mysql -uroot -proot
 mysql: [Warning] Using a password on the command line interface can be insecure.
-Welcome to the MySQL monitor.  Commands end with ; or \g.
-Your MySQL connection id is 22
-Server version: 8.0.21 MySQL Community Server - GPL
-
-Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
-
-Oracle is a registered trademark of Oracle Corporation and/or its
-affiliates. Other names may be trademarks of their respective
-owners.
-
-Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 
 mysql> change master to master_host='master-4_db', master_user='slaveuser2', master_password='slavepasswd', master_auto_position=1 for channel 'master-4';
-Query OK, 0 rows affected, 2 warnings (0.04 sec)
+Query OK, 0 rows affected, 2 warnings (0.15 sec)
 
 mysql> start slave for channel 'master-4';
-Query OK, 0 rows affected (0.00 sec)
+Query OK, 0 rows affected (0.03 sec)
 
 mysql> show slave status for channel 'master-4'\G
 *************************** 1. row ***************************
@@ -1021,66 +1053,30 @@ mysql> show slave status for channel 'master-4'\G
                 Connect_Retry: 60
               Master_Log_File: mysql-bin.000002
           Read_Master_Log_Pos: 196
-               Relay_Log_File: a5ffa0a360c9-relay-bin-master@002d4.000002
-                Relay_Log_Pos: 371
-        Relay_Master_Log_File: mysql-bin.000002
-             Slave_IO_Running: Yes
-            Slave_SQL_Running: Yes
-              Replicate_Do_DB:
-          Replicate_Ignore_DB:
-           Replicate_Do_Table:
-       Replicate_Ignore_Table:
-      Replicate_Wild_Do_Table:
-  Replicate_Wild_Ignore_Table:
-                   Last_Errno: 0
-                   Last_Error:
-                 Skip_Counter: 0
-          Exec_Master_Log_Pos: 196
-              Relay_Log_Space: 600
-              Until_Condition: None
-               Until_Log_File:
-                Until_Log_Pos: 0
-           Master_SSL_Allowed: No
-           Master_SSL_CA_File:
-           Master_SSL_CA_Path:
-              Master_SSL_Cert:
-            Master_SSL_Cipher:
-               Master_SSL_Key:
-        Seconds_Behind_Master: 0
-Master_SSL_Verify_Server_Cert: No
-                Last_IO_Errno: 0
-                Last_IO_Error:
-               Last_SQL_Errno: 0
-               Last_SQL_Error:
-  Replicate_Ignore_Server_Ids:
+.. 생략 ..
              Master_Server_Id: 4
-                  Master_UUID: 936e2786-ed03-11ea-9f8a-02420a00006f
+                  Master_UUID: 6f6c4bdc-ed8b-11ea-b42d-02420a00000e
              Master_Info_File: mysql.slave_master_info
                     SQL_Delay: 0
           SQL_Remaining_Delay: NULL
       Slave_SQL_Running_State: Slave has read all relay log; waiting for more updates
-           Master_Retry_Count: 86400
-                  Master_Bind:
-      Last_IO_Error_Timestamp:
-     Last_SQL_Error_Timestamp:
-               Master_SSL_Crl:
-           Master_SSL_Crlpath:
-           Retrieved_Gtid_Set:
-            Executed_Gtid_Set: 133a4799-ecd5-11ea-8ab0-02420a00018d:1-5,
-19dbb6ff-ecd8-11ea-8fad-02420a000058:1-11,
-209f0525-ecee-11ea-9210-02420a00005c:1-14,
-936e2786-ed03-11ea-9f8a-02420a00006f:1,
-a51764c3-ecf9-11ea-8cea-02420a000062:1-2
+.. 생략 ..
+           Retrieved_Gtid_Set: 6f6c4bdc-ed8b-11ea-b42d-02420a00000e:1
+            Executed_Gtid_Set: 59d4f62b-ed8a-11ea-a48d-02420a000310:1-8,
+6f6c4bdc-ed8b-11ea-b42d-02420a00000e:1,
+bfae6f7e-ed88-11ea-9d41-02420a00000c:1-16
                 Auto_Position: 1
          Replicate_Rewrite_DB:
                  Channel_Name: master-4
-           Master_TLS_Version:
-       Master_public_key_path:
-        Get_master_public_key: 0
-            Network_Namespace:
+.. 생략 ..
 1 row in set (0.00 sec)
+```  
 
+`master-4` 복제 까지 정상적으로 완료 됐다. 
+`test2.exam22` 테이블은 `master-2`, `master-4` 의 데이터를 복제하고 있는 상태이다. 
+`master-2`, `master-4`, `slave` 를 사용해서 정상적으로 동작하고 있는지 테스트를 수행하면 아래와 같다.  
 
+```bash
 .. master-4 ..
 mysql> show databases;
 +--------------------+
@@ -1108,12 +1104,11 @@ mysql> select * from exam22;
 +--------+-------+---------------------+
 | id     | value | datetime            |
 +--------+-------+---------------------+
-| 100000 | aa    | 2020-09-02 10:03:49 |
-| 100001 | bb    | 2020-09-02 10:03:49 |
-| 100002 | cc    | 2020-09-02 10:03:49 |
+| 100000 | aa    | 2020-09-03 02:16:29 |
+| 100001 | bb    | 2020-09-03 02:16:29 |
+| 100002 | cc    | 2020-09-03 02:16:29 |
 +--------+-------+---------------------+
 3 rows in set (0.00 sec)
-
 
 
 .. slave ..
@@ -1147,63 +1142,84 @@ mysql> select * from exam22;
 +--------+-------+---------------------+
 | id     | value | datetime            |
 +--------+-------+---------------------+
-| 100000 | aa    | 2020-09-02 10:03:49 |
-| 100001 | bb    | 2020-09-02 10:03:49 |
-| 100002 | cc    | 2020-09-02 10:03:49 |
+|      1 | a     | 2020-09-02 07:50:09 |
+|      2 | b     | 2020-09-02 07:50:09 |
+|      3 | c     | 2020-09-02 07:50:09 |
+|      4 | 222   | 2020-09-02 07:50:09 |
+| 100000 | aa    | 2020-09-03 02:16:29 |
+| 100001 | bb    | 2020-09-03 02:16:29 |
+| 100002 | cc    | 2020-09-03 02:16:29 |
 +--------+-------+---------------------+
-3 rows in set (0.00 sec)
+7 rows in set (0.00 sec)
+
+
+.. master-4 ..
+mysql> insert into exam22(value) values('444');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from exam22;
++--------+-------+---------------------+
+| id     | value | datetime            |
++--------+-------+---------------------+
+| 100000 | aa    | 2020-09-03 02:16:29 |
+| 100001 | bb    | 2020-09-03 02:16:29 |
+| 100002 | cc    | 2020-09-03 02:16:29 |
+| 100003 | 444   | 2020-09-03 02:26:47 |
++--------+-------+---------------------+
+4 rows in set (0.00 sec)
+
+
+.. slave ..
+mysql> select * from exam22;
++--------+-------+---------------------+
+| id     | value | datetime            |
++--------+-------+---------------------+
+|      1 | a     | 2020-09-02 07:50:09 |
+|      2 | b     | 2020-09-02 07:50:09 |
+|      3 | c     | 2020-09-02 07:50:09 |
+|      4 | 222   | 2020-09-02 07:50:09 |
+| 100000 | aa    | 2020-09-03 02:16:29 |
+| 100001 | bb    | 2020-09-03 02:16:29 |
+| 100002 | cc    | 2020-09-03 02:16:29 |
+| 100003 | 444   | 2020-09-03 02:26:47 |
++--------+-------+---------------------+
+8 rows in set (0.00 sec)
+
+
+.. master-2 ..
+mysql> insert into exam22(value) values('2222');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from exam22;
++----+-------+---------------------+
+| id | value | datetime            |
++----+-------+---------------------+
+|  1 | a     | 2020-09-02 07:50:09 |
+|  2 | b     | 2020-09-02 07:50:09 |
+|  3 | c     | 2020-09-02 07:50:09 |
+|  4 | 222   | 2020-09-02 07:50:09 |
+|  5 | 2222  | 2020-09-03 02:28:11 |
++----+-------+---------------------+
+5 rows in set (0.00 sec)
+
+
+.. slave ..
+mysql> select * from exam22;
++--------+-------+---------------------+
+| id     | value | datetime            |
++--------+-------+---------------------+
+|      1 | a     | 2020-09-02 07:50:09 |
+|      2 | b     | 2020-09-02 07:50:09 |
+|      3 | c     | 2020-09-02 07:50:09 |
+|      4 | 222   | 2020-09-02 07:50:09 |
+|      5 | 2222  | 2020-09-03 02:28:11 |
+| 100000 | aa    | 2020-09-03 02:16:29 |
+| 100001 | bb    | 2020-09-03 02:16:29 |
+| 100002 | cc    | 2020-09-03 02:16:29 |
+| 100003 | 444   | 2020-09-03 02:26:47 |
++--------+-------+---------------------+
+9 rows in set (0.00 sec)
 ```  
-
-
-
-
-
-
-
-
-
-mysqldump --all-databases -flush-privileges --single-transaction --flush-logs --triggers --routines --events -hex-blob --no-create-db --no-create-info --host=master-4_db --port=3306 --user=root  --password=root > master-4-dump.sql
-
-mysql -uroot -proot < master-4-dump.sql
-
-change master to master_host='master-4_db', master_user='slaveuser2', master_password='slavepasswd', master_auto_position=1 for channel 'master-4';
-
-아래꺼 사용해서 덤프 뜬거 slave에 적용해보기 
-
-기존 처럼 진행하면 test2.exam22 테이블이 master-4 로 초기화 됨 
-
-아마 데이터베이스 및 테이블 생성 관련 쿼리를 덤프 파일에서 제거가 필요할 듯
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ---
