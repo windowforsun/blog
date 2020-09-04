@@ -220,12 +220,116 @@ thisisfile
 앞서 언급했던 것과 같이 파드 하나에 `nfs` 서버를 설정하고, 다른 파드와 공유해서 사용하는 설정을 구성해본다. 
 `hostPath` 를 사용해서 `nfs` 서버를 만들고, 
 다른 파드들은 `nfs` 서버에 `nfs` 볼륨을 마운트해서 구성한다. 
-아래는 `nfs` 서버를 설정하는 파트 템플릿의 예시이다. 
+아래는 `nfs` 서버를 설정하는 디플로이먼트 템플릿의 예시이다. 
 
 ```yaml
+# deploy-nfsserver.yaml
 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-server
+  labels:
+    app: nfs-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nfs-server
+  template:
+    metadata:
+      labels:
+        app: nfs-server
+    spec:
+      containers:
+        - name: nfs-server
+          image: arisu1000/nfs-server
+          ports:
+            - name: nfs
+              containerPort: 2049
+            - name: mountd
+              containerPort: 20048
+            - name: rpcbind
+              containerPort: 111
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /exports
+              name: hostpath-volume
+      volumes:
+        - name: hostpath-volume
+          hostPath:
+            path: /var/lib/nfsdir
+            type: DirectoryOrCreate
 ```  
 
+- `.spec.template.spec.containers[].ports[1]` : `mountd` 는 `NFS` 서버에서 사용하는 프로세스의 포트로 
+지정된 디렉토리로 볼륨을 마운트하는 데몬이다. 
+- `.spec.template.spec.containers[].ports[2]` : `rpcbind` 는 `NFS` 서버에서 사용하는 프로세스의 포트로 
+`RPC` 서비스를 관리하는 데몬이다. 
+- `.spec.template.spec.containers[].securityContext` : 컨테이너 보안 설정 필드로 컨테이너가 호스트 장치에 접근 권한을 얻을 수 있도록 설정한다. 
+- `.spec.template.spec.containers[].volumeMounts[].mountPath` : 볼륨을 마운트할 컨테이너 경로를 설정한다. 
+
+구성한템플릿을 `kubectl apply -f deploy-nfsserver.yaml` 명령으로 클러스터에 적용한다. 
+그리고 `kubectl get pod -o wide -l app=nfs-server` 로 컨테이너 IP 를 확인하면 아래와 같다.  
+
+```
+$ kubectl apply -f deploy-nfsserver.yaml
+deployment.apps/nfs-server created
+$ kubectl get pod -o wide -l app=nfs-server
+NAME                          READY   STATUS    RESTARTS   AGE   IP          NODE             NOMINATED NODE   READINESS GATES
+nfs-server-6469c777b5-ws56j   1/1     Running   0          41s   10.1.0.24   docker-desktop   <none>           <none>
+```  
+
+컨테이너 IP 를 확인하면 `10.10.0.24` 이다. 
+이후 `NFS` 서버를 사용하는 컨테이너에서 해당 아이피를 사용하게 된다. 
+아래는 `NFS` 서버를 사용하는 파드를 구성하는 디플로이먼트 템플릿의 예시이다. 
+
+```yaml
+# deploy-nfsapp.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-app
+  labels:
+    app: nfs-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nfs-client
+  template:
+    metadata:
+      labels:
+        app: nfs-client
+    spec:
+      containers:
+        - name: nfs-app-pod
+          image: nginx:latest
+          volumeMounts:
+            - mountPath: /nfspath
+              name: nfs-volume
+          ports:
+            - containerPort: 80
+      volumes:
+        - name: nfs-volume
+          nfs:
+            server: 10.10.0.24
+            path: /
+```  
+
+- `.spec.template.spec.containers[].volumeMounts[].mountPath` : `NFS` 볼륨을 마운트할 컨테이너 경로를 설정한다. 
+- `.spec.template.spec.volumes[].nfs.server` : 앞서 확인한 `NFS` 컨테이너 아이피를 설정한다. 
+
+구성한 템플릿을 `kubectl apply -f deploy-nfsapp.yaml` 명령으로 클러스터에 적용한다. 
+실행 된 파드를 확인하면 2개의 `NFS` 를 사용하는 앱 파드가 실행 중인 것을 확인 할 수 있다. 
+
+
+```bash
+$ kubectl apply -f deploy-nfsapp.yaml
+deployment.apps/nfs-app created
+```  
 
 
 
