@@ -165,6 +165,8 @@ spec:
 >---|---
 >/var/lib/<dir-or-file>|/mnt/wsl/docker-desktop-data/data/<dir-or-file>
 >/var/lib/docker/volumes|/mnt/wsl/docker-desktop-data/data/docker/volumes
+>
+
 
 `.spec.volums[].hostPath.type` 은 `hostPath` 경로를 설정할 때 경로의 타입을 설정하는 필드이다. 
 해당 필드에 사용가능한 값은 아래와 같다. 
