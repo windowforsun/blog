@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kubernetes 개념] "
+title: "[Kubernetes 개념] 볼륨"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: ''
+excerpt: '쿠버네티스에서 볼륨에 대해 간단하게 알아보고 템플릿의 볼륨 필드르 사용해서 간단한 예제를 진행해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,7 @@ categories :
 tags:
   - Kubernetes
   - Concept
+  - Volume
 toc: true
 use_math: true
 ---  
@@ -281,7 +282,7 @@ NAME                          READY   STATUS    RESTARTS   AGE   IP          NOD
 nfs-server-6469c777b5-ws56j   1/1     Running   0          41s   10.1.0.24   docker-desktop   <none>           <none>
 ```  
 
-컨테이너 IP 를 확인하면 `10.10.0.24` 이다. 
+컨테이너 IP 를 확인하면 `10.1.0.24` 이다. 
 이후 `NFS` 서버를 사용하는 컨테이너에서 해당 아이피를 사용하게 된다. 
 아래는 `NFS` 서버를 사용하는 파드를 구성하는 디플로이먼트 템플릿의 예시이다. 
 
@@ -329,41 +330,53 @@ spec:
 ```bash
 $ kubectl apply -f deploy-nfsapp.yaml
 deployment.apps/nfs-app created
+$ kubectl get pod
+NAME                          READY   STATUS    RESTARTS   AGE
+nfs-app-7566cc9b87-bjfjd      1/1     Running   0          89s
+nfs-app-7566cc9b87-vm5nf      1/1     Running   0          89s
 ```  
 
+실행 중인 2개 파드에 접근해서 `nfs` 디렉토리에 파드 이름과 동일한 파일을 생성한다. 
+그리고 `nfs-app` 컨테이너, `nfs-server` 컨테이너, 호스트에서 마운트된 경로에 파일을 확인하면 아래와 같이 파일 경로가 공유되는 것을 확인 할 수 있다.  
 
 
+```bash
+..  nfs-app-7566cc9b87-bjfjd ..
+$ kubectl exec -it nfs-app-7566cc9b87-bjfjd sh
+# cd nfspath
+# ls
+index.html
+# touch nfs-app-7566cc9b87-bjfjd
+# ls
+index.html  nfs-app-7566cc9b87-bjfjd
+# exit
 
+.. nfs-app-7566cc9b87-vm5nf ..
+$ kubectl exec -it nfs-app-7566cc9b87-vm5nf sh
+# cd nfspath
+# ls
+index.html  nfs-app-7566cc9b87-bjfjd
+# touch nfs-app-7566cc9b87-vm5nf
+# ls
+index.html  nfs-app-7566cc9b87-bjfjd  nfs-app-7566cc9b87-vm5nf
+# exit
 
+.. nfs-server-6469c777b5-ws56j ..
+$ kubectl exec -it nfs-server-6469c777b5-ws56j sh
+sh-4.2# cd exports/
+sh-4.2# ls
+index.html  nfs-app-7566cc9b87-bjfjd  nfs-app-7566cc9b87-vm5nf
+sh-4.2# exit
 
+.. host ..
+$ cd /mnt/wsl/docker-desktop-data/data/nfsdir/
+$ ls
+index.html  nfs-app-7566cc9b87-bjfjd  nfs-app-7566cc9b87-vm5nf
+```  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- 
-
-
+진행한 방법은 단순히 예제일 뿐이기 때문에 실무 급에서 사용하기 위해서는 
+보다 더 여러 옵션과 상황을 고려해서 구성해야 한다. 
+그리고 볼륨을 마운트할 때, 예제외 같이 디플로이먼트에서 바로 생성하지 않고 퍼시스턴트 볼륨을 사용하는 것이 더욱 안전성이 높다.  
 
 ---
 ## Reference
