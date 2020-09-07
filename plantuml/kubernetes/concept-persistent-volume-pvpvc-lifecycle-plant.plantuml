@@ -1,0 +1,20 @@
+@startuml
+
+rectangle "프로비저닝\nProvisioning" as Provisioning
+
+rectangle "바인딩\nBinding" as Binding
+
+rectangle "사용\nUsing" as Using
+
+rectangle "반환\nReclaiming" as Reclaiming
+
+Provisioning -r-> Binding
+
+Binding -d-> Using
+
+Using -l-> Reclaiming
+
+Reclaiming -u-> Provisioning
+
+
+@enduml
