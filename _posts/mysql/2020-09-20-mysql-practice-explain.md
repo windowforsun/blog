@@ -110,7 +110,15 @@ mysql> explain select count(1) from exam;
 그리고 아래부터는 `EXPLAIN` 결과로 출력되는 각 컬럼의 의미와 구성에 대해서 알아본다.  
 
 ### id
+`id` 컬럼은 각 다른 데이터를 조회하는 `select` 쿼리 별로 부여되는 식별값이다. 
 
+```sql
+create table table_1 (id int not null auto_increment, value_1 varchar(255) default null, primary key(id));
+create table table_2 (id int not null auto_increment, value_2 varchar(255) default null, primary key(id));
+
+
+
+```
 
 
 
@@ -119,4 +127,4 @@ mysql> explain select count(1) from exam;
 [8.8 Understanding the Query Execution Plan](https://dev.mysql.com/doc/refman/8.0/en/execution-plan-information.html))  
 [13.8.2 EXPLAIN Statement](https://dev.mysql.com/doc/refman/8.0/en/explain.html)  
 [16.11 Overview of MySQL Storage Engine Architecture](https://dev.mysql.com/doc/refman/8.0/en/pluggable-storage-overview.html)  
-[[MySQL] MySQL 실행 계획](https://12bme.tistory.com/160://dev.mysql.com/doc/refman/8.0/en/pluggable-storage-overview.html)  
+[[MySQL] MySQL 실행 계획](https://12bme.tistory.com/160)  
