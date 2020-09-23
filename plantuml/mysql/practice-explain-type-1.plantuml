@@ -1,0 +1,35 @@
+@startuml
+
+card system #deepskyblue
+card const #deepskyblue
+card eq_ref #deepskyblue
+
+card ref #limegreen
+card ref_or_null #limegreen
+card range #limegreen
+
+card index_merge #tomato
+card unique_subquery #tomato
+card index_subquery #tomato
+
+card index #crimson
+card ALL #crimson
+
+note left of range : row 수가 적은 경우
+
+
+system -r-> const
+const -r-> eq_ref
+eq_ref -d-> ref
+
+ref -l-> ref_or_null
+ref_or_null -d-> index_merge
+
+index_merge -r-> unique_subquery
+unique_subquery -r-> index_subquery
+index_subquery -d-> range
+
+range -d-> index
+
+index -l-> ALL
+@enduml
