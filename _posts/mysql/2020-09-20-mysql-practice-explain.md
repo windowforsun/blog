@@ -13,6 +13,7 @@ tags:
   - MySQL
   - Practice
   - Explain
+  - Index
 toc: true
 use_math: true
 ---  
