@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[MySQL 실습] "
+title: "[MySQL 실습] Explain 실행 계획"
 header:
   overlay_image: /img/mysql-bg.png
-excerpt: ''
+excerpt: '쿼리 성능 파악을 위한 Explain 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -84,8 +84,6 @@ ANALYZE TABLE exam ANALYZE PARTITION p2;
 
 ## EXPLAIN
 `MySQL` 에서 수행할 쿼리의 실행 계획은 `EXPLAIN` 명령을 사용해서 가능하다. 
-그리고 필요에 따라 더 다양한 상세한 실행 계획을 확인할 수 있는 `EXPLAIN EXTENDED`, `EXPLAIN PARTITIONS` 를 사용할 수 있다.  
-
 `EXPLAIN` 사용법은 아주 간단하다. 
 아래와 같이 `EXPLAIN` 뒤에 확인하고 싶은 쿼리를 작성해 주면 된다. 
 
@@ -932,7 +930,8 @@ mysql> explain select * from tb_1 where type > 2;
 ### Extra
 `Extra` 컬럼은 쿼리 실행에 대한 추가적인 정보를 보여준다. 
 해당 필드에서 나타나는 값은 실제로 성능 예측과 크게 관련있는 부분이 있다. 
-
+전체 리스트는 [여기](https://dev.mysql.com/doc/refman/8.0/en/explain-output.html#explain-extra-information)
+에서 확인 할 수 있다. 
 
 #### Using Index
 쿼리 수행시 데이터 파일을 사용하지 않고, 인덱스 테이블에서 모두 처리가능한 경우 표시된다. 
@@ -966,129 +965,141 @@ mysql> explain select id from type_1 where id > 2;
 
 
 #### Using Where
-`where` 절을 사용해서 데이터를 선별한다. 
-`type` 컬럼이 `index` 이거나 `ALL` 이면 성능 개선이 필요하다. 
-
-
-
-
-
-
 `Using where` 은 쿼리 수행 결과로 스토리지 엔진에서 받은 데이터를 `MySQL` 엔진이 다시 필터링 할때 표시되는 값이다. 
 즉, 스토리지 엔진으로 부터 받은 데이터를 별도 필터링, 가공 없이 클라이언트로 전달 가능하다면 `Using where` 은 표시되지 않는다. 
+만약 실행 계획의 `type` 컬럼이 `index`, `ALL` 일 경우 쿼리의 개선이 필요하다.  
 
+`Using where` 의 대표적인 예로는 `where` 조건에서 인덱스 컬럼을 사용해서 데이터를 선별하지만, 
+`select` 절에 인덱스에 포함되지 않은 컬럼이 포함된 경우이다. 
 
+```sql
+mysql> explain select id, value_1 from type_1 where id > 2;
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+| id | select_type | table  | partitions | type  | possible_keys | key     | key_len | ref  | rows | filtered | Extra       |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+|  1 | SIMPLE      | type_1 | NULL       | range | PRIMARY       | PRIMARY | 4       | NULL |    4 |   100.00 | Using where |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+```  
 
+그리고 `where` 조건에 인덱스 컬럼과 인덱스가 걸리지 않은 컬럼으로 조건을 구성하는 경우도 포함된다.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```sql
+mysql> explain select id from type_1 where id > 2 and value_1 is null;
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+| id | select_type | table  | partitions | type  | possible_keys | key     | key_len | ref  | rows | filtered | Extra       |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+|  1 | SIMPLE      | type_1 | NULL       | range | PRIMARY       | PRIMARY | 4       | NULL |    4 |    16.67 | Using where |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------------+
+```  
 
 #### Using Filesort
+쿼리 결과를 정렬할때 가장 좋은 방법은 인덱스를 사용하는 것이다. 
+하지만 `order by` 절에서 인덱스를 사용하지 못하는 경우 `Using filesort` 가 표시된다. 
+정렬은 메모리 혹은 디스크 상에서 수행되는 정렬을 모두 포함한다. 
+조회 결과 데이터가 많은 경우 성능에 큰 영향을 미칠 수 있다. 
+
+```sql
+mysql> explain select * from type_1 order by id;
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------+
+| id | select_type | table  | partitions | type  | possible_keys | key     | key_len | ref  | rows | filtered | Extra |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------+
+|  1 | SIMPLE      | type_1 | NULL       | index | NULL          | PRIMARY | 4       | NULL |    6 |   100.00 | NULL  |
++----+-------------+--------+------------+-------+---------------+---------+---------+------+------+----------+-------+
+
+mysql> explain select * from type_1 order by value_1;
++----+-------------+--------+------------+------+---------------+------+---------+------+------+----------+----------------+
+| id | select_type | table  | partitions | type | possible_keys | key  | key_len | ref  | rows | filtered | Extra          |
++----+-------------+--------+------------+------+---------------+------+---------+------+------+----------+----------------+
+|  1 | SIMPLE      | type_1 | NULL       | ALL  | NULL          | NULL | NULL    | NULL |    6 |   100.00 | Using filesort |
++----+-------------+--------+------------+------+---------------+------+---------+------+------+----------+----------------+
+```  
+
+첫번째 쿼리 처럼 `Primary` 키인 `id` 컬럼으로 정렬을 수행하면 인덱스를 바탕으로 정렬이 가능하다. 
+하지만 두번째 쿼리 처럼 인덱스가 걸리지 않은 컬럼으로 정렬을 수행하기 위해서는 조회 결과를 별도로 정렬 알고리즘을 사용해서 정렬을 수행해줘야 한다.  
+
 
 #### Using Temporary
+쿼리 수행을 위해 중간 결과를 담아두기 위한 임시 테이블(`Temporary table`)을 사용하는 경우 표시된다. 
+임시 테이블은 메모리, 디스크 중 하나에 생성될 수 있다.  
+
+```sql
+mysql> explain select group_id from tb_1 group by group_id order by min(type);
++----+-------------+-------+------------+-------+---------------+-----------+---------+------+------+----------+---------------------------------+
+| id | select_type | table | partitions | type  | possible_keys | key       | key_len | ref  | rows | filtered | Extra                           |
++----+-------------+-------+------------+-------+---------------+-----------+---------+------+------+----------+---------------------------------+
+|  1 | SIMPLE      | tb_1  | NULL       | index | idx_group     | idx_group | 5       | NULL |    2 |   100.00 | Using temporary; Using filesort |
++----+-------------+-------+------------+-------+---------------+-----------+---------+------+------+----------+---------------------------------+
+```  
+
+위 쿼리는 `group by` 절과 `order by` 절에 사용되는 컬럼이 다르기 때문에 임시 테이블이 사용된다.  
+
+하지만 `MySQL` 내부적으로 임시 테이블을 사용하지만 `Using Temporary` 가 표시되지 않는 경우도 있다. 
+- `from` 절에 사용되는 서브 쿼리는 파생 테이블(`Derived table`)은 임시 테이블을 사용한다. 
+- `count(distinct(<colunm))` 와 같은 쿼리도 임시 테이블을 사용한다. 
+- `union`, `union all` 을 사용하는 쿼리도 임시 테이블을 사용한다.
+- 인덱스를 사용하지 않는 `order by` 절의 정렬 또한 정렬을 위해 사용되는 임시 버퍼는 임시 테이블을 사용한다. 
 
 
+### filter
+`MySQL` 엔진에 의해 필터링이 되어 남은 비율(`%`)을 나타내는 값이다. 
 
+```sql
+mysql> explain select * from type_group where type_1 > 3 and type_2 > 2;
++----+-------------+------------+------------+-------+-------------------+---------+---------+------+------+----------+-------------+
+| id | select_type | table      | partitions | type  | possible_keys     | key     | key_len | ref  | rows | filtered | Extra       |
++----+-------------+------------+------------+-------+-------------------+---------+---------+------+------+----------+-------------+
+|  1 | SIMPLE      | type_group | NULL       | range | PRIMARY,idx_value | PRIMARY | 4       | NULL |    9 |    33.33 | Using where |
++----+-------------+------------+------------+-------+-------------------+---------+---------+------+------+----------+-------------+
+```  
 
+스토리지 엔진이 쿼리에 해당하는 `rows` 컬럼의 개수인 9개를 `MySQL` 엔진에 전달했고, 
+`MySQL` 엔진은 9개 중에서 33.33% 만큼인 3개만 필터링해서 결과로 사용했다는 의미이다. 
+이또한 정확한 숫자가 아닌 통계 정보를 바탕으로 산출된 값에 의존한다.  
 
+### partition
+쿼리에 사용되는 테이블이 파티션 테이블일 경우, 
+사용되는 파티션을 나타내는 컬럼이다. 
+아래와 같이 년도를 기준으로 파티션이 구성된 테이블이 있다. 
 
+```sql
+create table tb_partition (
+    id int not null auto_increment,
+    value varchar(255) default null,
+    reg_date datetime not null default now(),
+    primary key(id, reg_date)
+)
+partition by range (year(reg_date)) (
+    partition p2018 values less than (2019),
+    partition p2019 values less than (2020),
+    partition p2020 values less than (2021),
+    partition p2021 values less than (2022)
+);
+```  
 
+2019 년도에 해당하는 로우를 조회하는 실행 계획은 아래와 같다. 
 
+```sql
+mysql> explain select * from tb_partition where reg_date between '2019-01-01' and '2019-12-31';
++----+-------------+--------------+------------+------+---------------+------+---------+------+------+----------+-------------+
+| id | select_type | table        | partitions | type | possible_keys | key  | key_len | ref  | rows | filtered | Extra       |
++----+-------------+--------------+------------+------+---------------+------+---------+------+------+----------+-------------+
+|  1 | SIMPLE      | tb_partition | p2019      | ALL  | NULL          | NULL | NULL    | NULL |   12 |    11.11 | Using where |
++----+-------------+--------------+------------+------+---------------+------+---------+------+------+----------+-------------+
+```  
 
+`partition` 컬럼을 확인하면 2019 년도에 해당하는 파티션인 `p2019` 사용 된 것을 확인 할 수 있다. 
+좀 더 넓은 범위의 조건을 사용하면 아래와 같다. 
 
+```sql
+mysql> explain select * from tb_partition where reg_date between '2019-01-01' and '2020-03-31';
++----+-------------+--------------+-------------+------+---------------+------+---------+------+------+----------+-------------+
+| id | select_type | table        | partitions  | type | possible_keys | key  | key_len | ref  | rows | filtered | Extra       |
++----+-------------+--------------+-------------+------+---------------+------+---------+------+------+----------+-------------+
+|  1 | SIMPLE      | tb_partition | p2019,p2020 | ALL  | NULL          | NULL | NULL    | NULL |   21 |    11.11 | Using where |
++----+-------------+--------------+-------------+------+---------------+------+---------+------+------+----------+-------------+
+```  
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`where` 절 조건에 해당하는 `p2019`, `p2020` 파티션이 사용된 것을 확인 할 수 있다. 
 
 
 ---
