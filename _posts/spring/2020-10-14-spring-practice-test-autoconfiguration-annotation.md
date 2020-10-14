@@ -15,6 +15,13 @@ tags:
     - Junit
     - Auto-configuration
     - Test Annotation
+    - SpringBootTest
+    - WebMvcTest
+    - DataJpaTest
+    - DataJdbcTest
+    - DataRedisTest
+    - RestClientTest
+    - JsonTest
 toc: true
 use_math: true
 ---  
@@ -253,6 +260,14 @@ public class SpringBootRealDataJdbcTest {
 기능이나 설정의 대부분이 `@DataJdbcTest` 와 동일하고, 
 차이점이 있다면 `JPA` 와 관련된 설정을 추가로 자동설정 한다는 부분이다.  
 
+테스트 대상인 `JPA Repository` 의 인터페이스는 아래와 같다. 
+
+```java
+@Repository
+public interface MemberRepository extends JpaRepository<Member, Long> {
+}
+```  
+
 인메모리 데이터베이스를 사용하는 경우 테스트 코드의 예시는 아래와 같다.  
 
 ```java
@@ -390,6 +405,14 @@ public class SpringBootRealDataJpaTest {
 해당 어노테이션이 설정된 테스트에 대해서는 전체 자동설정이 비활성화되고, 
 `Redis` 관련된 테스트 설정만 자동 설정으로 구성된다.  
 
+테스트 대상에 포함되는 `Redis Repository` 인터페이스는 아래와 같다. 
+
+```java
+@Repository
+public interface MemberCountRepository extends CrudRepository<MemberCount, String> {
+}
+```  
+
 ```java
 @DataRedisTest(
         properties = {
@@ -475,6 +498,26 @@ public class SpringBootDataRedisTest {
 만약 `REST API` 동작을 수행하는 부분에서 `RestTemplateBuilder` 를 사용하지 않고, 
 `RestTemplate` 를 바로 사용할 경우에는 `@AutoConfigureWebClient(registerRestTemplate=true)` 으로 `RestTemplate` 빈을 설정할 수 있다. 
 
+테스트 대상이자 `RestTemplate` 로 외부 `API` 를 호출에 비지니스 로직을 처리하는 `ClassInfoService` 의 내용은 아래와 같다. 
+
+```java
+@Service
+public class ClassInfoService {
+    private final RestTemplate restTemplate;
+
+    public ClassInfoService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    public ClassInfo getByName(String name) {
+        return this.restTemplate.getForObject(
+                "http://localhost/class/{name}",
+                ClassInfo.class,
+                name);
+    }
+}
+```  
+
 ```java
 @RestClientTest(
         value = ClassInfoService.class,
@@ -556,6 +599,30 @@ public class SpringBootRestClientTest {
 
 또한 `MockMvc` 는 `@MockBean` 과 같은 모의 객체를 사용해서, 
 컨트롤러에서 수행하는 복잡한 처리과정에 대한 결과를 모의로 정의해 테스트를 할 수 있다.  
+
+테스트 대상이자 요청을 처리하고 응답을 리턴하는 `MemberController` 내용은 아래와 같다. 
+
+```java
+@RestController
+@RequestMapping("/member")
+public class MemberController {
+    private final MemberService memberService;
+
+    public MemberController(MemberService memberService) {
+        this.memberService = memberService;
+    }
+
+    @GetMapping("/{id}")
+    public Member getById(@PathVariable long id) {
+        return this.memberService.getById(id);
+    }
+
+    @PostMapping
+    public Member create(@RequestBody Member member) {
+        return this.memberService.add(member);
+    }
+}
+```  
 
 ```java
 @WebMvcTest(
@@ -661,16 +728,16 @@ public class InnerTestConfigurationTest {
 
     @Test
     public void Inner_TestConfiguration() {
-        assertThat(this.testClassInfo.getName(), is("testConfig"));
+        assertThat(this.testClassInfo.getName(), is("testClassInfo"));
         assertThat(this.testClassInfo.getType(), is(1));
-        assertThat(this.testClassInfo.getDetail(), is("testConfigBean"));
+        assertThat(this.testClassInfo.getDetail(), is("testClassInfoBean"));
     }
 
     @TestConfiguration
     public static class TestConfig {
         @Bean
         public ClassInfo testClassInfo() {
-            return new ClassInfo("testConfig", 1, "testConfigBean");
+            return new ClassInfo("testClassInfo", 1, "testClassInfoBean");
         }
     }
 }
@@ -681,6 +748,37 @@ public class InnerTestConfigurationTest {
 `@TestConfiguration` 은 감지되지 않는다. 
 위와 같은 상황에서는 `@TestConfiguration` 클래스를 `classes` 에 추가하거나, 
 `@Import` 어노테이션을 사용해서 명시할 수 있다.  
+
+```java
+@TestConfiguration
+public class TestConfig2 {
+    @Bean
+    public ClassInfo testClassInfo2() {
+        return new ClassInfo("testClassInfo2", 2, "testClassInfoBean2");
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        RestTemplate restTemplate = new RestTemplate();
+        restTemplate.setErrorHandler(new ResponseErrorHandler() {
+            @Override
+            public boolean hasError(ClientHttpResponse response) throws IOException {
+                return false;
+            }
+
+            @Override
+            public void handleError(ClientHttpResponse response) throws IOException {
+                System.out.println("TestConfig2.handleError");
+            }
+        });
+
+        return restTemplate;
+    }
+}
+```  
+
+위 `TestConfiguration` 설정을 임포트 하기 때문에, 
+`ClassInfoService` 클래스에서 사용하는 `RestTemplate` 빈 또한 `TestConfig2` 에서 생성한 빈으로 등록된다. 
 
 ```java
 @RunWith(SpringRunner.class)
@@ -703,7 +801,44 @@ public class ImportTestConfigurationTest {
 ```  
 
 `@SpringBootTest` 또한 자동으로 `Mockito` 에 대한 설정을 수행하므로, 
-`@MockBean` 어노테이션을 통해 모의 빈을 사용해 동작을 정의할 수 있다. 
+`@MockBean` 어노테이션을 통해 모의 빈을 사용해 동작을 정의할 수 있다.  
+
+`MemberService` 의 내용은 아래와 같다. 
+
+```java
+@Service
+public class MemberService {
+    private final MemberRepository memberRepository;
+    private final MemberCountRepository memberCountRepository;
+
+    public MemberService(MemberRepository memberRepository, MemberCountRepository memberCountRepository) {
+        this.memberRepository = memberRepository;
+        this.memberCountRepository = memberCountRepository;
+    }
+
+    public Member add(Member member) {
+        MemberCount memberCount = this.memberCountRepository.findById(member.getClassName()).orElse(null);
+
+        if(memberCount == null) {
+            memberCount = new MemberCount();
+            memberCount.setClassName(member.getClassName());
+            memberCount.setCount(0);
+        }
+
+        memberCount.increase();
+        this.memberCountRepository.save(memberCount);
+
+        return this.memberRepository.save(member);
+    }
+
+    public Member getById(long id) {
+        return this.memberRepository.findById(id).orElse(null);
+    }
+
+    .. 생략 ..
+
+}
+```  
 
 ```java
 @RunWith(SpringRunner.class)
