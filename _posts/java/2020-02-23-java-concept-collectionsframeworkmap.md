@@ -34,10 +34,10 @@ use_math: true
 - Java Map 의 루트 인터페이스로 Map 동작에 필요한 공통적인 메소드가 정의돼 있다.
 - Map 구조에서 `key` 는 중복된 값을 가질 수 없고, 각 `key` 는 대응되는 `value` 를 갖는다.
 - Java 의 Map 구조는 Dictionary 구조를 대체할 수 있다.
-- Map 은 기본적으로 데이터 조회를 위해 세가지 방식의 Collection 을 제공한다.
-	- `Set` 형식의 `key` 집합을 받아, `value` 를 조회한다.
-	- `Collection` 형식의 `value` 를 받는다.
-	- `Set` 형식의 `key-value` 구조를 받는다.
+- Map 은 기본적으로 데이터 조회를 위해 세가지 방식의 Collection 을 제공한다. (`HashMap<String, String> map`)
+	- `Set` 형식의 `key` 집합을 받아, `value` 를 조회한다. (`Set<String> keySet = map.keySet()`)
+	- `Collection` 형식의 `value` 를 받는다. (`Collection<String> values = map.values()`)
+	- `Set` 형식의 `key-value` 구조를 받는다. (`Set<Map.Entry<String, String>> entrySet = map.entrySet()`)
 - `Collection` 의 순서는 `iterator` 에서 정의된 것을 따르고, 몇가지(`TreeMap`)는 별도의 순서를 가질 수 있다.
 - Map 에서 `key`, `value` 에 대한 값 제한은 하위 구현체에 따라 상이 할 수 있다.
 	- 어떤 구현체에서는 `null` 값을 허용하지 않는다.
