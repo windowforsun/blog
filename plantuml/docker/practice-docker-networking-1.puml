@@ -1,0 +1,44 @@
+@startuml
+
+rectangle "Host" as host {
+	rectangle "eth0" as host_eth0 {
+		card "192.168.10.10"
+	}
+
+	rectangle "docker0" as host_docker0 {
+		card "172.17.0.1"
+	}
+
+	rectangle "veth7dfe7" as host_veth_1 {
+	}
+
+	rectangle "Container 1" as container_1 {
+		rectangle "etho0" as docker_eth0_1 {
+			card "172.17.0.2" as 111
+		}
+	}
+
+	rectangle "veth1erwq" as host_veth_2 {
+	}
+
+	rectangle "Container 2" as container_2 {
+		rectangle "etho0" as docker_eth0_2 {
+			card "172.17.0.3" as 222
+		}
+	}
+
+	host_eth0 -d- host_docker0
+	host_docker0 -d- host_veth_1
+	host_docker0 -d- host_veth_2
+	host_veth_1 -d- docker_eth0_1
+	host_veth_2 -d- docker_eth0_2
+
+
+'	host_eth0 -[hidden]d- host_docker0
+'	host_docker0 -[hidden]d- host_veth_1
+'	host_docker0 -[hidden]d- host_veth_2
+'	host_veth_1 -[hidden]d- container_1
+'	host_veth_2 -[hidden]d- container_2
+}
+
+@enduml
