@@ -459,6 +459,236 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 서브 인터페이스간의 트래픽을 외부로 보내지 않고 바로 전달하는 방식으로 이뤄진다. 
 이러한 특징으로 트래픽 전달시 수행해야하는 몇가지 동작이 제외되기 때문에 성능적으로는 이점이 생긴다.  
 
+간단하게 `macvlan` 도커 네트워크를 생성하는 명령어는 아래와 같다. 
+
+```bash
+$ docker network create -d macvlan \
+>  --subnet=123.11.11.0/24 \
+>  --gateway=123.11.11.1 \
+>  -o parent=eth0 \
+>  eth0-macvlan
+fb28abd9dec81f40bff468e1ef4f9c20dc9132e6b988a0aa5b3ed1446f0572bc
+```  
+
+`eth0` 을 부모 인터페이스로 사용하는 `eth0-macvlan` 이라는 도커 네트워크를 생성한다. 
+`macvlan` 을 생성할때는 `subet` 과 `gateway`, `-o parent` 등의 정보를 명시해주어야 한다.  
+
+`busybox` 이미지를 사용해서 `eth0-macvlan` 을 사용하는 컨테이너를 하나 생성하고, 
+`ifconfig` 로 네트워크 인터페이스 정보를 확인하면 아래와 같다. 
+
+```bash
+$ docker run \
+> --rm -dit \
+> --name test-busybox-eth0macvlan-1 \
+> --network eth0-macvlan \
+> busybox \
+> ash
+995c10c120093afd02f8485ee36bd9b0fe2c8ae75c4949d4987cd8b7d81c3fa1
+$ docker exec test-busybox-eth0macvlan-1 ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 02:42:7B:0B:0B:02
+          inet addr:123.11.11.2  Bcast:123.11.11.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+```  
+
+`eth0-macvlan` 에 설정한 서브넷에 맞게 아이피가 할당된 것을 확인할 수 있다. 
+`ip` 명령어로 아이피 정보를 확인하면 아래와 같다. 
+
+```bash
+$ docker exec test-busybox-eth0macvlan-1 ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+62: eth0@if2: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
+    link/ether 02:42:7b:0b:0b:02 brd ff:ff:ff:ff:ff:ff
+    inet 123.11.11.2/24 brd 123.11.11.255 scope global eth0
+       valid_lft forever preferred_lft forever
+```  
+
+`eth0@if2` 를 봐서 부모 인터페이스는 `if2` 로 확인된다.  
+
+다음으로 `ping` 명령을 통해 통신여부를 확인해본다. 
+먼저 호스트의 `eth0`(`172.20.222.61)` 과 `google.com` 으로 수행하면 아래와 같다. 
+
+```bash
+$ docker exec test-busybox-eth0macvlan-1 ping -c 3 172.20.222.61
+PING 172.20.222.61 (172.20.222.61): 56 data bytes
+
+--- 172.20.222.61 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+$ docker exec test-busybox-eth0macvlan-1 ping -c 3 google.com
+ping: bad address 'google.com'
+```  
+
+모두 통신이 불가능한 것을 확인할 수 있고, 
+이로써 `macvlan` 은 기본적인 상태에서 서브 인터페이스의 외부와는 통신이 불가능한 것을 확인했다.  
+
+`eth0-macvlan` 네트워크를 사용하는 컨테이너(`test-buxybox-eth0macvlan-2`)를 하나 더 생성한다. 
+그리고 `test-busybox-eth0macvlan-1` 의 아이피(`123.11.11.2`)로 `ping` 테스트를 하면 아래와 같다. 
+
+```bash
+$ docker run \
+> --rm -dit \
+> --name test-busybox-eth0macvlan-2 \
+> --network eth0-macvlan \
+> busybox \
+> ash
+20fea3744d2fc6fb1f3384876d1bb7fe9dff79e43cdf0060de444a78589b5200
+$ docker exec test-busybox-eth0macvlan-2 ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 02:42:7B:0B:0B:03
+          inet addr:123.11.11.3  Bcast:123.11.11.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:9 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:5 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:897 (897.0 B)  TX bytes:378 (378.0 B)
+$ docker exec test-busybox-eth0macvlan-2 ping -c 3 123.11.11.2
+PING 123.11.11.2 (123.11.11.2): 56 data bytes
+64 bytes from 123.11.11.2: seq=0 ttl=64 time=0.066 ms
+64 bytes from 123.11.11.2: seq=1 ttl=64 time=0.048 ms
+64 bytes from 123.11.11.2: seq=2 ttl=64 time=0.071 ms
+
+--- 123.11.11.2 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.048/0.061/0.071 ms
+```  
+
+정상적으로 통신이 이뤄지는 것을 확인할 수 있다. 
+이로써 동일 `macvlan` 네트워크안에 있는 서브 인터페이스 간에는 통신이 가능한것을 확인했다.  
+
+지금까지의 네트워크를 도식화 하면 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/docker/practice_docker_networking_4.png)
+
+#### VLAN Trunking with MACVLAN
+현재 호스트의 `NIC` 인 `eth0` 에는 `eth0-macvlan` 이라는 도커 네트워크가 생성된 상태이다. 
+여기서 네트워크를 분리하기위해 `eth0` 을 부모로 새로운 `macvlan` 도커 네트워크를 생성하면 아래와 같이 생성되지 않는다. 
+
+```bash
+$ docker network create -d macvlan \
+>   --subnet=172.16.86.0/24 \
+>   --gateway=172.16.86.1 \
+>   -o parent=eth0 \
+>   eth0-macvlan-2
+Error response from daemon: network dm-fb28abd9dec8 is already using parent interface eth0
+```  
+
+부모 인터페이스로 사용중인 `NIC` 의 경우 아래와 같은 방법으로 별도의 `macvlan` 도커 네트워크를 생성할 수 있다. 
+
+```bash
+$ docker network create -d macvlan \
+>   --subnet=123.12.11.0/24 \
+>   --gateway=123.12.11.1 \
+>   -o parent=eth0.10 \
+>   eth0.10-macvlan
+80474f8de27864c73bcd6b245a80f3cd5230b536ad3633b829f66bff2eaa5044
+```  
+
+그리고 호스트에서 `ifconfig` 로 `NIC` 를 조회하면 `eth0.10` 이라는 인터페이스가 조회하는 것을 확인할 수 있다. 
+
+```bash
+$ ifconfig
+eth0.10: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::215:5dff:fe00:224  prefixlen 64  scopeid 0x20<link>
+        ether 00:15:5d:00:02:24  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 21  bytes 1370 (1.3 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+`eth0.10-macvlan` 네트워크를 사용하는 2개의 컨테이너를 생성하고, 
+아이피를 확인하면 아래와 같다. 
+
+```bash
+$ docker run \
+> --rm -dit \
+> --name test-busybox-eth0.10macvlan-1 \
+> --network eth0.10-macvlan \
+> busybox \
+> ash
+def2f93455954a853aa8c79078b5fbb9af9552f61a55e74e22ecf9dff1e6eef5
+$ docker run \
+> --rm -dit \
+> --name test-busybox-eth0.10macvlan-2 \
+> --network eth0.10-macvlan \
+> busybox \
+> ash
+ff02da80d6fff469d65f300e1daada93f52a52359e8cbc7c5618fd68950edd6b
+$ docker exec test-busybox-eth0.10macvlan-1 ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 02:42:7B:0C:0B:02
+          inet addr:123.12.11.2  Bcast:123.12.11.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+
+$ docker exec test-busybox-eth0.10macvlan-2 ifconfig eth0
+eth0      Link encap:Ethernet  HWaddr 02:42:7B:0C:0B:03
+          inet addr:123.12.11.3  Bcast:123.12.11.255  Mask:255.255.255.0
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:0
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+```  
+
+두 컨테이너 모두 아이피가 지정된 네트워크의 서브넷에 맞게 설정되었다.  
+
+`ping` 명령으로 `eth0-macvlan` 네트워크를 사용하는 `test-busybox-eth0macvlan-1`(`123.11.11.2`)
+컨테이너에 통신 가능여부를 테스트하면 아래와 같다. 
+
+```bash
+$ docker exec test-busybox-eth0.10macvlan-1 ping -c 3 123.11.11.2
+PING 123.11.11.2 (123.11.11.2): 56 data bytes
+
+--- 123.11.11.2 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+root@ubuntu-test:/home/ubuntu# docker exec test-busybox-eth0.10macvlan-2 ping -c 3 123.11.11.2
+PING 123.11.11.2 (123.11.11.2): 56 data bytes
+
+--- 123.11.11.2 ping statistics ---
+3 packets transmitted, 0 packets received, 100% packet loss
+```  
+
+통신이 되지 않는다. 
+이번에는 `test-busybox-eth0.10macvlan-1`(`123.12.11.2`)와 `test-busybox-eth0.10macvlan-1`(`123.12.11.3`) 간에 
+서로 `ping` 테스트를 수행하면 아래와 같다. 
+
+```bash
+$ docker exec test-busybox-eth0.10macvlan-1 ping -c 3 123.12.11.3
+PING 123.12.11.3 (123.12.11.3): 56 data bytes
+64 bytes from 123.12.11.3: seq=0 ttl=64 time=0.057 ms
+64 bytes from 123.12.11.3: seq=1 ttl=64 time=0.065 ms
+64 bytes from 123.12.11.3: seq=2 ttl=64 time=0.128 ms
+
+--- 123.12.11.3 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.057/0.083/0.128 ms
+$ docker exec test-busybox-eth0.10macvlan-2 ping -c 3 123.12.11.2
+PING 123.12.11.2 (123.12.11.2): 56 data bytes
+64 bytes from 123.12.11.2: seq=0 ttl=64 time=0.040 ms
+64 bytes from 123.12.11.2: seq=1 ttl=64 time=0.053 ms
+64 bytes from 123.12.11.2: seq=2 ttl=64 time=0.067 ms
+
+--- 123.12.11.2 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.040/0.053/0.067 ms
+```  
+
+통신이 정상적으로 이뤄지는 것을 확인할 수 있다. 
+이로써 `eth0-macvlan` 과 `eth0.10-macvlan` 은 모두 호스트의 `eth0` 를 부모 인터페이스로 만들어진 
+서브 인터페이스이지만 서로 독립된 네트워크 공간을 갖는다는 것을 알 수 있다. 
+이를 현재까지 네트워크를 도식화하면 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/docker/practice_docker_networking_4.png)
+
+
 
 
 
@@ -485,6 +715,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 ---
 ## Reference
 [Networking overview](https://docs.docker.com/network/)  
+[Docker Swarm Reference Architecture: Exploring Scalable, Portable Docker Container Networks](https://success.mirantis.com/article/networking)  
 [Docker container networking](http://docs.docker.oeynet.com/engine/userguide/networking/)  
 [Understanding Docker Networking Drivers and their use cases](https://www.docker.com/blog/understanding-docker-networking-drivers-use-cases/)  
 [Plugins and Services](https://docs.docker.com/engine/extend/plugins_services/)  

@@ -2,7 +2,11 @@
 
 rectangle "Host" as host {
 	rectangle "eth0" as host_eth0 {
-		card "macvlan"
+		card "eth0-macvlan" as eth0_macvlan
+
+		rectangle "eth0.10" {
+			card "eth0.10-macvlan" as eth0_10_macvlan
+		}
 	}
 
 
@@ -19,8 +23,8 @@ rectangle "Host" as host {
 		}
 	}
 
-	macvlan -d- docker_eth0_1
-	macvlan -d- docker_eth0_2
+	eth0_macvlan -d- docker_eth0_1
+	eth0_10_macvlan -d- docker_eth0_2
 
 
 '	host_eth0 -[hidden]d- host_docker0
