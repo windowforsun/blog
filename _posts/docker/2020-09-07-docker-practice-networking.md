@@ -445,6 +445,21 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 이로 인해 하위 인터페이스들에 여러 컨테이너들이 연결될 수 있게 된다. 
 간단하게 하나의 네트워크 인터페이스 가상화해 여러 `MAC` 주소를 갖는 것을 의미한다.  
 
+`macvlan` 은 부모 인터페이스와 서브 인터페이스로 나뉜다. 
+부모 인터페이스는 가상화의 대상이 되는 `NIC`(`eth0`) 를 의미하고, 
+`NIC` 를 가상화해서 생성되는 것을(`mac0`) 서브 인터페이스라고 한다. 
+`eth0` 을 가상화해서 생성된 서브 인터페이스인 `mac0` 을 표현할때 `mac0@eth0` 이라고 한다.  
+
+`macvlan` 의 방식중 `Docker` 에서는 `Bridge macvlan` 을 사용한다. 
+`Bridge macvlan` 은 아래와 같은 특징이 있다. 
+- 호스트 다른 네트워크와는 통신이 불가능하다. 
+- 서브 인터페이스간에만 통신이 가능하다. 
+
+`macvlan` 타입을 네트워크를 생성하게 되면 외부 통신은 물론이고, 다른 `NIC` 와도 통신이 불가능하다. 
+서브 인터페이스간의 트래픽을 외부로 보내지 않고 바로 전달하는 방식으로 이뤄진다. 
+이러한 특징으로 트래픽 전달시 수행해야하는 몇가지 동작이 제외되기 때문에 성능적으로는 이점이 생긴다.  
+
+
 
 
 
@@ -473,3 +488,5 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 [Docker container networking](http://docs.docker.oeynet.com/engine/userguide/networking/)  
 [Understanding Docker Networking Drivers and their use cases](https://www.docker.com/blog/understanding-docker-networking-drivers-use-cases/)  
 [Plugins and Services](https://docs.docker.com/engine/extend/plugins_services/)  
+[Networking using a macvlan network](https://docs.docker.com/network/network-tutorial-macvlan/)  
+[Bridge vs Macvlan](http://hicu.be/bridge-vs-macvlan)  
