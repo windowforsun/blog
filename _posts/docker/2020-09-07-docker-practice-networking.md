@@ -686,15 +686,48 @@ round-trip min/avg/max = 0.040/0.053/0.067 ms
 서브 인터페이스이지만 서로 독립된 네트워크 공간을 갖는다는 것을 알 수 있다. 
 이를 현재까지 네트워크를 도식화하면 아래와 같다. 
 
-![그림 1]({{site.baseurl}}/img/docker/practice_docker_networking_4.png)
+![그림 1]({{site.baseurl}}/img/docker/practice_docker_networking_5.png)
+
+### none
+`none` 네트워크 드라이버는 각 컨테이너가 격리된 네트워크 영역을 가지지만, 
+네트워크 인터페이스(`eth0`) 이 없는 상태로 컨테이너가 생성된다. 
+그러므로 `loopback`(`lo`) 네트워크 인터페이스만 가지게 되므로 
+컨테이너 내부 통신만 가능하고, 컨테이너 외부와의 통신은 단절된 상태로 컨테이너가 생성된다.  
+
+`test-busybox-none` 이라는 네트워크가 `none` 으로 설정된 컨테이너를 실행하고, 
+네트워크 인터페이스를 확인하면 아래와 같다. 
+
+```bash
+$ docker run --rm -dit --name test-busybox-none --network none busybox ash
+7e727cf8b93533c1419dbbc1f3bf40c2c24734cb83ed793cb79c6a94c26ea9ae
+$ docker exec test-busybox-none ifconfig
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+$ docker exec test-busybox-none ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+2: sit0@NONE: <NOARP> mtu 1480 qdisc noop qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+```  
+
+`loopback` 인터페이스만 존재하고 `eth0` 과 같은 이더넷 인테페이스는 컨테이너에 존재하지 않는다. 
+즉 해당 컨테이너느 추가적으로 네트워클 인터페이스를 설정해 주지 않는 이상 
+컨테이너 외부와 통신은 불가능한 상태이다.  
+
+
+### overlay
 
 
 
 
 
-
-- `overlay`
-- `none`
 - `Network Plugin` 
 
 
@@ -717,7 +750,8 @@ round-trip min/avg/max = 0.040/0.053/0.067 ms
 [Networking overview](https://docs.docker.com/network/)  
 [Docker Swarm Reference Architecture: Exploring Scalable, Portable Docker Container Networks](https://success.mirantis.com/article/networking)  
 [Docker container networking](http://docs.docker.oeynet.com/engine/userguide/networking/)  
-[Understanding Docker Networking Drivers and their use cases](https://www.docker.com/blog/understanding-docker-networking-drivers-use-cases/)  
 [Plugins and Services](https://docs.docker.com/engine/extend/plugins_services/)  
+[Use overlay networks](https://docs.docker.com/network/overlay/)  
+[Understanding Docker Networking Drivers and their use cases](https://www.docker.com/blog/understanding-docker-networking-drivers-use-cases/)  
 [Networking using a macvlan network](https://docs.docker.com/network/network-tutorial-macvlan/)  
 [Bridge vs Macvlan](http://hicu.be/bridge-vs-macvlan)  
