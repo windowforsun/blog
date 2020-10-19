@@ -161,6 +161,13 @@ eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
 실행된 컨테이너 내부에는 `eth0` 네트워크 인터페이스가 있고, 
 할당된 아이피는 `172.17.0.2` 인 것을 확인할 수 있다.  
 
+{% raw %}
+>컨테이너의 네트워크 정보가 궁금한경우 `docker inspect` 명령으로 조회할 수 있다. 
+>명령어의 예시는 아래와 같다. 
+>- 컨테이너 아이피 조회 : `docker inspect -f '{{ .NetworkSettings.IPAddress }}' <container>`
+>- 컨테이너 네트워크 정보 전체 Json 형식으로 조회 : `docker inspect -f '{{json .NetworkSettings }}' <container>`
+{% endraw %}
+
 그리고 `route` 명령으로 네트워크의 라우팅 정보를 조회하면 아래와 같다. 
 
 ```bash
@@ -188,10 +195,12 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 컨테이너가 생성되면 `/var/run/docker/netns` 디렉토리에 독립된 네임스페이스가 생성된다. 
 이는 아래와 같이 `docker inspect` 명령으로 확인할 수 있다. 
 
+{% raw %}
 ```bash
 $ docker inspect -f {{.NetworkSettings.SandboxKey}} test-nginx
 /var/run/docker/netns/8b7504f82c82
 ```  
+{% endraw %}
 
 위 경로를 `/var/run/netns` 에 심볼릭 링크를 걸어 주게 되면 호스트에서 
 컨테이너의 네트워크 정보를 조회할 수 있다. 
@@ -407,6 +416,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 컨테이너 실행시 네트워크를 `host` 로 지정하고 실행한다. 
 그리고 네트워크 관련 정보를 확인하면 아래와 같다. 
 
+{% raw %}
 ```bash
 $ docker run --rm -d --name test-nginx-host --network host nginx:latest
 b86667fe253e60427f69f2b297c2f6b09e56cf63299287f6193c00c1f80d0dee
@@ -437,6 +447,7 @@ Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
 10.0.2.0        0.0.0.0         255.255.255.0   U     100    0        0 eth0
 172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
 ```  
+{% endraw %}
 
 먼저 `Network Namespacd` 의 경우 `/var/run/docker/netns/deafult` 이다. 
 그리고 컨테이너 내부에서 `ifconfig` 명령을 수행하면, 
@@ -815,12 +826,14 @@ s3rlc5284a7i        ingress             overlay             swarm
 
 `test-overlay` 라는 `overlay` 도커 네트워크를 생성한다. 
 
+{% raw %}
 ```bash
 $ docker network create --driver overlay test-overlay
 h2ncm6gou8wsze9v9t0b8sg69
 $ docker network inspect -f '{{json .IPAM.Config }}' test-overlay
 [{"Subnet":"10.0.4.0/24","Gateway":"10.0.4.1"}]
 ```  
+{% endraw %}
 
 `test-overlay` 는 `10.0.4.0/24` 의 아이피 대역을 갖는 것을 확인할 수 있다. 
 그리고 `test-overlay` 네트워크를 사용하는 `test-busybox` 서비스도 생성한다.  
