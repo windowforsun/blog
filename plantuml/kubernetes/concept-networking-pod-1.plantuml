@@ -1,22 +1,32 @@
 @startuml
 
 rectangle "Host" {
+rectangle "Host Network Namespace" {
+
 	rectangle "eth0" as host_eth0 {
 
 	}
 
+	rectangle "NAT" as host_nat {
+
+	}
 	rectangle "docker0" as host_docker0 {
 	}
 
+}
 	rectangle "Pod" as pod {
 		rectangle "veth0" as pod_veth0
+
+		rectangle "Pause Network Namespace" {
 
 		rectangle "pause" as pod_pause
 		rectangle "container1" as pod_container1
 		rectangle "container2" as pod_container2
+		}
 	}
 
-	host_eth0 -- host_docker0
+	host_eth0 -- host_nat
+	host_nat -- host_docker0
 	host_docker0 -- pod_veth0
 	pod_veth0 -- pod_pause
 	pod_veth0 -- pod_container1

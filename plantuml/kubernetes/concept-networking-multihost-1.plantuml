@@ -1,0 +1,68 @@
+@startuml
+
+rectangle "Router/Gateway" {
+ card "192.168.100.1" as rg_ip
+}
+
+rectangle "Host_1" as host1 {
+	rectangle "eth0" as host1_eth0 {
+		card "192.168.100.2" as host1_eth0_ip
+	}
+
+	rectangle "NAT" as host1_nat
+
+	rectangle "docker0" as host1_docker0 {
+		card "172.17.0.1" as host1_docker0_ip
+	}
+
+	rectangle "Pod" as pod1 {
+		rectangle "veth0" as pod1_veth0 {
+			card "172.17.0.2" as pod1_veth0_ip
+		}
+
+		rectangle "pause" as pod1_pause
+		rectangle "container1" as pod1_container1
+		rectangle "container2" as pod1_container2
+	}
+
+	host1_eth0_ip -- host1_nat
+	host1_nat -- host1_docker0_ip
+	host1_docker0_ip -- pod1_veth0_ip
+	pod1_veth0_ip -- pod1_pause
+	pod1_veth0_ip -- pod1_container1
+	pod1_veth0_ip -- pod1_container2
+}
+rectangle "Host_2" as host2 {
+	rectangle "eth0" as host2_eth0 {
+		card "192.168.100.3" as host2_eth0_ip
+	}
+
+	rectangle "NAT" as host2_nat
+
+	rectangle "docker0" as host2_docker0 {
+		card "172.17.0.1" as host2_docker0_ip
+	}
+
+	rectangle "Pod" as pod2 {
+		rectangle "veth0" as pod2_veth0 {
+			card "172.17.0.2" as pod2_veth0_ip
+		}
+
+		rectangle "pause" as pod2_pause
+		rectangle "container1" as pod2_container1
+		rectangle "container2" as pod2_container2
+	}
+
+	host2_eth0_ip -- host2_nat
+	host2_nat -- host2_docker0_ip
+	host2_docker0_ip -- pod2_veth0_ip
+	pod2_veth0_ip -- pod2_pause
+	pod2_veth0_ip -- pod2_container1
+	pod2_veth0_ip -- pod2_container2
+}
+
+rg_ip -d- host1_eth0_ip
+rg_ip -d- host2_eth0_ip
+
+
+@enduml

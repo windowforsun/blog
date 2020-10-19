@@ -1,0 +1,77 @@
+@startuml
+
+rectangle "Router/Gateway" as rg {
+ card "192.168.10.1" as rg_ip
+ card "Routing Rule" as rg_routing_rule {
+ 	card "192.168.20.0/24" as rule_1
+ 	card "192.168.30.0/24" as rule_2
+
+ 	rule_1 -[hidden]d- rule_2
+ }
+
+ rg_ip -[hidden]d- rule_1
+ rg_ip -[hidden]d- rule_2
+}
+
+rectangle "Host_1" as host1 {
+	rectangle "eth0" as host1_eth0 {
+		card "192.168.10.2" as host1_eth0_ip
+	}
+
+	rectangle "NAT" as host1_nat
+
+	rectangle "cbr0" as host1_cbr0 {
+		card "192.168.20.1" as host1_cbr0_ip
+	}
+
+	rectangle "Pod" as pod1 {
+		rectangle "veth0" as pod1_veth0 {
+			card "192.168.20.2" as pod1_veth0_ip
+		}
+
+		rectangle "pause" as pod1_pause
+		rectangle "container1" as pod1_container1
+		rectangle "container2" as pod1_container2
+	}
+
+	host1_eth0_ip -- host1_nat
+	host1_nat -- host1_cbr0_ip
+	host1_cbr0_ip -- pod1_veth0_ip
+	pod1_veth0_ip -- pod1_pause
+	pod1_veth0_ip -- pod1_container1
+	pod1_veth0_ip -- pod1_container2
+}
+rectangle "Host_2" as host2 {
+	rectangle "eth0" as host2_eth0 {
+		card "192.168.10.3" as host2_eth0_ip
+	}
+
+	rectangle "NAT" as host2_nat
+
+	rectangle "cbr0" as host2_cbr0 {
+		card "192.168.30.1" as host2_cbr0_ip
+	}
+
+	rectangle "Pod" as pod2 {
+		rectangle "veth0" as pod2_veth0 {
+			card "192.168.30.2" as pod2_veth0_ip
+		}
+
+		rectangle "pause" as pod2_pause
+		rectangle "container1" as pod2_container1
+		rectangle "container2" as pod2_container2
+	}
+
+	host2_eth0_ip -- host2_nat
+	host2_nat -- host2_cbr0_ip
+	host2_cbr0_ip -- pod2_veth0_ip
+	pod2_veth0_ip -- pod2_pause
+	pod2_veth0_ip -- pod2_container1
+	pod2_veth0_ip -- pod2_container2
+}
+
+rg -d- host1_eth0_ip
+rg -d- host2_eth0_ip
+
+
+@enduml
