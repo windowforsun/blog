@@ -12,6 +12,10 @@ categories :
 tags:
   - Docker
   - Network
+  - bridge
+  - overlay
+  - macvlan
+  - none
 toc: true
 use_math: true
 ---  
@@ -213,6 +217,10 @@ $ docker exec test-nginx ip a
     inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
        valid_lft forever preferred_lft forever
 ```  
+
+### 도커 컨테이너에서 호스트로 요청
+도커 컨테이너에서 호스트에 실행중인 서버로 요청을 보내야 하는 상황이 있을 수도 있다. 
+이런 경우에는 컨테이너에서 요청 도메인을 `host.docker.internal` 로 사용하면 가능하다.  
 
 ## Network Driver
 `Docker` 는 컨테이너 네트워크 동작을 위해 몇가지 네트워크 드라이버를 제공한다. 
@@ -723,26 +731,139 @@ $ docker exec test-busybox-none ip a
 
 
 ### overlay
+[Overlay 네트워크]({{site.baseurl}}{% link _posts/docker/2020-02-04-docker-practice-overlaynetwork.md %})
+포스트에서 `overlay` 네트워크에 대해 알아본 적이 있으면 해당 포스트를 참고 하도록 한다. 
+
+<!-- 
+중복되는 내용이 포함될 수 있지만 좀더 자세히 알아보기위해 다시 정리한다. 
+기본적인 `overlay` 에 대한 설명은 위 링크를 참고하도록 한다. 
+`overlay` 드라이버는 클러스터로 구성된 도커 호스트들간의 통신을 제공하고, 
+로드밸런싱도 기능도 포함된 도커 네트워크 드라이버이다.  
+
+먼저 테스트를 위해 `docker swarm init` 으로 `Swarm Cluster` 를 초기화를 진행한다. 
+`overlay` 네트워크를 생성하기 위해서는 호스트에 `Swarm` 이 설정된 상태여야 한다.  
+
+```bash
+docker swarm init --advertise-addr 192.168.100.2
+Swarm initialized: current node (v1k7f7fi9ou7s2fc85r0m47sg) is now a manager.
+
+To add a worker to this swarm, run the following command:
+
+    docker swarm join --token SWMTKN-1-4yq91n4nqfjga7clkswr8ibzobe3y9qi3x8s1mx5gw4xtkd9x4-4eb27ulsouhjq3i2ie6yyq676 192.168.100.2:2377
+
+To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+```  
+
+`Swarm` 을 설정한 후 `ifconfig` 로 네트워크 인터페이스를 조회하면 아래와 같다. 
+
+```bash
+$ ifconfig
+docker_gwbridge: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.18.0.1  netmask 255.255.0.0  broadcast 172.18.255.255
+        inet6 fe80::42:90ff:fe93:64a0  prefixlen 64  scopeid 0x20<link>
+        ether 02:42:90:93:64:a0  txqueuelen 0  (Ethernet)
+        RX packets 32  bytes 2592 (2.5 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 32  bytes 2592 (2.5 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+veth0020689: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet6 fe80::ec33:44ff:feb0:6759  prefixlen 64  scopeid 0x20<link>
+        ether ee:33:44:b0:67:59  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 12  bytes 1012 (1012.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+.. 기타 생략 ..
+```  
+
+`Swarm` 을 설정하기 전과 비교했을 때, 
+`docker_bridge` 와 `veth0020689` 이라는 네트워크 인터페이스가 생성됐다. 
+`ip a` 명령으로 `veth0020689` 인터페이스는 `docker_bridge` 와 연결된 가상 인터페이스인것을 확인할 수 있다.  
+
+```
+$ ip a
+9: docker_gwbridge: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default
+    link/ether 02:42:90:93:64:a0 brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global docker_gwbridge
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:90ff:fe93:64a0/64 scope link
+       valid_lft forever preferred_lft forever
+11: veth0020689@if10: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default
+    link/ether ee:33:44:b0:67:59 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::ec33:44ff:feb0:6759/64 scope link
+       valid_lft forever preferred_lft forever
+
+.. 기타 생략 ..
+```  
+
+그리고 `docker network ls` 명령으로 도커 네트워크를 조회하면 아래와 같다.  
+
+```bash
+$ docker network ls
+NETWORK ID          NAME                DRIVER              SCOPE
+b6481ef7ffdb        bridge              bridge              local
+82413e200d1c        docker_gwbridge     bridge              local
+78b4a0134731        host                host                local
+s3rlc5284a7i        ingress             overlay             swarm
+09f31cd303ff        none                null                local
+```  
+
+`docker_gwbridge` 와 `ingress` 라는 도커 네트워크가 추가되었다. 
+두 도커 네트워크에 대한 자세한 설명은 상단 링크에서 확인 가능하다.  
+
+`test-overlay` 라는 `overlay` 도커 네트워크를 생성한다. 
+
+```bash
+$ docker network create --driver overlay test-overlay
+h2ncm6gou8wsze9v9t0b8sg69
+$ docker network inspect -f '{{json .IPAM.Config }}' test-overlay
+[{"Subnet":"10.0.4.0/24","Gateway":"10.0.4.1"}]
+```  
+
+`test-overlay` 는 `10.0.4.0/24` 의 아이피 대역을 갖는 것을 확인할 수 있다. 
+그리고 `test-overlay` 네트워크를 사용하는 `test-busybox` 서비스도 생성한다.  
+
+```bash
+docker service create --name test-nginx --network test-overlay nginx:latest
+ofeq9yi8zebg1kepwg8ec5wgr
+overall progress: 1 out of 1 tasks
+1/1: running   [==================================================>]
+verify: Service converged
+$ docker exec -it `docker ps -q -f name=test-nginx` ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1450
+        inet 10.0.4.27  netmask 255.255.255.0  broadcast 10.0.4.255
+        ether 02:42:0a:00:04:1b  txqueuelen 0  (Ethernet)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.18.0.3  netmask 255.255.0.0  broadcast 172.18.255.255
+        ether 02:42:ac:12:00:03  txqueuelen 0  (Ethernet)
+        RX packets 903  bytes 8690096 (8.2 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 711  bytes 39923 (38.9 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+$ docker exec -it `docker ps -q -f name=test-nginx` route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         172.18.0.1      0.0.0.0         UG    0      0        0 eth1
+10.0.4.0        0.0.0.0         255.255.255.0   U     0      0        0 eth0
+172.18.0.0      0.0.0.0         255.255.0.0     U     0      0        0 eth1
+```  
+
+`test-nginx` 서비스에 실행되는 컨테이너에는 `eth0` ,`eth1` 네트워크 인터페이스가 있다. 
+그리고 `route -n` 으로 확인하면 
+
+이후 다시 전체적인 아키텍쳐 이해후 작성 필요 .. 
 
 
 
-
-
-- `Network Plugin` 
-
-
-
-
-
-
-
-
-## Bridge Network
-도커에는 다양한 네트워크 드라이버가 존재하지만, 
-그중 기본 네트워크 드라이버는 브리지(`Bridge`) 드라이버이다. 
-브리지 타입 네트워크의 구조는 아래와 같다. 
-
-
+https://success.mirantis.com/article/networking
+-->
 
 
 ---
