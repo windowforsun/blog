@@ -51,6 +51,23 @@ Annotation|Desc|Bean
 `JUnit4` 를 사용하는 경우, 
 `@RunWith(SpringRunner.class)` 가 선언되어야 한다.  
 
+테스트 프로젝트에서 사용한 의존성 관리툴은 `Gradle` 이고 의존성에 대한 내용은 아래와 같다. 
+
+```groovy
+dependencies {
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-data-jpa', version: '2.2.6.RELEASE'
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.2.6.RELEASE'
+    compile group: 'org.springframework.boot', name: 'spring-boot-starter-data-redis', version: '2.2.6.RELEASE'
+    runtimeOnly 'mysql:mysql-connector-java:8.0.16'
+    testCompile group: 'org.springframework.boot', name: 'spring-boot-starter-test', version: '2.2.6.RELEASE'
+    testCompile group: 'com.h2database', name: 'h2', version: '1.4.197'
+    testCompile "org.testcontainers:testcontainers:1.14.3"
+    testCompile "org.testcontainers:mysql:1.14.3"
+    compileOnly 'org.projectlombok:lombok:1.16.20'
+    annotationProcessor 'org.projectlombok:lombok:1.16.20'
+}
+```
+
 ### @JsonTest
 `@JsonTest` 어노테이션을 사용하면 `Json` 관련 `Serialize`, `Deserialize` 결과를 쉽게 테스트 할 수 있다. 
 `@JsonComponent`, `Jackson` 모듈 등을 자동 설정한다. 
