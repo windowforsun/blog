@@ -82,7 +82,7 @@ k8s-centos
 ### Vagrantfile
 가상 시스템을 구성하는 `Vagrant` 의 스크립트인 `Vagrantfile` 내용은 아래와 같다. 
 
-```vagrantfile
+```
 BOX_IMAGE = "centos/7"
 Vagrant.require_version ">= 2.2.0"
 
@@ -211,7 +211,7 @@ VM_INFO = {
 
 `common-setup.sh` 는 공통적인 설정으로 `root` 비밀번호 설정, `ssh` 설정, 필요 툴 설치 `kubectl` 명령어 등록 등을 수행한다. 
 
-```shell script
+```shell
 #!/bin/bash
 
 echo "common setup"
@@ -226,7 +226,7 @@ echo "alias kubectl='/usr/local/bin/kubectl'" >> ~/.bashrc
 
 `setup.sh` 는 `Kubespray` 가 구성되는 `VM` 에 필요한 기본적인 설정으로 `ssh` 키를 생성한다. 
 
-```shell script
+```shell
 #!/bin/bash
 
 echo "setup"
@@ -244,7 +244,7 @@ echo -e "\n\n\n\n" | ssh-keygen -t rsa
 `inventory-setup.sh` 는 `inventory.ini` 에 작성돼야 할 `VM` 노드의 아이피 정보를 기입하고, 
 `Kubespray` 노드에서 다른 노드로 `ssh` 접근을 할 수 있도록 설정한다. 
 
-```shell script
+```shell
 #!/bin/bash
 
 prefix=$1
