@@ -4,7 +4,7 @@ classes: wide
 title: "[Kubernetes 실습] Vagrant 와 Kubespray 사용해서 Kubernetes 환경 구성하기"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: ''
+excerpt: 'Vagrant 를 사용해서 가상환경을 만들고 그 위에 Kubespray 를 사용해서 Kubernetes 환경을 구성하자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -19,7 +19,33 @@ use_math: true
 ---  
 
 ## Kubespray
+`Kubespray` 는 보안성과 고가용성이 있는 쿠버네티스 클러스터를 배포할 수 있는 오픈소스 프로젝트이다. 
+`Kubespray` 는 앤서블(`Ansible`) 이라는 서버 환경 설정 자동화 도구를 사용해서 클러스터 대상이되는 노드들에 쿠버네티스 환경을 구성한다. 
+설정에 맞춰 다양한 쿠버네티스 환경을 구성할 수 있기 때문에, 
+온프레미스 환경에서 상용 서비스로 사용할 쿠버네티스  클러스터 구성할때 용의하다. 
+그리고 `ingress-nginx`, `helm`, 볼륨 플러그인 등과 같은 추가 구성 요소를 클러스터에 실행할 수 있다.  
 
+`Kubespray` 에서 사용하는 고가용성 구조는 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-vagrant-kubespray-1.png)
+
+
+각 노드 `Nginx`(`nginx proxy`) 가 리버시 프록시 역할을 수행하며, 
+마스터 노드의 `kube-apiserver` 를 바라보는 구조이다. 
+각 노드에서 실행 중인 쿠버네티스 컴포넌트들은 마스터 노드와 직접 통신하는 것이 아니라, 
+컴포넌트가 위치하는 노드의 `nginxproxy` 을 거쳐 마스터와 통신하게 된다. 
+마스터 노드의 상태는 각 노드의 `nginx proxy` 가 헬스체크를 수행하며 판별 및 처리하게 된다.  
+
+`Kubespray` 에서 지원하는 네트워크 플러그인은 [여기](https://github.com/kubernetes-sigs/kubespray#network-plugins)
+에서 확인할 수 있다. 
+위와 같은 네트워크 플러그인을 통해 간단하게 네트워크를 자동으로 구성할 수 있다. 
+현재 실습에서는 기본 네트워크 플러그인인 `calico` 를 사용해서 구성한다.  
+
+실습에서 사용할 `Kubespray` 버전은 `v2.11.0` 이고, 
+해당 버전에서 설치되는 요소와 버전은 아래와 같다. 
+- 클러스터 : `Kubernetes v1.16.3`, `etcd v3.3.10`, `Docker v18.09.7`
+- 네트워크 플러그인 : `calico v3.7.3`
+- 추가 애플리케이션 : `coredns v1.6.0`, `ingress-nginx v0.25.1`
 
 
 ## Kubespray 환경 구성
@@ -544,3 +570,4 @@ Found 5 pods, using pod/deployment-nginx-855648744-xptlx
 ## Reference
 [kubernetes-sigs/kubespray](https://github.com/kubernetes-sigs/kubespray)  
 [A Beginner’s Guide and Tutorial to Ansible Playbooks, Variables, and Inventory Files](https://linuxhint.com/begineers_guide_tutorial_ansible/)
+[HA endpoints for K8s](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/ha-mode.md)
