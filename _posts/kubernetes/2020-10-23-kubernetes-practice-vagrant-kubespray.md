@@ -569,5 +569,5 @@ Found 5 pods, using pod/deployment-nginx-855648744-xptlx
 ---
 ## Reference
 [kubernetes-sigs/kubespray](https://github.com/kubernetes-sigs/kubespray)  
-[A Beginner’s Guide and Tutorial to Ansible Playbooks, Variables, and Inventory Files](https://linuxhint.com/begineers_guide_tutorial_ansible/)
-[HA endpoints for K8s](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/ha-mode.md)
+[A Beginner’s Guide and Tutorial to Ansible Playbooks, Variables, and Inventory Files](https://linuxhint.com/begineers_guide_tutorial_ansible/)  
+[HA endpoints for K8s](https://github.com/kubernetes-sigs/kubespray/blob/master/docs/ha-mode.md)  
