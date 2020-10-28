@@ -50,6 +50,50 @@ use_math: true
 ### merge
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EntityManagerFactory
+EntityManager 인스턴스 관리 역할
+Persistence 를 통해 생성할 수 있음
+EntityManagerFactory 가 생성될때 Connection Pool 생성을 포함한 여러 작업이 수행되기 때문에 비용이 매우 큼
+DataSource 당 하나의 EntityManagerFactory 생성
+EntityManager 를 생성하는 역할
+Thread-safe
+
+
+EntityManager 
+Entity 생성, 수정, 삭제, 조회 등 Entity 관리 역할
+EntityManager 생성 비용은 거의 들지 않음
+EntityManager 는 데이터베이스 연결이 꼭 필요한 시점까지 커넥션을 얻지 않음
+실제 DB Connection 과 밀접한 관계가 있음
+EntityManager 관련 동작은 Transaction 안에서 작업이 수행되야 함
+JPA 에서는 EntityManager 는 Thread 단위(요청?)로 생성됨
+Thread-unsafe 이므로 Thread 간 공유되지 않도록 주의가 필요함
+
+Persistence Context
+논리적인 개념으로 EntityManager 를 통해 Persistence Context 에 접근해서 Entity를 관리하는 역할
+Entity를 영구 저장하는 환경
+여러 EntityManager 가 같은 Persistence Context 에 접근할 수 있음
+    같은 트랜잭션의 범위에 있는 EntityManager 는 동일한 Persistence Context 에 접근한다. 
+
+
+
+
+
+
+
 ---
 ## Reference
 [[JPA] 영속성 컨텍스트와 플러시 이해하기](https://ict-nroo.tistory.com/130)  
@@ -61,3 +105,4 @@ use_math: true
 [[Spring JPA] 영속 환경 ( Persistence Context )](https://victorydntmd.tistory.com/207)  
 [Getting started with Spring Data JPA](https://spring.io/blog/2011/02/10/getting-started-with-spring-data-jpa)  
 [JPA/Hibernate Persistence Context](https://www.baeldung.com/jpa-hibernate-persistence-context)  
+[Package javax.persistence](https://javaee.github.io/javaee-spec/javadocs/javax/persistence/package-summary.html)  
