@@ -241,6 +241,33 @@ echo -e "\n\n\n\n" | ssh-keygen -t rsa
 미리 작성된 `inventory.ini` 의 템플릿 파일을 사용할 클러스터 경로에 복사한다. 
 마지막으로 `requirements.txt` 에 작성된 `Kubespray` 의 필요 환경을 설치한다.  
 
+```shell
+#!/bin/bash
+
+kubespray_version=$1
+kubespray_root_path=$2
+
+sudo yum install -y epel-release
+
+sudo yum update -y
+
+sudo yum install -y python-pip git
+
+git clone https://github.com/kubernetes-sigs/kubespray.git
+
+cd kubespray/
+
+git checkout -b ${kubespray_version}
+
+cp -rfp inventory/sample inventory/mycluster
+
+cp -f /vagrant/inventory.ini inventory/mycluster/inventory.ini
+
+sudo pip install --upgrade pip
+
+sudo pip install -r requirements.txt
+```
+
 `inventory-setup.sh` 는 `inventory.ini` 에 작성돼야 할 `VM` 노드의 아이피 정보를 기입하고, 
 `Kubespray` 노드에서 다른 노드로 `ssh` 접근을 할 수 있도록 설정한다. 
 
