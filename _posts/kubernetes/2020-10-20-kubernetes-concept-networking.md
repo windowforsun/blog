@@ -171,8 +171,131 @@ container:e2bd0cf933199bf7512595bdfcbec4d0ccea4a67e6a060a114f9942c8f3b1040
 
 ![그림 1]({{site.baseurl}}/img/kubernetes/concept_networking_multihost_2.png)
 
+이전 다중 호스트 네트워크 구조와 큰 차이점은 파드 `IP` 인 `veth0` 의 `IP` 가 각 호스트마다 다르다는 점이다. 
+`Host_1` 의 `veth0` 는 `192.168.20.2` 이고, `Host_2` 의 `veth0` 는 `192.168.30.2` 인 것을 확인할 수 있다.  
+
+### 서비스 네트워킹
+먼저 실습을 통해 서비스 네트워킹에 대해 알아본다. 
+`NodePort` 타입의 서비스로 연결할 파드를 아래와 같은 템플릿을 사용해서 생성한다. 
+
+```yaml
+# service-network-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod
+  labels:
+    service-name: nginx-pod
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+```  
+
+`kubectl apply -f` 명령으로 클러스터에 적용하고, 
+실행된 파드를 확인하면 같이 파드가 정상적으로 실행된 것을 확인할 수 있다.  
+
+```bash
+$ kubectl apply -f service-network-pod.yaml
+pod/nginx-pod created
+$ kubectl get pod
+NAME        READY   STATUS    RESTARTS   AGE
+nginx-pod   1/1     Running   0          49s
+```  
+
+실행한 파드를 외부로 노출 시키기 위해 `NodePort` 타입의 서비스를 아래 템플릿을 통해 생성한다. 
+
+```yaml
+# service-network-nodeport.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-nodeport
+spec:
+  type: NodePort
+  selector:
+    # 앞서 생성한 파드를 서비스에 지정
+    service-name: nginx-pod
+  ports:
+    - protocol: TCP
+      # 오픈할 포트
+      port: 32222
+      # 연결된 컨테이너에 오픈된 포트
+      targetPort: 80
+```  
+
+`kubectl apply -f` 명령으로 클러스터에 적용하고, 
+`kubectl describe svc nginx-nodeport` 명령으로 서비스의 상세정보를 확인하면 아래와 같다. 
+
+```bash
+$ kubectl apply -f service-network-nodeport.yaml
+service/nginx-nodeport created
+$ kubectl describe svc nginx-nodeport
+Name:                     nginx-nodeport
+Namespace:                default
+Labels:                   <none>
+Annotations:              <none>
+
+# 서비스가 선택한 백엔드 파드의 레이블 
+Selector:                 service-name=nginx-pod
+Type:                     NodePort
+
+# 서비스에 할당된 IP
+IP:                       10.233.34.161
+
+# 서비스에 할당된 포트
+Port:                     <unset>  32222/TCP
+
+# 컨테이너와 연결된 포트 
+TargetPort:               80/TCP
+
+# 실제 호스트에서 컨테이너와 매핑된 포트로 kube-proxy 에서 생성한 NAT가 해당 포트로 연결
+NodePort:                 <unset>  31496/TCP
+
+# 서비스와 연결된 파드의 IP
+Endpoints:                10.233.70.6:80
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```  
+
+아래 명령어로 생성한 파드가 실행 중인 호스트를 찾는다. 
+
+```bash
+$ kubectl get pod -l service-name=nginx-pod -o wide
+NAME        READY   STATUS    RESTARTS   AGE   IP            NODE    NOMINATED NODE   READINESS GATES
+nginx-pod   1/1     Running   0          10m   10.233.70.6   node5   <none>           <none>
+```  
+
+파드가 실제로 실행 중인 `node5` 로 이동해서 아래와 같은 `iptable` 명령어를 실행한다. 
+
+```bash
+$ iptables -t nat -L
+.. 생략 ..
+
+Chain KUBE-MARK-MASQ (3 references)
+target     prot opt source               destination
+MARK       all  --  anywhere             anywhere             MARK or 0x4000
+
+Chain KUBE-NODE-PORT (1 references)
+target     prot opt source               destination
+KUBE-MARK-MASQ  tcp  --  anywhere             anywhere             /* Kubernetes nodeport TCP port for masquerade purpose */ match-set KUBE-NODE-PORT-TCP dst
+
+Chain KUBE-SERVICES (2 references)
+target     prot opt source               destination
+KUBE-MARK-MASQ  all  -- !10.233.64.0/18       anywhere             /* Kubernetes service cluster ip + port for masquerade purpose */ match-set KUBE-CLUSTER-IP dst,dst
+KUBE-NODE-PORT  all  --  anywhere             anywhere             ADDRTYPE match dst-type LOCAL
+ACCEPT     all  --  anywhere             anywhere             match-set KUBE-CLUSTER-IP dst,dst
+
+.. 생략 ..
+```  
 
 
+.........  ㅠㅠㅠ 잘안됨
 
 
 
