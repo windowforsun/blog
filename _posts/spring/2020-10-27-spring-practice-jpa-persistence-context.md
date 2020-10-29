@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] JPA Architecture 와 Persistence Context"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: ''
@@ -15,6 +15,206 @@ tags:
 toc: true
 use_math: true
 ---  
+
+## JPA Architecture
+
+.. 그림 ..
+
+### Persistence
+- Persistence (javax.persistence.Persistence) class contains java static methods to get EntityManagerFactory instances.
+- Since JPA 2.1 you can generatedatabase schemas and/or tables and/or create DDL scripts as determined by the supplied properties.
+- It is a class that contains static methods to obtain an EntityManagerFactory instance.
+- The javax.persistence.Persistence class contains static helper methods to obtain EntityManagerFactory instances in a vendor-neutral fashion.
+- This class contains static methods to obtain EntityManagerFactory instance.
+- This class contains static methods to obtain the EntityManagerFactory instance.
+
+
+### Persistence Unit
+- A persistence unit defines a set of all entity classes that are managed by EntityManager instances in an application.
+- This set of entity classes represents the data contained within a single data store.
+- Persistence units are defined by the persistence.xml configuration file.
+- JPA uses the persistence.xml file to create the connection and setup the required environment. Provides information which is necessary for making database connections.
+- It defines a set of all entity classes. In an application, EntityManager instances manage it. The set of entity classes represents the data contained within a single data store.
+
+
+
+
+
+
+
+
+### EntityManagerFactory
+- It is a factory class of EntityManager. It creates and manages multiple instances of EntityManager.
+- EntityManagerFactory (javax.persistence.EntityManagerFactory) class is a factory for EntityManagers.
+- During the application startup time EntityManagerFactory is created with the help of Persistence-Unit.
+- Typically, EntityManagerFactory is created once (One EntityManagerfactory object per Database) and kept alive for later use.
+- Responsible for creating EntityManager instances.
+- Initialized with the help of persistence context.
+- This is a factory class of EntityManager. It creates and manages multiple EntityManager instances.
+- Interface used to interact with the entity manager factory for the persistence unit.
+- When the application has finished using the entity manager factory, and/or at application shutdown, the application should close the entity manager factory. Once an EntityManagerFactory has been closed, all its entity managers are considered to be in the closed state.
+- EntityManager 인스턴스 관리 역할
+- Persistence 를 통해 생성할 수 있음
+- EntityManagerFactory 가 생성될때 Connection Pool 생성을 포함한 여러 작업이 수행되기 때문에 비용이 매우 큼
+- DataSource 당 하나의 EntityManagerFactory 생성
+- EntityManager 를 생성하는 역할
+- Thread-safe
+
+
+
+
+
+### EntityManager
+- It is an interface. It controls the persistence operations on objects. It works for the Query instance.
+- EntityManager is an interface to perform main actual database interactions.
+- Creates persistence instance.
+- Removes persistence instance.
+- Finds entities by entity’s primary key.
+- Allows queries to be run on entities.
+- Each EntityManager instance is associated with a PersistenceContext.
+- Performs the real work of persistence.
+- Performs create, update and delete operations on entities in persistence context.
+- Brings entities into persistence context and then entity is supposed to be managed by EntityManager .
+- Multiple EntityManager instances can be created from EntityManagerFactory .
+- The javax.persistence.EntityManager is the primary JPA interface used by applications. Each EntityManager manages a set of persistent objects, and has APIs to insert new objects and delete existing ones. When used outside the container, there is a one-to-one relationship between an EntityManager and an EntityTransaction. EntityManagers also act as factories for Query instances.
+- It is an Interface, it manages the persistence operations on objects. It works like a factory for Query instance.
+- EntityManager 는 Persistence Context 와 상호 작용하는 인터페이스로, 
+- 해당 인스턴스는 Persistence Context 와 연관있다. 
+- 여기서 Persistence Context 는 엔티티에서 고유한 id 를 가지고 있는 엔티티 인스턴스의 집합이다. 
+- Persistence Context 에서 엔티티 인스턴스는 정해진 라이프 사이클을 통해 관리된다. 
+- EntityManager API 는 Persistence Context 와 연관되어 엔티티 인스턴스를 생성, 제거, 찾는 동작이나, 
+- 엔티티에 대해 쿼리를 수행할 수 있다. 
+- EntityManager 에서 관리하는 엔티티 집합은 지속성 단위에 의해 정의된다. 
+- 지속성 단위는 모든 클래스에서 애플리케이션에 의해 그룹화 되면서 단일 데이터베이스에 매핑될 있는 것들로 정의된 집합이다. 
+- Entity 생성, 수정, 삭제, 조회 등 Entity 관리 역할
+- EntityManager 생성 비용은 거의 들지 않음
+- EntityManager 는 데이터베이스 연결이 꼭 필요한 시점까지 커넥션을 얻지 않음
+- 실제 DB Connection 과 밀접한 관계가 있음
+- EntityManager 관련 동작은 Transaction 안에서 작업이 수행되야 함(트랜잭션이 없으면 예외발생)
+- JPA 에서는 EntityManager 는 Thread 단위(요청?)로 생성됨
+- Thread-unsafe 이므로 Thread 간 공유되지 않도록 주의가 필요함
+
+
+
+
+
+
+### Persistence Unit
+- It defines a set of all entity classes. In an application, EntityManager instances manage it. The set of entity classes represents the data contained within a single data store.
+- A persistence unit defines a set of all entity classes that are managed by EntityManager instances in an application.
+- This set of entity classes represents the data contained within a single data store.
+- Persistence units are defined by the persistence.xml configuration file.
+- JPA uses the persistence.xml file to create the connection and setup the required environment. Provides information which is necessary for making database connections.
+- The persistence.xml configuration file is used to configure a given JPA Persistence Unit. The Persistence Unit defines all the metadata required to bootstrap an EntityManagerFactory, like entity mappings, data source, and transaction settings, as well as JPA provider configuration properties.
+- The goal of the EntityManagerFactory is used to create EntityManager objects we can for entity state transitions.
+- So, the persistence.xml configuration file defines all the metadata we need in order to bootstrap a JPA EntityManagerFactory.
+
+
+
+
+
+
+
+
+
+### Persistence Context
+-  A persistence context handles a set of entities which hold data to be persisted in some persistence store (e.g. database).
+
+
+
+
+논리적인 개념으로 EntityManager 를 통해 Persistence Context 에 접근해서 Entity를 관리하는 역할
+Entity를 영구 저장하는 환경
+여러 EntityManager 가 같은 Persistence Context 에 접근할 수 있음
+    같은 트랜잭션의 범위에 있는 EntityManager 는 동일한 Persistence Context 에 접근한다. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### EntityManagerFactory
+
+### EntityManager
+
+
+
+## Entity LifeCycle
+
+
+
+
+
 
 ## JPA Persistence Context
 `JPA` 를 사용하면 `JPA` 와 데이터베이스 사이에 영속성 컨텍스트(`Persistence Context`) 
