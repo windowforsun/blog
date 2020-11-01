@@ -121,14 +121,228 @@ $ kubectl logs -f pod-nginx
 일래스틱서치는 검색 엔진으로 클러스터 형태로 여러 노드에서 실행할 수 있다. 
 수집되는 로그들은 일래스틱서치에 저장되고, 특정 로그를 검색 및 정렬도 가능하다. 
 
-아래 템플릿은 디플로이먼트를 사용한 일래스틱서치의 템플릿 예시이다. 
+아래 템플릿은 디플로이먼트와 서비스를 사용한 일래스틱서치의 템플릿 예시이다. 
 
 ```yaml
+# elasticsearch.yaml
 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  labels:
+    app: elasticsearch
+spec:
+  # 단일 노드로 일래스틱서치를 구성한다.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        # 일래스틱서치 컨테이너 이미지와 설정을 기술한다. 
+        - name: elasticsearch
+          image: elastic/elasticsearch:7.9.3
+          # discovery.type 환경 변수를 single-node 값으로 설정해서 단일 노드로 실행 하도록 한다.  
+          env:
+            - name: discovery.type
+              value: "single-node"
+          # 일래스틱서치에서 필요한 9200, 9300 포트를 설정한다. 
+          ports:
+            - containerPort: 9200
+            - containerPort: 9300
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: elasticsearch
+  name: elasticsearch-svc
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: elasticsearch
+  # 디플로이먼트에서 설정한 9200, 9300 포트를 30920, 30930 포트를 사용해서 외부에서 접근하 수 있도록 한다. 
+  ports:
+    - name: elasticsearch-rest
+      nodePort: 30920
+      port: 9200
+      protocol: TCP
+      targetPort: 9200
+    - name: elasticsearch-nodecom
+      nodePort: 30930
+      port: 9300
+      protocol: TCP
+      targetPort: 9300
 ```  
 
+`kubectl apply -f` 명령으로 위 템플릿을 클러스터에 적용하고, 
+`localhost:30920` 으로 웹 브라우저 혹은 `curl` 로 요청하면 아래 결과를 확인 할 수 있다. 
+
+```bash
+$ kubectl apply -f elastaicsearch.yaml
+deployment.apps/elasticsearch created
+service/elasticsearch-svc created
+$ curl http://localhost:30920
+{
+  "name" : "elasticsearch-7bc6b99f4-ssdfn",
+  "cluster_name" : "docker-cluster",
+  "cluster_uuid" : "3cU-YM_STNC03RMtDwQwpA",
+  "version" : {
+    "number" : "7.9.3",
+    "build_flavor" : "default",
+    "build_type" : "docker",
+    "build_hash" : "c4138e51121ef06a6404866cddc601906fe5c868",
+    "build_date" : "2020-10-16T10:36:16.141335Z",
+    "build_snapshot" : false,
+    "lucene_version" : "8.6.2",
+    "minimum_wire_compatibility_version" : "6.8.0",
+    "minimum_index_compatibility_version" : "6.0.0-beta1"
+  },
+  "tagline" : "You Know, for Search"
+}
+```  
+
+일래스틱서치를 사용하면 `REST API` 를 사용해서 로그 데이터를 저장하고 검색할 수 있다. 
+이는 `REST API` 를 사용하는 것은 시각적으로 불편하기 때문에 
+일래스틱서치 전용 대시보드 역할을 하는 키바나를 함께 사용하면 활용도를 더욱 높일 수 있다. 
 
 
+### 키바나
+아래 디플로이먼트와 서비스로 구성된 키바나 템플릿의 예시이다.  
+
+```yaml
+# kibana.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: elastic/kibana:7.9.3
+          env:
+            - name: SERVER_NAME
+              value: "kibana.k8s.test.com"
+            # ELASTICSEARCH_HOSTS 환경 변수에 일래스틱서치 서비스 도메인과 포트를 설정한다. 
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch-svc.default.svc.cluster.local:9200"
+          ports:
+            - containerPort: 5601
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: kibana
+  name: kibana-svc
+  namespace: default
+spec:
+  type: NodePort
+  selector:
+    app: kibana
+  ports:
+    - name: kibana-http
+      port: 5601
+      protocol: TCP
+      targetPort: 5601
+      nodePort: 30561
+```  
+
+`ELASTICSEARCH_HOST` 환경 변수에 설정하는 값은 쿠버네티스 내부에서 사용할 수 있는 도메인이다. 
+포트를 제외한 뒤쪽 부터 차례대로 살펴보면 `local` 이라는 `cluster` 에 있는 `svc`(서비스) 중 `default` 네임스페이스의 
+`elasticsearch-svc` 서비스를 가리키는 도메인이다. 
+해당 도메인을 사용하면 쿠버네티스 클러스터 내부에서 도메인에 해당하는 컨테이너의 포트에 접근 할 수 있다. 
+직접 `elasticsearch-svc` 의 `IP` 를 설정하는 것도 가능하지만, 
+서비스의 아이피는 재실행 될때마다 변경될 수 있기 때문에 도메인으로 사용하는 것이 더욱 효율적일 수 있다.  
+
+`kubectl apply -f` 명령으로 키바나 템플릿을 클러스터에 적용하고, 
+웹 브라우저에서 `localhost:30561` 로 접속하면 키바나 대시보드를 확인할 수 있다. 
+
+```bash
+$ kubectl apply -f kibana.yaml
+deployment.apps/kibana created
+service/kibana-svc created
+```  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/concept-logging-1.png)
+
+우선 일래스틱서치로 로그를 보내면 이를 키바나에서 모니터링 가능한 구조를 구성해 보았다.
+
+
+## 클러스터 레벨 로깅
+클러스터 환경에서는 컨테이너가 비정상 종료되거나 노드에 장애가 있더라도 컨테이너의 로그 확인은 가능해야 한다. 
+그러기 때문에 컨테이너, 파드, 노드의 생명 주기와 분리된 스토리지 구축이 필요하다.  
+
+이렇게 쿠버네티스에서 생명주기와 분리된 스토리지를 구축하는 아키텍처를 클러스터 레벨 로깅이라고 한다. 
+쿠버네티스 자체적으로 클러스터 레벨 로깅관련 도구를 제공하지 않기 때문에 외부 도구를 사용해서 이를 구축해야 한다.  
+
+### 컨테이너 로그 
+일반적으로 컨테이너의 로그 수집은 컨테이너의 런타임인 도커가 담당한다. 
+도커 컨테이너에서 `stdout` 혹은 `stderr` 출력이 있으면 이를 도커에서 설정된 로그 드라이버로 리다이렉트 하는 방식을 사용한다. 
+도커 로그관련 자세한 설명은 [여기]({{site.baseurl}}{% link _posts/docker/2020-08-06-docker-practice-docker-jsonfile-logdriver.md %})
+에서 확인 가능하다.  
+
+`docker ps` 명령으로 현재 실행 중인 컨테이너를 확인하고, 
+그중 아무 컨테이너 아이디를 사용해서 `docker inspect <컨테이너ID>` 명령을 수행하면 아래와 같이 로그관련 정보를 확인 할 수 있다. 
+
+```bash
+docker inspect 4408ddb2c2bb
+[
+    {
+        .. 생략 ..
+
+        "LogPath": "/var/lib/docker/containers/<컨테이너ID>/<컨테이너ID>-json.log",
+        "HostConfig": {
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {
+                    "max-file": "3",
+                    "max-size": "10m"
+                }
+            },
+
+            .. 생략 ..
+        },
+
+    .. 생략 ..
+]
+```  
+
+`docker inspect` 결과에서 `LogPath` 필드는 컨테이너 관련 메타 데이터를 저장한 심볼릭 링크이다. 
+그리고 `LogConfig` 필드는 로그 설정 정보를 담고 있다. 
+`Type` 은 현재 컨테이너에서 사용하는 도커 로그 드라이버이고, 
+`Config` 의 `max-file` 은 컨테이너에서 유지하는 로그 파일의 최대 개수이고, 
+`max-size` 는 파일당 최대 크기를 의미한다.  
+
+클러스터 각 노드에서 실행되는 `kubelet` 은 `/var/lib/docker/<컨테이너ID>/<컨테이너ID>-json.log` 파일에 대해 아래와 같은 심볼릭 링크를 생성해서 로그를 관리한다. 
+- `/var/log/container/<파드이름>_<파드네임스페이스>_<컨테이너이름><컨테이너ID>.log`
+- `/var/log/pods/<파드UID>/<컨테이너이름>/0.log`
+
+플루언트디 같은 로그 수집기는 첫 번째 심볼릭 링크를 테일링해서 로그 내용으 수집하고, 
+파일 경로를 바탕으로 파드, 컨테이너, 네임스페이스 등에 대한 정보를 얻는다. 
+
+### 시스템 컴포넌트 로그
+쿠버네티스 클러스터 구성요소 중 `kubelet`, `docker` 등은 컨테이너 기반으로 동작하지 않는다. 
 
 
 
