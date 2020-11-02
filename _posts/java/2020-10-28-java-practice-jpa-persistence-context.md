@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] JPA Architecture 와 Persistence Context"
+title: "[Java 실습] JPA Architecture 와 Persistence Context"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: ''
@@ -19,19 +19,79 @@ use_math: true
 
 
 
-
-
-
-
 ## JPA Architecture
 
-.. 그림 ..
+
+`JPA`(`Java Persistence API`) 는 `Java` 객체를 관계형 데이터베이스에 매핑하기 위한 `Java` 표준을 의미한다. 
+`Java` 객체를 데이터베이스 테이블에 매핑하는 것을 `ORM`(`Object-Replicational Mapping`) 이라고 한다. 
+`JPA` 는 `Java` 에서 `ORM` 동작을 수행할 수 있는 하나의 접근법이다. 
+`JPA` 를 사용해서 `Java` 객체와 관계형 데이터베이스의 매핑, 저장, 업데이트, 검색 등의 동작을 수행할 수 있다. 
+`JPA` 스펙에 맞춰 구현된 사용가능한 라이브러리는 `Hibernate`, `EclipseLink`, `Apache OpenJPA` 등이 있다.  
+그리고 `JPA` 는 비지니스 레이어에서 생성되는 엔티티를 관계 엔티티로 저장하고 관리하는 역할을 수행한다. 
+
+`JPA` 구조를 클래스 레벨로 도식화 하면 아래와 같다.  
+
+.. 그림 ..  
+https://2.bp.blogspot.com/-zQCYV-qJCU0/XAPuPHYDHSI/AAAAAAAAFEs/B2_uskqyAss_ZPX_EzsJujEYtirEtu49gCLcBGAs/s1600/jpa_class_level_architecture.png  
+혹은 아래 그림이랑 합쳐서   
+https://www.programmersought.com/images/965/15788f6b0fda48a893a27ed20f228cc5.jpg  
+https://javabydeveloper.com/wp-content/uploads/2019/12/Jpa-architecture-768x403.png?ezimgfmt=ng:webp/ngcb102  
+
+- `Persistence` : 
+- `EntityManagerFactory` : 
+- `EntityManager` : 
+- `Entity` : 
+- `Query` : 
+
+`javax.persistence` 패키지를 구성하는 주요 클래스와 인터페이스의 관계를 도식화 하면 아래와 같다. 
+
+.. 그림 ..  
+https://4.bp.blogspot.com/-fVjv79bHZMA/XAPvFu2YTDI/AAAAAAAAFE4/iaL19yzi2boDDhVTffQWInYFlNVwYDDOQCLcBGAs/s1600/jpa_class_relationships.png  
+
+
+## EntityManager, EntityManagerFactory ?????
+https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fxn0pW%2FbtqyjdzFtfd%2F9tmnEVN7UPnOFqGSIu0GZ1%2Fimg.png  
+
+## Persistence Context
+
+-  A persistence context handles a set of entities which hold data to be persisted in some persistence store (e.g. database).
 
 
 
 
+논리적인 개념으로 EntityManager 를 통해 Persistence Context 에 접근해서 Entity를 관리하는 역할
+Entity를 영구 저장하는 환경
+여러 EntityManager 가 같은 Persistence Context 에 접근할 수 있음
+    같은 트랜잭션의 범위에 있는 EntityManager 는 동일한 Persistence Context 에 접근한다. 
 
 
+
+
+### 생명주기
+
+https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fcc3i97%2FbtqxX8e4Rgz%2Fm2kuh5rH6LKk831Rv2eNyk%2Fimg.png  
+https://github.com/namjunemy/TIL/blob/master/Jpa/tacademy/img/12_entity_lifecycle.PNG?raw=true  
+https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=http%3A%2F%2Fcfile21.uf.tistory.com%2Fimage%2F99CA54415AE4627A2C7BE0  
+
+
+
+<!-- ## Persistence Context 장점 ????????????????? -->
+### 1차캐시
+
+### 동일성
+
+### 쓰기 지연
+
+### Dirty Checking
+
+<!-- ## Persistence Context 특징 ????????????????? -->
+### flush
+
+### remove
+
+### detached
+
+### merge
 
 
 
@@ -116,6 +176,8 @@ use_math: true
 
 
 ### Persistence Unit
+
+
 
 
 
@@ -212,15 +274,6 @@ use_math: true
 
 
 ### Persistence Context
--  A persistence context handles a set of entities which hold data to be persisted in some persistence store (e.g. database).
-
-
-
-
-논리적인 개념으로 EntityManager 를 통해 Persistence Context 에 접근해서 Entity를 관리하는 역할
-Entity를 영구 저장하는 환경
-여러 EntityManager 가 같은 Persistence Context 에 접근할 수 있음
-    같은 트랜잭션의 범위에 있는 EntityManager 는 동일한 Persistence Context 에 접근한다. 
 
 
 
