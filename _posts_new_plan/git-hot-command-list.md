@@ -48,3 +48,7 @@ stage to unstate$ git reset HEAD <filename>, git reset HEAD
 변경 파일 전체 수정 이전 커밋으로 되돌리기$ git reset --hard
 
 변경한 특정 파일 수정 이전 커밋으로 되돌리기$ git checkout -- <파일경로 이름>
+
+원격 저장소 삭제 $ git remote remove <원격저장소이름>
+
+원격 저장소 추가 $ git remote add <원격저장소이름> <원격저장소주소>
