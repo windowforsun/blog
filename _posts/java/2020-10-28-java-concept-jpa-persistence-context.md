@@ -3,15 +3,15 @@ layout: single
 classes: wide
 title: "[Java 실습] JPA Architecture 와 Persistence Context"
 header:
-  overlay_image: /img/spring-bg.jpg
+  overlay_image: /img/java-bg.jpg
 excerpt: ''
 author: "window_for_sun"
 header-style: text
 categories :
-  - Spring
+  - Java
 tags:
-    - Practice
-    - Spring
+    - Concept
+    - Java
 toc: true
 use_math: true
 ---  
@@ -29,60 +29,182 @@ use_math: true
 `JPA` 스펙에 맞춰 구현된 사용가능한 라이브러리는 `Hibernate`, `EclipseLink`, `Apache OpenJPA` 등이 있다.  
 그리고 `JPA` 는 비지니스 레이어에서 생성되는 엔티티를 관계 엔티티로 저장하고 관리하는 역할을 수행한다. 
 
-`JPA` 구조를 클래스 레벨로 도식화 하면 아래와 같다.  
+`JPA` 구조와 `javax.persistence` 패키지 구성을 클래스 레벨로 도식화 하면 아래와 같다.  
 
-.. 그림 ..  
-https://2.bp.blogspot.com/-zQCYV-qJCU0/XAPuPHYDHSI/AAAAAAAAFEs/B2_uskqyAss_ZPX_EzsJujEYtirEtu49gCLcBGAs/s1600/jpa_class_level_architecture.png  
-혹은 아래 그림이랑 합쳐서   
-https://www.programmersought.com/images/965/15788f6b0fda48a893a27ed20f228cc5.jpg  
-https://javabydeveloper.com/wp-content/uploads/2019/12/Jpa-architecture-768x403.png?ezimgfmt=ng:webp/ngcb102  
+![그림 1]({{site.baseurl}}/img/java/concept_jpa_1.png)  
 
-- `Persistence` : 
-- `EntityManagerFactory` : 
-- `EntityManager` : 
-- `Entity` : 
-- `Query` : 
+### Persistence 
+`Persistence` 클래스는 `EntityManagerFactory` 인스턴스를 생성하는 정적 메소드를 가지고 있는 클래스이다. 
+`Persistence` 의 `createEntityManagerFactory()` 메소드를 사용하면 `EntityManagerFactory` 의 인스턴스를 리턴 받을 수 있다. 
 
-`javax.persistence` 패키지를 구성하는 주요 클래스와 인터페이스의 관계를 도식화 하면 아래와 같다. 
+### EntityManagerFactory
+`EntityManagerFactory` 인터페이스는 `EntityManager` 의 `Factory` 역할을 수행한다. 
+하나 이상의 필요에 따라 `EntityManager` 인스턴스를 생성할 수 있다. 
+`EntityManagerFactory` 는 애플리케이션이 시작하면 `PersistenceUnit` 의 설정값에 맞춰 생성된다. 
+`EntityManagerFactory` 는 연결되는 하나의 데이터베이스와 매칭되는 구조로 생성되기 떄문에, 
+`Connection Pool` 을 포함한 여러 작업이 인스턴스 생성과정에 포함된다. 
+그러므로 생성 비용이 매우 크기때문에 한 번 생성후 애플리케이션에서 재사용하게 된다. 
+`DataSource` 마다 하나의 `EntityManagerFactory` 가 생성된다고 생각할 수 있다. 
+그리고 여러 스레드에서 사용이 가능해야 하기때문에 `Thread-safe` 하다.  
 
-.. 그림 ..  
-https://4.bp.blogspot.com/-fVjv79bHZMA/XAPvFu2YTDI/AAAAAAAAFE4/iaL19yzi2boDDhVTffQWInYFlNVwYDDOQCLcBGAs/s1600/jpa_class_relationships.png  
+### EntityManager
+`EntityManager` 는 `Entity` 에 대한 영속성관련 동작을 실제로 수행하면서 데이터베이스 `Connection` 과 관계가 있는 인터페이스이다. 
+그리고 영속성 관련 인스턴스(`Persistence Context`) 를 생성하고, 삭제하는 역할을 수행한다. 
+데이터베이스와 매핑되는 `Entity` 에 대해 `Persistence Context` 와 `Connection` 를 상황에 따라 적절하 상호동작하게 된다. 
+`Entity` 의 `PrimaryKey` 를 사용해서 생성, 수정, 삭제, 조회 등의 동작을 수행하며 이를 관리한다. 
+`EntityManager` 는 `Persistence Context` 를 사용해서 `Entity` 를 관리하다가 데이터베이스의 커넥션이 필요한 시점이 되면, 
+`Query` 인터페이스를 사용해서 데이터베이스와 동기화를 수행한다. 
+그리고 `EntityTransaction` 을 사용해서 트랜잭션 관련 동작을 수행한다.  
+`EntityManagerFactory` 와 비교했을 때 `EntityManager` 는 생성비용이 거의 들지 많지만, 
+`Thread-unsafe` 하기 때문에 스레드간 공유되지 않도록 주의가 필요하다. 
+`EntityManager` 에서 수행하는 동작들은 `Transaction` 안에서 수행되야 하고, 그렇지 않다면 예외가 발생한다.   
+
+### Entity
+`Entity` 는 데이터베이스의 테이블과 매핑되는 클래스이면서, 
+`Persistence Context` 를 사용해서 `EntityManager` 의 관리 대상이기도 하다. 
+
+### EntityTransaction
+`EntityTransaction` 은 `EntityManager` 와 1:1 관계를 가지면서, 
+`EntityManager` 에서 트랜잭션 관련 동작을 수행할 수 있도록 한다.  
+
+### Query
+`Query` 는 `EntityManager` 에서 `Entity` 에 대한 쿼리를 수행하는 역할을 수행한다. 
+
+
+## 클래스 관계
+앞서 설명한 `javax.persistence` 패키지를 구성하는 주요 클래스와 인터페이스의 관계도를 그리면 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/java/concept_jpa_2.png)  
+
+- `EntityManagerFactory` 와 `EntityManager` 는 1:N 관계를 갖는다. 
+`EntityManagerFactory` 에서 필요에 따라 `EntityManager` 를 생성할 수 있다. 
+- `EntityManager` 와 `EntityTransaction` 은 1:1 관계를 갖는다. 
+`EntityManager` 에서는 하나의 `EntityTransaction` 을 생성해서 사용한다. 
+- `EntityManager` 와 `Query` 는 1:N 관계를 갖는다. 
+`EntityManager` 에서는 여러 `Query` 인스턴스를 사용해서 쿼리를 동작을 수행한다. 
+- `EntityManager` 와 `Entity` 는 1:N 관계를 갖는다. 
+`EntityManager` 에서는 여러 `Entity` 에 대해 관리를 수행할 수 있다. 
+
 
 
 ## EntityManager, EntityManagerFactory ?????
-https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fxn0pW%2FbtqyjdzFtfd%2F9tmnEVN7UPnOFqGSIu0GZ1%2Fimg.png  
+[](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fxn0pW%2FbtqyjdzFtfd%2F9tmnEVN7UPnOFqGSIu0GZ1%2Fimg.png)  
+
+
+
 
 ## Persistence Context
-
--  A persistence context handles a set of entities which hold data to be persisted in some persistence store (e.g. database).
-
-
-
-
-논리적인 개념으로 EntityManager 를 통해 Persistence Context 에 접근해서 Entity를 관리하는 역할
-Entity를 영구 저장하는 환경
-여러 EntityManager 가 같은 Persistence Context 에 접근할 수 있음
-    같은 트랜잭션의 범위에 있는 EntityManager 는 동일한 Persistence Context 에 접근한다. 
-
-
-
+`Persistence Context` 는 `Entity` 를 영구 저장하는 논리적인 공간이면서 개념이다. 
+`EntityManager` 와 `Persistence Context` 가 1:1 관계는 갖는 경우도 있지만, 
+트랜잭션, 스레드를 기준으로 여러 `EntityManager` 가 `Persistence Context` 를 공유해서 사용하는 경우도 있다. 
 
 ### 생명주기
+`Persistence Context` 의 생명주기에는 `New(Transient)`, `Managed`, `Detached`, `Removed` 가 있는데 
+전체적인 흐름은 아래와 같다. 
 
-https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fcc3i97%2FbtqxX8e4Rgz%2Fm2kuh5rH6LKk831Rv2eNyk%2Fimg.png  
-https://github.com/namjunemy/TIL/blob/master/Jpa/tacademy/img/12_entity_lifecycle.PNG?raw=true  
-https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=http%3A%2F%2Fcfile21.uf.tistory.com%2Fimage%2F99CA54415AE4627A2C7BE0  
+![그림 1]({{site.baseurl}}/img/java/concept_jpa_3.png)  
 
+- `New(Transient)` : `Entity` 에 해당하는 객체가 인스턴스로 생성만 된 상태로 아직 `Persistence Context` 와는 관련이 없는 상태이다. 
+
+    ```java    
+    NoAutoIncrement entity = new NoAutoIncrement();
+    entity.setId(11);
+    entity.setNum(111);
+    entity.setStr("str111");
+    ```  
+
+- `Managed` : `Entity` 가 `Persistence Context` 에 저장된 상태로 `EntityManager` 에 의해 관리 된다. 
+`persist()` 메소드를 호출하거나 `find()`, `JPQL` 로 `Entity` 를 조회한 상태를 의미한다. 
+`Persistence Context` 에 저장된 상태이지 아직 데이터베이스에는 저장및 관련 쿼리는 수행되지 않았다. 
+이후 `flush()` 혹은 `commit()` 이 호출되면 `Persistence Context` 에 있는 `Entity` 정보가 데이터베이스에 반영된다. 
+
+    ```java
+    // persist()
+    entityManager.persist(entity);
+  
+    // find()
+    NoAutoIncrement entity = entityManager.find(NoAutoIncrement.class, 11);
+  
+    // JPQL
+    String jpql = "SELECT nai FROM NoAutoIncrement nai WHERE nai.id = :id";
+    NoAutoIncrement entity = this.entityManager
+            .createQuery(jpql, NoAutoIncrement.class)
+            .setParameter("id", 11)
+            .getSingleResult();
+    ```  
+  
+- `Detached` : `Persistence Context` 에 저장돼 있다가 분리된 상태로, `EntityManager` 의 관리 대상에서 벗어난 `Entity` 를 의미한다. 
+`detach()` 메소드 호출로 `Detached` 상태를 만들 수 있다. 
+
+    ```java
+    entityManager.detach(entity);
+    ```  
+
+- `Removed` : `Persistence Context` 와 데이터베이스에서도 제거되는 상태이다. 
+`remove()` 메소드 호출로 `Entity` 를 삭제할 수 있다. 
+
+    ```java
+    entityManager.remove(entity);
+    ```  
 
 
 <!-- ## Persistence Context 장점 ????????????????? -->
-### 1차캐시
+### 1차 캐시
+`Persistence Context` 에는 1차 캐시(`first level cache`) 라는 것이 존재한다. 
+이는 `Map` 구조로 `Entity` 의 `Id` 를 키로 가지고 `Entity` 를 값으로 갖는다.  
+
+@Id|Entity
+---|---
+11|`Entity` 인스턴스
+...|...  
+
+`persist()`, `find()`, `JPQL` 등으로 `Entity` 가 `Persistence Context` 에 한번 저장되어 관리대상이 되면, 
+유지되는 범위에 한해서 저장된 `Entity` 는 이후 조회, 업데이트 동작에 있어서 실제 데이터베이스와 쿼리를 수행하지 않고 `Persistence Context` 에 해당하는 인스턴스만 수정한다.  
+
+간단한 예로 `find()` 메소드로 찾고자하는 `Entity` 가 `Persistence Context`에 존재하지 않으면, 
+`SELECT` 쿼리를 통해 데이터베이스에서 가져와 `Persistence Context` 에 저장해서 `Managed` 상태로 만든다. 
+그리고 이후 동일한 `Entity` 를 `find()` 메소드로 찾으면 데이터베이스를 통하지 않고 바로 `Persistence Context` 에서 해당하는 `Entity` 를 반환 한다. 
+
+```java
+
+
+```  
+
 
 ### 동일성
+`Persistence Context` 에서 같은 키로 반환하는 `Entity` 의 인스턴스는 동일성을 보장한다. 
+이 또한 1차 캐시를 사용하기 때문에 가능하다. 
+반복적인 읽기 동작에 대해서 애플리케이션 수준에서 `REPEATABLE READ` 격리 수준을 제공한다.  
+
+```java
+
+
+```  
 
 ### 쓰기 지연
+`persist()` 메소드를 사용해서 `Entity` 를 `Persistence Context` 에 추가하면 바로 데이터베이스에 `INSERT` 쿼리가 수행되지 않는다. 
+`EntityManager` 는 이를 쿼리 저장소라는 곳에 추가된 `Entity` 의 `INSERT` 쿼리을 저장해 놓게 된다. 
+그리고 `commit()`, `flush()` 가 호출될때 저장해 둔 `INSERT` 쿼리를 데이터베이스에 보내 실제로 저장한다.  
+
+<!-- 이러한 쓰기 지연을 사용하게 되면 추가되는 `Entity` 가 있을 때마다 `INSERT` 쿼리를 수행하는 것이 아니라, -->
+<!-- 모아 뒀다가 한번에 `INSERT` 쿼리를 데이터베이스로 보내 수행하기 때문에 성능을 높일 수 있다. -->
+
+`EntityManager` 에서 `commit()` 메소드를 수행하게 되면, 
+내부에서 먼저 `flush()` 를 호출해서 `Persistence Context` 와 데이터베이스의 동기화하는 작업을 수행한다. 
+그리고 작업이 완료되면 최종적으로 `commit` 을 수행해서 데이터베이스에 영구적으로 반영한다.  
+
+`hibernate.jdbc.batch_size` 의 키 값으로 한번에 처리할 `INSERT` 쿼리의 크기를 지정할 수 있다.   
+
+```java
+
+
+```  
+
+
 
 ### Dirty Checking
+`Persistence Context` 에 저장된 `Entity` 
+
 
 <!-- ## Persistence Context 특징 ????????????????? -->
 ### flush
@@ -450,7 +572,10 @@ Entity를 영구 저장하는 환경
 [JPA 변경 감지와 스프링 데이터](https://medium.com/@SlackBeck/jpa-%EB%B3%80%EA%B2%BD-%EA%B0%90%EC%A7%80%EC%99%80-%EC%8A%A4%ED%94%84%EB%A7%81-%EB%8D%B0%EC%9D%B4%ED%84%B0-2e01ad594b82)  
 [(JPA - 2) 영속성(Persistence) 관리](https://kihoonkim.github.io/2017/01/27/JPA(Java%20ORM)/2.%20JPA-%EC%98%81%EC%86%8D%EC%84%B1%20%EA%B4%80%EB%A6%AC/)  
 [[Spring JPA] 영속 환경 ( Persistence Context )](https://victorydntmd.tistory.com/207)  
+
+
 [Getting started with Spring Data JPA](https://spring.io/blog/2011/02/10/getting-started-with-spring-data-jpa)  
 [JPA/Hibernate Persistence Context](https://www.baeldung.com/jpa-hibernate-persistence-context)  
 [Package javax.persistence](https://javaee.github.io/javaee-spec/javadocs/javax/persistence/package-summary.html)  
 [Hibernate ORM User Guide](https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html)  
+[Spring Boot JPA](https://www.javatpoint.com/spring-boot-jpa)  
