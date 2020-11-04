@@ -1,0 +1,33 @@
+@startuml
+
+
+card "New(Transient)"as new {
+}
+
+rectangle "Persistence Context" as pc {
+	card Managed {
+	}
+}
+
+card Detached {
+}
+
+card Removed {
+}
+
+database "\n\nDatabase\n\n" as db
+
+. -l-> new : new
+
+new -l-> Managed :persist
+Managed -u-> Detached :detached\nclear\nclose
+Detached -d-> Managed :merge
+Managed -d-> Removed :remove
+Removed -u-> Managed :persist
+Managed --> db :flush\ncommit
+Removed --> db :flush\ncommit
+db --> Managed :find\nJPQL
+
+
+
+@enduml

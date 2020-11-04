@@ -1,0 +1,28 @@
+@startuml
+
+package javax.persistence {
+	class Persistence
+	interface EntityManagerFactory
+	interface EntityManager
+	interface Query
+	interface EntityTransaction
+	rectangle PersistenceUnit {
+	}
+
+	Persistence --> EntityManagerFactory :Creates
+	EntityManagerFactory <--> PersistenceUnit :Configured by
+	EntityManagerFactory --> EntityManager :Creates
+	EntityManager --> Query :Creates
+	EntityManager --> EntityTransaction :Creates
+}
+
+class Entity
+
+EntityManager -l-> Entity :Manages
+
+
+
+
+
+
+@enduml
