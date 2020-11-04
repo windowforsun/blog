@@ -16,12 +16,7 @@ toc: true
 use_math: true
 ---  
 
-
-
-
 ## JPA Architecture
-
-
 `JPA`(`Java Persistence API`) 는 `Java` 객체를 관계형 데이터베이스에 매핑하기 위한 `Java` 표준을 의미한다. 
 `Java` 객체를 데이터베이스 테이블에 매핑하는 것을 `ORM`(`Object-Replicational Mapping`) 이라고 한다. 
 `JPA` 는 `Java` 에서 `ORM` 동작을 수행할 수 있는 하나의 접근법이다. 
@@ -84,14 +79,6 @@ use_math: true
 `EntityManager` 에서는 여러 `Query` 인스턴스를 사용해서 쿼리를 동작을 수행한다. 
 - `EntityManager` 와 `Entity` 는 1:N 관계를 갖는다. 
 `EntityManager` 에서는 여러 `Entity` 에 대해 관리를 수행할 수 있다. 
-
-
-
-## EntityManager, EntityManagerFactory ?????
-[](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fxn0pW%2FbtqyjdzFtfd%2F9tmnEVN7UPnOFqGSIu0GZ1%2Fimg.png)  
-
-
-
 
 ## Persistence Context
 `Persistence Context` 는 `Entity` 를 영구 저장하는 논리적인 공간이면서 개념이다. 
@@ -167,7 +154,7 @@ use_math: true
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-update=update",
-                "spring.jpa.properties.hibernate.format_sql=true"
+                "spring.jpa.properties.hibernate.show_sql=true"
         }
 )
 @RunWith(SpringRunner.class)
@@ -179,6 +166,8 @@ public class FirstLevelCacheTest {
     private TestEntityManager testEntityManager;
     private EntityManager entityManager;
     private Connection connection;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
     @Before
     public void setUp() throws Exception {
@@ -202,6 +191,9 @@ public class FirstLevelCacheTest {
         assertThat(actual.getId(), is(entity.getId()));
         assertThat(actual.getNum(), is(entity.getNum()));
         assertThat(actual.getStr(), is(entity.getStr()));
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: select"
+        )));
     }
 
     @Test
@@ -226,6 +218,10 @@ public class FirstLevelCacheTest {
         assertThat(actual.getId(), is(entity.getId()));
         assertThat(actual.getNum(), is(entity.getNum()));
         assertThat(actual.getStr(), is(entity.getStr()));
+        assertThat(this.capture.getOut(), allOf(
+                containsString("Hibernate: select"),
+                not(stringContainsInOrder("Hibernate: select", "Hibernate: select"))
+        ));
     }
 
     @Test
@@ -252,6 +248,10 @@ public class FirstLevelCacheTest {
         assertThat(actual.getId(), is(entity.getId()));
         assertThat(actual.getNum(), is(entity.getNum()));
         assertThat(actual.getStr(), is(entity.getStr()));
+        assertThat(this.capture.getOut(), allOf(
+                containsString("Hibernate: select"),
+                not(stringContainsInOrder("Hibernate: select", "Hibernate: select"))
+        ));
     }
 
     @Test
@@ -272,6 +272,9 @@ public class FirstLevelCacheTest {
         assertThat(actual.getId(), is(entity.getId()));
         assertThat(actual.getNum(), is(entity.getNum()));
         assertThat(actual.getStr(), is(entity.getStr()));
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: select"
+        )));
     }
 }
 ```  
@@ -297,7 +300,6 @@ public class IdentityTest {
     private TestEntityManager testEntityManager;
     private EntityManager entityManager;
     private Connection connection;
-
 
     @Before
     public void setUp() throws Exception {
@@ -384,7 +386,7 @@ public class IdentityTest {
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-update=update",
-                "spring.jpa.properties.hibernate.format_sql=true"
+                "spring.jpa.properties.hibernate.show_sql=true"
         }
 )
 @RunWith(SpringRunner.class)
@@ -396,6 +398,8 @@ public class TransactionWriteBehindTest {
     private TestEntityManager testEntityManager;
     private EntityManager entityManager;
     private Connection connection;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
     @Before
     public void setUp() throws Exception {
@@ -422,6 +426,9 @@ public class TransactionWriteBehindTest {
 
         // then
         assertThat(actual, is(0));
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: insert"
+        )));
     }
 
     @Test
@@ -444,6 +451,9 @@ public class TransactionWriteBehindTest {
 
         // then
         assertThat(actual, is(1));
+        assertThat(this.capture.getOut(), containsString(
+                "Hibernate: insert"
+        ));
     }
 }
 ```  
@@ -464,7 +474,7 @@ public class TransactionWriteBehindTest {
 @DataJpaTest(
         properties = {
                 "spring.jpa.hibernate.ddl-update=update",
-                "spring.jpa.properties.hibernate.format_sql=true"
+                "spring.jpa.properties.hibernate.show_sql=true"
         }
 )
 @RunWith(SpringRunner.class)
@@ -476,6 +486,8 @@ public class DirtyCheckingTest {
     private TestEntityManager testEntityManager;
     private EntityManager entityManager;
     private Connection connection;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
     @Before
     public void setUp() throws Exception {
@@ -506,6 +518,10 @@ public class DirtyCheckingTest {
         assertThat(rs.getInt("id"), is(entity.getId()));
         assertThat(rs.getInt("num"), is(entity.getNum()));
         assertThat(rs.getString("str"), is(entity.getStr()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert",
+                "Hibernate: update no_auto_increment set num=?, str=? where id=?"
+        ));
     }
 
     @Test
@@ -534,6 +550,10 @@ public class DirtyCheckingTest {
         assertThat(rs.getInt("id"), is(entity.getId()));
         assertThat(rs.getInt("num"), not(entity.getNum()));
         assertThat(rs.getString("str"), not(entity.getStr()));
+        assertThat(this.capture.getOut(), allOf(
+                containsString("Hibernate: insert"),
+                not(containsString("Hibernate: update"))
+        ));
     }
 
     @Test
@@ -558,8 +578,13 @@ public class DirtyCheckingTest {
         assertThat(rs.getInt("id"), is(entity.getId()));
         assertThat(rs.getInt("num"), is(entity.getNum()));
         assertThat(rs.getString("str"), is(entity.getStr()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert",
+                "Hibernate: update no_auto_increment set num=? where id=?"
+        ));
     }
 }
+
 ```  
 
 
@@ -686,80 +711,181 @@ public class RemoveTest {
 트랜잭션 단위로 데이터베이스와 동기화를 맞추는 매커니즘을 사용한다.  
 
 ```java
+@DataJpaTest(
+        properties = {
+                "spring.jpa.hibernate.ddl-update=update",
+                "spring.jpa.properties.hibernate.show_sql=true"
+        }
+)
+@RunWith(SpringRunner.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class FlushTest {
+    @Autowired
+    private DataSource dataSource;
+    @Autowired
+    private TestEntityManager testEntityManager;
+    private EntityManager entityManager;
+    private Connection connection;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
+    @Before
+    public void setUp() throws Exception {
+        this.entityManager = this.testEntityManager.getEntityManager();
+        this.connection = this.dataSource.getConnection();
 
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(111);
+        entity.setNum(1111);
+        entity.setStr("str1111");
+        this.entityManager.persist(entity);
+        this.entityManager.getTransaction().commit();
+        this.entityManager.getTransaction().begin();
+    }
+
+    @Test
+    public void 새로운Entity추가하고_flush호출하면_Insert쿼리실행() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert", "Hibernate: insert"
+        ));
+    }
+
+    @Test
+    public void 새로운Entity추가하고_flush호출하면_데이터베이스에는존재하지않음() throws Exception {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        String query = "select count(1) from no_auto_increment where id = ?";
+        PreparedStatement psmt = this.connection.prepareStatement(query);
+        psmt.setInt(1, entity.getId());
+        ResultSet rs = psmt.executeQuery();
+        rs.next();
+        assertThat(rs.getInt(1), is(0));
+    }
+
+    @Test
+    public void 기존Entity수정하고_flush호출하면_Update쿼리실행() {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        entity.setNum(2222);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert", "Hibernate: update"
+        ));
+    }
+
+    @Test
+    public void 기존Entity수정하고_flush호출하면_데이터베이스에는반영되지않음() throws Exception {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        entity.setNum(2222);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        String query = "select * from no_auto_increment where id = ?";
+        PreparedStatement psmt = this.connection.prepareStatement(query);
+        psmt.setInt(1, entity.getId());
+        ResultSet rs = psmt.executeQuery();
+        rs.next();
+        assertThat(rs.getInt("num"), not(entity.getNum()));
+    }
+
+    @Test
+    public void Entity삭제하고_flush호출하면_Delete쿼리수행() {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        this.entityManager.remove(entity);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert", "Hibernate: delete"
+        ));
+    }
+
+    @Test
+    public void Entity삭제하고_flush호출하면_데이터베이스에는삭제되지않음() throws Exception {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        this.entityManager.remove(entity);
+
+        // when
+        this.entityManager.flush();
+
+        // then
+        String query = "select count(1) from no_auto_increment where id = ?";
+        PreparedStatement psmt = this.connection.prepareStatement(query);
+        psmt.setInt(1, entity.getId());
+        ResultSet rs = psmt.executeQuery();
+        rs.next();
+        assertThat(rs.getInt(1), is(1));
+    }
+
+    @Test
+    public void Entity삭제하고_JPQL수행하면_flush호출되면서_Delete쿼리수행() {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        this.entityManager.remove(entity);
+
+        // when
+        this.entityManager
+                .createQuery("select nai from NoAutoIncrement nai")
+                .getResultList();
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert", "Hibernate: delete", "Hibernate: select"
+        ));
+    }
+
+    @Test
+    public void Entity삭제하고_JPQL수행하면_flush호출되면서_데이터베이스에는삭제되지않음() throws Exception {
+        // given
+        NoAutoIncrement entity = this.entityManager.find(NoAutoIncrement.class, 111);
+        this.entityManager.remove(entity);
+
+        // when
+        this.entityManager
+                .createQuery("select nai from NoAutoIncrement nai")
+                .getResultList();
+
+        // then
+        String query = "select count(1) from no_auto_increment where id = ?";
+        PreparedStatement psmt = this.connection.prepareStatement(query);
+        psmt.setInt(1, entity.getId());
+        ResultSet rs = psmt.executeQuery();
+        rs.next();
+        assertThat(rs.getInt(1), is(1));
+    }
+}
 ```  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ### detached
@@ -776,69 +902,117 @@ public class RemoveTest {
 
 
 ```java
+@DataJpaTest(
+        properties = {
+                "spring.jpa.hibernate.ddl-update=update",
+                "spring.jpa.properties.hibernate.show_sql=true"
+        }
+)
+@RunWith(SpringRunner.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class DetachTest {
+    @Autowired
+    private TestEntityManager testEntityManager;
+    private EntityManager entityManager;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
+    @Before
+    public void setUp() {
+        this.entityManager = this.testEntityManager.getEntityManager();
+    }
 
+    @Test
+    public void 영속Entity_detach하면_Commit해도_Insert쿼리수행되지않는다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+
+        // when
+        this.entityManager.detach(entity);
+        this.entityManager.getTransaction().commit();
+
+        // then
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: insert"
+        )));
+    }
+
+    @Test
+    public void 영속Entity_detach하면_Commit해도_Update쿼리수행되지않는다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.getTransaction().commit();
+        this.entityManager.getTransaction().begin();
+        entity.setNum(2222);
+        this.entityManager.detach(entity);
+
+        // when
+        this.entityManager.detach(entity);
+        this.entityManager.getTransaction().commit();
+
+        // then
+        assertThat(this.capture.getOut(), allOf(
+                containsString("Hibernate: insert"),
+                not(containsString("Hibernate: update"))
+        ));
+    }
+
+    @Test
+    public void 영속Entity_detach하면_Commit해도_Delete쿼리수행되지않는다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.getTransaction().commit();
+        this.entityManager.getTransaction().begin();
+        this.entityManager.remove(entity);
+        this.entityManager.detach(entity);
+
+        // when
+        this.entityManager.detach(entity);
+        this.entityManager.getTransaction().commit();
+
+        // then
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: remove"
+        )));
+    }
+
+    @Test
+    public void 영속Entity_clear하면_Commit해도_모든쿼리수행하지않는다() {
+        // given
+        NoAutoIncrement entity1 = new NoAutoIncrement();
+        entity1.setId(11);
+        entity1.setNum(111);
+        entity1.setStr("str111");
+        this.entityManager.persist(entity1);
+        NoAutoIncrement entity2 = new NoAutoIncrement();
+        entity2.setId(22);
+        entity2.setNum(222);
+        entity2.setStr("str222");
+        this.entityManager.persist(entity2);
+
+        // when
+        this.entityManager.clear();
+        this.entityManager.getTransaction().commit();
+
+        // then
+        assertThat(this.capture.getOut(), not(containsString(
+                "Hibernate: insert"
+        )));
+    }
+}
 ```  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ### merge
 준영속 상태가 된 `Entity` 는 `merge()` 메소드를 사용해서 다시 영속 상태로 만들 수 있다. 
@@ -849,75 +1023,110 @@ public class RemoveTest {
 
 
 ```java
+@DataJpaTest(
+        properties = {
+                "spring.jpa.hibernate.ddl-update=update",
+                "spring.jpa.properties.hibernate.show_sql=true"
+        }
+)
+@RunWith(SpringRunner.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public class MergeTest {
+    @Autowired
+    private DataSource dataSource;
+    @Autowired
+    private TestEntityManager testEntityManager;
+    private EntityManager entityManager;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
 
+    @Before
+    public void setUp() {
+        this.entityManager = this.testEntityManager.getEntityManager();
+    }
 
+    @Test
+    public void 준영속Entity인스턴스와_merge리턴인스턴스는_같지않다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.detach(entity);
+
+        // when
+        NoAutoIncrement actual = this.entityManager.merge(entity);
+
+        // then
+        assertThat(actual, not(entity));
+    }
+
+    @Test
+    public void 준영속Entity인스턴스와_merge후_find한영속인스턴스는_같지않다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.detach(entity);
+
+        // when
+        this.entityManager.merge(entity);
+        NoAutoIncrement actual = this.entityManager.find(NoAutoIncrement.class, entity.getId());
+
+        // then
+        assertThat(actual, not(entity));
+    }
+
+    @Test
+    public void 준영속Entity_merge리턴인스턴스와_find한영속인스턴스는_같다() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.detach(entity);
+        NoAutoIncrement mergedEntity = this.entityManager.merge(entity);
+
+        // when
+        NoAutoIncrement actual = this.entityManager.find(NoAutoIncrement.class, entity.getId());
+
+        // then
+        assertThat(actual, is(mergedEntity));
+    }
+
+    @Test
+    public void 준영속Entity_merge하고_commit하면_Update쿼리수행() {
+        // given
+        NoAutoIncrement entity = new NoAutoIncrement();
+        entity.setId(11);
+        entity.setNum(111);
+        entity.setStr("str111");
+        this.entityManager.persist(entity);
+        this.entityManager.getTransaction().commit();
+        this.entityManager.getTransaction().begin();
+        entity.setNum(222);
+        this.entityManager.detach(entity);
+
+        // when
+        NoAutoIncrement mergedEntity = this.entityManager.merge(entity);
+        this.entityManager.getTransaction().commit();
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "Hibernate: insert", "Hibernate: select", "Hibernate: update"
+        ));
+    }
+}
 ```  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 ---
 ## Reference
-[[JPA] 영속성 컨텍스트와 플러시 이해하기](https://ict-nroo.tistory.com/130)  
-[JPA - Persistence Context (영속성 컨텍스트)](https://heowc.tistory.com/55)  
-[더티 체킹 (Dirty Checking)이란?](https://jojoldu.tistory.com/415)  
-[JPA 더티 체킹(Dirty Checking)이란?](https://interconnection.tistory.com/121)  
-[JPA 변경 감지와 스프링 데이터](https://medium.com/@SlackBeck/jpa-%EB%B3%80%EA%B2%BD-%EA%B0%90%EC%A7%80%EC%99%80-%EC%8A%A4%ED%94%84%EB%A7%81-%EB%8D%B0%EC%9D%B4%ED%84%B0-2e01ad594b82)  
-[(JPA - 2) 영속성(Persistence) 관리](https://kihoonkim.github.io/2017/01/27/JPA(Java%20ORM)/2.%20JPA-%EC%98%81%EC%86%8D%EC%84%B1%20%EA%B4%80%EB%A6%AC/)  
-[[Spring JPA] 영속 환경 ( Persistence Context )](https://victorydntmd.tistory.com/207)  
-
-
 [Getting started with Spring Data JPA](https://spring.io/blog/2011/02/10/getting-started-with-spring-data-jpa)  
 [JPA/Hibernate Persistence Context](https://www.baeldung.com/jpa-hibernate-persistence-context)  
 [Package javax.persistence](https://javaee.github.io/javaee-spec/javadocs/javax/persistence/package-summary.html)  
