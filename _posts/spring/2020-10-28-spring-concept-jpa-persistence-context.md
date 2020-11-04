@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Spring 개념] JPA Architecture 와 Persistence Context"
 header:
-  overlay_image: /img/java-bg.jpg
+  overlay_image: /img/spring-bg.jpg
 excerpt: 'Java ORM 표준 JPA 의 구조와 영속성 컨텍스트에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
