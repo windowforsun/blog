@@ -87,7 +87,9 @@ use_math: true
 ## Persistence Context
 `Persistence Context`(영속성 컨텍스트) 는 `Entity` 를 영구 저장하는 논리적인 공간이면서 개념이다. 
 `EntityManager` 와 `Persistence Context` 가 1:1 관계는 갖는 경우도 있지만, 
-트랜잭션, 스레드를 기준으로 여러 `EntityManager` 가 `Persistence Context` 를 공유해서 사용하는 경우도 있다. 
+트랜잭션, 스레드를 기준으로 여러 `EntityManager` 가 `Persistence Context` 를 공유해서 사용하는 경우도 있다.  
+
+예제 테스트 코드에서는 `JPA` 구현체로 `Hibernate` 를 사용한다.  
 
 ### 생명주기
 `Persistence Context` 의 생명주기에는 `New(Transient)`, `Managed`, `Detached`, `Removed` 가 있는데 
