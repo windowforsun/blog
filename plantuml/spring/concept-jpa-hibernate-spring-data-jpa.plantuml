@@ -1,0 +1,38 @@
+@startuml
+
+skinparam linetype ortho
+
+rectangle "Application" as app {
+
+}
+
+rectangle "Spring Data JPA" as sdj {
+}
+
+rectangle " " as api {
+rectangle "JPA" as jpa {
+
+}
+
+rectangle "Hibernate Native API" as hna {
+}
+}
+
+rectangle "Hibernate" as hibernate {
+}
+
+rectangle "JDBC" as jdbc {
+}
+
+database "RDBMS" as rdb
+
+app <--> sdj
+app <--> api
+sdj <--> jpa
+api <--> hibernate
+hibernate <--> jdbc
+jdbc <--> rdb
+
+
+
+@enduml

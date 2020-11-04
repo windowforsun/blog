@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] JPA, Hibernate, Spring Data JPA 관계"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Java 와 Spring 에서 ORM 을 제공하는 JPA, Hibernate, Spring Data JPA 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,22 +15,13 @@ tags:
     - JPA
     - Hibernate
     - Spring Data JPA
+    - ORM
 toc: true
 use_math: true
 ---  
 
-
-
-
 ## JPA
-
-
-
-
-
-
-
-[여기]()
+[여기]({{site.baseurl}}{% link _posts/spring/2020-10-28-spring-concept-jpa-persistence-context.md %})
 에서도 관련 내용이 있지만, 
 `JPA` 는 `Java Persistence API` 의 약자로 자바 애플리케이션에서 관계형 데이터베이스를 사용하는 방식을 정의한 인터페이스의 모음이다. 
 여기서 인터페이스의 모음이라는 의미가 말그대로 `JPA` 관련 클래스와 인터페이스가 있는 `javax.persistence` 패키지를 보면, 
@@ -72,12 +63,6 @@ public interface EntityManager {
 
 
 ## Hibernate
-
-
-
-
-
-
 앞서 `JPA` 는 말그대로 인터페이스라고 설명했다. 
 이 인터페이스를 실제로 구현한 구현체가 바로 `Hibernate` 이다. 
 간단하게 비유하면 `JPA` 는 `interface` 이고, `Hiberate` 는 `ConcreteClas` 로 비유할 수 있다. 
@@ -100,7 +85,6 @@ public interface EntityManager {
 
 
 ## Spring Data JPA
-
 `Spring Data JPA` 는 `Spring` 에서 제공하는 여러가지 모듈 중 하나로, 
 `JPA` 를 보다 쉽고 간편하게 사용할 수 있도록 한다. 
 `JPA` 를 `Repository` 라는 인터페이스로 한번 더 추상화해 `Repository` 단위로 데이터를 조작할 수 있다. 
@@ -186,79 +170,10 @@ public class SimpleJpaRepository<T, ID> implements JpaRepositoryImplementation<T
 메소드 구현에서 `EntityManager` 를 사용해서 메소드에 맞는 관련처리를 수행하는 것을 확인 할 수 있다.  
 
 ## 계층 구조
-`JPA`, `Hibernate,` Spring Data JPA` 모두 `Java ORM` 사용을 위한 스펙이고 라이브러리이자 모듈이다. 
+`JPA`, `Hibernate,` `Spring Data JPA` 모두 `Java ORM` 사용을 위한 스펙이고 라이브러리이자 모듈이다. 
 이를 계층 구조로 표현하면 아래와 같다.  
 
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+![그림 1]({{site.baseurl}}/img/spring/concept_jpa_hibernate_spring_data_jpa.svg) 
 
 ---
 ## Reference
