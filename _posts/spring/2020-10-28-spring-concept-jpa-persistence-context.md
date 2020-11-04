@@ -1,17 +1,21 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] JPA Architecture 와 Persistence Context"
+title: "[Spring 개념] JPA Architecture 와 Persistence Context"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java ORM 표준 JPA 의 구조와 영속성 컨텍스트에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Java
+  - Spring
 tags:
     - Concept
-    - Java
+    - Spring
+    - JPA
+    - Persistence Context
+    - Dirty Checking
+    - EntityManager
 toc: true
 use_math: true
 ---  
@@ -81,7 +85,7 @@ use_math: true
 `EntityManager` 에서는 여러 `Entity` 에 대해 관리를 수행할 수 있다. 
 
 ## Persistence Context
-`Persistence Context` 는 `Entity` 를 영구 저장하는 논리적인 공간이면서 개념이다. 
+`Persistence Context`(영속성 컨텍스트) 는 `Entity` 를 영구 저장하는 논리적인 공간이면서 개념이다. 
 `EntityManager` 와 `Persistence Context` 가 1:1 관계는 갖는 경우도 있지만, 
 트랜잭션, 스레드를 기준으로 여러 `EntityManager` 가 `Persistence Context` 를 공유해서 사용하는 경우도 있다. 
 
