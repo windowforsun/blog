@@ -173,7 +173,7 @@ public class SimpleJpaRepository<T, ID> implements JpaRepositoryImplementation<T
 `JPA`, `Hibernate,` `Spring Data JPA` 모두 `Java ORM` 사용을 위한 스펙이고 라이브러리이자 모듈이다. 
 이를 계층 구조로 표현하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept_jpa_hibernate_spring_data_jpa.svg) 
+![그림 1]({{site.baseurl}}/img/spring/concept_jpa_hibernate_spring_data_jpa.png) 
 
 ---
 ## Reference
