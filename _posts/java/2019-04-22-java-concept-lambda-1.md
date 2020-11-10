@@ -503,18 +503,20 @@ Predicate|매개값은 있고, 리턴 타입은 boolean, 매가값을 조사해�
 ### Consumer 함수적 인터페이스
 - Consumer 의 특징은 리턴값이 없는 accept() 메소드를 가지고 있다.
 - accept() 메소드는 매개값을 소비하고 값을 리턴하지 않는다.
-- 매개변수 타입에 따른 Consumer 의 종류는 아래와 같다.
+- 매개변수 타입에 따른 Consumer 의 종류는 아래와 같다.  
+
 
 인터페이스명|추상메소드|설명
 ---|---|---
-Consumer<T>|void accept(T t)|객체 T를 받아 소비
-BiConsumer<T, U>|void accept(T t, U u)|객체 T와 U를 받아 소비
-DoubleConsumer|void accept(double value)|double 값을 받아 소비
-IntConsumer|void accept(int value)|int 값을 받아 소비
-LongConsumer|void accept(long value)|long 값을 받아 소비
-ObjDoubleConsumer<T>|void accept(T t, double value)|객체 T와 double 값을 받아 소비
-ObjIntConsumer<T>|void accept(T t, int value)|객체 T와 int 값을 받아 소비
-ObjLongConsumer<T>|void accept(T t, long value)|객체 T와 long 값을 받아 소비
+`Consumer<T>`|`void accept(T t)`|객체 T를 받아 소비
+`BiConsumer<T, U>`|`void accept(T t, U u)`|객체 T와 U를 받아 소비
+`DoubleConsumer`|`void accept(double value)`|double 값을 받아 소비
+`IntConsumer`|`void accept(int value)`|int 값을 받아 소비
+`LongConsumer`|`void accept(long value)`|long 값을 받아 소비
+`ObjDoubleConsumer<T>`|`void accept(T t, double value)`|객체 T와 double 값을 받아 소비
+`ObjIntConsumer<T>`|`void accept(T t, int value)`|객체 T와 int 값을 받아 소비
+`ObjLongConsumer<T>`|`void accept(T t, long value)`|객체 T와 long 값을 받아 소비
+  
 
 - 예제코드
 

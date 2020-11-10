@@ -1,0 +1,48 @@
+@startuml
+
+rectangle "Stream Source" as ss
+
+note bottom of ss
+	Array
+	Collection
+	I/O Channel
+	etc ..
+end note
+
+rectangle "Intermediate Operations" as io {
+	card "Operation 1" as o1
+	card "Operation 2" as o2
+	card "Operation 3" as o3
+
+	o1 -d-> o2
+	o2 -d-> o3
+}
+
+note bottom of io
+	Filtering
+	Mapping
+	Sorting
+	etc ..
+end note
+
+rectangle "Operation Result" as or
+
+note top of or
+	Reduction
+	Collecting
+	Count
+	etc ..
+end note
+
+ss -r-> o1 : Create Stream instance
+
+o3 -r-> or : Terminal Operation
+
+
+
+
+
+
+
+
+@enduml
