@@ -1,0 +1,33 @@
+@startuml
+
+card "Task" as t1
+card "Task" as t2
+card "Task" as t3
+t1 -d-> t2 :fork
+t1 -d-> t3 :fork
+t1 <-[#blue]d- t2 :join
+t1 <-[#blue]d- t3 :join
+card "Task" as t4
+card "Task" as t5
+t2 -d-> t4 :fork
+t2 -d-> t5 :fork
+t2 <-[#blue]d- t4 :join
+t2 <-[#blue]d- t5 :join
+card "Task" as t6
+card "Task" as t7
+t3 -d-> t6 :fork
+t3 -d-> t7 :fork
+t3 <-[#blue]d- t6 :join
+t3 <-[#blue]d- t7 :join
+
+
+
+
+
+
+
+
+
+
+
+@enduml
