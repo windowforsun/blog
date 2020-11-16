@@ -8,11 +8,11 @@ t -r-> iq :submit
 
 rectangle "Thread 1" as th1
 
-queue "dequeue" as d1
+queue "deque" as d1
 
 rectangle "Thread 2" as th2
 
-queue "dequeue(empty)" as d2
+queue "deque(empty)" as d2
 
 th1 -u-> iq :take
 th2 -u-> iq :take
@@ -22,7 +22,7 @@ th1 <-- d1 :pop
 th2 --> d2 :push
 th2 <-- d2 :pop
 
-th2 --> d1: streal
+th2 --> d1: steal
 
 
 
