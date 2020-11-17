@@ -1,0 +1,77 @@
+@startuml
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.2.0
+
+!includeurl ICONURL/common.puml
+!includeurl ICONURL/material/refresh.puml
+
+card "Sequential Stream" as ss {
+
+	rectangle "Core 1" as sc1 {
+		package "Data Set" as ds {
+			MATERIAL_REFRESH(sci1, Iteration 1) #white
+			MATERIAL_REFRESH(sci2, Iteration 2) #white
+			MATERIAL_REFRESH(sci3, Iteration 3) #white
+
+			sci1 -r-> sci2
+			sci2 -r-> sci3
+		}
+	}
+
+}
+
+card "Parallel Stream" as ps {
+
+
+	rectangle "Core 1" as pc1 {
+		package "Sub Data Set" as sds1 {
+			MATERIAL_REFRESH(pci11, Iteration 1) #white
+			MATERIAL_REFRESH(pci12, Iteration 2) #white
+			MATERIAL_REFRESH(pci13, Iteration 3) #white
+
+			pci11 -r-> pci12
+			pci12 -r-> pci13
+		}
+	}
+
+	rectangle "Core 2" as pc2 {
+		package "Sub Data Set" as sds2 {
+			MATERIAL_REFRESH(pci21, Iteration 1) #white
+			MATERIAL_REFRESH(pci22, Iteration 2) #white
+			MATERIAL_REFRESH(pci23, Iteration 3) #white
+
+			pci21 -r-> pci22
+			pci22 -r-> pci23
+		}
+	}
+
+	rectangle "Core 3" as pc3 {
+		package "Sub Data Set" as sds3 {
+			MATERIAL_REFRESH(pci31, Iteration 1) #white
+			MATERIAL_REFRESH(pci32, Iteration 2) #white
+			MATERIAL_REFRESH(pci33, Iteration 3) #white
+
+			pci31 -r-> pci32
+			pci32 -r-> pci33
+		}
+	}
+
+	rectangle "Core 4" as pc4 {
+		package "Sub Data Set" as sds4 {
+			MATERIAL_REFRESH(pci41, Iteration 1) #white
+			MATERIAL_REFRESH(pci42, Iteration 2) #white
+			MATERIAL_REFRESH(pci43, Iteration 3) #white
+
+			pci41 -r-> pci42
+			pci42 -r-> pci43
+		}
+	}
+
+	pc1 -[hidden]d- pc2
+	pc2 -[hidden]d- pc3
+	pc3 -[hidden]d- pc4
+}
+
+ss -[hidden]r- ps
+
+
+@enduml

@@ -1,0 +1,56 @@
+@startuml
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/v2.2.0
+
+!includeurl ICONURL/common.puml
+!includeurl ICONURL/material/refresh.puml
+
+rectangle "Sequential Stream" as ss {
+
+	rectangle "Core 1" as sc1 {
+		MATERIAL_REFRESH(sci1, Iteration 1) #white
+		MATERIAL_REFRESH(sci2, Iteration 2) #white
+		MATERIAL_REFRESH(sci3, Iteration 3) #white
+		MATERIAL_REFRESH(sci4, Iteration 4) #white
+		MATERIAL_REFRESH(sci5, Iteration 5) #white
+		MATERIAL_REFRESH(sci6, Iteration 6) #white
+
+		sci1 -[hidden]r- sci2
+		sci2 -[hidden]r- sci3
+		sci3 -[hidden]r- sci4
+		sci4 -[hidden]r- sci5
+		sci5 -[hidden]r- sci6
+	}
+
+}
+
+rectangle "Parallel Stream" as ps {
+
+	rectangle "Core 1" as pc1 {
+		MATERIAL_REFRESH(pci1, Iteration 1) #white
+		MATERIAL_REFRESH(pci2, Iteration 2) #white
+
+		pci1 -[hidden]r- pci2
+	}
+
+	rectangle "Core 2" as pc2 {
+		MATERIAL_REFRESH(pci3, Iteration 3) #white
+
+	}
+	rectangle "Core 3" as pc3 {
+		MATERIAL_REFRESH(pci4, Iteration 4) #white
+		MATERIAL_REFRESH(pci5, Iteration 5) #white
+
+		pci4 -[hidden]r- pci5
+	}
+	rectangle "Core 4" as pc4 {
+		MATERIAL_REFRESH(pci6, Iteration 6) #white
+	}
+
+	pc1 -[hidden]d- pc2
+	pc2 -[hidden]d- pc3
+	pc3 -[hidden]d- pc4
+}
+
+ss -[hidden]d- ps
+
+@enduml
