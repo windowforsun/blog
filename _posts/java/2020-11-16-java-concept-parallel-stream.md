@@ -39,8 +39,31 @@ use_math: true
 동기화 처리없이 병렬처리를 구현할 수 있다.  
 
 그리고 `Parallel Stream` 은 `JVM` 에서 글로벌한 `Thread Pool` 을 사용한다는 점을 기억해야 한다. 
-하개의 처리를 `Parallel Stream` 으로 성능을 향상 시켰더라도, 
+한개의 처리를 `Parallel Stream` 으로 성능을 향상 시켰더라도, 
 실제 운영에 환경에서는 이로인해 전체적인 성능 저하가 발생할 수 있다는 의미이다.  
+
+`Parallel Stream` 에서 사용하는 `Thread Pool` 의 크기는 시스템의 코어 수로 설정된다. 
+`Thread Pool` 크기를 조절하고 싶다면 아래의 방법으로 가능하다. 
+
+```java
+System.setProperty("java.util.concurrent.ForkJoinPool.common.parallelism","16");
+```  
+
+만약 별도의 특정 스트림만 별도의 `Thread Pool` 을 사용해야 하는 경우 아래와 같은 방법으로 가능하다. 
+
+```java
+ForkJoinPool forkjoinPool = new ForkJoinPool(5);
+forkjoinPool.submit(() -> {
+	list.parallelStream().forEach(i -> {
+		System.out.printIn("Thread : " + Thread.currentThread().getName()
+             + ", " +  i + ", " + new Date());
+		try{
+			Thread.sleep(5000);
+		} catch (InterruptedException e){
+		}
+	});
+}).get();
+```  
 
 `Stream` 의 연산은 여러 종류의 `Iteration` 의 집합으로 구성된다. 
 `filter`, `map` 등 `Stream` 에서 제공하는 모든 연산을 수행하기 위해서는 데이터 집합에 대해 `Iteration` 을 통해 작업을 처리한다. 
