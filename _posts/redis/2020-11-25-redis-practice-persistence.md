@@ -356,15 +356,71 @@ root@d7bd7ca1198d:/data# redis-cli
 # Persistence
 loading:0
 rdb_changes_since_last_save:0
-rdb_bgsave_in_progress:0
-rdb_last_save_time:1606385468
-rdb_last_bgsave_status:ok
-rdb_last_bgsave_time_sec:-1
-rdb_current_bgsave_time_sec:-1
-rdb_last_cow_size:0
+rdb_bgsave_in_progress:0  # 현재 진행 중인 rewrite 가 있는지 여부
+rdb_last_save_time:1606385468  # 마지막 RDB 파일 저장 시간
+rdb_last_bgsave_status:ok  # 마지막 RDB 파일 저장 성공 여부
+rdb_last_bgsave_time_sec:-1  # 마지막 RDB 파일 저장에 걸린 시간
+rdb_current_bgsave_time_sec:-1  # 현재 RDB 파일 저장 시작하고 경과 시간
 
 .. 생략 ..
 ```  
+
+현재 `RDB` 저장 시점은 `save 1 2` 이기 때문에, 
+매초 마다 2번 이상 변경이 발생하면 `RDB` 파일을 저장하게 될 것이다. 
+
+```bash
+127.0.0.1:6379> set 1 1
+OK
+127.0.0.1:6379> info persistence
+# Persistence
+loading:0
+rdb_changes_since_last_save:1
+rdb_bgsave_in_progress:0
+rdb_last_save_time:1606537251
+rdb_last_bgsave_status:ok
+rdb_last_bgsave_time_sec:-1
+rdb_current_bgsave_time_sec:-1
+127.0.0.1:6379> set 2 2
+OK
+127.0.0.1:6379> info persistence
+# Persistence
+loading:0
+rdb_changes_since_last_save:0
+rdb_bgsave_in_progress:0
+rdb_last_save_time:1606537588
+rdb_last_bgsave_status:ok
+rdb_last_bgsave_time_sec:0
+rdb_current_bgsave_time_sec:-1
+```  
+
+2번 이상의 변경이 발생한 시점 이후 `info persistence` 출력 결과를 살펴보면, 
+`rdb_last_save_time`, `rdb_last_bgsave_time_sec` 등의 값이 변경 된 것을 확인할 수 있다. 
+`Redis` 서버 로그를 확인하면 아래와 같다. 
+
+```bash
+$ docker logs redis-rdb
+
+.. 생략 ..
+
+# save 조건 만족
+1:M 28 Nov 2020 04:26:28.560 * 2 changes in 1 seconds. Saving...  
+# RDB 파일 저장을 위해 자식 프로세스 fork()
+1:M 28 Nov 2020 04:26:28.561 * Background saving started by pid 25
+# 자식 프로세스에서 데이터를 디스크에 저장
+25:C 28 Nov 2020 04:26:28.586 * DB saved on disk
+25:C 28 Nov 2020 04:26:28.586 * RDB: 4 MB of memory used by copy-on-write
+1:M 28 Nov 2020 04:26:28.661 * Background saving terminated with success
+```  
+
+`save` 조건을 만족했을 때 `BGSAVE` 를 통해 자식 프로세스를 사용해서 메모리 데이터를 디스크에 쓰는 것을 확인 할 수 있다.  
+
+`BGSAVE` 는 필요에 따라 명시적으로 명령을 호출해서 파일을 저장하는 것도 가능하다. 
+`BGSAVE` 의 동작 과정은 아래와 같다. 
+1. 부모 프로세스에서 자식 프로세스 `fork()`
+1. 자식 프로세스는
+
+
+
 
 
 
