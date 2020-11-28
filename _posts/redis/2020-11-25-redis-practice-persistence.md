@@ -416,8 +416,123 @@ $ docker logs redis-rdb
 
 `BGSAVE` 는 필요에 따라 명시적으로 명령을 호출해서 파일을 저장하는 것도 가능하다. 
 `BGSAVE` 의 동작 과정은 아래와 같다. 
-1. 부모 프로세스에서 자식 프로세스 `fork()`
-1. 자식 프로세스는
+1. 부모(메인) 프로세스에서 자식 프로세스 `fork()` 한다. 
+1. 자식 프로세스는 메모리에 있는 데이터를 새로운 `RDB` 임시 파일에 쓴다. 
+1. 임시 파일 쓰기가 완료되면 기존 파일은 삭제하고, 임시 파일의 이름을 변경한다. 
+
+```bash
+.. Redis Server ..
+127.0.0.1:6379> bgsave
+Background saving started
+
+.. Bash ..
+$ docker logs redis-rdb
+
+.. 생략 .. 
+
+1:M 28 Nov 2020 18:10:07.482 * Background saving started by pid 25
+25:C 28 Nov 2020 18:10:07.487 * DB saved on disk
+25:C 28 Nov 2020 18:10:07.488 * RDB: 4 MB of memory used by copy-on-write
+1:M 28 Nov 2020 18:10:07.555 * Background saving terminated with success
+```  
+
+자식 프로세스가 먼저 쓰는 임시 파일의 이름은 `temp-<pid>.rdb`(`temp-25.rdb`) 이다.  
+
+먼저 살펴본 `BGSAVE` 는 메인 프로세스에서 쓰기 작업을 수행하는 것이 아닌, 
+자식 프로세스를 만들어 메인 프로세스는 계속해서 명령어 수행 작업이 가능하다. 
+하지만 `SAVE` 는 메인 프로세스에서 `RDB` 파일 쓰기 작업을 수행하기 때문에, 
+작업이 끝날 때까지 명령어 수행작업이 지연된다. 
+`SAVE` 의 동작 과정은 아래와 같다. 
+1. 메인 프로세스가 메모리의 데이터를 새로운 `RDB` 임시 파일로 쓴다. 
+1. 임시 파일 쓰기 작업이 완료되면 기존 파일은 삭제하고, 임시 파일의 이름을 변경한다. 
+
+```bash
+.. Redis Server ..
+127.0.0.1:6379> save
+OK
+
+.. Bash ..
+$ docker logs redis-rdb
+
+.. 생략 ..
+
+1:M 28 Nov 2020 18:17:18.434 * DB saved on disk
+```  
+
+
+## 권장 설정 
+`Redis` 서버의 데이터에 대한 지속성을 보장하기 위해서는 `AOF` 와 `RDB` 를 모두 적절하게 사용하는 것을 권장한다. 
+`AOF` 를 기본으로 사용하고 `RDB` 는 옵션의 역할을 수행하는 방식이다. 
+여기서 `AOF` 의 주기는 `erverysec` 으로 하고 `rewrite` 는 적절하게 운용될 수 있도록 설정이 필요하다.  
+
+`Redis` 서버가 `AOF`, `RDB` 파일을 읽어 들이는 시점은 서버를 재시작 할 때이다. 
+별도로 서버가 실행 중인 상태에서 데이터를 읽는 명령은 제공하지 않는다. 
+그리고 `AOF` 와 `RDB` 파일이 모두 존재하는 경우 읽어 들이는 파일은 설정옵션에 따라 아래와 같다. 
+1. `appendonly yes` 이라면 `AOF` 파일을 읽는다. 
+1. `appendonly no` 이라면 `RDB` 파일을 읽는다. 
+
+`AOF` 가 활성화 된 상태에서 `AOF` 파일은 존재하지 않고 `RDB` 파일이 존재하더라도 `RDB` 파일은 읽지 않는다. 
+위 상황과 반대로 `AOF` 가 비활성화 된 상태에서 `RDB` 파일은 존재하지 않고 `AOF` 파일이 있더라도 읽지 않는다. 
+
+### 테스트
+가장 만저 `Redis` 서버가 시작 될때 `AOF`, `RDB` 파일을 읽으면서 발생하는 로그를 살펴본다.  
+
+서버가 시작할 때 `AOF` 파일을 읽는 로그는 아래와 같이 `DB loaded from append only file: 0.002 seconds` 라고 출력된다. 
+
+```bash
+.. AOF Redis Server 컨테이너 실행 ..
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-aof redis:6 redis-server --appendonly yes --auto-aof-rewrite-min-size 10b
+19f345545e3451c1bf940469a0534be0644568914a78c4c5e55ba06010c341df
+$ docker exec -it redis-aof /bin/bash
+root@19f345545e34:/data# redis-cli
+
+.. 데이터 추가 ..
+127.0.0.1:6379> set aof1 1
+OK
+127.0.0.1:6379> set aof2 2
+OK
+127.0.0.1:6379> exit
+root@19f345545e34:/data# exit
+exit
+
+.. AOF Redis Server 컨테이너 재시작 ..
+$ docker restart redis-aof
+redis-aof
+$ docker logs redis-aof
+.. 생략 ..
+1:M 28 Nov 2020 18:32:52.994 * DB loaded from append only file: 0.002 seconds
+1:M 28 Nov 2020 18:32:52.994 * Ready to accept connections
+```  
+
+서버가 시작 할때 `RDB` 파일을 읽는 로그는 아래와 같이 `DB loaded from disk: 0.002 seconds` 라고 출력된다. 
+
+```bash
+.. RDB Redis Server 컨테이너 실행 ..
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-rdb redis:6 redis-server --save 1 2
+7bc103b8515b62230638e385ad0cb583d8df96b3d167ba119bb1b19517f92086
+$ docker exec -it redis-rdb /bin/bash
+root@7bc103b8515b:/data# redis-cli
+
+.. 데이터 추가 ..
+127.0.0.1:6379> set rdb1 1
+OK
+127.0.0.1:6379> set rdb2 2
+OK
+127.0.0.1:6379> exit
+root@7bc103b8515b:/data# exit
+exit
+
+.. RDB Redis Server 컨테이너 재시작 ..
+$ docker restart redis-rdb
+redis-rdb
+$ docker logs redis-rdb
+.. 생략 ..
+1:M 28 Nov 2020 18:39:10.851 * DB loaded from disk: 0.002 seconds
+1:M 28 Nov 2020 18:39:10.851 * Ready to accept connections
+```  
+
+다음으로는 `RDB` 파일만 있을때 이를 `AOF` 를 활성화 해서 읽어 들이는 방법에 대해 알아본다. 
+또는 그 반대 상황도 .. ??
 
 
 
