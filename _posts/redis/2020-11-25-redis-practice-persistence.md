@@ -531,30 +531,47 @@ $ docker logs redis-rdb
 1:M 28 Nov 2020 18:39:10.851 * Ready to accept connections
 ```  
 
+
+다음으로는 `RDB` 파일만 있을때 `AOF` 를 활성화해서 이후에도 `AOF` 파일로 운용이 가능하도록 하는 방법에 대해 알아본다. 
+먼저 테스트를위해 `RDB` 만 활성화된 `Redis` 서버를 실행하고, 몇개의 데이터를 추가하면 `/data` 경로에 `dump.rdb` 파일이 생성된 것을 확인 할 수 있다. 
+
+```bash
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-test redis:6 redis-server --save 1 2
+4c80566187a23dde77709c94d60f46a707a748a4e46399c0ddaf157bd61276b8
+$ docker exec -it redis-test /bin/bash
+root@4c80566187a2:/data# redis-cli
+127.0.0.1:6379> set rdb1 1
+OK
+127.0.0.1:6379> set rdb2 2
+OK
+127.0.0.1:6379> exit
+root@4c80566187a2:/data# ls
+dump.rdb
+```  
+
+현재 상황은 `RDB` 파일만 존재하기 때문에 `RDB` 파일 저장전 서버에 이상이 생기면 마지막 저장시점 이후의 데이터는 모두 손실된다. 
+이 상황에서 `Redis` 서버를 재시작하지 않고 `AOF` 를 활성하과 하고 기존 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 다음으로는 `RDB` 파일만 있을때 이를 `AOF` 를 활성화 해서 읽어 들이는 방법에 대해 알아본다. 
 또는 그 반대 상황도 .. ??
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
