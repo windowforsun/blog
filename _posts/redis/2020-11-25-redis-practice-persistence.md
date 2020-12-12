@@ -13,6 +13,7 @@ tags:
   - Redis
   - Practice
   - Persistence
+toc: true
 ---  
 
 ## Redis Persistence
