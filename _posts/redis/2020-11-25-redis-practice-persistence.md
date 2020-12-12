@@ -4,7 +4,7 @@ classes: wide
 title: "[Redis 실습] Redis Persistence"
 header:
   overlay_image: /img/redis-bg.png
-excerpt: ''
+excerpt: 'Redis의 Persistence 에 대해 알아보고 서버 데이터르 지속성 있게 운영하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -536,88 +536,106 @@ $ docker logs redis-rdb
 먼저 테스트를위해 `RDB` 만 활성화된 `Redis` 서버를 실행하고, 몇개의 데이터를 추가하면 `/data` 경로에 `dump.rdb` 파일이 생성된 것을 확인 할 수 있다. 
 
 ```bash
-$ docker run -d --rm -v ${PWD}/data:/data --name redis-test redis:6 redis-server --save 1 2
-4c80566187a23dde77709c94d60f46a707a748a4e46399c0ddaf157bd61276b8
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-test redis:6 redis-server --save 9000 900
+f2b58dc1f1cdecfb5e21338832c08693225729c4fa0f3a7c8ca0c330f5b8ee51
 $ docker exec -it redis-test /bin/bash
-root@4c80566187a2:/data# redis-cli
+root@f2b58dc1f1cd:/data# redis-cli
 127.0.0.1:6379> set rdb1 1
 OK
 127.0.0.1:6379> set rdb2 2
 OK
+127.0.0.1:6379> save
+OK
 127.0.0.1:6379> exit
-root@4c80566187a2:/data# ls
+root@f2b58dc1f1cd:/data# ls
 dump.rdb
 ```  
 
 현재 상황은 `RDB` 파일만 존재하기 때문에 `RDB` 파일 저장전 서버에 이상이 생기면 마지막 저장시점 이후의 데이터는 모두 손실된다. 
-이 상황에서 `Redis` 서버를 재시작하지 않고 `AOF` 를 활성하과 하고 기존 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-다음으로는 `RDB` 파일만 있을때 이를 `AOF` 를 활성화 해서 읽어 들이는 방법에 대해 알아본다. 
-또는 그 반대 상황도 .. ??
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+이 상황에서 `Redis` 서버를 재시작하지 않고 `AOF` 를 활성화해서 기존 파일을 유지하면서 적용하는 방법에 대해 살펴본다. 
+`Redis` 서버가 실행 중인 상태에서는 `config set` 명령을 사용해서 설정값을 변경하 수 있기 때문에, 
+`config set appendonly yes` 명령을 실행하는 방법으로 재시작 없이 `AOF` 를 활성화 한다.  
+
+```bash
+root@f2b58dc1f1cd:/data# redis-cli
+127.0.0.1:6379> config set appendonly yes
+OK
+127.0.0.1:6379> set aof1 1
+OK
+127.0.0.1:6379> set aof2 2
+OK
+127.0.0.1:6379> exit
+root@f2b58dc1f1cd:/data# ls
+appendonly.aof  dump.rdb
+```  
+
+`AOF` 를 활성하고 하고 몇개의 데이터를 추가하자 `AOF` 파일이 생성된 것을 확인 할 수 있다. 
+`Redis` 서버 실행 중 `AOF` 를 활성화하면 메모리에 있는 데이터를 `rewrite` 기능과 비슷하게 `AOF` 파일에 쓰게 된다. 
+먼저 `RDB` 모드로 서버를 재시작하면 아래와 같이 `AOF` 활성화 이후 저장한 데이터는 존재하지 않은 것을 확인 할 수 있다. 
+테스트를 위해 `Redis` 서버는 `shutdown nosave` 명령으로 죽이고 다시 `Docker Container` 를 실행한다. 
+
+```bash
+127.0.0.1:6379> shutdown nosave
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-test redis:6 redis-server --save 9000 900
+6ca3511ead9ce7a160a77b62f7b78f318a2661e75a0c9b032e2537566a22238d
+$ docker logs redis-test
+
+.. 생략 ..
+
+1:M 12 Dec 2020 07:43:33.798 * RDB age 94 seconds
+1:M 12 Dec 2020 07:43:33.798 * RDB memory usage when created 0.83 Mb
+1:M 12 Dec 2020 07:43:33.798 * DB loaded from disk: 0.002 seconds
+1:M 12 Dec 2020 07:43:33.798 * Ready to accept connections
+$ docker exec -it redis-test /bin/bash
+root@6ca3511ead9c:/data# redis-cli
+127.0.0.1:6379> get rdb1
+"1"
+127.0.0.1:6379> get rdb2
+"2"
+127.0.0.1:6379> get aof1
+(nil)
+127.0.0.1:6379> get aof2
+(nil)
+```  
+
+`Redis` 서버 로그를 확인하면 `RDB` 파일을 읽어 메모리에 적재하는 것을 확인 할 수 있다.
+그리고 `AOF` 활성화 이전에 추가한 `rdb*` 를 키로 갖는 데이터는 조회 할 수 있지만, 
+`aof*` 를 키로 갖는 데이터를 조회되지 않은 것을 확인 할 수 있다.  
+
+다시 `shutdown nosave` 명령으로 `Redis` 서버를 종료하고 이번에는 `AOF` 가 활성화된 상태로 실행하면, 
+아래와 같이 `AOF` 활성화 이전 이후 데이터를 모두 조회가능 한 것을 확인 할 수 있다. 
+
+```bash
+127.0.0.1:6379> shutdown nosave
+$ docker run -d --rm -v ${PWD}/data:/data --name redis-test redis:6 redis-server --appendonly yes
+cd98d8e26757fb56d82842f75fa9cc5cd9438b117a4a5729e5b183c0e81ed726
+$ docker logs redis-test
+
+.. 생략 ..
+
+1:M 12 Dec 2020 07:47:00.689 * Reading RDB preamble from AOF file...
+1:M 12 Dec 2020 07:47:00.689 * Loading RDB produced by version 6.0.9
+1:M 12 Dec 2020 07:47:00.689 * RDB age 286 seconds
+1:M 12 Dec 2020 07:47:00.689 * RDB memory usage when created 0.83 Mb
+1:M 12 Dec 2020 07:47:00.689 * RDB has an AOF tail
+1:M 12 Dec 2020 07:47:00.689 * Reading the remaining AOF tail...
+1:M 12 Dec 2020 07:47:00.690 * DB loaded from append only file: 0.002 seconds
+1:M 12 Dec 2020 07:47:00.690 * Ready to accept connections
+$ docker exec -it redis-test /bin/bash
+root@cd98d8e26757:/data# redis-cli
+127.0.0.1:6379> get aof1
+"1"
+127.0.0.1:6379> get aof2
+"2"
+127.0.0.1:6379> get rdb1
+"1"
+127.0.0.1:6379> get rdb2
+"2"
+127.0.0.1:6379> get aof1
+"1"
+127.0.0.1:6379> get aof2
+"2"
+```  
 
 
 
