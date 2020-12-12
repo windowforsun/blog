@@ -642,5 +642,5 @@ root@cd98d8e26757:/data# redis-cli
 
 ---
 ## Reference
-[Redis Persistence](https://redis.io/topics/persistence)
-[Redis Persistence Introduction](http://redisgate.kr/redis/configuration/persistence.php)
+[Redis Persistence](https://redis.io/topics/persistence)  
+[Redis Persistence Introduction](http://redisgate.kr/redis/configuration/persistence.php)  
