@@ -199,6 +199,74 @@ public Job footballJob() {
 - `filterCount`
 - `writeSkipCount`
 
+
+### ExecutionContext
+`ExecutionContext` 는 `StepExecution` 객체 또는 `JobExecution` 객체의 범위에서 유지되어야 하는 `key-value` 컬렉션이다. 
+이는 `Quartz` 프레임워크에서 `JobDataMap` 과 유사한 역할을 수행한다. 
+가정 대표적인 예로 한번 실행된 배치 작업이 실패했을때 다시 재시작을 할때 `ExecutionContext` 에 저장된 데이터를 바탕으로 적절한 정보를 유지시키며 진행할 수 있다. 
+아래의 코드와 같이 실패한 배치 작업에서 몇번째 줄까지 수행되었는지 `ExecutionContext` 에 데이터를 저장할 수 있다. 
+
+```java
+executionContext.putLong(getKey(LINES_READ_COUNT), reader.getPosition());
+```  
+
+앞서 예시로 하루에 한번 수행하는 `Job` 에서 위와 같은 코드가 `StepExecution` 객체이 있는 상태에서 실패 하게됐을 때, 
+메타데이터를 요약하면 아래와 같다. 
+- `BATCH_JOB_INSTANCE`
+
+    JOB_INST_ID|JOB_NAME
+    ---|---
+    1|EndOfDay
+    
+- `BATCH_JOB_EXECUTION_PARAMS`
+
+    JOB_EXECUTION_ID|TYPE_CD|KEY_NAME|DATE_VAL|IDENTIFYING
+    ---|---|---|---|---
+    1|DATE|schedule.Date|2007-05-05 00:00:00|TRUE
+    
+- `BATCH_JOB_EXECUTION`
+
+    JOB_EXEC_ID|JOB_INST_ID|START_TIME|END_TIME|STATUS
+    ---|---|---|---|---
+    1|1|2007-05-05 21:00|2007-05-05 21:30:00|FAILED
+    
+- `BATCH_STEP_EXECUTION`
+
+    STEP_EXEC_ID|JOB_EXEC_ID|STEP_NAME|START_TIME|END_TIME_STATUS
+    ---|---|---|---|---|---
+    1|1|loadData|2007-05-05 21:00:00|2007-05-05 21:30:00|FAILED
+
+- `BATCH_STEP_EXECUTION_CONTEXT`
+
+    STEP_EXEC_ID|SHORT_CONTEXT
+    ---|---
+    1|{piece.count=4123}
+
+위와 같이 실패한 배치 작업을 재실행 할때 `StepExecution` 의 `ExecutionContext` 를 사용해서, 
+재시작시 이전 배치 작업에서 처리한 다음 라인부터 시작하도록 구성한다면 아래와 같다. 
+
+```java
+if (executionContext.containsKey(getKey(LINES_READ_COUNT))) {
+    log.debug("Initializing for restart. Restart data is: " + executionContext);
+
+    long lineCount = executionContext.getLong(getKey(LINES_READ_COUNT));
+
+    LineReader reader = getReader();
+
+    Object record = "";
+    while (reader.getPosition() < lineCount && record != null) {
+        record = readLine();
+    }
+}
+```  
+
+메타데이터부분을 보면 알수 있듯이 `Job` 이 여러 `Step` 으로 구성 돼있다면, 
+각 `Step` 의 `StepExecution` 마다 별도의 `ExecutionContext` 를 가지는 것을 확인할 수 있다. 
+
+
+
+
+
 스텝의 실행은 Step Execution 클래스의 객체에 의해 나타납니다. 각 실행에는 대응하는 스텝, 작업 실행 및 커밋 수나 롤백 수, 시작 시각 및 종료 시각과 같은 트랜잭션 관련 데이터에 대한 참조가 포함됩니다. 또한 각 단계의 실행에는 Execution Context가 포함됩니다.Execution Context에는 재시동에 필요한 통계정보나 상태정보 등 개발자가 배치실행 전체에서 유지해야 할 모든 데이터가 포함됩니다. 다음 표에 스텝 수행 속성들을 보여 줍니다.
 
 
