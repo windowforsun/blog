@@ -272,8 +272,8 @@ if (executionContext.containsKey(getKey(LINES_READ_COUNT))) {
 `Step` 을 실행할 때 동일한 `JobParameter` 로 실행한 이력이 있지만 실패 했기 때문에 `StepExecution` 은 `BATCH_STEP_EXECUTION_CONTEXT` 에 있는 `ExecutionContext` 정보를 참조하게 된다. 
 그리고 `ExecutionContext` 에 있는 `piece.count` 값인 `4123` 라인부터 다시 해당 `Step` 처리를 수행하게 된다.  
 
-`JobParameter` 가 `2007-05-06 00:00:00` 과 같이 새로운 값으로 실행되면다면 `StepExecution` 은 독립된 `ExecutionContext` 를 사용하게 되고, 
-`2007-05-05 00:00:00` 로 실행된 `StepExecution` 의 `ExecutionContext` 와는 별도록 구성되고 사용된다.  
+`JobParameter` 가 `2007-05-06 00:00:00` 과 같이 새로운 값으로 실행된다면 `StepExecution` 은 독립된 `ExecutionContext` 를 사용하게 되고, 
+`2007-05-05 00:00:00` 로 실행된 `StepExecution` 의 `ExecutionContext` 와는 별도로 구성되고 사용된다.  
 
 이렇게 `Job` 처리에서 지속성이 필요한 데이터를 저장할 수 있는 `ExecutionContext` 는 `StepExecution` 별로 구성되고, 
 `JobExecution` 별로 구성하는 것도 가능하다. 
