@@ -23,7 +23,7 @@ use_math: true
 ## Spring Batch 구성 요소
 `Spring Batch` 를 구성하는 요소들을 간단하게 다이어그램 형태로 그려보면 아래와 같다. 
 
-![그림 1]({{site.baseurl}}/img/spring/concept-batch-doamin-1.png)  
+![그림 1]({{site.baseurl}}/img/spring/concept-batch-domain-1.png)  
 
 위 다이어그램에서 보면 알 수 있듯이 하나의 `Job` 은 하나 이상의 `Step` 을 가질 수 있다. 
 그리고 하나의 `Step` 은 하나씩의 `ItemReader`, `ItemProcessor`, `ItemWriter` 를 가지게 된다. 
@@ -35,7 +35,7 @@ use_math: true
 또한 `Job` 은 `XML` 혹은 `Java Config` 를 사용해서 구성할 수 있다. 
 그리고 `Job` 은 아래 다이어그램과 같이 `Job` 을 이루는 계층에서 최상위에 위치하는 엔티티이다. 
 
-![그림 1]({{site.baseurl}}/img/spring/concept-batch-doamin-2.png)  
+![그림 1]({{site.baseurl}}/img/spring/concept-batch-domain-2.png)  
 
 `Job` 은 하나의 배치 작업을 여러 논리적인 흐름으로 나눠 설계된 `Step` 의 조합으로 구성될 수 있다. 
 이러한 포함관계에서 `Job` 을 통해 여러 `Step` 에서 공통적으로 필요한 글로벌 속성을 설정하거나, 
@@ -81,7 +81,7 @@ public Job footballJob() {
 `JobParameters` 는 배치 작업이 처리 될때 필요한 파라미터의 역할을 하면서, 
 주기적으로 실행되는 `Job` 의 식별자 역할을 하게 된다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept-batch-doamin-3.png)  
+![그림 1]({{site.baseurl}}/img/spring/concept-batch-domain-3.png)  
 
 위 그림을 보면 하루에 한번 실행되는 `Job` 이 있을때 `JobParameters` 로 `2007/05/05` 를 전달해서 배치 잡을 실행한다. 
 그러면 결과로 `2007/05/05` 에 해당하는 `JobInstance` 가 생성되는 것을 확인 할 수 있다. 
@@ -175,7 +175,7 @@ public Job footballJob() {
 또한 `Job` 이 실제 실행 단위인 `JobExecution` 을 갖는 것처럼, 
 `Step` 또한 실제 실행 단위인 `StepExecution` 을 가지게 되고 이는 `JobExecution` 과 연관성이 있다. 
 
-![그림 1]({{site.baseurl}}/img/spring/concept-batch-doamin-4.png)  
+![그림 1]({{site.baseurl}}/img/spring/concept-batch-domain-4.png)  
 
 #### StepExecution
 `StepExecution` 은 `Job` 과 `JobExecution` 관계와 동일하게 실제로 실행된 `Step` 을 의미한다. 
