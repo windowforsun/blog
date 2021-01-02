@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] Spring Batch 의 구성요소"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Batch 를 구성하는 전체적인 구성요소에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,9 @@ tags:
     - Concept
     - Spring
     - Spring Batch
+    - Job
+    - Step
+    - ExecutionContext
 toc: true
 use_math: true
 ---  
@@ -242,6 +245,9 @@ executionContext.putLong(getKey(LINES_READ_COUNT), reader.getPosition());
     ---|---
     1|{piece.count=4123}
 
+`JobParameter` 가 `2007-05-05 00:00:00` 로 실행된 `Job` 이 첫번째 `Step` 을 처리하던 과정에 실패 했고, 
+`StepExecution` 에서 실행되었던 정보는 `ExecutionContext` 에 `{piece.count=4123}` 와 같이 저장되었다.  
+
 위와 같이 실패한 배치 작업을 재실행 할때 `StepExecution` 의 `ExecutionContext` 를 사용해서, 
 재시작시 이전 배치 작업에서 처리한 다음 라인부터 시작하도록 구성한다면 아래와 같다. 
 
@@ -262,24 +268,66 @@ if (executionContext.containsKey(getKey(LINES_READ_COUNT))) {
 
 메타데이터부분을 보면 알수 있듯이 `Job` 이 여러 `Step` 으로 구성 돼있다면, 
 각 `Step` 의 `StepExecution` 마다 별도의 `ExecutionContext` 를 가지는 것을 확인할 수 있다. 
+만약 `JobParameter` 가 `2007-05-05 00:00:00` 로 주어지고 실행된다면, 
+`Step` 을 실행할 때 동일한 `JobParameter` 로 실행한 이력이 있지만 실패 했기 때문에 `StepExecution` 은 `BATCH_STEP_EXECUTION_CONTEXT` 에 있는 `ExecutionContext` 정보를 참조하게 된다. 
+그리고 `ExecutionContext` 에 있는 `piece.count` 값인 `4123` 라인부터 다시 해당 `Step` 처리를 수행하게 된다.  
+
+`JobParameter` 가 `2007-05-06 00:00:00` 과 같이 새로운 값으로 실행되면다면 `StepExecution` 은 독립된 `ExecutionContext` 를 사용하게 되고, 
+`2007-05-05 00:00:00` 로 실행된 `StepExecution` 의 `ExecutionContext` 와는 별도록 구성되고 사용된다.  
+
+이렇게 `Job` 처리에서 지속성이 필요한 데이터를 저장할 수 있는 `ExecutionContext` 는 `StepExecution` 별로 구성되고, 
+`JobExecution` 별로 구성하는 것도 가능하다. 
+
+```java
+ExecutionContext ecStep = stepExecution.getExecutionContext();
+ExecutionContext ecJob = jobExecution.getExecutionContext();
+```  
+
+`ecStep` 은 `StepExecution` 단위의 `ExecutionContext` 이고, 
+`ecJob` 은 `JobExecution` 단위의 `ExecutionContext` 이기 때문에 두 `ExecutionContext` 는 같지 않다.
+`ecStep` 은 하나의 `Step` 스코프에서(`StepExecution`) 커밋 단위와 같이 지속성이 필요한 정보를 저장하는 데이터를 저장하는데 사용 할 수 있다. 
+그리고 `ecJob` 은 하나의 `Job` 을 구성하는 여러 `Step` 이 있을때 `Job` 스코프에서 매 `Step` 마다 지속성이 필요한 데이터를 저장하는데 사용 할 수 있다.  
 
 
+### JobRepository
+`JobRepository` 는 앞서 언급한 모든 메타데이터를 저장하는 저장소를 의미한다. 
+`JobRepository` 는 `JobLauncher`, `Job`, `Step` 에서 `CRUD` 연산을 제공한다. 
+그리고 `Job` 이 처음 실행되면 `JobExecution` 이 실행하기 위한 정보를 `JobRepository` 에서 얻고, 
+실행 중에도 관련 정보를 얻거나 저장 할 수 있다. 
+`StepExecution`, `JobExecution` 에서 필요한 지속성에 대한 데이터도 `JobRepository` 를 통해 저장소에 저장된다.  
+
+`JobRepository` 는 애플리케이션에서 `@EnableBatchProcessing` 어노테이션을 선언하게 되면 자동으로 설정에 따라 저장소가 구성된다.  
 
 
+### JobLauncher
+`JobLauncher` 는 `Job` 을 특정 `JobParameter` 을 통해 실행하도록 하는 간단한 인터페이스이다. 
 
-스텝의 실행은 Step Execution 클래스의 객체에 의해 나타납니다. 각 실행에는 대응하는 스텝, 작업 실행 및 커밋 수나 롤백 수, 시작 시각 및 종료 시각과 같은 트랜잭션 관련 데이터에 대한 참조가 포함됩니다. 또한 각 단계의 실행에는 Execution Context가 포함됩니다.Execution Context에는 재시동에 필요한 통계정보나 상태정보 등 개발자가 배치실행 전체에서 유지해야 할 모든 데이터가 포함됩니다. 다음 표에 스텝 수행 속성들을 보여 줍니다.
+```java
+public interface JobLauncher {
+
+public JobExecution run(Job job, JobParameters jobParameters)
+            throws JobExecutionAlreadyRunningException, JobRestartException,
+                   JobInstanceAlreadyCompleteException, JobParametersInvalidException;
+}
+```  
+
+`JobLauncher` 의 구현체는 `Job` 실행을 위해 `JobRepository` 에서 적절한 `JobExecution` 을 얻을 수 있어야 한다.  
 
 
+### ItemReader
+`ItemReader` 는 `Step` 단위에서 처리를 위해 필요한 `Item` 을 읽어오는 추상 클래스이다. 
+`ItemReader` 는 구현한 `Item` 단위로 읽어오게 되고, 만약 더 이상 읽을 `Item` 이 없다면 `null` 을 리턴하게 된다. 
 
 
+### ItemWriter
+`ItemWriter` 는 `Step` 단위의 결과물을 만드는 추상 클래스이다. 
+`Itemwriter` 의 실행은 한번에 처리하는 `Item` 의 개수를 설정하는 `chunk` 개수에 따라 수행 횟수가 달라질 수 있다. 
 
-
-
-
-
-`Spring Batch` 는 크게 `Job` 과 `Step` 을 바탕으로 실행되면서, 
-개발자가 제공하는 `ItemReader`, `ItemWriter` 등을 통해 데이터를 처리하게 된다. 
-이는 아래와 같은 `Spring` 패턴, 템플릿, 콜백 등을 
+### ItemProcessor
+`ItemProcessor` 는 `Batch Job` 처리의 비지니스 로직을 구현할 수 있는 추상 클래스이다. 
+`ItemReader` 에서 읽은 `Item` 단위 데이터는 `ItemProcessor` 에 전달되고 구현된 로직에 맞춰 처리된다. 
+그리고 `ItemWriter` 에 전달하기 위해 설정된 `chunk` 의 수만큼 `Item` 을 처리하고 `ItemWriter` 로 `chunk` 단위 데이터를 전달한다. 
+`Item` 의 유효성은 `null` 인지 아닌지 검사해서 처리하고 해당 데이터 부터는 `ItemWriter` 로 전달되지 않는다. 
 
 
 ---
