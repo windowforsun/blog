@@ -52,3 +52,8 @@ stage to unstate$ git reset HEAD <filename>, git reset HEAD
 원격 저장소 삭제 $ git remote remove <원격저장소이름>
 
 원격 저장소 추가 $ git remote add <원격저장소이름> <원격저장소주소>
+
+브랜치 패턴 조회 $ git branch -l feature/spring/*
+
+현재 브랜치 $ git branch --show-current
+$ git rev-parse --abbrev-ref HEAD
