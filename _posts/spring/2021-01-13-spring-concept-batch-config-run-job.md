@@ -1239,7 +1239,10 @@ public AutomaticJobRegistrar registrar() {
 - `JobRegistryJobConfig`
 
 ```java
-{
+@Configuration
+@Import(StepConfig.class)
+@RequiredArgsConstructor
+public class JobRegistryJobConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final JobRegistry jobRegistry;
     private final Step prefixStep;
