@@ -393,7 +393,7 @@ public class SampleJobConfig {
 ## Configuring a Step for Restart
 
 ### Setting a Start Limit
-`startLimit` 설정을 사요앟면 `Job` 내에서 `Step` 의 실행 횟수를 지정할 수 있다. 
+`startLimit` 설정을 사용하면 `Job` 내에서 `Step` 의 실행 횟수를 지정할 수 있다. 
 여기서 `Step` 의 실행 횟수란 `JobInstance` 단위에서 횟수를 의미한다. 
 만약 `JobInstane` 단위에서 `Step` 에 설정된 `startLimit` 를 넘는 실행횟수가 수행되면 `StartLimitExceededException` 예외가 발생한다. 
 `startLimit` 의 기본값은 `Integer.MAX_VALUE` 이다.  
