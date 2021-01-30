@@ -38,7 +38,7 @@ use_math: true
 그러면 `ItemWriter` 는 넘어온 `chunk`(`item` 의 묶음) 전체에 대해서 쓰기를 수행하고 트랜잭션이 커밋 된다. 
 위와 같은 과정을 도식화 하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept-batch-chunk-oriented-processing-2.png.png)  
+![그림 1]({{site.baseurl}}/img/spring/concept-batch-chunk-oriented-processing-2.png)  
 
 ## 예제 프로젝트
 `Spring Batch` 에서 `Chunk-oriented Processing` 을 기반으로 하는 `Step` 을 설정하고 실행하는 예제 프로젝트를 간단히 소개하며 시작한다.  
