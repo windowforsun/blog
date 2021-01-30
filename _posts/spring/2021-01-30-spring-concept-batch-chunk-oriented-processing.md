@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: ""
+title: "[Spring 개념] Spring Batch Item기반(Chunk) Step 설정과 실행"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Batch 에서 Chunk-oriented Processing 기반 Step 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,9 @@ tags:
     - Spring
     - Spring Batch
     - Job
+    - Chunk
+    - Listener
+    - Step
 toc: true
 use_math: true
 ---  
@@ -39,6 +42,268 @@ use_math: true
 
 ## 예제 프로젝트
 `Spring Batch` 에서 `Chunk-oriented Processing` 을 기반으로 하는 `Step` 을 설정하고 실행하는 예제 프로젝트를 간단히 소개하며 시작한다.  
+
+### 프로젝트 구조
+
+```
+│  build.gradle
+└─src
+    ├─main
+    │  ├─java
+    │  │  │
+    │  │  └─com
+    │  │      └─windowforsun
+    │  │          └─stepexam
+    │  │              │  StepExamApplication.java
+    │  │              │
+    │  │              ├─component
+    │  │              │      SampleChunkListener.java
+    │  │              │      SampleItemProcessorListener.java
+    │  │              │      SampleItemReadListener.java
+    │  │              │      SampleItemWriteListener.java
+    │  │              │      SampleJobListener.java
+    │  │              │      SampleSkipListener.java
+    │  │              │      SampleStepListener.java
+    │  │              │
+    │  │              ├─config
+    │  │              │      InterceptingConfig.java
+    │  │              │      ItemConfig.java
+    │  │              │      ItemStreamConfig.java
+    │  │              │      NoRollbackConfig.java
+    │  │              │      RestartCompleteStepConfig.java
+    │  │              │      RetryLogicConfig.java
+    │  │              │      SampleJobConfig.java
+    │  │              │      SkipLogicConfig.java
+    │  │              │      StartLimitConfig.java
+    │  │              │      StartLimitDuplicatedStepConfig.java
+    │  │              │
+    │  │              ├─domain
+    │  │              │      NumberData.java
+    │  │              │      PrefixStringData.java
+    │  │              │      StringData.java
+    │  │              │
+    │  │              ├─exception
+    │  │              │      CustomException.java
+    │  │              │      MySkipException.java
+    │  │              │
+    │  │              ├─item
+    │  │              │      CustomNumberDataReader.java
+    │  │              │      CustomStringDataReader.java
+    │  │              │      FailCountNumberDataProcessor.java
+    │  │              │      FailCountStringDataProcessor.java
+    │  │              │      LogItemProcessor.java
+    │  │              │      LogItemReader.java
+    │  │              │      LogItemWriter.java
+    │  │              │      NumberDataItemStream.java
+    │  │              │      NumberDataProcessor.java
+    │  │              │      SampleStream.java
+    │  │              │      StringDataProcessor.java
+    │  │              │
+    │  │              └─tmp
+    │  └─resources
+    │          application.yaml
+    │          number-data.csv
+    │          schema-all.sql
+    │          string-data.csv
+    │
+    └─test
+        └─java
+          │
+          └─com
+              └─windowforsun
+                  └─stepexam
+                          BatchTestConfig.java
+                          CommitIntervalTest.java
+                          InterceptingTest.java
+                          ItemStreamTest.java
+                          NoRollbackTest.java
+                          RestartCompleteStepTest.java
+                          RetryLogicTest.java
+                          SkipLogicTest.java
+                          StartLimitDuplicatedStepTest.java
+                          StartLimitTest.java
+
+```  
+
+### build.gradle
+
+```groovy
+plugins {
+    id 'org.springframework.boot' version '2.2.2.RELEASE'
+    id 'io.spring.dependency-management' version '1.0.8.RELEASE'
+    id 'java'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+    runtimeOnly 'com.h2database:h2'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    testImplementation 'org.springframework.batch:spring-batch-test'
+
+    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
+    annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
+}
+
+test {
+    useJUnitPlatform()
+}
+```  
+
+### StepExamApplication
+
+```java
+@SpringBootApplication
+@EnableBatchProcessing
+public class StepExamApplication {
+    public static void main(String[] args) {
+        System.exit(
+                SpringApplication.exit(
+                        SpringApplication.run(StepExamApplication.class, args)
+                )
+        );
+    }
+}
+```  
+
+### ItemConfig
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class ItemConfig {
+    private final DataSource dataSource;
+
+    @Bean
+    public ItemReader<NumberData> numberReader() {
+        return new FlatFileItemReaderBuilder<NumberData>()
+                .name("numberReader")
+                .resource(new ClassPathResource("number-data.csv"))
+                .delimited()
+                .names("numVal")
+                .fieldSetMapper(new BeanWrapperFieldSetMapper<NumberData>() {{
+                    setTargetType(NumberData.class);
+                }})
+                .build();
+    }
+
+    @Bean
+    public ItemProcessor<NumberData, NumberData> numberProcessor() {
+        return new NumberDataProcessor();
+    }
+
+    @Bean
+    public ItemWriter<NumberData> numberWriter() {
+        return new JdbcBatchItemWriterBuilder<NumberData>()
+                .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
+                .sql("INSERT INTO number_data (num_val) VALUES (:numVal)")
+                .dataSource(this.dataSource)
+                .build();
+    }
+
+    @Bean
+    public ItemReader<StringData> stringReader() {
+        return new FlatFileItemReaderBuilder<StringData>()
+                .name("stringReader")
+                .resource(new ClassPathResource("string-data.csv"))
+                .delimited()
+                .names("strVal ")
+                .fieldSetMapper(new BeanWrapperFieldSetMapper<StringData>() {{
+                    setTargetType(StringData.class);
+                }})
+                .build();
+    }
+
+    @Bean
+    public ItemProcessor<StringData, StringData> stringProcessor() {
+        return new StringDataProcessor();
+    }
+
+    @Bean
+    public ItemWriter<StringData> stringWriter() {
+        return new JdbcBatchItemWriterBuilder<StringData>()
+                .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
+                .sql("INSERT INTO string_data (str_val) VALUES (:strVal)")
+                .dataSource(this.dataSource)
+                .build();
+    }
+}
+```  
+
+### BatchTestConfig
+
+```java
+@EnableBatchProcessing
+@EnableAutoConfiguration
+public class BatchTestConfig {
+}
+```  
+
+### resources
+- `number-data.csv`
+
+```
+1000
+2000
+3000
+4000
+5000
+6000
+7000
+8000
+9000
+10000
+```  
+
+- `string-data.csv`
+
+```
+aa
+bb
+cc
+dd
+ee
+ff
+gg
+hh
+ii
+jj
+```  
+
+- `schema-all.sql`
+
+```sql
+DROP TABLE IF EXISTS `number_data`;
+
+CREATE TABLE number_data  (
+    id BIGINT auto_increment NOT NULL PRIMARY KEY,
+    num_val int
+);
+
+DROP TABLE IF EXISTS `string_data`;
+
+CREATE TABLE string_data  (
+    id BIGINT auto_increment NOT NULL PRIMARY KEY,
+    str_val varchar
+);
+
+DROP TABLE IF EXISTS `prefix_string_data`;
+
+CREATE TABLE prefix_string_data  (
+    id BIGINT auto_increment NOT NULL PRIMARY KEY,
+    prefix_str_val varchar
+);
+```  
+
 
 
 
@@ -850,13 +1115,897 @@ public Step step1() {
 `ItemStream` 은 `Step` 의 생명주기 동안 정의된 지점에서 콜백을 처리할 수 있다. 
 한가지 예로 커스텀한 `ItemReader` 또는 `ItemWriter` 를 구현해야 할때, 
 `ItemStream` 에 있는 `open()`, `update()`, `close()` 메소드를 사용해서 리소스 접근에(`Connection`) 대한 전처리, 중간처리, 후처리를 수행할 수 있다. 
-그리고 커스텀한 재시작 룰을 적용하고 싶은 경우 `ItemStream` 에서 `ExecutionContext` 를 활용해서 처리 가능하다. 
+그리고 커스텀한 재시작 룰을 적용하고 싶은 경우 `ItemStream` 에서 `ExecutionContext` 를 활용해서 처리 가능하다.  
 
-테스트에서는 `numberStep` 에 간단한 `
+`ItemStream` 을 구성하는 3개의 메소드의 간단한 설명은 아래와 같다. 
+- `open()` : `Step` 이 시작할때 한번 호출 된다. 
+- `update()` : `chunk` 단위가 시작할 떄마다 호출 된다. 
+- `close()` : `Step` 종료 될떄 한번 호출 된다. 
+
+`ItemStream` 에 대한 더 자세한 내용은 [여기](https://docs.spring.io/spring-batch/docs/4.3.x/reference/html/readersAndWriters.html#itemStream)
+에서 확인 할 수 있다.  
+
+테스트에서는 `numberStep` 에 커스텀한 `ItemReader`(`CustomNumberDataReader`) 를 사용할떄, 
+`ItemStream` 을 사용해서 재시작에 대한 처리를 적용해 본다.  
+
+- `ItemStreamConfig`
+
+```java
+@Configuration
+@Import(ItemConfig.class)
+@RequiredArgsConstructor
+public class ItemStreamConfig {
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    @Bean
+    public Step numberStep(ItemProcessor<NumberData, NumberData> numberProcessor,
+                           ItemWriter<NumberData> numberWriter) {
+        return this.stepBuilderFactory
+                .get("numberStep")
+                .<NumberData, NumberData>chunk(2)
+                .reader(new CustomNumberDataReader())
+                .processor(numberProcessor)
+                .writer(numberWriter)
+                .stream(new NumberDataItemStream())
+                .build();
+    }
+
+    @Bean
+    public Step stringStep(ItemReader<StringData> stringReader,
+                           ItemProcessor<StringData, StringData> stringProcessor,
+                           ItemWriter<StringData> stringWriter) {
+        return this.stepBuilderFactory
+                .get("stringStep")
+                .<StringData, StringData>chunk(2)
+                .reader(stringReader)
+                .processor(stringProcessor)
+                .writer(stringWriter)
+                .build();
+    }
+
+    @Bean
+    public Job sampleJob(Step numberStep, Step stringStep) {
+        return this.jobBuilderFactory
+                .get("sampleJob")
+                .start(numberStep)
+                .next(stringStep)
+                .build();
+    }
+}
+```  
+
+- `NumberDataItemStream`
+
+```java
+@Slf4j
+public class NumberDataItemStream implements ItemStream {
+    private int index;
+
+    @Override
+    public void open(ExecutionContext executionContext) throws ItemStreamException {
+        if(executionContext.containsKey("index")) {
+            this.index = executionContext.getInt("index");
+        } else {
+            this.index = 0;
+        }
+
+        CustomNumberDataReader.INDEX = this.index;
+        log.info("open index : " + this.index);
+    }
+
+    @Override
+    public void update(ExecutionContext executionContext) throws ItemStreamException {
+        this.index = CustomNumberDataReader.INDEX;
+        executionContext.putInt("index", this.index);
+        log.info("update index : " + this.index);
+    }
+
+    @Override
+    public void close() throws ItemStreamException {
+        log.info("close");
+    }
+}
+```  
+  - `open()` 이 호출됐을 떄 `ExecutionContext` 에서 인덱스 정보가 있으면 `ItemReader` 에 설정하고, 아니면 초기화 한다. 
+  - `update()` 가 호출 될 때마다 `ExecutionContext` 에 인덱스 정보를 갱신한다. 
+  
+- `ItemStreamTest`
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBatchTest
+@ContextConfiguration(classes = {
+        BatchTestConfig.class,
+        ItemStreamConfig.class
+})
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+public class ItemStreamTest {
+    @Autowired
+    private JobLauncherTestUtils jobLauncherTestUtils;
+    @Autowired
+    private JobRepositoryTestUtils jobRepositoryTestUtils;
+    @Autowired
+    private JobRepository jobRepository;
+    @Autowired
+    JdbcTemplate jdbcTemplate;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
+
+    @Before
+    public void setUp() {
+        CustomNumberDataReader.INDEX = 0;
+        NumberDataProcessor.FAIL_NUMBER = -1;
+        this.jobRepositoryTestUtils.removeJobExecutions();
+    }
+
+    @Test
+    public void givenSameJobParametersFirstFailed_whenSuccessLaunchJob_thenRestartSuccess() throws Exception {
+        // given
+        NumberDataProcessor.FAIL_NUMBER = 5000;
+        JobParameters jobParameters = new JobParametersBuilder().addLong("key", 100L).toJobParameters();
+        this.jobLauncherTestUtils.launchJob(jobParameters);
+        NumberDataProcessor.FAIL_NUMBER = -1;
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob(jobParameters);
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.COMPLETED.getExitCode()));
+        int actualNumberData = this.jdbcTemplate.queryForObject("select count(1) from number_data", Integer.class);
+        assertThat(actualNumberData, is(10));
+        int actualStringData = this.jdbcTemplate.queryForObject("select count(1) from string_data", Integer.class);
+        assertThat(actualStringData, is(10));
+        StepExecution stepExecution = this.jobRepository.getLastStepExecution(jobExecution.getJobInstance(), "numberStep");
+        ExecutionContext executionContext = stepExecution.getExecutionContext();
+        assertThat(executionContext.getInt("index"), is(10));
+    }
+
+    @Test
+    public void givenSameJobParametersFirstFailed_whenSuccessLaunchJob_thenCheckLogging() throws Exception {
+        // given
+        CustomNumberDataReader.DATAS = new int[]{
+                1000, 2000, 3000, 4000, 5000
+        };
+        NumberDataProcessor.FAIL_NUMBER = 3000;
+        JobParameters jobParameters = new JobParametersBuilder().addLong("key", 100L).toJobParameters();
+        this.jobLauncherTestUtils.launchJob(jobParameters);
+        NumberDataProcessor.FAIL_NUMBER = -1;
+
+        // when
+        this.jobLauncherTestUtils.launchJob(jobParameters);
+
+        // then
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "NumberDataItemStream.open index : 0",
+                "NumberDataItemStream.update index : 0",
+                "CustomNumberDataReader.read : 1000",
+                "CustomNumberDataReader.read : 2000",
+                "NumberDataProcessor.process : 1000",
+                "NumberDataProcessor.process : 2000",
+                "NumberDataItemStream.update index : 2",
+                "CustomNumberDataReader.read : 3000",
+                "CustomNumberDataReader.read : 4000",
+                // when process 3000 throw exception
+                "CustomException: number processor fail",
+                "NumberDataItemStream.close",
+                // restart jobinstance
+                "NumberDataItemStream.open index : 2",
+                "NumberDataItemStream.update index : 2",
+                "CustomNumberDataReader.read : 3000",
+                "CustomNumberDataReader.read : 4000",
+                "NumberDataProcessor.process : 3000",
+                "NumberDataProcessor.process : 4000",
+                "NumberDataItemStream.update index : 4",
+                "CustomNumberDataReader.read : 5000",
+                "NumberDataProcessor.process : 5000",
+                "NumberDataItemStream.close"
+        ));
+    }
+}
+```  
 
 
+## Intercepting Step Execution
+`Job` 과 동일하게 `Step` 또한 라이프 사이클 중 특정 이벤트에 따라 처리를 수행할 수 있다. 
+`Step` 뿐만 아니라 구성요소인 `ItemReader`, `ItemProcessor`, `ItemWriter`, `Chunk`, `Skip` 등 
+다양한 `Listener` 를 구현해서 `Step` 구성에 사용하는 `StepBuilderFactory` 를 통해 등록 가능하다.  
 
+`Listener` 에 대한 구현은 각 인터페이스를 구현하고 등록하는 방법도 가능하고, 
+어노테이션을 사용해서 구현하는 방법도 있다.  
 
+### StepExecutionListener
+`Step` 실행 전, 후에 대한 처리를 수행할 수 있는 리스너의 인터페이스는 아래와 같다. 
+
+```java
+public interface StepExecutionListener extends StepListener {
+
+    void beforeStep(StepExecution stepExecution);
+
+    ExitStatus afterStep(StepExecution stepExecution);
+
+}
+```  
+
+두 메소드는 `Step` 의 성공, 실패 여부에 상관하지 않고 한번씩 실행된다. 
+`afterStep` 에서는 `Step` 이 처리완료 되었지만 다시한번 검증 후 실패 `ExitStatus` 를 리턴하는 동작이 가능하다.  
+
+`StepExecutionListener` 에 해당하는 어노테이션은 아래와 같다. 
+- `@BeforeStep`
+- `@AfterStep`
+
+### ChunkListener
+`Chunk` 실행 전, 후등에 처리를 수행할 수 있는 리스너의 인터페이스는 아래와 같다. 
+
+```java
+public interface ChunkListener extends StepListener {
+
+    void beforeChunk(ChunkContext context);
+    void afterChunk(ChunkContext context);
+    void afterChunkError(ChunkContext context);
+
+}
+```  
+
+- `beforeChunk` : 트랜잭션 시작된 후 이면서, `ItemReader` 의 `read` 메소드 호출 전에 호출된다. 
+- `afterChunk` : 트랜잭션 커밋 후 호출된다. 만약 롤백된 경우에는 호출되지 않는다. 
+- `afterChunkError` : `Chunk` 단위에서 예외가 발생한 경우 롤백 후 호출 된다. 
+
+`ChunkListener` 는 `Tasklet` 기반 `Step` 에서도 사용될 수 있다. 
+`Tasklet` 에서 사용될 때는 실행 전, 후에 호출 된다.  
+
+`ChunkListener` 에 해당하는 어노테이션은 아래와 같다. 
+- `@BeforeChunk`
+- `@AfterChunk`
+- `@AfterChunkError`
+
+### ItemReadListener
+`ItemReader` 실행 전, 후등에 처리를 수행할 수 있는 리스너의 인터페이스는 아래와 같다. 
+
+```java
+public interface ItemReadListener<T> extends StepListener {
+
+    void beforeRead();
+    void afterRead(T item);
+    void onReadError(Exception ex);
+
+}
+```  
+
+- `beforeReader` : `read` 메소드 호출 전에 호출된다. 
+- `afterReader` : `read` 메소드 호출이 성공하고 나서 호출 된다. 
+- `onReadError` : `read` 메소드에서 예외가 발생하면 호출 된다. 
+
+`ItemReadListner` 에 해당하는 어노테이션은 아래와 같다. 
+- `@BeforeRead`
+- `@AfterRead`
+- `@OnReadError`
+
+### ItemProcessListener
+`ItemProcessor` 실행 전, 후등에 처리를 수행할 수 있는 리스너의 인터페이스는 아래와 같다. 
+
+```java
+public interface ItemProcessListener<T, S> extends StepListener {
+
+    void beforeProcess(T item);
+    void afterProcess(T item, S result);
+    void onProcessError(T item, Exception e);
+
+}
+```  
+
+- `beforeProcess` : `process` 메소드 호출 전에 호출 된다. 
+- `afterProcess` : `process` 메소드가 성공하고 나서 호출 된다. 
+- `onProcessError` : `process` 메소드에서 예외가 발생하면 호출 된다. 
+
+`ItemProcessListener` 에 해당하는 어노테이션은 아래와 같다. 
+- `@BeforeProcess`
+- `@AfterProcess`
+- `@OnProcessError`
+
+### ItemWriteListener
+`ItemWriter` 실행 전, 후등에 처리를 수행할 수 있는 리스너의 인터페이스는 아래와 같다. 
+
+```java
+public interface ItemWriteListener<S> extends StepListener {
+
+    void beforeWrite(List<? extends S> items);
+    void afterWrite(List<? extends S> items);
+    void onWriteError(Exception exception, List<? extends S> items);
+
+}
+```  
+
+- `beforeWrite` : `write` 메소드 호출 전에 호출 된다. 
+- `afterWrite` : `write` 메소드가 성공하고 나서 호출 된다. 
+- `onWriteError` : `write` 메소드에서 예외가 발생하면 호출 된다. 
+
+`ItemWriteListener` 에 해당하는 어노테이션은 아래와 같다. 
+- `@BeforeWrite`
+- `@AfterWrite`
+- `@OnWriteError`
+
+### SkipListener
+앞서 살펴본 `skip` 설정을 하게 되면 `ItemReader`, `ItemProcessor`, `ItemWriter` 의 리스너에서는 스킵 여부는 알 수 없다. 
+스킵 여부는 `SkipListener` 를 통해서만 여부를 판별 할 수 있고 그 인터페이스는 아래와 같다. 
+
+```java
+public interface SkipListener<T,S> extends StepListener {
+
+    void onSkipInRead(Throwable t);
+    void onSkipInProcess(T item, Throwable t);
+    void onSkipInWrite(S item, Throwable t);
+
+}
+```  
+
+- `onSkipInRead` : `ItemReader` 에서 스킵이 발생할 때마다 호출 된다. 
+- `onSkipInProcess` : `ItemProcessor` 에서 스킵이 발생할 때마다 호출 된다. 
+- `onSkipInWrite` : `ItemWriter` 에서 스킵이 발생할 때마다 호출 된다. 
+
+`SkipListener` 는 아래 두가지 동작을 보장한다. 
+- 하나의 `item` 스킵에 대해서 해당하는 하나의 `SkipListener` 메소드만 호출 된다. 
+- `SkipListener` 는 트랜잭션 커밋 직전에 호출 된다. 
+만약 `ItemWriter` 에서 예외 발생하더라도 리스너에서 호출하는 트랜잭션까지 롤백되진 않는다. 
+
+`SkipListener` 에 해당하는 어노테이션은 아래와 같다. 
+- `@OnSkipRead`
+- `@OnSkipProcess`
+- `@OnSkipWrite`
+
+### 리스너 등록
+앞서 설명한 것처럼 `Listener` 는 `StepBuilderFactory` 의 `listener` 메소드를 사용해서 `Step` 에 등록하게 된다. 
+`listener` 의 메소드의 리턴 타입을 기준으로 `Listener` 를 3가지로 분류 할 수 있다. 
+1. `SimpleStepBuilder`
+    - `ItemReadListener`
+    - `ItemProcessListener`
+    - `ItemWriteListener`
+1. `FaultTolerantStepBuilder`
+    - `SkipListener`
+    - `ChunkListener`
+1. `AbstractTaskletStepBuilder`
+    - `StepExecutionListener`
+    - `ChunkListener`
+    
+만약 사용할 수 있는 모든 `Listener` 를 등록한다면 등록 순서에 따라 특정 `Listener` 는 동작이 불가할 수 있다. 
+모든 `Listener` 를 동작한다면 아래와 같은 순서로 등록하는게 모든 동작에 대한 보장이 될 수 있을 것같다. 
+`ChunkListener` 는 두 위치 중 구현 내용에 적절한 위치에 등록한다. 
+1. `ItemReadListener`, `ItemProcessListener`, `ItemWriteListener`
+1. `faultTolerant` 설정 후, `SkipListener`, `ChunkListener`
+1. `StepExecutionListener`, `ChunkListener`
+
+### 테스트 
+
+- `InterceptingConfig`
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class InterceptingConfig {
+    private final JobBuilderFactory jobBuilderFactory;
+    private final StepBuilderFactory stepBuilderFactory;
+
+    @Bean
+    public Step sampleStep() {
+        return this.stepBuilderFactory
+                .get("sampleStep")
+                .<String, String>chunk(2)
+                .reader(new LogItemReader())
+                .processor(new LogItemProcessor())
+                .writer(new LogItemWriter())
+                .listener(new SampleItemReadListener())
+                .listener(new SampleItemProcessorListener())
+                .listener(new SampleItemWriteListener())
+                .faultTolerant()
+                .skipLimit(1)
+                .skip(MySkipException.class)
+                .listener(new SampleSkipListener())
+                .listener(new SampleStepListener())
+                .listener(new SampleChunkListener())
+                .build();
+    }
+
+    @Bean
+    public Job sampleJob() {
+        return this.jobBuilderFactory
+                .get("sampleJob")
+                .start(this.sampleStep())
+                .build();
+    }
+}
+```  
+
+- `SampleStepListener`
+
+```java
+@Slf4j
+public class SampleStepListener implements StepExecutionListener {
+    @Override
+    public void beforeStep(StepExecution stepExecution) {
+        log.info("SampleStepListener.beforeStep");
+    }
+
+    @Override
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        log.info("SampleStepListener.afterStep : " + stepExecution.getExitStatus().getExitCode());
+        return stepExecution.getExitStatus();
+    }
+}
+```  
+
+- `SampleChunkListener`
+
+```java
+@Slf4j
+public class SampleChunkListener implements ChunkListener {
+    @Override
+    public void beforeChunk(ChunkContext context) {
+        log.info("SampleChunkListener.beforeChunk");
+    }
+
+    @Override
+    public void afterChunk(ChunkContext context) {
+        log.info("SampleChunkListener.afterChunk");
+    }
+
+    @Override
+    public void afterChunkError(ChunkContext context) {
+        log.info("SampleChunkListener.afterChunkError");
+    }
+}
+```  
+
+- `SampleSkipListener`
+
+```java
+@Slf4j
+public class SampleSkipListener implements SkipListener<String, String> {
+    @Override
+    public void onSkipInRead(Throwable t) {
+        log.info("SampleSkipListener.onSkipInRead");
+    }
+
+    @Override
+    public void onSkipInWrite(String item, Throwable t) {
+        log.info("SampleSkipListener.onSkipInWrite : " + item);
+    }
+
+    @Override
+    public void onSkipInProcess(String item, Throwable t) {
+        log.info("SampleSkipListener.onSkipInProcess : " + item);
+    }
+}
+```  
+
+- `SampleItemReadListener`
+
+```java
+@Slf4j
+public class SampleItemReadListener implements ItemReadListener<String> {
+    @Override
+    public void beforeRead() {
+        log.info("SampleItemReadListener.beforeRead");
+    }
+
+    @Override
+    public void afterRead(String item) {
+        log.info("SampleItemReadListener.afterReader : " + item);
+    }
+
+    @Override
+    public void onReadError(Exception ex) {
+        log.info("SampleItemReadListener.onReadError");
+    }
+}
+```  
+
+- `SampleItemProcessorListener`
+
+```java
+@Slf4j
+public class SampleItemProcessorListener implements ItemProcessListener<String, String> {
+    @Override
+    public void beforeProcess(String item) {
+        log.info("SampleItemProcessorListener.beforeProcess : " + item);
+    }
+
+    @Override
+    public void afterProcess(String item, String result) {
+        log.info("SampleItemProcessorListener.afterProcess : " + item + " -> " + result);
+    }
+
+    @Override
+    public void onProcessError(String item, Exception e) {
+        log.info("SampleItemProcessorListener.onProcessError : " + item);
+    }
+}
+```  
+
+- `SampleItemWriteListener`
+
+```java
+@Slf4j
+public class SampleItemWriteListener implements ItemWriteListener<String> {
+    @Override
+    public void beforeWrite(List<? extends String> items) {
+        log.info("SampleWriteListener.beforeWrite : " + Arrays.toString(items.toArray()));
+    }
+
+    @Override
+    public void afterWrite(List<? extends String> items) {
+        log.info("SampleWriteListener.afterWrite : " + Arrays.toString(items.toArray()));
+    }
+
+    @Override
+    public void onWriteError(Exception exception, List<? extends String> items) {
+        log.info("SampleWriteListener.onWriteError : " + Arrays.toString(items.toArray()));
+    }
+}
+```  
+
+- `LogItemReader`
+
+```java
+@Slf4j
+public class LogItemReader implements ItemReader<String> {
+    public static String[] DATAS = new String[]{
+            "aa", "bb", "cc", "dd"
+    };
+    public static int INDEX = 0;
+    public static String FAIL_STR = "";
+    public static boolean IS_SKIP = false;
+    
+    @Override
+    public String read() throws Exception, UnexpectedInputException, ParseException, NonTransientResourceException {
+        if(INDEX < DATAS.length) {
+            String data = DATAS[INDEX++];
+
+            if(FAIL_STR.equals(data)) {
+                if(IS_SKIP) {
+                    throw new MySkipException("skip reader exception");
+                } else {
+                    throw new CustomException("log reader fail");
+                }
+            }
+
+            log.info("LogItemReader.read : " + data);
+            return data;
+        }
+
+        return null;
+    }
+}
+```  
+
+- `LogItemProcessor`
+
+```java
+@Slf4j
+public class LogItemProcessor implements ItemProcessor<String, String> {
+    public static String FAIL_STR = "";
+    public static boolean IS_SKIP = false;
+
+    @Override
+    public String process(String item) throws Exception {
+        if(FAIL_STR.equals(item)) {
+            if(IS_SKIP) {
+                throw new MySkipException("skip processor exception");
+            } else {
+                throw new CustomException("log process fail");
+            }
+        }
+
+        String after = item + "~";
+
+        log.info("LogItemProcessor.process : " + after);
+
+        return after;
+    }
+}
+```  
+
+- `LogItemWriter`
+
+```java
+@Slf4j
+public class LogItemWriter implements ItemWriter<String> {
+    public static String FAIL_STR = "";
+    public static boolean IS_SKIP = false;
+
+    @Override
+    public void write(List<? extends String> items) throws Exception {
+        for (String item : items) {
+            if(FAIL_STR.equals(item)) {
+                if(IS_SKIP) {
+                    throw new MySkipException("skip writer exception");
+                } else {
+                    throw new CustomException("log writer fail");
+                }
+            }
+
+            log.info("LogItemWriter.write : " + item);
+        }
+    }
+}
+```  
+
+- `InterceptingTest`
+
+```java
+@RunWith(SpringRunner.class)
+@SpringBatchTest
+@ContextConfiguration(classes = {
+        BatchTestConfig.class,
+        InterceptingConfig.class
+})
+public class InterceptingTest {
+    @Autowired
+    private JobLauncherTestUtils jobLauncherTestUtils;
+    @Autowired
+    private JobRepositoryTestUtils jobRepositoryTestUtils;
+    @Rule
+    public final OutputCaptureRule capture = new OutputCaptureRule();
+
+    @Before
+    public void setUp() {
+        LogItemReader.INDEX = 0;
+        LogItemReader.FAIL_STR = "";
+        LogItemReader.IS_SKIP = false;
+        LogItemProcessor.FAIL_STR = "";
+        LogItemProcessor.IS_SKIP = false;
+        LogItemWriter.FAIL_STR = "";
+        LogItemWriter.IS_SKIP = false;
+        this.jobRepositoryTestUtils.removeJobExecutions();
+    }
+
+    @Test
+    public void whenLaunchJob_thenAllCompletedLog() throws Exception {
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.COMPLETED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "LogItemReader.read : aa",
+                "SampleItemReadListener.afterReader : aa",
+                "SampleItemReadListener.beforeRead",
+                "LogItemReader.read : bb",
+                "SampleItemReadListener.afterReader : bb",
+                "SampleItemProcessorListener.beforeProcess : aa",
+                "LogItemProcessor.process : aa~",
+                "SampleItemProcessorListener.afterProcess : aa -> aa~",
+                "SampleItemProcessorListener.beforeProcess : bb",
+                "LogItemProcessor.process : bb~",
+                "SampleItemProcessorListener.afterProcess : bb -> bb~",
+                "SampleWriteListener.beforeWrite : [aa~, bb~]",
+                "LogItemWriter.write : aa~",
+                "LogItemWriter.write : bb~",
+                "SampleWriteListener.afterWrite : [aa~, bb~]",
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                // skip next chunk log (cc, dd)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "SampleChunkListener.afterChunk",
+                "SampleStepListener.afterStep : COMPLETED"
+
+        ));
+    }
+
+    @Test
+    public void givenReaderException_whenLaunchJob_thenReaderErrorLog() throws Exception {
+        // given
+        LogItemReader.FAIL_STR = "dd";
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.FAILED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "LogItemReader.read : cc",
+                "SampleItemReadListener.afterReader : cc",
+                "SampleItemReadListener.beforeRead",
+                // when reader dd throw exception
+                "SampleItemReadListener.onReadError",
+                "SampleChunkListener.afterChunkError",
+                "SampleStepListener.afterStep : FAILED"
+        ));
+    }
+
+    @Test
+    public void givenProcessorException_whenLaunchJob_thenProcessorErrorLog() throws Exception {
+        // given
+        LogItemProcessor.FAIL_STR = "dd";
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.FAILED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                // skip read cc, dd
+                "SampleItemProcessorListener.beforeProcess : cc",
+                "LogItemProcessor.process : cc~",
+                "SampleItemProcessorListener.afterProcess : cc -> cc~",
+                "SampleItemProcessorListener.beforeProcess : dd",
+                // when process dd throw exception
+                "SampleItemProcessorListener.onProcessError : dd",
+                "SampleChunkListener.afterChunkError",
+                "SampleStepListener.afterStep : FAILED"
+        ));
+    }
+
+    @Test
+    public void givenWriterException_whenLaunchJob_thenWriteErrorLog() throws Exception {
+        // given
+        LogItemWriter.FAIL_STR = "dd~";
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.FAILED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                // skip read, process cc, dd
+                "SampleWriteListener.beforeWrite : [cc~, dd~]",
+                "LogItemWriter.write : cc~",
+                // when write dd~ throw exception
+                "SampleWriteListener.onWriteError : [cc~, dd~]",
+                "SampleChunkListener.afterChunkError",
+                "SampleStepListener.afterStep : FAILED"
+        ));
+    }
+
+    @Test
+    public void givenReaderSkipFail_whenLaunchJob_thenReaderSkipLog() throws Exception {
+        // given
+        LogItemReader.FAIL_STR = "dd";
+        LogItemReader.IS_SKIP = true;
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.COMPLETED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "LogItemReader.read : cc",
+                "SampleItemReadListener.afterReader : cc",
+                "SampleItemReadListener.beforeRead",
+                // when reader dd throw skip exception
+                "SampleItemReadListener.onReadError",
+                "SampleItemReadListener.beforeRead",
+                "SampleItemProcessorListener.beforeProcess : cc",
+                "LogItemProcessor.process : cc~",
+                "SampleItemProcessorListener.afterProcess : cc -> cc~",
+                "SampleWriteListener.beforeWrite : [cc~]",
+                "LogItemWriter.write : cc~",
+                "SampleWriteListener.afterWrite : [cc~]",
+                // logging skip reader
+                "SampleSkipListener.onSkipInRead",
+                "SampleChunkListener.afterChunk",
+                "SampleStepListener.afterStep : COMPLETED"
+        ));
+    }
+
+    @Test
+    public void givenProcessorSkipFail_whenLaunchJob_thenProcessorSkipLog() throws Exception {
+        // given
+        LogItemProcessor.FAIL_STR = "dd";
+        LogItemProcessor.IS_SKIP = true;
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.COMPLETED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                // skip read cc, dd
+                "SampleItemProcessorListener.beforeProcess : cc",
+                "LogItemProcessor.process : cc~",
+                "SampleItemProcessorListener.afterProcess : cc -> cc~",
+                "SampleItemProcessorListener.beforeProcess : dd",
+                // when process dd throw skip exception
+                "SampleItemProcessorListener.onProcessError : dd",
+                "SampleChunkListener.afterChunkError",
+                // restart chunk
+                "SampleChunkListener.beforeChunk",
+                "SampleItemProcessorListener.beforeProcess : cc",
+                "LogItemProcessor.process : cc~",
+                "SampleItemProcessorListener.afterProcess : cc -> cc~",
+                "SampleWriteListener.beforeWrite : [cc~]",
+                "LogItemWriter.write : cc~",
+                "SampleWriteListener.afterWrite : [cc~]",
+                // logging skip processor
+                "SampleSkipListener.onSkipInProcess : dd",
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "SampleChunkListener.afterChunk",
+                "SampleStepListener.afterStep : COMPLETED"
+        ));
+    }
+
+    @Test
+    public void givenWriterSkipFail_whenLaunchJob_thenWriterSkipLog() throws Exception {
+        // given
+        LogItemWriter.FAIL_STR = "dd~";
+        LogItemWriter.IS_SKIP = true;
+
+        // when
+        JobExecution jobExecution = this.jobLauncherTestUtils.launchJob();
+
+        // then
+        assertThat(jobExecution.getExitStatus().getExitCode(), is(ExitStatus.COMPLETED.getExitCode()));
+        assertThat(this.capture.getOut(), stringContainsInOrder(
+                "SampleStepListener.beforeStep",
+                "SampleChunkListener.beforeChunk",
+                // skip log completed first chunk (aa, bb)
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                // skip read, process cc, dd
+                "SampleWriteListener.beforeWrite : [cc~, dd~]",
+                "LogItemWriter.write : cc~",
+                // when write dd~ throw skip exception
+                "SampleWriteListener.onWriteError : [cc~, dd~]",
+                "SampleChunkListener.afterChunkError",
+                // restart chunk
+                "SampleChunkListener.beforeChunk",
+                "SampleItemProcessorListener.beforeProcess : cc",
+                "LogItemProcessor.process : cc~",
+                "SampleItemProcessorListener.afterProcess : cc -> cc~",
+                "LogItemWriter.write : cc~",
+                "SampleWriteListener.afterWrite : [cc~]",
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemProcessorListener.beforeProcess : dd",
+                "LogItemProcessor.process : dd~",
+                "SampleItemProcessorListener.afterProcess : dd -> dd~",
+                "SampleWriteListener.onWriteError : [dd~]",
+                "SampleChunkListener.afterChunkError",
+                "SampleChunkListener.beforeChunk",
+                // logging skip writer
+                "SampleSkipListener.onSkipInWrite : dd~",
+                "SampleChunkListener.afterChunk",
+                "SampleChunkListener.beforeChunk",
+                "SampleItemReadListener.beforeRead",
+                "SampleChunkListener.afterChunk",
+                "SampleStepListener.afterStep : COMPLETED"
+        ));
+    }
+}
+```  
 
 ---
 ## Reference
