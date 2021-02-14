@@ -416,6 +416,165 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 이는 `Nginx` 로 들어온 요청이 `Burst` 큐에 들어가고 다시 큐에서 나와 요청이 처리 되기 까지 대기시간이 존재하기 때문이다.  
 
 ## Queueing with No Delay
+앞서 살펴본 `Burst` 설정은 `Rate Liniting` 을 좀더 유동적으로 사용할수있도록 하는 설정이였다. 
+하지만 테스트에서 확인 할 수 있듯이, `Burst` 를 사용하면 응딥시간에 큰 지연을 가져다 준다. 
+응답 시간과 `Burst` 의 유동적인 설정을 동시에 사용할 수 있도록 하는 것이 `nodelay` 파라미터 이다. 
+간단하게 `nodelay` 는 설정된 `Rate Limiting` 에서 한개 요청을 처리하고 다음 요청을 처리할떄 딜레이를 두지 않고, 
+가능한 요청을 모두 처리하는 파라미터라고 할 수 있다.  
+
+`nodlay` 파라미터는 아래와 같이 `limit_req` 부분에 선언해서 사용할 수 있다. 
+
+```
+limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
+
+server {
+    location /test {
+        limit_req zone=mylimit burst=100 nodlay;
+
+        proxy_pass http://backend;
+    }
+}
+```  
+
+설정을 보면 1초에 100개의 요청 즉 `10ms` 에 1개 요청처리가 가능하지만, 
+`Burst` 설정을 통해 100개의 큐 공간을 두고 `nodelay` 파라미터가 설정된 상태이다. 
+위 설정에서 `nodlay` 의 동작에 대한 설정은 아래와 같다.  
+
+1. 첫 `10ms` 이내 101개 요청 도착
+    - 1개는 요청처리
+    - 현재 큐 크기가 100개 이기 때문에 거용가능한 100개 요청 또한 즉시 요청처리
+    - `burst queue = 100`(즉시 처리한 100개 요청 할당), 큐는 `10ms` 마다 가용공간이 1개씩 생겨남
+1. 다음 `11ms` 이내 100개 요청 도착
+    - 큐에는 1개의 공간만 생겼기 때문에 1개 요청 즉시 처리
+    - `burst queue = 100` (즉시 처리한 1개 요청 할당)
+    - 나머지 99개 요청은 `503` 에러
+1. 다음 `51ms` 이내 100개 요청 도착
+    - 큐에는 5개의 공간이 생겼기 때문에 5개 요청 즉시 처리
+    - `burst queue = 100` (즉시 처리한 5개 요청 할당)
+    - 나머지 95개 요청은 `503` 에러
+    
+### 테스트
+사용하는 템플릿은 앞서 살펴본 `burst` 템플릿과 거의 비슷하고, 
+`nodelay` 관련 설정과 템플릿 구분을 위해 이름 정도만 차이가 있다.  
+
+- `nodelay-configmap.yaml`
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nodelay-configmap
+  namespace: default
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  2;
+
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
+
+        server {
+            listen 80;
+            server_name localhost;
+
+            location /status {
+                limit_req zone=mylimit burst=100 nodelay;
+                stub_status on;
+                allow all;
+                deny all;
+            }
+        }
+    }
+```  
+
+- `nodelay-pod.yaml`
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nodelay-rate-limiting
+  labels:
+    app: nodelay-rate-limiting
+    type: rate-limiting
+spec:
+  containers:
+    - name: nodelay-rate-limiting
+      image: nginx:1.19
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+  volumes:
+    - name: nginx-conf
+      configMap:
+        name: nodelay-configmap
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+```  
+
+```bash
+$ kubectl apply -f nodelay-configmap.yaml
+configmap/nodelay-configmap created
+$ kubectl apply -f nodelay-pod.yaml
+pod/nodelay-rate-limiting created
+$ kubectl get configmap,pod,svc
+NAME                             DATA   AGE
+configmap/nodelay-configmap      1      33s
+
+NAME                        READY   STATUS    RESTARTS   AGE
+pod/nodelay-rate-limiting   1/1     Running   0          24s
+
+NAME                            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:32222/TCP   1h02m
+
+```  
+
+`JMeter` 툴의 설정은 아래와 같이 `basic` 테스트 때와 동일하다. 
+- `Number of Thread` : 100
+- `Ramp-up period`: 10
+- `Loop Count` : 100
+
+테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-nodelay-tps.png)
+
+응답시간에 따른 그래프는 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-nodelay-rtt.png)
+
+`TPS` 와 응답시간 그래프를 보면 `basic` 템플릿 테스트에서 도출된 그래프와 매우 비슷한 것을 확인 할 수 있다. 
+지금 테스트에서는 계속해서 요청을 1000tps 이상 주고 있기 때문에 이러한 그래프 형태가 나오는 이유이다. 
+`basic` 템플릿 테스트 결과와 차이를 말하지만 `nodelay` 테스트 결과는 실패한 요청의 `TPS` 가 900을 넘지 않은 것을 알 수 있다. (`basic` 은 실패 요청이 900을 넘은 부분이 존재한다.)
+그 이유는 `nodelay` 에는 `burst` 라는 추가 100개의 공간이 있기 때문이다.  
+
+그리고 응답시간 그래프는 `burst` 를 사용하고 있지만 `burst` 테스트 결과와 달리 응답시간이 지속적으로 늘어나지 않는 것을 확인할 수 있다.  
+
+
+## Two-Stage Rate Limiting
+관련 설명 및 예시 설정
+
+
 
 
 ---
