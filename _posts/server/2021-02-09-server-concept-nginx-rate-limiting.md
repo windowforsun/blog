@@ -40,7 +40,7 @@ tags:
 그리고 구멍으로 빠져나가는 물은 서버에서 처리하기 위해 버퍼에서 나가는 요청이고, 
 넘쳐 흐르는 물은 서비스되지 못하고 버려지는 요청을 의미한다.  
 
-## Rate Limiting 설정
+## Rate Limiting 설정(Basic)
 아래는 간단한 `Rate Limiting` 설정의 예시이다. 
 
 ```
@@ -217,8 +217,13 @@ Reading: 0 Writing: 1 Waiting: 0
 
 `JMeter` 툴의 설정은 아래와 같다. 
 - `Number of Thread` : 100
-- `Ramp-up period`: 10
+- `Ramp-up period`: 100
 - `Loop Count` : 100
+
+테스트는 `Throughput Shaping Timer` 플러그인을 사용해서 아래와 같은 `RPS` 와 시간으로 수행한다. 
+
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-basic-expected-rps.jpg)
+
 
 테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
 
@@ -226,12 +231,14 @@ Reading: 0 Writing: 1 Waiting: 0
 
 응답시간에 따른 그래프는 아래와 같다. 
 
-![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-basic-rtt.png)
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-basic-rtot.png)
 
-붉은 선이 `TPS` 100 을 넘지 않는 것을 확인 할 수 있고, 
-초과하는 요청은 모두 실패 처리가 되는 것을 확인 할 수 있다. 
-응답시간 같은 경우 `Nginx` 서버가 안정적으로 응답할 수 있는 `TPS` 로 `Rate Limiting` 을 설정 했다면, 
-일정한 시간을 보이는 것을 확인 할 수 있다.  
+`RPS` 가 100을 넘지않는 10초 이전 그래프에서도 실패가 요청 수에 비례하게 증가함을 알 수 있다. 
+그리고 `RPS` 가 200 까지 증가하는 10초 이후 구간에는 급격하게 실패가 증가함을 보여준다. 
+현재 `Rate Limiting` 설정은 `10ms` 마다 하나의 요청으로 제한하고 있기 때문에, 
+초당 100개의 요청이지만, `10ms` 이내에 1개이상 들어오는 요청은 실패됨을 알수 있다.  
+
+그와 다르게 응답시간에 대한 그래프는 비교적 일정한 수준의 결과를 보여주고 있다.  
 
 `error.log` 를 확인하면 `Rate Limiting` 의 응답은 아래와 같이 에러 로그가 남게 된다. 
 
@@ -276,7 +283,7 @@ server {
 
 1. `10ms` 에 100개 요청 도착
     - 1개는 요청처리
-    - `burst queue = 99`
+    - 나머지 99개 요청은 쿠에 추가, `burst queue = 99'`
 1. 다음 `10ms` 에 1개 요청 도착
     - `burst` 큐에 요청 하나 빼서 처리, `burst queue = 98`
     - 도착한 요청 큐에 추가, `burst queue = 99`
@@ -397,9 +404,6 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 ```  
 
 `JMeter` 툴의 설정은 아래와 같이 `basic` 테스트 때와 동일하다. 
-- `Number of Thread` : 100
-- `Ramp-up period`: 10
-- `Loop Count` : 100
 
 테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
 
@@ -407,13 +411,14 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 응답시간에 따른 그래프는 아래와 같다. 
 
-![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-burst-rtt.png)
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-burst-rtot.png)
 
-먼저 `TPS` 그래프를 보면 `basic` 의 그래프와 달리 실패한 요청이 없는 것을 확인 할 수 있다. 
-`Nginx` 로 들어오는 요청이 모두 `Burst` 에 추가되면서 처리가 되었기 때문이다. 
-하지만 응답시간 그래프를 보면 `Burst` 가 만등 솔루션이 아닌 것을 확인 할 수 있다. 
-`basic` 과 비교해서도 그렇고 일정 요청 개수까지 계속해서 응답시간이 증가하게 된다. 
-이는 `Nginx` 로 들어온 요청이 `Burst` 큐에 들어가고 다시 큐에서 나와 요청이 처리 되기 까지 대기시간이 존재하기 때문이다.  
+먼저 `TPS` 그래프를 보면 `basic` 테스트와 달리 실패 요청이 존재하지 않는다. 
+그리고 `TPS` 는 10초 이후 구간에도 실패없이 100을 넘지 않는 것을 확인 할 수 있다. 
+이는 `Burst` 설정으로 인해 초과되는 요청은 큐를 통해 관리되고 있음을 확인 할 수 있다.  
+
+하지만 응답시간 그래프를 보면 200 `RPS` 까지 증가하는 10초 이후 구간에서 응답시간이 갑자기 증가하는 것을 확인 할 수 있다. 
+`10ms` 당 1개 요청처리에서 초과되는 요청들이 `Burst` 큐에 들어가고 다시 큐에서 나와 요청이 처리되기 까지 대기시간이 존재하기 때문이다.  
 
 ## Queueing with No Delay
 앞서 살펴본 `Burst` 설정은 `Rate Liniting` 을 좀더 유동적으로 사용할수있도록 하는 설정이였다. 
@@ -453,6 +458,12 @@ server {
     - `burst queue = 100` (즉시 처리한 5개 요청 할당)
     - 나머지 95개 요청은 `503` 에러
     
+`burst` 설정만 한 상태와, `burst` + `nodelay` 를 한 설정을 비교했을 때 차이에 대한 설명은 아래와 같다. 
+설정한 `RPS` 를 넘어가는 요청 중 `burst` 큐의 가용 공간이 있을 때 `burst` 는 가용 공간만큼 요청을 큐에 추가하고, 
+`burst` + `nodelay` 는 가용 공간만큼 요청을 즉시 처리하고 큐 가용공간을 즉시 처리한 만큼 줄인다. 
+그리고 이후 설정된 `RPS` 의 주기에 따라 `burst` 는 큐에서 요청을 빼서 처리하고, 
+`burst` + `nodelay` 는 주기에 따라 큐의 가용공간을 늘린다.  
+
 ### 테스트
 사용하는 템플릿은 앞서 살펴본 `burst` 템플릿과 거의 비슷하고, 
 `nodelay` 관련 설정과 템플릿 구분을 위해 이름 정도만 차이가 있다.  
@@ -561,20 +572,41 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 응답시간에 따른 그래프는 아래와 같다. 
 
-![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-nodelay-rtt.png)
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-nodelay-rtot.png)
 
-`TPS` 와 응답시간 그래프를 보면 `basic` 템플릿 테스트에서 도출된 그래프와 매우 비슷한 것을 확인 할 수 있다. 
-지금 테스트에서는 계속해서 요청을 1000tps 이상 주고 있기 때문에 이러한 그래프 형태가 나오는 이유이다. 
-`basic` 템플릿 테스트 결과와 차이를 말하지만 `nodelay` 테스트 결과는 실패한 요청의 `TPS` 가 900을 넘지 않은 것을 알 수 있다. (`basic` 은 실패 요청이 900을 넘은 부분이 존재한다.)
-그 이유는 `nodelay` 에는 `burst` 라는 추가 100개의 공간이 있기 때문이다.  
+`TPS` 그래프를 보면 `Burst` 테스트와 같이 `RPS` 에 비례하게 증가하다가, 
+`RPS` 가 200까지 증가하는 10초 이후 구간 부터 실패 응답이 발생하는 것을 알 수 있다. 
+여기서 발생하는 실패응답은 `Burst` 큐의 가용공간이 없기 때문이다.  
 
-그리고 응답시간 그래프는 `burst` 를 사용하고 있지만 `burst` 테스트 결과와 달리 응답시간이 지속적으로 늘어나지 않는 것을 확인할 수 있다.  
+응답시간 그래프는 `Burst` 테스트의 응답 그래프와 달리 `Basic` 테스트의 응답 그래프처럼 비교적 일정한 결과를 보여주고 있다. 
+`Burst` 큐에 가용한 요청은 즉시 처리되기 때문에, `Burst` 테스트와 달리 `RPS` 를 초과하는 요청이 큐에서 대기하는 시간이 존재하지 않기 때문이다.  
 
 
 ## Two-Stage Rate Limiting
 관련 설명 및 예시 설정
 
+```
+limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
 
+        server {
+            listen 80;
+            server_name localhost;
+
+            location /status {
+                limit_req zone=mylimit burst=100 delay=50;
+                stub_status on;
+                allow all;
+                deny all;
+            }
+        }
+```  
+
+`delay` 50 요청만큼은 `nodelay` 처리되기 때문에, `burst` 만 설정된것 보다는 응답시간 증가폭이 작다. 
+하지만 `burst` 에 대한 전체를 `nodelay` 처리하는 것이 아니기 때문에 `burst` + `nodelay` 처리보다는 응답시간이 증가한다.  
+
+
+
+jmeter jmx 파일 열어서 `basic` 부터 다시 테스트 및 설명쓰기 / 스샷도 다시 
 
 
 ---
