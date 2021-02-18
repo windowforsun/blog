@@ -218,7 +218,7 @@ Reading: 0 Writing: 1 Waiting: 0
 ```  
 
 `JMeter` 툴의 설정은 아래와 같다. 
-- `Number of Thread` : 100
+- `Number of Thread` : 2000
 - `Ramp-up period`: 100
 - `Loop Count` : 100
 
