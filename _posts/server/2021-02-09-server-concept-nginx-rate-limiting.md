@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: ""
+title: "[Nginx] Rate Limiting"
 header:
   overlay_image: /img/server-bg.jpg
-excerpt: ''
+excerpt: 'Back-end 서버로 전달되는 요청을 제한하고 관리할 수 있는 Rate Limiting 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -222,17 +222,17 @@ Reading: 0 Writing: 1 Waiting: 0
 
 테스트는 `Throughput Shaping Timer` 플러그인을 사용해서 아래와 같은 `RPS` 와 시간으로 수행한다. 
 
-![그림 1]({{site.baseurl}}/img/server/ngins-rate-limiting-expected-rps.png)
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-expected-rps.png)
 
 Start RPS|End RPS|Duration, sec
 ---|---|---
 1|100|5
 100|100|5
-120|120|2
-140|140|2
-160|160|2
-180|180|2
-200|200|2
+120|120|4
+140|140|4
+160|160|4
+180|180|4
+200|200|4
 
 위 `RPS` 에 따른 테스트는 이후 테스트에서도 계속해서 사용한다.  
 
@@ -360,7 +360,7 @@ data:
             server_name localhost;
 
             location /status {
-                limit_req zone=mylimit;
+                limit_req zone=mylimit burst=200;
                 stub_status on;
                 allow all;
                 deny all;
@@ -415,8 +415,6 @@ NAME                            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S
 service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:32222/TCP   67m
 ```  
 
-`JMeter` 툴의 설정은 아래와 같이 `basic` 테스트 때와 동일하다. 
-
 테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
 
 ![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-burst-tps.png)
@@ -425,10 +423,11 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 ![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-burst-rtot.png)
 
-먼저 `TPS` 그래프를 보면 `basic` 테스트와 달리 실패 요청이 존재하지 않는다. 
-그리고 `TPS` 는 10초 이후 구간에도 실패없이 100을 넘지 않는 것을 확인 할 수 있다. 
+먼저 `TPS` 그래프를 보면 `basic` 테스트와 달리 실패 요청이 뒤늦게 등장한다. 
+그리고 `TPS` 가 100을 넘어가는 6초 이후 구간에도 실패하지 않는다. 
 이는 `Burst` 설정으로 인해 초과되는 요청은 큐를 통해 관리되고 있음을 확인 할 수 있다. 
-즉 현재 `10ms` 당 1개의 요청을 처리하는 과정에서 초과하는 모든 요청이 `Burst` 공간에 충분히 관리될 수 있음을 의미한다.  
+즉 현재 `10ms` 당 1개의 요청을 처리하는 과정에서 초과하는 모든 요청을 `Burst` 를 통해 관리하지만 
+`TPS` 가 140 이상되는 17, 18초 구간부터는 `Burst` 가 꽉차 에러 응답이 발생한다.  
 
 하지만 응답시간 그래프를 보면 200 `RPS` 까지 증가하는 10초 이후 구간에서 응답시간이 갑자기 증가하는 것을 확인 할 수 있다. 
 `10ms` 당 1개 요청처리에서 초과되는 요청들이 `Burst` 큐에 들어가고 다시 큐에서 나와 요청이 처리되기 까지 대기시간이 존재하기 때문이다.  
@@ -511,7 +510,7 @@ data:
 
         access_log  /var/log/nginx/access.log  main;
 
-        limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
+        limit_req_zone $binary_remote_addr zone=mylimit:10m rate=200r/s;
 
         server {
             listen 80;
@@ -574,11 +573,6 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 ```  
 
-`JMeter` 툴의 설정은 아래와 같이 `basic` 테스트 때와 동일하다. 
-- `Number of Thread` : 100
-- `Ramp-up period`: 10
-- `Loop Count` : 100
-
 테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
 
 ![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-nodelay-tps.png)
@@ -589,6 +583,7 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 `TPS` 그래프를 보면 `Burst` 테스트와 같이 `RPS` 에 비례하게 증가하다가, 
 `RPS` 가 200까지 증가하는 10초 이후 구간 부터 실패 응답이 발생하는 것을 알 수 있다. 
+더 정확하게 말하면 `RPS` 가 140 이후 구간인 18초 부터 실패 응답이 발생한다. 
 여기서 발생하는 실패응답은 `Burst` 큐의 가용공간이 없을때 들어온 요청에 대한 실패이다.  
 
 응답시간 그래프는 `Burst` 테스트의 응답 그래프와 달리 `Basic` 테스트의 응답 그래프처럼 비교적 일정한 결과를 보여주고 있다. 
@@ -602,17 +597,17 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 현재 구성하는 서버에서 초당 요청 개수를 어느정도 예측 가능한 경우, 
 보다 서버에 알맞는 `delay` 설정을 구성할 수 있다. 
 아래는 평균적으로 초당 요청이 100개가 들어오고 특정 경우 최대 150개의 요청이 들어올 수 있을 때, 
-`nodelay` 파라미터의 값에 50값을 주어 `limit_req` 부분에 선언해 사용할 수 있다.  
+`nodelay` 파라미터의 값에 150값을 주어 `limit_req` 부분에 선언해 사용할 수 있다.  
 
 ```
-limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
+limit_req_zone $binary_remote_addr zone=mylimit:10m rate=5r/s;
 
         server {
             listen 80;
             server_name localhost;
 
             location /status {
-                limit_req zone=mylimit burst=100 delay=50;
+                limit_req zone=mylimit burst=12 delay=8;
                 stub_status on;
                 allow all;
                 deny all;
@@ -620,18 +615,147 @@ limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
         }
 ```  
 
-`delay` 는 서버에서 가용할 수 있는 최대 요청수에 대해 설정할 수 있는 파라미터이다.  
+`delay` 는 서버에서 가용할 수 있는 최대 요청수설정해서 지연없이 처리 할 수있도록 하는 파라미터이다.  
 
-위 설정은 1초에 들어온 150(`)
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-burst-delay.png)
 
-ngins-rate-limiting-burst-delay.png
+위 설정에 대해 설명하면 아래와 같다.
+1. 첫 1초 이내 7개 요청 도착
+    - `burst queue = 0`
+    - 모든 7개 요청 지연없이 처리 
+    - `burst queue = 7`(즉시 처리한 7개 요청 할당)
+1. 다음 1초 이내 8개 요청 도착
+    - `burst queue = 7`
+    - 먼저 들어온 1개 요청은 지연없이 처리
+    - 그리고 그 다음으로 들어온 4개의 요청에 대해서는 지연처리
+    - `burst queue = 12`(즉시 처리 + 지연처리 요청 할당)
+    - 나머지 3개 요청은 `503` 에러
+1. 다음 1초 이내 6개 요청 도착
+    - `burst queue = 7`
+    - 먼저 들어온 5개 요청은 지연처리
+    - `burst queue = 12`(지연처리 요청 할당)
+    - 나머지 1개 요청은 `503` 에러
 
-`delay` 50 요청만큼은 `nodelay` 처리되기 때문에, `burst` 만 설정된것 보다는 응답시간 증가폭이 작다. 
-하지만 `burst` 에 대한 전체를 `nodelay` 처리하는 것이 아니기 때문에 `burst` + `nodelay` 처리보다는 응답시간이 증가한다.  
+
+### 테스트
+사용하는 템플릿은 앞서 살펴본 `nodelay` 템플릿과 거의 비슷하고, 
+`delay` 관련 설정과 템플릿 구분을 위해 이름 정도만 차이가 있다.  
+
+- `delay-configmap.yaml`
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: delay-configmap
+  namespace: default
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  2;
+
+    error_log  /var/log/nginx/error.log warn;
+    pid        /var/run/nginx.pid;
+
+    events {
+        worker_connections  1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+
+        access_log  /var/log/nginx/access.log  main;
+
+        limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
+
+        server {
+            listen 80;
+            server_name localhost;
+
+            location /status {
+                limit_req zone=mylimit burst=200 delay=150;
+                stub_status on;
+                allow all;
+                deny all;
+            }
+        }
+    }
+```  
+
+- `delay-pod.yaml`
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: delay-rate-limiting
+  labels:
+    app: delay-rate-limiting
+    type: rate-limiting
+spec:
+  containers:
+    - name: delay-rate-limiting
+      image: nginx:1.19
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+          readOnly: true
+  volumes:
+    - name: nginx-conf
+      configMap:
+        name: delay-configmap
+        items:
+          - key: nginx.conf
+            path: nginx.conf
+```  
+
+```bash
+$ kubectl apply -f delay-configmap.yaml
+configmap/delay-configmap created
+$ kubectl apply -f delay-pod.yaml
+pod/delay-rate-limiting created
+$ kubectl get configmap,pod,svc
+NAME                             DATA   AGE
+configmap/delay-configmap      1      33s
+
+NAME                        READY   STATUS    RESTARTS   AGE
+pod/delay-rate-limiting   1/1     Running   0          24s
+
+NAME                            TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:32222/TCP   2h02m
+```  
+
+테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-delay-tps.png)  
+
+응답시간에 따른 그래프는 아래와 같다. 
+
+![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-delay-rtot.png)  
+
+`TPS` 그래프를 보면 요청수가 150을 넘어가는 16, 17초 부터 에러 응답이 발생하는 것을 확인 할 수 있다. 
+그리고 이후 `TPS` 가 200으로 증가하는 30초까지 성공 응답은 100선은 계속 유지하지만, 실패 응답은 계속해서 증가하게 된다.  
+
+응답시간 그래프 또한 `TPS` 가 150을 넘어가는 16, 17초 부터 응답시간이 급격하게 증가하는 것을 확인 할 수 있다.  
+
+`nodelay` 와 비교하면 `delay` 설정은 보다 디테일하게 `delay` 에 대한 설정을 할수 있다는 점에 차이가 있다. 
+`nodelay` 는 가용한 `Burst` 사이즈에 대해 모두 `nodelay` 처리하기 때문에 정확하게 몇 `RPS` 까지 `nodelay` 처리가 되는지는 명확하지 않다. 
+하지만 `delay` 는 `nodelay` 에 비해 요청 증가에 따라 응답시간, 실패응답이 더욱 큰 폭으로 증가할 수 있다. 
+`Burst` 만 설정한 경우 응답시간이 너무 큰 폭으로 증가하고, `nodelay` 를 설정한 경우 한번에 너무 많은 요청이 애플리케이션 서버로 전달 될 수 있다. 
+여기서 `delay` 파라미터를 통해 이러한 부분을 보다 명확하게 처리할 수 있다. 
+예측되는 최대 요청수를 `delay` 설정해서 과도하게 애플리케이션 서버로 요청이 전달되는 것은 방어하면서, 
+`delay` 이내의 모든 요청에 대해서는 빠르게 처리할 수 있다.  
 
 
 
-jmeter jmx 파일 열어서 `basic` 부터 다시 테스트 및 설명쓰기 / 스샷도 다시 
 
 
 ---
