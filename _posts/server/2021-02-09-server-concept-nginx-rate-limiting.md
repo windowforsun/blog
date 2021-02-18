@@ -13,6 +13,8 @@ tags:
   - Server
   - Rate Limiting
   - Nginx
+toc: true
+use_math: true
 ---  
 
 ## Rate Limiting
