@@ -222,7 +222,19 @@ Reading: 0 Writing: 1 Waiting: 0
 
 테스트는 `Throughput Shaping Timer` 플러그인을 사용해서 아래와 같은 `RPS` 와 시간으로 수행한다. 
 
-![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-basic-expected-rps.jpg)
+![그림 1]({{site.baseurl}}/img/server/ngins-rate-limiting-expected-rps.png)
+
+Start RPS|End RPS|Duration, sec
+---|---|---
+1|100|5
+100|100|5
+120|120|2
+140|140|2
+160|160|2
+180|180|2
+200|200|2
+
+위 `RPS` 에 따른 테스트는 이후 테스트에서도 계속해서 사용한다.  
 
 
 테스트 결과에 따른 `TPS` 그래프는 아래와 같다. 
@@ -233,7 +245,7 @@ Reading: 0 Writing: 1 Waiting: 0
 
 ![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-basic-rtot.png)
 
-`RPS` 가 100을 넘지않는 10초 이전 그래프에서도 실패가 요청 수에 비례하게 증가함을 알 수 있다. 
+`RPS` 가 100을 넘지않는 5초 이전 그래프에서도 실패가 요청 수에 비례하게 증가함을 알 수 있다. 
 그리고 `RPS` 가 200 까지 증가하는 10초 이후 구간에는 급격하게 실패가 증가함을 보여준다. 
 현재 `Rate Limiting` 설정은 `10ms` 마다 하나의 요청으로 제한하고 있기 때문에, 
 초당 100개의 요청이지만, `10ms` 이내에 1개이상 들어오는 요청은 실패됨을 알수 있다.  
