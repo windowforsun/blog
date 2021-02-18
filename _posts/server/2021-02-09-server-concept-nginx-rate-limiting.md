@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Nginx] Rate Limiting"
+title: "[Nginx] Nginx Rate Limiting"
 header:
   overlay_image: /img/server-bg.jpg
 excerpt: 'Back-end 서버로 전달되는 요청을 제한하고 관리할 수 있는 Rate Limiting 에 대해 알아보자'
@@ -27,7 +27,7 @@ tags:
 
 ## Rate Limiting 의 원리
 `Nginx` 의 `Rate Limting` 동작은 대역폭이 제한될 때, 
-`Burst`(초과분)를 처리하기 위해 널리 사용되는 [Leaky Bucket Algorithm(https://en.wikipedia.org/wiki/Leaky_bucket) 
+`Burst`(초과분)를 처리하기 위해 널리 사용되는 [Leaky Bucket Algorithm](https://en.wikipedia.org/wiki/Leaky_bucket) 
 을 사용한다. 
 
 ![그림 1]({{site.baseurl}}/img/server/nginx-rate-limiting-1.jfif)
