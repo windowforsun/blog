@@ -250,7 +250,7 @@ Start RPS|End RPS|Duration, sec
 현재 `Rate Limiting` 설정은 `10ms` 마다 하나의 요청으로 제한하고 있기 때문에, 
 초당 100개의 요청이지만, `10ms` 이내에 1개이상 들어오는 요청은 실패됨을 알수 있다.  
 
-그와 다르게 응답시간에 대한 그래프는 비교적 일정한 수준의 결과를 보여주고 있다.  
+응답시간 그래프는 비교적 일정한 수준의 결과를 보여주고 있다.  
 
 `error.log` 를 확인하면 `Rate Limiting` 의 응답은 아래와 같이 에러 로그가 남게 된다. 
 
@@ -427,7 +427,8 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 먼저 `TPS` 그래프를 보면 `basic` 테스트와 달리 실패 요청이 존재하지 않는다. 
 그리고 `TPS` 는 10초 이후 구간에도 실패없이 100을 넘지 않는 것을 확인 할 수 있다. 
-이는 `Burst` 설정으로 인해 초과되는 요청은 큐를 통해 관리되고 있음을 확인 할 수 있다.  
+이는 `Burst` 설정으로 인해 초과되는 요청은 큐를 통해 관리되고 있음을 확인 할 수 있다. 
+즉 현재 `10ms` 당 1개의 요청을 처리하는 과정에서 초과하는 모든 요청이 `Burst` 공간에 충분히 관리될 수 있음을 의미한다.  
 
 하지만 응답시간 그래프를 보면 200 `RPS` 까지 증가하는 10초 이후 구간에서 응답시간이 갑자기 증가하는 것을 확인 할 수 있다. 
 `10ms` 당 1개 요청처리에서 초과되는 요청들이 `Burst` 큐에 들어가고 다시 큐에서 나와 요청이 처리되기 까지 대기시간이 존재하기 때문이다.  
@@ -439,14 +440,14 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 간단하게 `nodelay` 는 설정된 `Rate Limiting` 에서 한개 요청을 처리하고 다음 요청을 처리할떄 딜레이를 두지 않고, 
 가능한 요청을 모두 처리하는 파라미터라고 할 수 있다.  
 
-`nodlay` 파라미터는 아래와 같이 `limit_req` 부분에 선언해서 사용할 수 있다. 
+`nodelay` 파라미터는 아래와 같이 `limit_req` 부분에 선언해서 사용할 수 있다. 
 
 ```
 limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
 
 server {
     location /test {
-        limit_req zone=mylimit burst=100 nodlay;
+        limit_req zone=mylimit burst=100 nodelay;
 
         proxy_pass http://backend;
     }
@@ -455,7 +456,7 @@ server {
 
 설정을 보면 1초에 100개의 요청 즉 `10ms` 에 1개 요청처리가 가능하지만, 
 `Burst` 설정을 통해 100개의 큐 공간을 두고 `nodelay` 파라미터가 설정된 상태이다. 
-위 설정에서 `nodlay` 의 동작에 대한 설정은 아래와 같다.  
+위 설정에서 `nodelay` 의 동작에 대한 설정은 아래와 같다.  
 
 1. 첫 `10ms` 이내 101개 요청 도착
     - 1개는 요청처리
@@ -588,14 +589,20 @@ service/rate-limiting-service   NodePort    10.105.130.60   <none>        80:322
 
 `TPS` 그래프를 보면 `Burst` 테스트와 같이 `RPS` 에 비례하게 증가하다가, 
 `RPS` 가 200까지 증가하는 10초 이후 구간 부터 실패 응답이 발생하는 것을 알 수 있다. 
-여기서 발생하는 실패응답은 `Burst` 큐의 가용공간이 없기 때문이다.  
+여기서 발생하는 실패응답은 `Burst` 큐의 가용공간이 없을때 들어온 요청에 대한 실패이다.  
 
 응답시간 그래프는 `Burst` 테스트의 응답 그래프와 달리 `Basic` 테스트의 응답 그래프처럼 비교적 일정한 결과를 보여주고 있다. 
 `Burst` 큐에 가용한 요청은 즉시 처리되기 때문에, `Burst` 테스트와 달리 `RPS` 를 초과하는 요청이 큐에서 대기하는 시간이 존재하지 않기 때문이다.  
 
 
 ## Two-Stage Rate Limiting
-관련 설명 및 예시 설정
+먼저 살펴본 `nodelay` 설정은 `Burst` 에 들어오는 모든 요청에 대해 지연없이 바로 요청을 전달하는 역할이다.  
+`nodelay` 가 설정되지 않은 경우 응답시간이 예측 불가능할 정도로 늘어나는 상황이 발생할 수 있다. 
+이런 상황을 어느정도 대응할 수 있는 방법이 `delay` 설정이다. 
+현재 구성하는 서버에서 초당 요청 개수를 어느정도 예측 가능한 경우, 
+보다 서버에 알맞는 `delay` 설정을 구성할 수 있다. 
+아래는 평균적으로 초당 요청이 100개가 들어오고 특정 경우 최대 150개의 요청이 들어올 수 있을 때, 
+`nodelay` 파라미터의 값에 50값을 주어 `limit_req` 부분에 선언해 사용할 수 있다.  
 
 ```
 limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
@@ -612,6 +619,12 @@ limit_req_zone $binary_remote_addr zone=mylimit:10m rate=100r/s;
             }
         }
 ```  
+
+`delay` 는 서버에서 가용할 수 있는 최대 요청수에 대해 설정할 수 있는 파라미터이다.  
+
+위 설정은 1초에 들어온 150(`)
+
+ngins-rate-limiting-burst-delay.png
 
 `delay` 50 요청만큼은 `nodelay` 처리되기 때문에, `burst` 만 설정된것 보다는 응답시간 증가폭이 작다. 
 하지만 `burst` 에 대한 전체를 `nodelay` 처리하는 것이 아니기 때문에 `burst` + `nodelay` 처리보다는 응답시간이 증가한다.  
