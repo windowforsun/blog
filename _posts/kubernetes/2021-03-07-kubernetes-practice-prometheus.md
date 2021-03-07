@@ -4,7 +4,7 @@ classes: wide
 title: "[Kubernetes 실습] Prometheus 를 활용한 모니터링 구성 및 Metric 수집"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: 'Kubernetes Cluster 에서 Promethues 를 사용해서 모니터링과 Metric 수집을 수행해 보자'
+excerpt: 'Kubernetes Cluster 에서 Prometheus 를 사용해서 모니터링과 Metric 수집을 수행해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
