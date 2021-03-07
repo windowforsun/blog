@@ -1,0 +1,66 @@
+@startuml
+
+'skinparam linetype ortho
+'!include <tupadr3/common>
+!include <tupadr3/govicons/user>
+!include <logos/prometheus.puml>
+!include <logos/grafana.puml>
+!include <logos/slack.puml>
+!include <logos/kubernetes.puml>
+
+
+rectangle "<$prometheus> Prometheus Server" as prometheusserver #white {
+	card "검색(Retrieval)" as retrieval
+	card "TSDB" as tsdb
+	card "HTTP 서버" as http
+	card "HDD/SDD" as storage
+
+	retrieval -r-> tsdb
+	tsdb -r-> http
+	tsdb -d-> storage
+}
+
+rectangle "<$prometheus> Alert Manager" as alertManager #white
+
+rectangle "<$kubernetes> Kubernetes API" as kubernetesapi #white {
+	card "Service Discovery" as servicediscovery
+}
+
+rectangle "<$kubernetes> kubernetes Cluster" as kubernetescluster #white {
+	card "kube-state-metrics" as kubestatemetrics
+	card "Node Exporter" as nodeexporter
+	card "kubernetes-pods" as kubernetespods
+	card "kubernetes-service-endpoint" as kubernetesserviceendpoints
+}
+
+rectangle "Monitoring" as monitoring {
+	rectangle "<$grafana>" as grafana #white
+	rectangle "Prometheus Web UI" as ui #white
+	rectangle "API Client" as apiClient #white
+
+	grafana -[hidden]d- ui
+	ui -[hidden]d- apiClient
+}
+
+rectangle "<$grafana>" as grafana #white
+rectangle "<$slack>" as slack #white
+'rectangle "<$kubernetes>" as kubernetes #white
+
+rectangle "Push Gateway" as pushgateway #white
+rectangle "Email" as email #white
+rectangle "etc" as etc #white
+
+kubernetescluster --> pushgateway :Push Metrics
+retrieval -r-> kubernetescluster :Pull Metrics
+retrieval -r-> pushgateway :Pull Metrics
+
+
+
+retrieval -u-> servicediscovery
+monitoring --> prometheusserver :PromQL
+http --> alertManager :Push Alarm
+alertManager --> slack
+alertManager --> email
+alertManager --> etc
+
+@enduml
