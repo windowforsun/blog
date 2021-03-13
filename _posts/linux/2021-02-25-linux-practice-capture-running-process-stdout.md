@@ -90,7 +90,6 @@ metadata:
   name: test-script
   namespace: default
 data:
-    wait $pid1 $pid2
   buffering.py: |
     import time
     import sys
