@@ -45,7 +45,8 @@ public interface Tasklet {
 간단하게 구성한 기본적인 `Tasklet` 의 예시는 아래와 같다.  
 
 - `SimpleTasklet`
-
+    - `Tasklet` 은 `RepeatStatus.FINISHED` 를 리턴하며 종료할 수 있다.
+    
 ```java
 @Slf4j
 public class SimpleTasklet implements Tasklet {
@@ -59,8 +60,7 @@ public class SimpleTasklet implements Tasklet {
     }
 }
 ```  
-
-  - `Tasklet` 은 `RepeatStatus.FINISHED` 를 리턴하며 종료할 수 있다. 
+ 
 
 - `SimpleTaskletConfig`
 
@@ -139,6 +139,8 @@ public class SimpleTaskletTest {
 `Dao` 에 이미 해당 동작이 구현돼 있어 `TaskletAdapter` 를 사용해서 `Dao` 의 메소드를 `Tasklet` 동작으로 연결시키는 예제는 아래와 같다.  
 
 - `SomeDao`
+    - `deleteBySome` 은 `Tasklet` 동작을 수행하는 메소드이다. 
+    - `some` 에 해당하는 데이터를 지우는 동작을 수행한다고 가정하고, 동작 판별을 위해 로그를 찍는다.
 
 ```java
 @Slf4j
@@ -148,9 +150,7 @@ public class SomeDao {
     }
 }
 ```  
-
-  - `deleteBySome` 은 `Tasklet` 동작을 수행하는 메소드이다. 
-  - `some` 에 해당하는 데이터를 지우는 동작을 수행한다고 가정하고, 동작 판별을 위해 로그를 찍는다. 
+ 
   
 - `TaskletAdapterConfig`
 
@@ -233,7 +233,7 @@ public class TaskletAdapterTest {
 ### Tasklet 리턴값에 따른 동작
 앞서 `Tasklet` 의 `execute` 메소드는 `RepeatStatus` 타입을 리턴하고, 
 `RepeatStatus.FINISHED` 리턴을 통해 종료한다고 언급했었다. 
-`RepeatStatus` 의 종류는 `FiNISHED` 외에 한가지 더 있는데 원형은 아래와 같다. 
+`RepeatStatus` 의 종류는 `FINISHED` 외에 한가지 더 있는데 원형은 아래와 같다. 
 
 ```java
 public enum RepeatStatus {
@@ -269,7 +269,10 @@ public enum RepeatStatus {
 아래는 `execute()` 메소드 리턴값에 따른 동작에 대한 예시이다. 
 
 - `RepeatableTasklet`
-
+    - `beforeStep()` 메소드에서 스텝시작 전 `i` 값을 0으로 초기화 한다. 
+    - `execute()` 에서는 `i` 가 `MAX` 값보다 작은 경우 `i` 값에 대한 로그를 찍고 `i` 값 증가후, `COMTINUABLE` 을 리턴한다. 
+    - `i` 가 `MAX` 보다 같거나 큰 경우, `FINISHED` 를 리턴한다. 
+    
 ```java
 @Slf4j
 public class RepeatableTasklet implements Tasklet {
@@ -293,10 +296,7 @@ public class RepeatableTasklet implements Tasklet {
     }
 }
 ```  
-
-  - `beforeStep()` 메소드에서 스텝시작 전 `i` 값을 0으로 초기화 한다. 
-  - `execute()` 에서는 `i` 가 `MAX` 값보다 작은 경우 `i` 값에 대한 로그를 찍고 `i` 값 증가후, `COMTINUABLE` 을 리턴한다. 
-  - `i` 가 `MAX` 보다 같거나 큰 경우, `FINISHED` 를 리턴한다. 
+    
 
 - `RepeatableTaskletConfig`
 
