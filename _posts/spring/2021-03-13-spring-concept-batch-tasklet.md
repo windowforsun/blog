@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] Spring Batch Tasklet"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Batch Chunk 방식과 다르게 활용할 수 있는 Tasklet에 대해 알아보자'
+excerpt: 'Spring Batch Chunk 방식과 다르게 Step을 활용할 수 있는 Tasklet에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
