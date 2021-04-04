@@ -53,6 +53,8 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: test-storage-class
+  labels:
+    group: test-statefulset
 provisioner: docker.io/hostpath
 reclaimPolicy: Retain
 ```  
@@ -77,6 +79,7 @@ metadata:
   name: nginx-service
   labels:
     app: nginx
+    group: test-statefulset
 spec:
   ports:
     - port: 80
@@ -92,6 +95,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: nginx-statefulset
+  labels:
+    group: test-statefulset
 spec:
   selector:
     matchLabels:
@@ -102,6 +107,7 @@ spec:
     metadata:
       labels:
         app: nginx
+        group: test-statefulset
     spec:
       terminationGracePeriodSeconds: 10
       containers:
