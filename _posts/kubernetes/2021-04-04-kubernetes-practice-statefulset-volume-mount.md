@@ -226,6 +226,21 @@ $ curl localhost:30080/whoami.html
 im 0
 ```  
 
+`PV`, `PVC` 를 조회하면 아래와 같이 삭제되지 않고 유지되고 있는 것을 확인 할 수 있다.  
+
+```bash
+$ kubectl get pv,pvc
+NAME                                                        CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                                     STORAGECLASS         REASON   AGE
+persistentvolume/pvc-146ef4c5-cd7a-4bbc-8c9b-57ffa6a92d6e   1Gi        RWO            Retain           Bound    default/html-volume-nginx-statefulset-0   test-storage-class            75m
+persistentvolume/pvc-1e893902-7932-47d2-bf3e-cfc8dadb4175   1Gi        RWO            Retain           Bound    default/html-volume-nginx-statefulset-2   test-storage-class            75m
+persistentvolume/pvc-f23f5712-5996-4804-80c3-47f2de472bd2   1Gi        RWO            Retain           Bound    default/html-volume-nginx-statefulset-1   test-storage-class            75m
+
+NAME                                                    STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS         AGE
+persistentvolumeclaim/html-volume-nginx-statefulset-0   Bound    pvc-146ef4c5-cd7a-4bbc-8c9b-57ffa6a92d6e   1Gi        RWO            test-storage-class   75m
+persistentvolumeclaim/html-volume-nginx-statefulset-1   Bound    pvc-f23f5712-5996-4804-80c3-47f2de472bd2   1Gi        RWO            test-storage-class   75m
+persistentvolumeclaim/html-volume-nginx-statefulset-2   Bound    pvc-1e893902-7932-47d2-bf3e-cfc8dadb4175   1Gi        RWO            test-storage-class   75m
+```  
+
 현재 상태를 도식화 하면 아래와 같은 상황이다. 
 
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice_statefulset_volume_mount_2.png)  
