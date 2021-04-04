@@ -59,9 +59,12 @@ reclaimPolicy: Retain
 
 > `node` 의 호스트 이름이 `docker-desktop` 인 노드를 선택해서 사용하는데, 
 >이때 현재 `WSL` + `docker desktop` 환경이라서 경로에 대한 부가적인 설명은 아래와 같다. 
->Template(yaml)|WSL|Windows
->---|---|---
->/run/desktop/mnt/host/c/k8s/test-storage-class|/c/k8s/test-storage-class|C:\k8s\test-storage-class
+>
+>구분|경로
+>---|---
+>Template(yaml)|`/run/desktop/mnt/host/c/k8s/test-storage-class`
+>WSL|`/c/k8s/test-storage-class`
+>Windows|`C:\k8s\test-storage-class`
 
 ### Service, StatefulSet
 다음으로 `Nginx` 이미지를 사용해서 간단하게 구성한 `StatefulSet` 템플릿은 아래와 같다. 
