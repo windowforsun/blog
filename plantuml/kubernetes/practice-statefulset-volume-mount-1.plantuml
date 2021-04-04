@@ -1,0 +1,35 @@
+@startuml
+
+rectangle statefulset-pod-0 as ss0 {
+}
+rectangle statefulset-pod-1 as ss1 {
+}
+rectangle statefulset-pod-2 as ss2 {
+}
+
+rectangle pvc-pod-0 as pvc0 {
+}
+rectangle pvc-pod-1 as pvc1 {
+}
+rectangle pvc-pod-2 as pvc2 {
+}
+
+rectangle pv-pod-0 as pv0 {
+}
+rectangle pv-pod-1 as pv1 {
+}
+rectangle pv-pod-2 as pv2 {
+}
+
+ss0 -r- pvc0
+pvc0 -r- pv0
+
+ss1 -r- pvc1
+pvc1 -r- pv1
+
+ss2 -r- pvc2
+pvc2 -r- pv2
+
+ss0 -[hidden]d- ss1
+ss1 -[hidden]d- ss2
+@enduml
