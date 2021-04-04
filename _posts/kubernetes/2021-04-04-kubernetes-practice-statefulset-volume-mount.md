@@ -171,7 +171,7 @@ persistentvolumeclaim/html-volume-nginx-statefulset-2   Bound    pvc-1e893902-79
 
 `PV`, `PVC` 모두 `StatefulSet` 의 `Pod` 쌍에 맞게 생성되고 마운트 된 것을 확인 할 수 있다.  
 
-![그림 1]({{site.baseurl}}/img/spring/practice_statefulset_volume_mount_1.png)  
+![그림 1]({{site.baseurl}}/img/kubernetes/practice_statefulset_volume_mount_1.png)  
 
 ### 테스트
 테스트를 위해 `pod/nginx-statefulset-0 ~ 2` 까지 파드에 접속해 마운트 경로에 아래와 같이 파일을 생성해 준다. 
@@ -228,7 +228,7 @@ im 0
 
 현재 상태를 도식화 하면 아래와 같은 상황이다. 
 
-![그림 1]({{site.baseurl}}/img/spring/practice_statefulset_volume_mount_2.png)  
+![그림 1]({{site.baseurl}}/img/kubernetes/practice_statefulset_volume_mount_2.png)  
 
 다시 `StatefulSet` 의 `replicas` 를 3으로 조정해 1, 2번 파드를 실행하면 아래와 같다. 
 
