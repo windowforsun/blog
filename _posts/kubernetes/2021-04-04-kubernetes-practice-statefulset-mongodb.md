@@ -176,6 +176,10 @@ pod/mongodb-statefulset-1   1/1     Running   0          40s
 ```  
 
 ### MongoDB ReplicaSet 구성
+
+>`MongoDB` `ReplicaSet` 을 정상적으로 구성하기 위해서는 최소 3개의 노드가 필요하다. 
+>현재 예제 스텝에서는 2개로 구성을 시작하고 이후 진행되는 예제에서 3개의 노드로 최종적으로 구성한다.  
+
 `ReplicaSet` 구성은 `Kubernetes Cluster` 내부에서 사용할 수 있는 `Service Discovery DNS` 를 사용할 것이다.  
 `Pod` 이름, `Service` 이름, `Namespace` 이름 등으로 추론할 수 있지만, 
 각 `Pod` 에 접속해서 확인하면 아래와 같다.  
