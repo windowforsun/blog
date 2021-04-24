@@ -1,0 +1,30 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "onSubscribe" as onS {
+
+}
+
+rectangle "onNext" as onN {
+
+}
+
+rectangle "onError" as onE {
+
+}
+
+rectangle "onComplete" as onC {
+
+}
+
+onS --> onN
+onN --> onN
+onN --> onE
+onN --> onC
+
+
+
+
+
+@enduml
