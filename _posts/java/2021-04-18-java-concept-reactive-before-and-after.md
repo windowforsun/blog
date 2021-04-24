@@ -347,13 +347,13 @@ public static interface Subscriber<T> {
     // Publisher 로 부터 전달된 Subscription 처리
     public void onSubscribe(Subscription subscription);
     
-    // Publisher 로 부터 전달되는 데이터 처리
+    // Subscription.request() 요청에 대한 Publisher 의 데이터 응답
     public void onNext(T item);
     
-    // Publisher 로부터 전달된 에러 처리
+    // Publisher 의 데이터 발행 중 에러 전달
     public void onError(Throwable throwable);
     
-    // Publisher 와 완료 처리
+    // Publisher 의 데이터 발행 완료 전달
     public void onComplete();
 }
 ```  
@@ -365,7 +365,7 @@ public static interface Subscription {
     // Subscriber 가 n 개의 데이터를 Publisher 에게 요청
     public void request(long n);
     
-    // 구독을 취소한다. 
+    // Publisher 에게 데이터 발생 중단 요청
     public void cancel();
 }
 ```  
