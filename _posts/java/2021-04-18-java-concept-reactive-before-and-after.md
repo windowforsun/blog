@@ -306,7 +306,7 @@ public void observable_multiple() throws  Exception {
 
 선언문에 있는 이미지로 `Reactive` 를 표현하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept-java-reactive-before-and-after-1.svg)  
+![그림 1]({{site.baseurl}}/img/java/concept-java-reactive-before-and-after-1.svg)  
 
 ### Java Reactive Streams
 `Java` 에서 `Reactive Streams` 는 `Java 9` 의 `java.util.concurrent.Flow` 를 사용할 수도 있고, 
@@ -384,7 +384,7 @@ public static interface Processor<T,R> extends Subscriber<T>, Publisher<R> {
 
 `Publisher`, `Subscriber`, `Subscription` 의 관계와 흐름을 도식화 하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept-ractive-before-and-after-2.png)  
+![그림 1]({{site.baseurl}}/img/java/concept-ractive-before-and-after-2.png)  
 
 1. `Subscriber` 가 `subscribe()` 메소드를 사용해서 `Publisher` 에게 구독 요청을 한다. 
 1. `Publisher` 는 `Subscriber` 의 `onSubscribe()` 메소드를 사용해서 `Subscription` 을 전달한다. 
@@ -393,7 +393,7 @@ public static interface Processor<T,R> extends Subscriber<T>, Publisher<R> {
 
 위 그림에서 `Processor` 까지 함께 도식화 하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/spring/concept-ractive-before-and-after-3.png)  
+![그림 1]({{site.baseurl}}/img/java/concept-ractive-before-and-after-3.png)  
 
 
 `Reactive Streams API` 설명을 참조하면 프로토콜의 규칙을 아래와 같이 정리할 수 있다. 
@@ -402,7 +402,7 @@ public static interface Processor<T,R> extends Subscriber<T>, Publisher<R> {
 onSubscribe onNext* (onError | onComplete)?
 ```  
 
-![그림 1]({{site.baseurl}}/img/spring/concept_reactive_before_and_after_1.png)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactive_before_and_after_1.png)  
 
 `Reactive Streams` 동작에 대한 간단한 예시로 `1 ~ N` 개의 데이터를 차례대로 생산하는 아래와 같은 `Publisher` 와 `Subscription` 있다고 가정해 보자. 
 
