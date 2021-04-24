@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] Reactive Streams 의 이전과 이후"
+title: "[Java 개념] Reactive Streams"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java Reactive Streams 와 등장 배경에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -22,8 +22,8 @@ toc: true
 use_math: true
 ---  
 
-## Reactive 이전의 Java
-`Java 9` 에서 공개된 `Reactive`(`java.util.concurrent.Flow`) 방식의 이벤트 처리 방식의 등장 이전에 
+## Reactive Streams 이전의 Java
+`Java 9` 에서 공개된 `Reactive Streams`(`java.util.concurrent.Flow`) 방식의 이벤트 처리 방식의 등장 이전에 
 `Java` 진영에서는 어떻게 이벤트 데이터를 처리했는지에 대해서 먼저 알아본다.  
 
 ### Iterable
@@ -309,8 +309,303 @@ public void observable_multiple() throws  Exception {
 ![그림 1]({{site.baseurl}}/img/spring/concept-java-reactive-before-and-after-1.svg)  
 
 ### Java Reactive Streams
+`Java` 에서 `Reactive Streams` 는 `Java 9` 의 `java.util.concurrent.Flow` 를 사용할 수도 있고, 
+`Java 9` 이하 버전이라면 아래 의존성을 추가해서 사용할 수 있다. 
+
+- `Maven`
+
+```xml
+<dependency>
+    <groupId>org.reactivestreams</groupId>
+    <artifactId>reactive-streams</artifactId>
+    <version>1.0.3</version>
+</dependency>
+```  
+
+- `Gradle`
+
+```groovy
+implementation group: 'org.reactivestreams', name: 'reactive-streams', version: '1.0.3'
+```  
+
+`Java` 에서 `Reactive Streams` 는 아래 `API` 를 제공한다. 
+
+1. `Publisher` : `Subscriber` 들에게 데이터를 생산하는 생산자 역할이다. 
+
+```java
+@FunctionalInterface
+public static interface Publisher<T> {
+    // 생산되는 데이터를 받을 Subscriber 등록
+    public void subscribe(Subscriber<? super T> subscriber);
+}
+```  
+
+2. `Subscriber` : `Publisher` 가 생산한 데이터를 받아 소비하는 소비자 역할이다. 
+
+```java
+public static interface Subscriber<T> {
+    // Publisher 로 부터 전달된 Subscription 처리
+    public void onSubscribe(Subscription subscription);
+    
+    // Publisher 로 부터 전달되는 데이터 처리
+    public void onNext(T item);
+    
+    // Publisher 로부터 전달된 에러 처리
+    public void onError(Throwable throwable);
+    
+    // Publisher 와 완료 처리
+    public void onComplete();
+}
+```  
+
+3. `Subscription` : `Publisher` 와 `Subscriber` 의 중간에서 구독 정보의 역할을 한다. 
+
+```java
+public static interface Subscription {
+    // Subscriber 가 n 개의 데이터를 Publisher 에게 요청
+    public void request(long n);
+    
+    // 구독을 취소한다. 
+    public void cancel();
+}
+```  
+
+4. `Processor` : `Publisher` 와 `Subscriber` 를 모두 상속한 인터페이스 이다. `Publisher` 와 `Subscriber` 사이에서 중간 처리 단계의 역할을 한다. 
+`Publisher` 의 데이터를 변형하거나, 특정 `Subscriber` 에게만 전달하는 등의 동작을 수행할 수 있다. 
+
+```java
+public static interface Processor<T,R> extends Subscriber<T>, Publisher<R> {
+
+}
+```  
+
+각 `API` 에 대한 자세한 설명은 [여기](https://github.com/reactive-streams/reactive-streams-jvm#api-components)
+링크를 통해 확인 할 수 있다.  
+
+`Publisher`, `Subscriber`, `Subscription` 의 관계와 흐름을 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/spring/concept-ractive-before-and-after-2.png)  
+
+1. `Subscriber` 가 `subscribe()` 메소드를 사용해서 `Publisher` 에게 구독 요청을 한다. 
+1. `Publisher` 는 `Subscriber` 의 `onSubscribe()` 메소드를 사용해서 `Subscription` 을 전달한다. 
+1. `Subscriber` 는 `Publisher` 로 부터 전달 받은 `Subscription` 의 `request()` 메소드를 사용해서 데이터를 요청한다. 
+1. `Publisher` 는 `Subscription` 을 통해 `onNext()` 로는 데이터 전달, `onComplete()` 은 전달 완료, `onError()` 로는 에러를 `Subscriber` 에게 전달한다. 
+
+위 그림에서 `Processor` 까지 함께 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/spring/concept-ractive-before-and-after-3.png)  
 
 
+`Reactive Streams API` 설명을 참조하면 프로토콜의 규칙을 아래와 같이 정리할 수 있다. 
+
+```
+onSubscribe onNext* (onError | onComplete)?
+```  
+
+![그림 1]({{site.baseurl}}/img/spring/concept_reactive_before_and_after_1.png)  
+
+`Reactive Streams` 동작에 대한 간단한 예시로 `1 ~ N` 개의 데이터를 차례대로 생산하는 아래와 같은 `Publisher` 와 `Subscription` 있다고 가정해 보자. 
+
+```java
+static class MyPublisher implements Flow.Publisher<Integer> {
+    private final Iterator<Integer> iterator;
+    private boolean isError = false;
+
+    // count 만큼 Subscriber 로 전달할 iterator 생성
+    public MyPublisher(int count) {
+        this.iterator = IntStream.rangeClosed(1, count).iterator();
+    }
+
+    // isError 로 에러 발생 여부 결정
+    public MyPublisher(int count, boolean isError) {
+        this(count);
+        this.isError = isError;
+    }
+
+    @Override
+    public void subscribe(Flow.Subscriber<? super Integer> subscriber) {
+        // 구독하는 Subscriber 에게 Publisher 의 Subscription 전달
+        subscriber.onSubscribe(new MySubscription(this.iterator, subscriber, this.isError));
+    }
+}
+
+static class MySubscription implements Flow.Subscription {
+    private Flow.Subscriber subscriber;
+    private Iterator<Integer> iterator;
+    private boolean isError;
+    
+    public MySubscription(Iterator<Integer> iterator, Flow.Subscriber subscriber) {
+        this.subscriber = subscriber;
+        this.iterator = iterator;
+    }
+    
+    public MySubscription(Iterator<Integer> iterator, Flow.Subscriber subscriber, boolean isError) {
+        this(iterator, subscriber);
+        this.isError = isError;
+    }
+    
+    
+    @Override
+    public void request(long n) {
+        try {
+            while(n-- > 0) {
+                if(this.iterator.hasNext()) {
+                    this.subscriber.onNext(this.iterator.next());
+                } else {
+                	// isError 값에 따라 예외 혹은 onComplete 호출
+                    if(this.isError) {
+                        throw new Exception("test");
+                    } else {
+                        this.subscriber.onComplete();
+                    }
+                    break;
+                }
+            }
+        } catch(Exception e) {
+            this.subscriber.onError(e);
+        }
+    
+    }
+    
+    // Subscriber 가 cancel(구독 종료) 를 호출하면 onComplete 호출을 통해 종료 수행
+    @Override
+    public void cancel() {
+        this.subscriber.onComplete();
+    }
+}
+```  
+
+위 생산자의 데이터를 받아 처리할 `Subscriber` 는 아래와 같다. 
+
+```java
+static class MySubscriber implements Flow.Subscriber<Integer> {
+    private Flow.Subscription subscription;
+    private List<String> actual;
+    private boolean isCancel = false;
+    private boolean isComplete = false;
+
+    // Subscriber 에서 수행된 동작을 검증을 위해 외부에서 주입
+    public MySubscriber(List<String> actual) {
+        this.actual = actual;
+    }
+    
+    // isCancel 로 구독 강제 종료 여부 결정
+    public MySubscriber(List<String> actual, boolean isCancel) {
+        this(actual);
+        this.isCancel = isCancel;
+    }
+
+    @Override
+    public void onSubscribe(Flow.Subscription subscription) {
+        this.actual.add("onSubscribe");
+        this.subscription = subscription;
+        this.subscription.request(1);
+    }
+
+    @Override
+    public void onNext(Integer item) {
+        // 구독이 종료 된 경우 종료
+        if(this.isComplete) {
+            return;
+        }
+
+        this.actual.add("onNext " + item);
+
+        // isCancel 인경우 데이터 하나만 받고 바로 구독을 종료 시킨다. 
+        if(this.isCancel) {
+            this.subscription.cancel();
+        }
+
+        this.subscription.request(1);
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+        this.isComplete = true;
+        this.actual.add("onError");
+
+    }
+
+    @Override
+    public void onComplete() {
+        this.isComplete = true;
+        this.actual.add("onComplete");
+    }
+}
+```  
+
+위 `Publisher`, `Subscription`, `Subscriber` 를 사용해서 각 케이스에 따른 흐름을 테스트하면 아래와 같다. 
+
+```java
+@Test
+public void reactiveStream_onComplete() {
+    // given
+    MyPublisher myPublisher = new MyPublisher(5);
+    List<String> actual = new LinkedList<>();
+    MySubscriber mySubscriber = new MySubscriber(actual);
+
+    // when
+    myPublisher.subscribe(mySubscriber);
+
+    // then
+    assertThat(actual, hasSize(7));
+    assertThat(actual, contains(
+            "onSubscribe",
+            "onNext 1",
+            "onNext 2",
+            "onNext 3",
+            "onNext 4",
+            "onNext 5",
+            "onComplete"
+    ));
+}
+
+@Test
+public void reactiveStream_cancel_onComplete() {
+    // given
+    MyPublisher myPublisher = new MyPublisher(5);
+    List<String> actual = new LinkedList<>();
+    MySubscriber mySubscriber = new MySubscriber(actual, true);
+
+    // when
+    myPublisher.subscribe(mySubscriber);
+
+    // then
+    assertThat(actual, hasSize(3));
+    assertThat(actual, contains(
+            "onSubscribe",
+            "onNext 1",
+            "onComplete"
+    ));
+}
+
+@Test
+public void reactiveStream_onError() {
+    // given
+    MyPublisher myPublisher = new MyPublisher(5, true);
+    List<String> actual = new LinkedList<>();
+    MySubscriber mySubscriber = new MySubscriber(actual);
+
+    // when
+    myPublisher.subscribe(mySubscriber);
+
+    // then
+    assertThat(actual, hasSize(7));
+    assertThat(actual, contains(
+            "onSubscribe",
+            "onNext 1",
+            "onNext 2",
+            "onNext 3",
+            "onNext 4",
+            "onNext 5",
+            "onError"
+    ));
+}
+```  
+
+테스트를 위해 구현한 `Subscriber` 는 단순한 구현으로 `Subscription.request(1)` 로 1개의 데이터만 생산자에게 요청하고 있다. 
+하지만 좀더 `Back-pressure` 를 위한 처리가 필요한 경우 `request()` 메소드를 사용해서 자신이 현재 처리 가능한 데이터의 수를 요청해서 전달 받을 수 있다. 
+이 경우 `Publisher`, `Subscription` 또한 요청된 n개 만큼의 데이터를 줄수 있는 일련의 로직이 추가되어야 한다.  
 
 
 ---
@@ -319,4 +614,5 @@ public void observable_multiple() throws  Exception {
 [reactive-streams/reactive-streams-jvm](https://github.com/reactive-streams/reactive-streams-jvm)  
 [Reactor 3 Reference Guide](https://projectreactor.io/docs/core/release/reference/index.html)  
 [The Reactive Manifesto](https://www.reactivemanifesto.org/)  
+[Flow (Java SE 9 & JDK 9 )](https://docs.oracle.com/javase/9/docs/api/java/util/concurrent/Flow.html)  
 
