@@ -1,0 +1,24 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "pub" as pub {
+
+}
+
+rectangle "mapPrefixProcessor" as mapPrefixProcessor {
+	rectangle "Function" as func
+}
+
+rectangle "sub" as sub {
+
+}
+
+pub -> func :1...5
+func -> sub :MapProcessorPrefix-1...5
+
+
+
+
+
+@enduml

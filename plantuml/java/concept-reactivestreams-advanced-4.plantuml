@@ -1,0 +1,24 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "pub" as pub {
+
+}
+
+rectangle "mapPrefixPub" as mapPrefixPub {
+	rectangle "Function" as func
+}
+
+rectangle "sub" as sub {
+
+}
+
+pub -> func :1...5
+func -> sub :MapPrefix-1...5
+
+
+
+
+
+@enduml
