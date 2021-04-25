@@ -23,8 +23,8 @@ use_math: true
 ---  
 
 ## Reactive Streams 이전의 Java
-`Java 9` 에서 공개된 `Reactive Streams`(`java.util.concurrent.Flow`) 방식의 이벤트 처리 방식의 등장 이전에 
-`Java` 진영에서는 어떻게 이벤트 데이터를 처리했는지에 대해서 먼저 알아본다.  
+`Java 9` 에서 공개된 `Reactive Streams`(`java.util.concurrent.Flow`) 방식의 데이터 처리 흐름의 등장 이전에 
+`Java` 진영에서는 어떻게 데이터 흐름을(이벤트) 처리했는지에 대해서 먼저 알아본다.  
 
 ### Iterable
 `Iterable` 은 `Java` 언어를 사용해본 경험이 있다면 아주 친숙하고 한번쯤은 사용할 수 밖에 없는 
@@ -404,7 +404,75 @@ onSubscribe onNext* (onError | onComplete)?
 
 ![그림 1]({{site.baseurl}}/img/java/concept_reactive_before_and_after_1.png)  
 
-`Reactive Streams` 동작에 대한 간단한 예시로 `1 ~ N` 개의 데이터를 차례대로 생산하는 아래와 같은 `Publisher` 와 `Subscription` 있다고 가정해 보자. 
+`Reactive Streams` 의 간단한 동작으로 `1 ~ 5` 까지 데이터를 차례대로 생산하는 `Publisher` 와 이를 받아 처리하는 `Subscriber` 의 예시는 아래와 같다. 
+
+```java
+@Test
+public void simple_pub_sub() {
+    // given
+    List<String> actual = new LinkedList<>();
+    Flow.Publisher<String> pub = new Flow.Publisher<String>() {
+        @Override
+        public void subscribe(Flow.Subscriber<? super String> subscriber) {
+            subscriber.onSubscribe(new Flow.Subscription() {
+                @Override
+                public void request(long n) {
+                    subscriber.onNext("1");
+                    subscriber.onNext("2");
+                    subscriber.onNext("3");
+                    subscriber.onNext("4");
+                    subscriber.onNext("5");
+                    subscriber.onComplete();
+                }
+
+                @Override
+                public void cancel() {
+
+                }
+            });
+        }
+    };
+    Flow.Subscriber<String> sub = new Flow.Subscriber<String>() {
+        @Override
+        public void onSubscribe(Flow.Subscription subscription) {
+            actual.add("onSubscribe");
+            subscription.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(String item) {
+            actual.add(item);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            actual.add("onError");
+        }
+
+        @Override
+        public void onComplete() {
+            actual.add("onComplete");
+        }
+    };
+
+    // when
+    pub.subscribe(sub);
+
+    // then
+    assertThat(actual, hasSize(7));
+    assertThat(actual, contains(
+            "onSubscribe",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "onComplete"
+    ));
+}
+```  
+
+더 나아간 예시로 `1 ~ N` 개의 데이터를 차례대로 생산하는 아래와 같은 `Publisher` 와 `Subscription` 있다고 가정해 보자. 
 
 ```java
 static class MyPublisher implements Flow.Publisher<Integer> {
