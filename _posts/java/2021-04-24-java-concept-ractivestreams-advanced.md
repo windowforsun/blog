@@ -22,7 +22,7 @@ use_math: true
 ---  
 
 ## Reactive Streams 활용하기 
-2021-04-18-java-concept-reactive-before-and-after
+[Reactive Streams]({{site.baseurl}}{% link _posts/java/2021-04-18-java-concept-reactive-before-and-after.md %})
 에서는 `Reactive Streams` 가 무엇이고 구성요소와 어떻게 사용하는 지에 대해서 알아보았다. 
 `Reactive Streams` 는 간단하게 생산자와 소비자로 분리되어서 데이터를 주고 받고 처리하는 일련의 흐름이라고 할 수 있다. 
 여기서 데이터를 주고 받는 다는 것을 중간에 어떤 별도의 처리자의 역할을 수행하는 요소가 필요할 수 있다.  
@@ -108,7 +108,7 @@ public void pub_sub() {
 위 데이터 스트림을 도식화 하면 아래와 같이 아주 간단한 구조로 `pub`(`MyPublisher`) 이 데이터를 생산해서 넘겨주고, 
 `sub`(`MySubscriber`) 넘어온 데이터를 처리하는 아주 단순한 구조이다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_1)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_1.png)  
 
 
 
@@ -122,7 +122,7 @@ public void pub_sub() {
 `DelegatePublisher` 라는 새로운 `Publisher` 를 사용해서, 
 `MyPublisher` 와 `MySubscriber` 사이에서 단순히 데이터 스트림의 전달자 역할만 하는 스트림을 구성하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_2)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_2.png)  
 
 
 ```java
@@ -173,7 +173,7 @@ public void pub_delegatePub_sub() {
 `DelegatePublisher` 를 조금만 활용하면 아래와 같이 `MyPublisher`, `MySubscriber` 데이터 스트림 중간에서 
 데이터의 접두사를 붙이는 `PrefixPublisher` 를 추가할 수 있다. 
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_3)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_3.png)  
 
 ```java
 static class PrefixPublisher implements Flow.Publisher<String> {
@@ -284,7 +284,7 @@ public interface Function<T, R> {
 
 `MapPublisher` 를 구현하고 이를 통해 접두사를 붙이는 `Publisher` 를 구성해서 테스트 하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_4)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_4.png)  
 
 ```java
 static class MapPublisher implements Flow.Publisher<String> {
@@ -352,7 +352,7 @@ public interface BiFunction<T, U, R> {
 `ReducePbulisher` 를 구현하고 스트림의 요소가 문자열일 때 모두 더해 하나의 문자열로 만드는 `concat` 동작에 대한 테스트는 아래와 같다.  
 
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_5)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_5.png)  
 
 
 ```java
@@ -421,7 +421,7 @@ public void pub_reduceConcatPub_sub() {
 
 - MapProcessor
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_6)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_6.png)  
 
 ```java
 
@@ -493,7 +493,7 @@ public void pub_mapPrefixProcessor_sub() {
 
 - ReduceProcessor
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_7)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_7.png)  
 
 ```java
 static class ReduceProcessor implements Flow.Processor<String, String> {
@@ -579,7 +579,7 @@ public void pub_reduceConcatProcessor_sub() {
 
 먼저 `Publisher`, `Subscriber` 가 모두 동일 스레드에서 동작할 경우는 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_8)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_8.png)  
 
 ```java
 @Slf4j
@@ -689,7 +689,7 @@ public void pub_sub() {
 `Publisher` 의 동작을 별도의 스레드로 만들어 처리하는 것을 의미한다. 
 여기서 `Publisher` 의 동작이 느리다는 것은 데이터 생성을 위해 `Blocking-IO` 를 사용하는 등의 상황이 될 수 있다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_9)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_9.png)  
 
 ```java
 @Slf4j
@@ -765,7 +765,7 @@ public void subscribeOn() throws Exception {
 `PublishOn` 은 `SubscirbeOn` 과는 반대로 데이터를 받아 처리하는 `Subscriber` 가 아주 느리고, `Publisher` 는 빠른 경우에 사용할 수 있다. 
 `Subscriber` 의 동작을 별도의 스레드로 만들어 처리하는 것을 의미한다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_10)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_10.png)  
 
 ```java
 @Slf4j
@@ -858,7 +858,7 @@ public void publishOn() throws Exception {
 #### SubscribeOn, PublishOn
 만약 `Publisher`, `Subscriber` 모두 `Blocking-IO` 등 사용으로 인해 느리다면 모두 사용하는 방식으로 구성할 수도 있다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_11)  
+![그림 1]({{site.baseurl}}/img/java/concept_reactivestreams_advanced_11.png)  
 
 ```java
 @Test
