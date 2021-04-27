@@ -1,0 +1,24 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "pub" as pub {
+
+}
+
+rectangle "delegatePub" as delegatePub {
+
+}
+
+rectangle "sub" as sub {
+
+}
+
+pub -> delegatePub :1...5
+delegatePub -> sub :1...5
+
+
+
+
+
+@enduml

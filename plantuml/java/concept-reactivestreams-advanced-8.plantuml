@@ -1,0 +1,21 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "Main Thread" as mThread {
+	rectangle "pub" as pub {
+
+	}
+
+	rectangle "sub" as sub {
+
+	}
+}
+
+pub -l-> sub :1...5
+
+
+
+
+
+@enduml
