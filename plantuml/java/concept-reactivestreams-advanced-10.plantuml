@@ -1,0 +1,30 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle "Main Thread" as mThread {
+	rectangle "pub" as pub {
+
+	}
+}
+
+rectangle "Pool Thread" as pThread {
+
+	rectangle "sub" as sub {
+
+	}
+	rectangle "publishOn" as pOn {
+
+	}
+}
+
+pub -l-> pOn :1...5
+pOn -l-> sub :1...5
+'sOn --> pub:start thread
+'pub -l-> sub :1...5
+
+
+
+
+
+@enduml
