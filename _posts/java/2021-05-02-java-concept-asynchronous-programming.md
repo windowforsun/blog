@@ -765,6 +765,18 @@ public void completableFuture_async_threadpool() throws Exception {
 }
 ```  
 
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[ForkJoinPool.commonPool-worker-19] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - async
+[myPool-1-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - completableFuture
+[myPool-2-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - Prefix-completableFuture
+[myPool-2-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - Prefix-completableFuture-Suffix
+```  
+
+`CompletableFuture` 비동기 파이프라인 작업에서 `supplyAsync()` 메소드는 기본 스레드 풀인 `ForkJoinPool` 에서 수행된다. 
+그리고 다음 비동기 동작인 `thenApplyAsync()` 는 설정한 `myPool-1` 에서 수행되고, 
+이후 비동기 동작들은 모두 `myPool-2` 에서 실행되는 것을 확인 할 수 있다.  
 
 
 ---
