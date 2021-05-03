@@ -228,7 +228,7 @@ ExecutorService cachedPool = Executors.newCachedThreadPool();
 ```  
 
 
-![그림 1]({{site.baseurl}}/img/java/concept-asynchronous-programming-1.png)  
+![그림 1]({{site.baseurl}}/img/java/concept-asynchronous-programming-2.png)  
 
 
 생성된 `Thread Pool` 에 앞서 살펴본 `Runnable` 구현체를 `execute()` 메소드로 전달해 주면, 
