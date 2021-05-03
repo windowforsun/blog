@@ -15,6 +15,14 @@ tags:
     - Asynchronous
     - Multi Thread
     - Concurrent
+    - Future
+    - FutureTask
+    - Executor
+    - Runnable
+    - Thread
+    - CountDownLatch
+    - CyclicBarrier
+    - CompletableFuture
 toc: true
 use_math: true
 ---  
@@ -35,11 +43,14 @@ Callable|1.5
 Executor|1.5
 Future|1.5
 FutureTask|1.5
+CountDownLatch|1.5
 CyclicBarrier|1.5
 RunnableFuture|1.6
 CompletableFuture|1.8
 CompletionStage|1.8
 
+
+이번 포스트에서는 `Java` 비동기 동작 구성이 필요할 때 사용할 수 있는 클래스에 대해 간략하게 알아 본다.  
 
 ### Synchronous
 먼저 동기적(`Synchronous`) 흐름을 가지는 부분에서 오래걸리는 작업이 중간에 발생할 떄의 상황을 살펴 본다. 
@@ -217,13 +228,7 @@ ExecutorService cachedPool = Executors.newCachedThreadPool();
 ```  
 
 
-
-
-Task Task Task .. (Queue) -> Thread Pool 그림!!!!!
-https://miro.medium.com/max/700/1*l0v-d_vT-KHVgnyhKCYmgw.png  
-
-
-
+![그림 1]({{site.baseurl}}/img/java/concept-asynchronous-programming-1.png)  
 
 
 생성된 `Thread Pool` 에 앞서 살펴본 `Runnable` 구현체를 `execute()` 메소드로 전달해 주면, 
@@ -330,10 +335,10 @@ public void executor_future_callable() throws Exception {
     ExecutorService es = Executors.newSingleThreadExecutor();
     threadFactory.setThreadNamePrefix("ES-Callable-");
     Callable<String> callable = () -> {
-        printAndAddLog("start runnable");
+        printAndAddLog("start callable");
         Thread.sleep(100);
         String result = "callable";
-        printAndAddLog("end runnable");
+        printAndAddLog("end callable");
 
         return result;
     };
@@ -350,8 +355,8 @@ public void executor_future_callable() throws Exception {
     assertThat(resultQueue, contains(
             "start",
             "end",
-            "start runnable",
-            "end runnable"
+            "start callable",
+            "end callable"
     ));
 }
 ```  
@@ -489,18 +494,274 @@ public void cyclicBarrier() throws Exception {
 이와 비교해서 `Semaphore` 는 동기화를 수행할 블럭에 접근할 수 있는 스레드의 수를 지정할 수 있는 기능을 제공한다.  
 
 
-
-
 ### FutureTask
+`Java 1.5` 에 추가된 `FutureTask` 는 `RunnableTurue` 이고, 
+`RunnableFuture` 는 `Runnable` 과 `Future` 의 결합체이다.  
+
+```java
+public interface RunnableFuture<V> extends Runnable, Future<V> {
+    /**
+     * Sets this Future to the result of its computation
+     * unless it has been cancelled.
+     */
+    void run();
+}
+```  
+
+`RunnableTask` 의 구현체인 `FutureTask` 는 `Runnable`, `Callable` 을 모두 사용가능한 
+`Future` 객체라고 할 수 있다. 
+먼저 `Callable` 을 사용한 `FutureTask` 테스트는 아래와 같다.  
+
+```java
+@Test
+public void futureTask_callable() throws Exception {
+    // given
+    CustomizableThreadFactory threadFactory = new CustomizableThreadFactory();
+    threadFactory.setThreadNamePrefix("ES-futureTaskCallable-");
+    ExecutorService es = Executors.newSingleThreadExecutor(threadFactory);
+    FutureTask<String> futureTaskCallable = new FutureTask<String>(() -> {
+        printAndAddLog("start callable");
+        Thread.sleep(100);
+        String result = "callable";
+        printAndAddLog("end callable");
+
+        return result;
+    });
+
+    // when
+    printAndAddLog("start");
+    es.execute(futureTaskCallable);
+    printAndAddLog("end");
+    String actual = futureTaskCallable.get(); // blocking
+
+    // then
+    assertThat(actual, is("callable"));
+    assertThat(resultQueue, hasSize(4));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "start callable",
+            "end callable"
+    ));
+}
+```  
+
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[ES-futureTaskCallable-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start callable
+[ES-futureTaskCallable-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end callable
+```  
+
+`Runnable` 을 사용한 `FutureTask` 의 테스트는 아래와 같다. 
+
+```java
+@Test
+public void futureTask_Runnable() throws Exception {
+    // given
+    CustomizableThreadFactory threadFactory = new CustomizableThreadFactory();
+    threadFactory.setThreadNamePrefix("ES-futureTaskRunnable-");
+    ExecutorService es = Executors.newSingleThreadExecutor(threadFactory);
+    FutureTask<String> futureTaskRunnable = new FutureTask<String>(() -> {
+        try {
+            printAndAddLog("start runnable");
+            Thread.sleep(100);
+            printAndAddLog("end runnable");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }, "runnable");
+
+    // when
+    printAndAddLog("start");
+    es.execute(futureTaskRunnable);
+    printAndAddLog("end");
+    String actual = futureTaskRunnable.get();   // blocking
+
+    // then
+    assertThat(actual, is("runnable"));
+    assertThat(resultQueue, hasSize(4));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "start runnable",
+            "end runnable"
+    ));
+}
+```  
+
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[ES-futureTaskRunnable-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start runnable
+[ES-futureTaskRunnable-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end runnable
+```  
+
+앞서 설명한 것과 같이 `Runnable` 은 비동기 작업에 대한 결과를 받을 수 없다. 
+하지만 `FutureTask` 를 사용하면 비동기 작업에 따른 결과를 얻을 순 없지만, `FutureTask` 생성자에 지정된 결과를 설정해두고 리턴 받을 수 있다.  
 
 
-### RunnableFuture
+### CompletableFuture
+`Java 1.8` 에 등작한 `CompletableFuture` 는 `Future` 와 `CompletionStage` 를 구현한 클래스이다.  
+먼저 `CompletionStage` 는 비동기 작업의 완료 수행에 따른 다양한 동작을 제공하는 인터페이스이다. 
+하나의 비동기 동작이 완전히 완료 될 수도 있고, 예외가 발생하면서 실패가 될떄 필요한 예외처리를 추가하는 등의 동작이 가능하다. 
+또한 여러 비동기 작업을 파이프라인처럼 연결해 비동기 작업 처리 절차를 구성 할 수도 있다.  
 
+간단하게 `Future` 와 비교를 했을 때, `Future` 는 비동기 작업에 대한 검사를 `isDone()`, `isCancled()` 를 통해서만 가능하다. 
+하지만 복잡하고 예외사항이 더 많은 비동기 작업을 컨트롤하기 위해서는 이러한 부분으로는 부족하다. 
+이런 부족한 부분은 더욱 다양한 인터페이스를 통해 기능을 제공해 주어서 우아한 처리가 가능하게 하는 것이 `CompletionStage` 이고 이를 구현한 구현체가 `CompletableFuture` 이다.  
 
+가장 간단한 예로 `CompletableFuture` 를 사용하면, 
+`Thread` 와 `Runnable` 의 비동기 작업에 따른 결과를 `Future` 와 같이 결과를 받아 올 수 있다.  
 
+```java
+@Test
+public void completableFuture_runnable() throws Exception {
+    // given
+    CompletableFuture<String> completableFuture = new CompletableFuture<>();
+    Runnable runnable = () -> {
+        String result = "runnable";
 
+        try {
+            printAndAddLog("start runnable");
+            Thread.sleep(100);
+            printAndAddLog("end runnable");
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
+        completableFuture.complete(result);
+    };
 
+    // when
+    printAndAddLog("start");
+    new Thread(runnable).start();
+    printAndAddLog("end");
+    String actual = completableFuture.get();    // blocking
+
+    // when
+    assertThat(actual, is("runnable"));
+    assertThat(resultQueue, hasSize(4));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "start runnable",
+            "end runnable"
+    ));
+}
+```  
+
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[Thread-0] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start runnable
+[Thread-0] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end runnable
+```  
+
+다음으로 `CompletableFuture` 에서 제공하는 메소드를 사용하면 좀더 다양한 동작을 비동기의 작업의 결과로 만들어 내면서 컨트롤 할 수 있다. 
+참고로 `CompletableFuture` 에 등록된 비동기 동작들은 `ForkJoinPool` 에서 실행 된다.  
+
+```java
+@Test
+public void completableFuture_async() throws Exception {
+    // when
+    printAndAddLog("start");
+    CompletableFuture<Void> completableFuture = CompletableFuture
+            .supplyAsync(() -> {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "completableFuture";
+            })
+            .thenApply((str) -> {
+                printAndAddLog(str);
+                return "Prefix-" + str;
+            })
+            .thenApply((str) -> {
+                printAndAddLog(str);
+                return str;
+            })
+            .thenApply((str) -> str + "-Suffix")
+            .thenAccept((str) -> printAndAddLog(str));
+    printAndAddLog("end");
+
+    // then
+    Thread.sleep(200);
+    assertThat(resultQueue, hasSize(5));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "completableFuture",
+            "Prefix-completableFuture",
+            "Prefix-completableFuture-Suffix"
+    ));
+}
+```  
+
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[ForkJoinPool.commonPool-worker-19] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - completableFuture
+[ForkJoinPool.commonPool-worker-19] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - Prefix-completableFuture
+[ForkJoinPool.commonPool-worker-19] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - Prefix-completableFuture-Suffix
+```  
+
+`CompletableFuture` 에 등록된 작업들이 모두 메인 스레드와는 별대로 비동기적으로 수행된 것을 확인 할 수 있다. 
+그리고 각 비동기 동작에 대한 결과를 바탕으로 다음 비동기 동작이 순차적으로 수행하는 파이프라인 동작 또한 정상적으로 동작 된 것을 확인 할 수 있다.  
+
+만약 비동기 동작에 대한 결과 처리를 별도의 스레드에서 수행하고 싶을 경우 아래와 같이 `thenApplyAsync()` ,`thenAcceptAsync()` 메소드를 사용해서 가능하다.    
+
+```java
+@Test
+public void completableFuture_async_threadpool() throws Exception {
+    // given
+    CustomizableThreadFactory threadFactory1 = new CustomizableThreadFactory();
+    threadFactory1.setThreadNamePrefix("myPool-1-");
+    ExecutorService myPool1 = Executors.newSingleThreadExecutor(threadFactory1);
+    CustomizableThreadFactory threadFactory2 = new CustomizableThreadFactory();
+    threadFactory2.setThreadNamePrefix("myPool-2-");
+    ExecutorService myPool2 = Executors.newSingleThreadExecutor(threadFactory2);
+
+    // when
+    printAndAddLog("start");
+    CompletableFuture<Void> completableFuture = CompletableFuture
+            .supplyAsync(() -> {
+                try {
+                    Thread.sleep(100);
+                    printAndAddLog("async");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "completableFuture";
+            })
+            .thenApplyAsync((str) -> {
+                printAndAddLog(str);
+                return "Prefix-" + str;
+            }, myPool1)
+            .thenApplyAsync((str) -> {
+                printAndAddLog(str);
+                return str;
+            }, myPool2)
+            .thenApply((str) -> str + "-Suffix")
+            .thenAccept((str) -> printAndAddLog(str));
+    printAndAddLog("end");
+
+    // then
+    Thread.sleep(200);
+    assertThat(resultQueue, hasSize(6));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "async",
+            "completableFuture",
+            "Prefix-completableFuture",
+            "Prefix-completableFuture-Suffix"
+    ));
+}
+```  
 
 
 
