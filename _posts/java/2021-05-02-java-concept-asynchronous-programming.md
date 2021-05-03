@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] "
+title: "[Java 개념] Java Asynchronous Programming"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Java 에서 비동기 프로그래밍을 할때 사용 할 수 있는 API 에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -34,7 +34,7 @@ use_math: true
 `DB`, `API` (`Blocking IO`)등의 작업이 대부분일 것이다. 이러한 부분을 좀더 효율적으로 처리할 수 있도록 하는 것이 바로 
 비동기 기법을 통해 동시성을 늘리는 방법이다.  
 
-`Java` 에서는 이러한 비동기 처리를 위해 초기 버전부터 시작해서 다양한 클래스와 기능을 제공해오고 있다.  
+`Java` 에서는 이러한 비동기 처리를 위해 초기 버전부터 시작해서 다양한 `API` 를 제공해오고 있다.  
 
 Class|Java Version
 ---|---
@@ -50,7 +50,7 @@ CompletableFuture|1.8
 CompletionStage|1.8
 
 
-이번 포스트에서는 `Java` 비동기 동작 구성이 필요할 때 사용할 수 있는 클래스에 대해 간략하게 알아 본다.  
+이번 포스트에서는 `Java` 비동기 동작 구성이 필요할 때 사용할 수 있는 `API` 대해 간략하게 알아 본다.  
 
 ### Synchronous
 먼저 동기적(`Synchronous`) 흐름을 가지는 부분에서 오래걸리는 작업이 중간에 발생할 떄의 상황을 살펴 본다. 
@@ -660,6 +660,8 @@ public void completableFuture_runnable() throws Exception {
 ```  
 
 다음으로 `CompletableFuture` 에서 제공하는 메소드를 사용하면 좀더 다양한 동작을 비동기의 작업의 결과로 만들어 내면서 컨트롤 할 수 있다. 
+기본적으로 `CompletableFuture` 는 `supplyAsync()` 를 통해 비동기 파이프라인에서 처리할 데이터를 제공할 수 있다. 
+그리고 `Runnable` 과 같은 비동기 작업이 정의된 클래스는 `runAsync()` 를 사용해서 실행 할 수 있다. 
 참고로 `CompletableFuture` 에 등록된 비동기 동작들은 `ForkJoinPool` 에서 실행 된다.  
 
 ```java
