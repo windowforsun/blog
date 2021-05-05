@@ -220,12 +220,20 @@ public void thread_runnable() throws Exception {
 
 ```java
 // 크기가 1인 Thread pool 생성 
-ExecutorService singlePool = Executors.newFixedThreadPool();
+ExecutorService singlePool = Executors.newSingleThreadExecutor();
 // 크기가 4인 Thread pool 생성
-ExecutorService pool4 = Executors.newSingleThreadExecutor(4);
+ExecutorService pool4 = Executors.newFixedThreadPool(4);
 // 필요할 때마다 스레드를 생성하고, 이미 생성된 스레드는 재사용 가능
 ExecutorService cachedPool = Executors.newCachedThreadPool();
 ```  
+
+`Executors` 의 정적 메소드를 통해 스레드 풀을 생성할 때 종류에 따른 설명은 아래와 같다. 
+- `newSingleThreadExecutor` : 단일 스레드로 동작하는 `Executor` 이다. 
+- `newFixedThreadPool` : 최대 스레드 수를 인자 값으로 받고, 작업이 등록 될때 마다 하나씩 스레드를 생성한다. 
+그 수는 최대 스레드 수를 넘지 않는다. 
+- `newCachedThreadPool` : 최대 스레드의 수의 제한을 두지 않는다. 대신 현재 생성한 스레드 수가 처리해야하는 작업보다 많은 경우 스레드를 종료한다. 
+반대로 처리해야 되는 작업 보다 생성된 스레드 수가 더 적은 경우 필요한 만큼 스레드를 생성하게 된다. 
+- `newScheduledThreadPool` : 스레드의 수가 고정돼 있고, 일정 시간 이후에 실행하거느 주기적으로 작업을 실행 할 수 있다. `Executor.Timer` 와 유사하다. 
 
 
 ![그림 1]({{site.baseurl}}/img/java/concept-asynchronous-programming-2.png)  
