@@ -422,7 +422,7 @@ public void countDownLatch() throws Exception {
 ```  
 
 ```
-[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - start
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - wait
 [ES-countdownLatch-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 0
 [ES-countdownLatch-5] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 4
 [ES-countdownLatch-3] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 2
@@ -481,6 +481,16 @@ public void cyclicBarrier() throws Exception {
     ));
 }
 ```  
+
+```
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - wait
+[main] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - end
+[ES-cyclicBarrier-3] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 2
+[ES-cyclicBarrier-2] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 1
+[ES-cyclicBarrier-4] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 3
+[ES-cyclicBarrier-1] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 0
+[ES-cyclicBarrier-5] INFO com.windowforsun.reactivestreams.javasync.JavaAsyncTest - idx : 4
+```
 
 `ExecutorService` 스레드 풀 크기는 5이지만, `CyclicBarrier` 크기는 6으로 설정되었다. 
 현재 테스트에서 구현하고자 하는 것은 스레드 풀과 메인 스레드가 동시에 `await()` 메소드 이후 부분을 수행하도록 하는 것이기 때문에, 
