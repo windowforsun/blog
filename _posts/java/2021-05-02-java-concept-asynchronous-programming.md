@@ -38,6 +38,7 @@ use_math: true
 
 Class|Java Version
 ---|---
+Thread|1.0
 Runnable|1.0
 Callable|1.5
 Executor|1.5
@@ -45,6 +46,7 @@ Future|1.5
 FutureTask|1.5
 CountDownLatch|1.5
 CyclicBarrier|1.5
+Semaphore|1.5
 RunnableFuture|1.6
 CompletableFuture|1.8
 CompletionStage|1.8
