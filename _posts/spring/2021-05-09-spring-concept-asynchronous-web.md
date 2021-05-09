@@ -112,9 +112,11 @@ listenablefuture 에서 callback 으로 결과 처리는 결과처리에 대한 
 controller 에서 외부 api 비동기 결과 가공 후 리턴 
 callback hell 까지
 
-### DeferredResult Callback hell 개선 ?
+### DeferredResult Callback hell 개선 ? Completion
+callback hell 해결 라이브러리 구현
 
 ### CompletableFuture ?
+java 에서 공식 지원하는 비동기 작업 파이프라이닝 라이브러리 사용
 
 ---
 ## Reference
