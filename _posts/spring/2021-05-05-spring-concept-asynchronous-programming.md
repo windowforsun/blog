@@ -13,7 +13,7 @@ tags:
     - Concept
     - Spring
     - Spring Boot
-    - @Async
+    - Async
     - ThreadPoolTaskExecutor
     - AsyncResult
     - ListenableFuture
