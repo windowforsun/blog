@@ -1,0 +1,37 @@
+@startuml
+
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+
+rectangle Client
+
+rectangle "NIO Connection" as nio
+
+'rectangle "Servlet" as s {
+
+rectangle "Servlet Thread" as st1
+
+rectangle "Servlet Thread" as st2
+
+rectangle "Servlet Thread Pool" as stp
+'}
+
+'rectangle "Worker" as w {
+rectangle "DeferredResult Queue" as dr
+
+'rectangle "Event" as event
+
+
+nio --> st1 :(2) Assign Servlet
+stp --> st1
+st1 -u-> dr :(3) Register
+event --> dr :(4) Some Event
+dr -r-> st2 :(5) Response
+st1 --> stp
+stp --> st2
+st2 --> nio :(6) Forward NIO
+st2 --> stp
+Client -u-> nio :(1) Request
+nio -l-> Client :(7) Response
+@enduml

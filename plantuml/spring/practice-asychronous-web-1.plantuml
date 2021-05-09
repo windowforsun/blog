@@ -1,0 +1,52 @@
+@startuml
+
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+rectangle Client
+
+rectangle "NIO Connection" as nio
+
+'rectangle "Servlet" as s {
+
+rectangle "Servlet Thread" as st1
+
+rectangle "Servlet Thread" as st2
+
+rectangle "Servlet Thread Pool" as stp
+'}
+
+'rectangle "Worker" as w {
+rectangle "Worker Thread Pool" as wtp
+
+rectangle "Worker Thread" as wt
+'}
+'Client <--> nio :(1)
+'nio --> st1 :(2) Request
+'st1 -l-> wt :(4)
+'st1 <-r- wt :(5)
+'wt -l-> wtp
+'wtp -l-> wt
+'wt -l-> st2: Async Context
+'st1 -l-> stp :(5)
+'stp --> st1 :(3)
+'st2 --> stp
+'stp --> st2
+'st2 -l-> nio :Response
+
+Client --> nio :(1) Request
+nio --> st1 :(2) Assign Servlet
+stp --> st1
+st1 --> wt :(3) Assign Worker
+wtp --> wt
+st1 <-- wt :Return Thread
+st1 --> stp
+wt --> st2: (4) Response(Async Context)
+wt --> wtp
+stp --> st2
+st2 --> nio :(5) Forward NIO
+st2 --> stp
+nio --> Client :(6) Response
+
+
+@enduml
