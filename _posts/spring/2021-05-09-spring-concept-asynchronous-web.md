@@ -35,6 +35,9 @@ use_math: true
 DeferredResult|Spring 3.2
 ResponseBodyEmitter|Spring 4.2
 
+위 표에 있는 새로운 `API` 에 대한 설명도 있겠지만, 
+`Java`, `Spring` 에서 살펴본 비동기 기술을 활용해서 이를 웹 애플리케이션에 직접 적용 해보는 설명이 주를 이룰 것 같다.  
+
 
 `Spring Boot` 은 기본으로 컴파일된 `Web Server` 를 제공한다. 
 작성한 애플리케이션 코드는 자동으로 `Web Server` 에 의해 동작 되기 때문에 별도로 빌드 결과물을 `Web Server` 에 올리는 작업은 하지 않아도 웹 애플리케이션을 구동 할 수 있다. 
