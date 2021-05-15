@@ -33,6 +33,7 @@ use_math: true
 기능|버전
 ---|---
 DeferredResult|Spring 3.2
+WebAsyncTask|Spring 3.2
 ResponseBodyEmitter|Spring 4.2
 
 위 표에 있는 새로운 `API` 에 대한 설명도 있겠지만, 
@@ -227,7 +228,7 @@ public class SpringAsyncWebTest {
 이를 통해 계산해 보면 전체 요청이 처리되기까지 최소 1초에서 최대 2초 정도 소요됨을 알 수 있다.  
 
 실제로 테스트를 수행하며 출력된 로그는 아래와 같다. 
-웹통신을 처리하는 `o-auto-1-exec-1` 라는 스레드 하나가 모든 요청을 처리하고, 
+웹통신을 처리하는 `ServletThread` 의 이름인 `o-auto-1-exec-1` 라는 스레드 하나가 모든 요청을 처리하고, 
 `loadtest-*` 라는 10개의 스레드가 요청을 수행하고 응답 결과 로그를 찍는 것을 확인 할 수 있다.   
 
 ```
@@ -385,15 +386,430 @@ INFO 16864 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : tota
 동시에 100 밀리초가 걸리는 요청 10개를 처리하기 위해 `Tomcat` 스레드는 1개이지만 대신 
 `Callable` 이 수행되는 별도의 스레드 풀에서 10개의 스레드가 동작한 것이다.  
 
-앞서 살펴본 동기 방식에서 `Tomcat` 스레드 수를 10개로 늘린 것과 자원의 효율적 측면으로 본다면 
+앞서 살펴본 동기 방식에서 `Tomcat` 스레드 수를 10개로 늘린 것과 자원의 효율 측면에서 본다면 
 더 안좋다고 볼 수도 있는 방법이다. 
 `Tomcat` 스레드 수를 그냥 10개로 늘린다면 총 10개의 스레드로 동시에 요청 처리가 가능하지만, 
 현재 `Callable` 을 사용한 방법은 `Tomcat` 스레드 1개를 포함해서 총 11개의 스레드가 동작 된 것으로 볼 수 있기 때문이다.  
 
-### DeferredResult
-practice_asychronous_web_2
 
-### Emitter
+### WebAsyncTask
+`Spring 3.2` 부터 사용할 수 있는 `WebAsyncTask` 는 `Callable` 를 사용한 비동기 처리보다 
+좀 더 다양한 설정으로 비동기 웹 통신을 구성할 수 있는 클래스이다. 
+아래와 같이 타임아웃, 에러 처리, `Executor` 등 생성자로 설정을 할 수 있다. 
+그리고 `WebAsyncTask` 는 내부적으로 `Callable` 을 사용해서 비동기 처리를 수행한다.  
+
+```java
+public class WebAsyncTask<V> implements BeanFactoryAware {
+
+	private final Callable<V> callable;
+
+	private Long timeout;
+
+	private AsyncTaskExecutor executor;
+
+	private String executorName;
+
+	private BeanFactory beanFactory;
+
+	private Callable<V> timeoutCallback;
+
+	private Callable<V> errorCallback;
+
+	private Runnable completionCallback;
+
+	public WebAsyncTask(Callable<V> callable) {
+		Assert.notNull(callable, "Callable must not be null");
+		this.callable = callable;
+	}
+
+	public WebAsyncTask(long timeout, Callable<V> callable) {
+		this(callable);
+		this.timeout = timeout;
+	}
+
+	public WebAsyncTask(@Nullable Long timeout, String executorName, Callable<V> callable) {
+		this(callable);
+		Assert.notNull(executorName, "Executor name must not be null");
+		this.executorName = executorName;
+		this.timeout = timeout;
+	}
+
+	public WebAsyncTask(@Nullable Long timeout, AsyncTaskExecutor executor, Callable<V> callable) {
+		this(callable);
+		Assert.notNull(executor, "Executor must not be null");
+		this.executor = executor;
+		this.timeout = timeout;
+	}
+}
+```  
+
+위와 같은 특징으로 `Callable` 을 직접 사용하기보다는 `WebAsyncTask` 를 사용하는 것을 권정한다.  
+
+```java
+
+@RestController
+@Slf4j
+public static class MyController {
+    @GetMapping("/async/webAsyncTask/{i}")
+    public WebAsyncTask<String> webAsyncTaskAsync(@PathVariable int i) throws Exception {
+        printAndAddLog("start webAsyncTaskAsync " + i);
+    
+        return new WebAsyncTask<>(1000L, () -> {
+            String result = "result webAsyncTaskAsync " + i;
+            Thread.sleep(100);
+            printAndAddLog("end webAsyncTaskAsync " + i);
+    
+            return result;
+        });
+    }
+}
+
+
+@Test
+public void webAsyncTaskAsync() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/webAsyncTask");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, everyItem(containsString("webAsyncTaskAsync")));
+    assertThat(resultQueue, hasItems(
+            "start webAsyncTaskAsync 1",
+            "end webAsyncTaskAsync 1",
+            "result webAsyncTaskAsync 1",
+            "start webAsyncTaskAsync 10",
+            "end webAsyncTaskAsync 10",
+            "result webAsyncTaskAsync 10"
+    ));
+}
+```  
+
+```
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 1
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 4
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 7
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 10
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 3
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 5
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 2
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 6
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 8
+INFO 7520 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start webAsyncTaskAsync 9
+INFO 7520 --- [      MvcAsync2] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 4
+INFO 7520 --- [      MvcAsync1] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 1
+INFO 7520 --- [      MvcAsync7] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 2
+INFO 7520 --- [      MvcAsync8] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 6
+INFO 7520 --- [      MvcAsync9] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 8
+INFO 7520 --- [      MvcAsync4] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 10
+INFO 7520 --- [      MvcAsync3] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 7
+INFO 7520 --- [      MvcAsync6] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 5
+INFO 7520 --- [      MvcAsync5] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 3
+INFO 7520 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 330 millis, result : result webAsyncTaskAsync 4
+INFO 7520 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 331 millis, result : result webAsyncTaskAsync 1
+INFO 7520 --- [     MvcAsync10] c.w.r.springasyncweb.SpringAsyncWebTest  : end webAsyncTaskAsync 9
+INFO 7520 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 1
+INFO 7520 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 4
+INFO 7520 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 334 millis, result : result webAsyncTaskAsync 2
+INFO 7520 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 2
+INFO 7520 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 335 millis, result : result webAsyncTaskAsync 6
+INFO 7520 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 6
+INFO 7520 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 337 millis, result : result webAsyncTaskAsync 8
+INFO 7520 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 8
+INFO 7520 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 339 millis, result : result webAsyncTaskAsync 10
+INFO 7520 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 10
+INFO 7520 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 341 millis, result : result webAsyncTaskAsync 7
+INFO 7520 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 7
+INFO 7520 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 343 millis, result : result webAsyncTaskAsync 5
+INFO 7520 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 5
+INFO 7520 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 345 millis, result : result webAsyncTaskAsync 3
+INFO 7520 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 3
+INFO 7520 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 346 millis, result : result webAsyncTaskAsync 9
+INFO 7520 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result webAsyncTaskAsync 9
+INFO 7520 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 348 millis
+```  
+
+로그와 실제 동작은 `Callable` 을 사용했을 떄와 크게 다르지 않다. 
+
+
+
+### DeferredResult
+`Callable`, `WebAsyncTask` 이외에 비동기 웹 처리를 사용할 수 있는 방법중 하나가 바로 `DeferredResult` 이다. 
+`Spring 3.2` 부터 사용가능한 `DeferredResult` 는 `Callable` 처럼 다른 스레드로 부터 생산된 값을 반환하는 방식은 동일하다. 
+하지만 해당 스레드가 `Spring MVC` 에서 관리되는 것은 아니다.  
+
+```java
+public class DeferredResult<T> {
+	public DeferredResult() {
+		this(null, () -> RESULT_NONE);
+	}
+
+	public DeferredResult(Long timeoutValue) {
+		this(timeoutValue, () -> RESULT_NONE);
+	}
+
+	public DeferredResult(@Nullable Long timeoutValue, Object timeoutResult) {
+		this.timeoutValue = timeoutValue;
+		this.timeoutResult = () -> timeoutResult;
+	}
+
+	public DeferredResult(@Nullable Long timeoutValue, Supplier<?> timeoutResult) {
+		this.timeoutValue = timeoutValue;
+		this.timeoutResult = timeoutResult;
+	}
+}
+```
+
+`DeferredResult` 는 `Long polling` 방식이라고도 불리는데, 
+외부 이벤트로 부터 생산된 응답을 반환해야 하는 경우에 사용할 수 있다. 
+특정 작업이 진행되거나 이벤트가 완료된 후 요청 했었던 클라이언트에게 값을 전달 할 수 있다. 
+이를 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/spring/practice_asychronous_web_2.png)  
+
+1. 요청 받은 `Servlet Thread`(`Controller`)는 새로 생성한 `DeferedResult` 객체를 큐에 넣고 바로 리턴한다. 
+1. 이후 아무 시점에 이벤트에 해당하는 작업을 수행한다. (비동기)
+1. `Servlet Thread` 는 요청에서 벗어산 상태이지만 `Response` 는 열린 상태로 대기한다. 
+1. 이벤트에 해당하는 작업이 완료되면, 큐에 넣었던 `DeferredResult` 에 작업 결과를 설정한다. 
+1. `Spring MVC` 는 해당 요청에 대한 결과를 `Servlet Thread` 에게 다시 전달 한다. 
+1. 이후 `Servlet Thread` 는 전달 받은 비동기 결과를 응답 작업을 진행 한다.  
+
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    
+    // 클라이언트 요청에 대한 DeferedResult 생성 및 큐에 등록
+    @GetMapping("/async/deferred/{i}")
+    public DeferredResult<String> deferredAsync(@PathVariable int i) throws Exception {
+        printAndAddLog("start deferredAsync " + i);
+        DeferredResult<String> result = new DeferredResult<>(6000000L);
+        deferredMap.put(i, result);
+        printAndAddLog("end deferredAsync " + i);
+
+        return result;
+    }
+
+    // 현재 생성된 DeferredResult 총 개수
+    @GetMapping("/async/deferred/count")
+    public int deferredCount() {
+        return deferredMap.size();
+    }
+    
+    // 비동기 이벤트 처리 완료(가정)후, DeferredResult 에 결과 등록
+    @GetMapping("/async/deferred/event/{msg}")
+    public void deferredEvent(@PathVariable String msg) {
+        for (int key : deferredMap.keySet()) {
+            DeferredResult<String> dr = deferredMap.get(key);
+            dr.setResult("result deferredAsync " + msg + " " + key);
+            deferredMap.remove(dr);
+        }
+    }
+}
+
+@Test
+public void deferredResult() throws Exception {
+    // given
+    ExecutorService es = Executors.newSingleThreadExecutor();
+    Future<Long> loadTester = es.submit(() ->  this.loadTest(this.serverUrl + "/async/deferred"));
+    Thread.sleep(100);
+
+    // when
+    int deferredCount = this.restTemplate.getForObject(this.serverUrl + "/async/deferred/count", Integer.class);
+    this.restTemplate.getForObject(this.serverUrl + "/async/deferred/event/end!", String.class);
+    long actual = loadTester.get();
+
+    // then
+    assertThat(actual, allOf(greaterThan(100L), lessThan(400L)));
+    assertThat(deferredCount, is(10));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, everyItem(containsString("deferredAsync")));
+}
+```  
+
+```
+.. DeferredResult 등록 요청 ..
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 6
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 6
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 8
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 8
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 1
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 1
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 4
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 4
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 5
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 5
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 3
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 3
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 10
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 10
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 7
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 7
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 2
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 2
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start deferredAsync 9
+INFO 4664 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end deferredAsync 9
+.. DeferredResult 이벤트 완료 요청 ..
+INFO 4664 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 300 millis, result : result deferredAsync end! 1
+INFO 4664 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 1
+INFO 4664 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 302 millis, result : result deferredAsync end! 2
+INFO 4664 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 2
+INFO 4664 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 305 millis, result : result deferredAsync end! 3
+INFO 4664 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 3
+INFO 4664 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 307 millis, result : result deferredAsync end! 4
+INFO 4664 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 4
+INFO 4664 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 310 millis, result : result deferredAsync end! 5
+INFO 4664 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 5
+INFO 4664 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 313 millis, result : result deferredAsync end! 6
+INFO 4664 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 6
+INFO 4664 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 316 millis, result : result deferredAsync end! 7
+INFO 4664 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 7
+INFO 4664 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 318 millis, result : result deferredAsync end! 8
+INFO 4664 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 8
+INFO 4664 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 320 millis, result : result deferredAsync end! 9
+INFO 4664 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 9
+INFO 4664 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 323 millis, result : result deferredAsync end! 10
+INFO 4664 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result deferredAsync end! 10
+INFO 4664 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 325 millis
+```  
+
+`Servlet Thread` 인 `o-auto-1-exec-1` 는 `/async/deferred` 10번의 요청을 받아 10개의 `DeferredResult` 를 큐에 넣고 바로 리턴한다. 
+`/async/deferred` 로 요청한 클라이언트는 자신의 요청에 리턴된 `DeferredResult` 에 결과값이 설정 될때 까지 대기 상태에 빠지고, 
+최대 대기시간은 `DeferredResult` 에 설정된 타임아웃 시간이다. 
+그리고 `/async/deferred/count` 를 호출해서 현재 `DeferredResult` 의 개수를 가져오면 `10` 개임을 알 수 있다. 
+이후 `/async/deferred/event` 로 `end!` 라는 메시지와 함께 요청을 보내면 대기 중이였던 모든 클라이언트는 응답을 받게 된다.  
+
+이런 방식은 앞서 언급했던것 처럼 `Long polling` 으로 클라이언트 서버로 요청을 보낸 후, 서버가 응답을 줄떄까지 대기를 하는 방식이다. 
+그리고 서버는 대기 중인 클라이언트의 요청 처리를 위해 특정 스레드가 `Blocking` 상태에 빠지지 않고, 
+비동기 방식으로 이후 이벤트되고 `DeferredResult` 에 결과값이 설정 됐을 떄 다시 `Servlet Thread` 가 결과 값 응답을 위해 사용된다.  
+
+### ResponseBodyEmitter
+`Spring 4.2` 에 추가된 `ResponseBodyEmitter` 는 기존 `HTTP` 요청과 응답이 `1:1` 관계인것과 달리, 
+1개의 요청에 대해 1개 이상의 응답을 `Streaming` 방식으로 수행할 수 있다.  
+
+```java
+public class ResponseBodyEmitter {
+
+	@Nullable
+	private final Long timeout;
+
+	@Nullable
+	private Handler handler;
+
+	private final Set<DataWithMediaType> earlySendAttempts = new LinkedHashSet<>(8);
+
+	private boolean complete;
+
+	@Nullable
+	private Throwable failure;
+
+	private boolean sendFailed;
+
+	private final DefaultCallback timeoutCallback = new DefaultCallback();
+
+	private final ErrorCallback errorCallback = new ErrorCallback();
+
+	private final DefaultCallback completionCallback = new DefaultCallback();
+
+	public ResponseBodyEmitter() {
+		this.timeout = null;
+	}
+
+	public ResponseBodyEmitter(Long timeout) {
+		this.timeout = timeout;
+	}
+}
+```  
+
+`ResponseBodyEmitter.send()` 를 통해 스트리밍으로 결과를 전달하고, 완료되면 `ResponseBodyEmitter.complete()` 메소드를 호출해 주면된다.  
+
+테스트 코드는 아래와 같다.  
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+
+    @GetMapping("/async/emitter/{count}/{delay}")
+    public ResponseBodyEmitter emitterAsync(@PathVariable int count, @PathVariable long delay) {
+        final int emittercount = count;
+        ResponseBodyEmitter emitter = new ResponseBodyEmitter();
+
+        Executors.newSingleThreadExecutor().submit(() -> {
+            for (int i = 1; i <= emittercount; i++) {
+                String result = "stream : " + i + ", " + System.currentTimeMillis() + "\n";
+                printAndAddLog("start emitter " + i);
+                emitter.send(result);
+                printAndAddLog("end emitter " + i);
+                Thread.sleep(delay);
+            }
+
+            emitter.complete();
+
+            return null;
+        });
+
+        return emitter;
+    }
+}
+
+@Test
+public void emitter() throws Exception {
+    // given
+    StopWatch sw = new StopWatch();
+
+    // when
+    sw.start();
+    String actual = this.restTemplate.getForObject(this.serverUrl + "/async/emitter/10/100", String.class);
+    sw.stop();
+    long millis = sw.getTotalTimeMillis();
+
+    // then
+    assertThat(millis, allOf(greaterThan(1000L), lessThan(1500L)));
+    String[] strs = actual.split("\n");
+    assertThat(strs, arrayContaining(
+            startsWith("stream : 1"),
+            startsWith("stream : 2"),
+            startsWith("stream : 3"),
+            startsWith("stream : 4"),
+            startsWith("stream : 5"),
+            startsWith("stream : 6"),
+            startsWith("stream : 7"),
+            startsWith("stream : 8"),
+            startsWith("stream : 9"),
+            startsWith("stream : 10")
+    ));
+}
+```  
+
+```java
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 1
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 1
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 2
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 2
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 3
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 3
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 4
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 4
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 5
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 5
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 6
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 6
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 7
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 7
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 8
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 8
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 9
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 9
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 10
+INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 10
+```  
+
+아래는 웹 브라우저에서 `/async/emitter/100/200` 로 호출 했을 때의 결과이다.  
+
+![그림 1]({{site.baseurl}}/img/spring/practice-asychronous-web-1.gif)   
+
 
 ### WebClient(skip)
 
@@ -416,3 +832,4 @@ java 에서 공식 지원하는 비동기 작업 파이프라이닝 라이브러
 ---
 ## Reference
 [DeferredResult (Spring Framework 5.3.6 API)](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/context/request/async/DeferredResult.html)  
+[Asynchronous Requests](https://docs.spring.io/spring-framework/docs/current/reference/html/web.html#mvc-ann-async)  
