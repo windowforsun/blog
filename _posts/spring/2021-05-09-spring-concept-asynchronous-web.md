@@ -446,7 +446,6 @@ public class WebAsyncTask<V> implements BeanFactoryAware {
 위와 같은 특징으로 `Callable` 을 직접 사용하기보다는 `WebAsyncTask` 를 사용하는 것을 권정한다.  
 
 ```java
-
 @RestController
 @Slf4j
 public static class MyController {
@@ -530,7 +529,8 @@ INFO 7520 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total
 ```  
 
 로그와 실제 동작은 `Callable` 을 사용했을 떄와 크게 다르지 않다. 
-
+`Servlet Thread` 는 `o-auto-1-exec-1` 이름으로 하나만 사용됐지만, 
+`Servlet Thread` 에서 리턴하는 비동기 작업 처리를 위해 여러개 `MvcAsync` 이름의 스레드가 사용되었다.  
 
 
 ### DeferredResult
@@ -783,7 +783,7 @@ public void emitter() throws Exception {
 }
 ```  
 
-```java
+```
 INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 1
 INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end emitter 1
 INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start emitter 2
@@ -811,8 +811,6 @@ INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 
 ![그림 1]({{site.baseurl}}/img/spring/practice-asychronous-web-1.gif)   
 
 
-### WebClient(skip)
-
 
 ### ListenableFuture
 controller 에서 그냥 외부 api 비동기 결과 리턴
@@ -828,6 +826,11 @@ callback hell 해결 라이브러리 구현
 
 ### CompletableFuture ?
 java 에서 공식 지원하는 비동기 작업 파이프라이닝 라이브러리 사용
+
+
+### WebClient(skip)
+
+
 
 ---
 ## Reference
