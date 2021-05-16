@@ -1377,6 +1377,50 @@ public void asyncExternalServiceDeferredListenableCompletable() throws Exception
 }
 ```  
 
+```
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 4
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 4
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 10
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 10
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 8
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 8
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 2
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 2
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 6
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 6
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 5
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 5
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 9
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 9
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 7
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 7
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 3
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 3
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 1
+INFO 14368 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 1
+INFO 14368 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 575 millis, result : result 10/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 576 millis, result : result 4/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result 10/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result 4/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 579 millis, result : result 6/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result 6/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 582 millis, result : result 5/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result 5/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 584 millis, result : result 2/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result 2/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 586 millis, result : result 8/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result 8/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 588 millis, result : result 9/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result 9/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 590 millis, result : result 3/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result 3/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 592 millis, result : result 7/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result 7/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 595 millis, result : result 1/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result 1/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3
+INFO 14368 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 596 millis
+```  
+
 
 ---
 ## Reference
