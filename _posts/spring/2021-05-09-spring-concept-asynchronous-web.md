@@ -811,25 +811,571 @@ INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 
 ![그림 1]({{site.baseurl}}/img/spring/practice-asychronous-web-1.gif)   
 
 
-
 ### ListenableFuture
-controller 에서 그냥 외부 api 비동기 결과 리턴
-listenablefuture 에서 callback 으로 결과 처리는 결과처리에 대한 결과를 다시 리턴 받을 수 없음
+`Spring 4.0` 에 추가된 `ListenableFuture`는 비동기 동작을 콜백으로 제어하는 특징을 가지고 있다. 
+`Spring MVC` 의 `Controller` 에서 `ListenableFuture` 를 리턴을 하면, 
+`Servlet 3.1` 의 방식과 같이 콜백 방식으로 `Non-blocking` 으로 요청을 처리할 수 있다.  
+
+먼저 테스트를 위해 외부 서비스를 호출해서 결과를 제공하는 `ExternalService` 가 있다. 
+외부 서비스 요청과 응답 처리에 따른 `Blocking` 은 `sleep(100)` 을 통해 표현한다. 
+`ExternalService` 의 메소드들은 `AsyncRestTemplate`, `WebClient` 와 같이 비동기 웹 요청을 수행할 수 있는 라이브러리들을 
+사용해서 외부 `API`를 호출해서 결과를 리턴하는 동작을 수행한다고 가정한다. 
+그중 `requestToAsyncListenableFuture`  메소드는 `ListenableFuture` 방식으로 `Blocking` 처리에 대한 결과를 리턴하는 메소드이다.  
+
+```java
+@Slf4j
+@Service
+public static class ExternalService {
+    @Async
+    public ListenableFuture<String> requestToAsyncListenableFuture(String param, int seq) {
+        String result = param + "/resultListenableFuture-" + seq;
+
+        if(param.equals("error")) {
+            throw new RuntimeException("this is error");
+        }
+
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return new AsyncResult<>(result);
+    }
+}
+```  
 
 
-### DiferredResult
-controller 에서 외부 api 비동기 결과 가공 후 리턴 
-callback hell 까지
+```java
+@RestController
+@Slf4j
+public static class MyController {
 
-### DeferredResult Callback hell 개선 ? Completion
-callback hell 해결 라이브러리 구현
+    @Autowired
+    private ExternalService externalService;
 
-### CompletableFuture ?
-java 에서 공식 지원하는 비동기 작업 파이프라이닝 라이브러리 사용
+    @GetMapping("/async/external/listenable/{i}")
+    public ListenableFuture<String> asyncExternalServiceListenable(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        ListenableFuture<String> serviceResult = this.externalService.requestToAsyncListenableFuture(result, 1);
+        printAndAddLog("end " + i);
+
+        return serviceResult;
+    }
+}
 
 
-### WebClient(skip)
+@Test
+public void asyncExternalServiceListenable() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/listenable");
 
+    // then
+    Thread.sleep(1000L);
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "result 1/resultListenableFuture-1",
+            "result 2/resultListenableFuture-1",
+            "result 3/resultListenableFuture-1",
+            "result 4/resultListenableFuture-1",
+            "result 5/resultListenableFuture-1",
+            "result 6/resultListenableFuture-1",
+            "result 7/resultListenableFuture-1",
+            "result 8/resultListenableFuture-1",
+            "result 9/resultListenableFuture-1",
+            "result 10/resultListenableFuture-1"
+    ));
+}
+```  
+
+```
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 9
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 9
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 6
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 6
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 7
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 7
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 3
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 3
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 8
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 8
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 5
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 5
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 10
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 10
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 2
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 2
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 1
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 1
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 4
+INFO 6000 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 4
+INFO 6000 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 354 millis, result : result 6/resultListenableFuture-1
+INFO 6000 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result 6/resultListenableFuture-1
+INFO 6000 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 354 millis, result : result 9/resultListenableFuture-1
+INFO 6000 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result 9/resultListenableFuture-1
+INFO 6000 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 358 millis, result : result 3/resultListenableFuture-1
+INFO 6000 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result 3/resultListenableFuture-1
+INFO 6000 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 359 millis, result : result 7/resultListenableFuture-1
+INFO 6000 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result 7/resultListenableFuture-1
+INFO 6000 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 361 millis, result : result 8/resultListenableFuture-1
+INFO 6000 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result 8/resultListenableFuture-1
+INFO 6000 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 364 millis, result : result 2/resultListenableFuture-1
+INFO 6000 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result 2/resultListenableFuture-1
+INFO 6000 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 366 millis, result : result 4/resultListenableFuture-1
+INFO 6000 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result 4/resultListenableFuture-1
+INFO 6000 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 367 millis, result : result 10/resultListenableFuture-1
+INFO 6000 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result 10/resultListenableFuture-1
+INFO 6000 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 370 millis, result : result 5/resultListenableFuture-1
+INFO 6000 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result 5/resultListenableFuture-1
+INFO 6000 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 373 millis, result : result 1/resultListenableFuture-1
+INFO 6000 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result 1/resultListenableFuture-1
+INFO 6000 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 374 millis
+```  
+
+로그와 테스트 결과를 보면 10개의 요청을 `Servlet Thread` 1개가 처리하는데 소요된 시간이 `375` 밀리초 인것을 확인 할 수 있고, 
+이는 모든 요청이 `Non-blocking` 으로 처리 됐음을 보여 준다.  
+테스트 수행에 사용된 스레드는 `Servlet Thread` 인 `o-auto-1-exec-1` 스레드만 사용 됐다. 
+(스레드 이름이 `loadtest` 인 것은 테스트 요청을 수행하기 위해 사용된 스레드이다.) 
+
+
+### DeferredResult + ListenableFuture
+`Spring MVC Controller` 에서 `ListenableFuture` 만 사용했을 때 모든 처리를 `Non-blocking` 하기 처리 할 수 있었다.  
+하지만 `ListenableFuture` 는 비동기 동작의 결과를 받기 위해서는 `Blocking` 불가피 하게 수행되는 점이 있다. 
+그래서 결과를 받아 가공하기 위해서는 `ListenableFuture.addCallback()` 메소드를 사용해서 결과 처리 콜백 메소드를 등록해야 하고, 
+콜백 결과를 응답의 결과를 사용하기 위해서는 `DeferredResult` 를 사용하면 된다. 
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    @GetMapping("/async/external/deferred/listenable/{i}")
+    public DeferredResult<String> asyncExternalServiceDeferredListenable(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        DeferredResult<String> dr = new DeferredResult<>();
+        ListenableFuture<String> serviceResult = this.externalService.requestToAsyncListenableFuture(result, 1);
+        serviceResult.addCallback(
+                (r) -> {
+                    dr.setResult(r + "~");
+                },
+                (e) -> {
+                    dr.setErrorResult(e.getMessage());
+                }
+        );
+        printAndAddLog("end " + i);
+    
+        return dr;
+    }
+}
+
+@Test
+public void asyncExternalServiceDeferredListenable() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/deferred/listenable");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "result 1/resultListenableFuture-1~",
+            "result 2/resultListenableFuture-1~",
+            "result 3/resultListenableFuture-1~",
+            "result 4/resultListenableFuture-1~",
+            "result 5/resultListenableFuture-1~",
+            "result 6/resultListenableFuture-1~",
+            "result 7/resultListenableFuture-1~",
+            "result 8/resultListenableFuture-1~",
+            "result 9/resultListenableFuture-1~",
+            "result 10/resultListenableFuture-1~"
+    ));
+}
+```  
+
+```
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 8
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 8
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 1
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 1
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 2
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 2
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 10
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 10
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 9
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 9
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 6
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 6
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 4
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 4
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 5
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 5
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 7
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 7
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 3
+INFO 11072 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 3
+INFO 11072 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 362 millis, result : result 1/resultListenableFuture-1~
+INFO 11072 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 361 millis, result : result 8/resultListenableFuture-1~
+INFO 11072 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result 8/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result 1/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 365 millis, result : result 10/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result 10/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 367 millis, result : result 9/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result 9/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 370 millis, result : result 6/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result 6/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 372 millis, result : result 4/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result 4/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 374 millis, result : result 2/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result 2/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 375 millis, result : result 7/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result 7/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 378 millis, result : result 5/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result 5/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 380 millis, result : result 3/resultListenableFuture-1~
+INFO 11072 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result 3/resultListenableFuture-1~
+INFO 11072 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 381 millis
+```  
+
+결과를 보면 `ListenableFuture` 를 사용했을 때와 동일하게 모든 요청이 `Non-blocking` 하게 처리 됨을 확인 할 수 있고, 
+`Controller` 에서 비동기 작업에 대한 결과 처리 또한 정상적으로 수행된 것을 확인 할 수 있다.  
+
+
+하지만 만약 `ListenableFuture` 의 동작간에 의존성(A의 결과를 통해 B를 요청)이 있다거나, 
+계속해서 비동기 작업 결과에 대한 가공이 필요한 상황이 발생한다면 아래와 같이 `Callback Hell` 이 발생한다.  
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    @GetMapping("/async/external/deferred/listenable3/{i}")
+    public DeferredResult<String> asyncExternalServiceDeferredListenable3(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        DeferredResult<String> dr = new DeferredResult<>();
+        ListenableFuture<String> serviceResult = this.externalService.requestToAsyncListenableFuture(result, 1);
+        serviceResult.addCallback(
+                (r) -> {
+                    ListenableFuture<String> serviceResult2 = this.externalService.requestToAsyncListenableFuture(r, 2);
+                    serviceResult2.addCallback(
+                            (r2) -> {
+                                ListenableFuture<String> serviceResult3 = this.externalService.requestToAsyncListenableFuture(r2, 3);
+                                serviceResult3.addCallback(
+                                        (r3) -> {
+                                            dr.setResult(r3);
+                                        },
+                                        (e3) -> {
+                                           dr.setErrorResult(e3.getMessage());
+                                        }
+                                );
+                            },
+                            (e2) -> {
+                                dr.setErrorResult(e2.getMessage());
+                            }
+                    );
+                },
+                (e) -> {
+                    dr.setErrorResult(e.getMessage());
+                }
+        );
+        printAndAddLog("end " + i);
+    
+        return dr;
+    }
+}
+
+@Test
+public void asyncExternalServiceDeferredListenable3_callbackhell() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/deferred/listenable3");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "result 1/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 2/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 3/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 4/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 5/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 6/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 7/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 8/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 9/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 10/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3"
+    ));
+}
+```  
+
+
+### DeferredResult + CompletableFuture
+`CompletableFuture` 는 `Java 1.8` 에서 추가된 비동기 작업의 흐름을 효율적으로 구성할 수 있는 `API` 이다. 
+`Spring MVC Controller` 에서 사용하게 되면 `ListenableFuture` 에서 발생했던 `Callback Hell` 문제를 효과적으로 해결 할 수 있다.  
+
+테스트를 위해 `CompletableFuture` 를 결과로 리턴하는 `ExeternalService` 메소드를 추가한다. 
+`requestToAsyncCompletableFuture` 는 `ListenableFuture` 를 결과로 리턴하는 `requestToAsyncListenableFuture` 과 
+수행하는 동작은 같지만 리턴 타입에만 차이가 있다.  
+
+```java
+@Slf4j
+@Service
+public static class ExternalService {
+    @Async
+    public CompletableFuture<String> requestToAsyncCompletableFuture(String param, int seq) throws RuntimeException {
+        String result = param + "/requestToAsyncCompletableFuture-" + seq;
+
+        if(param.equals("error")) {
+            throw new RuntimeException("this is error");
+        }
+
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return CompletableFuture.supplyAsync(() -> result);
+    }
+}
+```  
+
+위 메소드를 사용하는 `Controller` 와 테스트 코드를 작성하면 아래와 같다.  
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    @GetMapping("/async/external/deferred/completable/{i}")
+    public DeferredResult<String> asyncExternalServiceDeferredCompletable(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        DeferredResult<String> dr = new DeferredResult<>();
+
+        this.externalService.requestToAsyncCompletableFuture(result, 1)
+                .thenCompose(r -> this.externalService.requestToAsyncCompletableFuture(r, 2))
+                .thenCompose(r -> this.externalService.requestToAsyncCompletableFuture(r, 3))
+                .thenAccept(r -> dr.setResult(r));
+
+        printAndAddLog("end " + i);
+
+        return dr;
+    }
+}
+
+@Test
+public void asyncExternalServiceDeferredCompletable() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/deferred/completable");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "result 1/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 2/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 3/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 4/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 5/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 6/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 7/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 8/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 9/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3",
+            "result 10/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3"
+    ));
+}
+```  
+
+```
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 2
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 2
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 4
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 4
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 10
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 10
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 7
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 7
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 8
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 8
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 9
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 9
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 6
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 6
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 1
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 1
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 3
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 3
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 5
+INFO 11384 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 5
+INFO 11384 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 555 millis, result : result 4/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : result 4/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 557 millis, result : result 2/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : result 2/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 559 millis, result : result 9/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : result 9/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 561 millis, result : result 8/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : result 8/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 564 millis, result : result 6/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : result 6/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 565 millis, result : result 10/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : result 10/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 568 millis, result : result 7/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : result 7/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 570 millis, result : result 5/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : result 5/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 573 millis, result : result 3/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : result 3/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 575 millis, result : result 1/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : result 1/requestToAsyncCompletableFuture-1/requestToAsyncCompletableFuture-2/requestToAsyncCompletableFuture-3
+INFO 11384 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 576 millis
+```  
+
+모든 요청을 `Servlet Thread` 1개를 사용해서 빠른 시간내에 처리하면서, 
+`Callback Hell` 이 발생하지 않으면서 비동기 작업에 대한 흐름을 구성할 수 있다.  
+
+아래는 비동기 작업 도중 에러가 발생했을 때는 에러 처리를 수행하고 싶은 비동기 작업 다음에 `CompletableFuture.exceptionally()` 메소드로 
+에러 처리에 대한 작업을 정의해주면 된다.  
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    @GetMapping("/async/external/deferred/completable/error/{i}")
+    public DeferredResult<String> asyncExternalServiceDeferredCompletableError(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        DeferredResult<String> dr = new DeferredResult<>();
+
+        this.externalService.requestToAsyncCompletableFuture("error", 1)
+                .thenCompose(r -> this.externalService.requestToAsyncCompletableFuture(r, 2))
+                .thenCompose(r -> this.externalService.requestToAsyncCompletableFuture(r, 3))
+                .thenAccept(r -> dr.setResult(r))
+                .exceptionally(e -> {
+                    dr.setErrorResult(e.getMessage());
+                    return null;
+                });
+
+        printAndAddLog("end " + i);
+
+        return dr;
+    }
+}
+
+@Test
+public void asyncExternalServiceDeferredCompletableError() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/deferred/completable/error");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "java.lang.RuntimeException: this is error"
+    ));
+}
+```  
+
+```
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 9
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 9
+INFO 11120 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-9, Elapsed : 252 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 8
+INFO 11120 --- [     loadtest-9] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 8
+INFO 11120 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-8, Elapsed : 257 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-8] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 3
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 3
+INFO 11120 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-3, Elapsed : 262 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-3] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 7
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 7
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 10
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 10
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 1
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 1
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 2
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 2
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 4
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 4
+INFO 11120 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-4, Elapsed : 279 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-4] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 5
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 5
+INFO 11120 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-5, Elapsed : 284 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-5] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : start 6
+INFO 11120 --- [o-auto-1-exec-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 6
+INFO 11120 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-6, Elapsed : 291 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-6] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-7, Elapsed : 294 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-7] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-10, Elapsed : 296 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [    loadtest-10] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-1, Elapsed : 301 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-1] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : Thread-2, Elapsed : 304 millis, result : java.lang.RuntimeException: this is error
+INFO 11120 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : java.lang.RuntimeException: this is error
+INFO 11120 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 305 millis
+```  
+
+다음으로 만약 비동기 작업이 `ListenableFuture` 를 리턴하는 상황에서 `CompletableFuture` 를 사용하는 방법은 아래와 같다.  
+
+```java
+@RestController
+@Slf4j
+public static class MyController {
+    <T> CompletableFuture<T> lfToCf(ListenableFuture<T> lf) {
+        CompletableFuture<T> cf = new CompletableFuture<>();
+        lf.addCallback(
+                r -> cf.complete(r),
+                e -> cf.completeExceptionally(e)
+        );
+
+        return cf;
+    }
+
+    @GetMapping("/async/external/deferred/listenable/completable/{i}")
+    public DeferredResult<String> asyncExternalServiceDeferredListenableCompletable(@PathVariable int i) throws Exception {
+        String result = "result " + i;
+        printAndAddLog("start " + i);
+        DeferredResult<String> dr = new DeferredResult<>();
+
+        lfToCf(this.externalService.requestToAsyncListenableFuture(result, 1))
+                .thenCompose(r -> lfToCf(this.externalService.requestToAsyncListenableFuture(r, 2)))
+                .thenCompose(r -> lfToCf(this.externalService.requestToAsyncListenableFuture(r, 3)))
+                .thenAccept(r -> dr.setResult(r))
+                .exceptionally(e -> {
+                    dr.setErrorResult(e.getMessage());
+                    return null;
+                });
+
+        printAndAddLog("end " + i);
+
+        return dr;
+    }
+}
+
+@Test
+public void asyncExternalServiceDeferredListenableCompletable() throws Exception {
+    // when
+    long actual = this.loadTest(this.serverUrl + "/async/external/deferred/listenable/completable");
+
+    // then
+    assertThat(actual, allOf(greaterThan(200L), lessThan(800L)));
+    assertThat(resultQueue, hasSize(30));
+    assertThat(resultQueue, hasItems(
+            "result 1/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 2/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 3/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 4/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 5/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 6/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 7/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 8/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 9/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3",
+            "result 10/resultListenableFuture-1/resultListenableFuture-2/resultListenableFuture-3"
+    ));
+}
+```  
 
 
 ---
