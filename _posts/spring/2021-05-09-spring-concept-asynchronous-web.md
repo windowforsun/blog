@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 개념] Spring Asynchronous Web"
+title: "[Spring 개념] Spring MVC Asynchronous"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring 에서 비동기 프로그래밍을 할때 사용 할 수 있는 API 와 기능에 대해서 알아보자'
+excerpt: 'Spring MVC 에서 Java 와 Spring 에서 제공하는 API를 사용해서 비동기 처리를 수행하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,10 +13,15 @@ tags:
     - Concept
     - Spring
     - Spring Boot
+    - Spring MVC
     - Async
     - ThreadPoolTaskExecutor
     - AsyncResult
+    - WebAsyncTask
     - ListenableFuture
+    - CompletableFuture
+    - DeferredResult
+    - ResponseBodyEmitter
 toc: true
 use_math: true
 ---  
@@ -814,7 +819,7 @@ INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 
 ### ListenableFuture
 `Spring 4.0` 에 추가된 `ListenableFuture`는 비동기 동작을 콜백으로 제어하는 특징을 가지고 있다. 
 `Spring MVC` 의 `Controller` 에서 `ListenableFuture` 를 리턴을 하면, 
-`Servlet 3.1` 의 방식과 같이 콜백 방식으로 `Non-blocking` 으로 요청을 처리할 수 있다.  
+`Callback` 방식으로 요청의 결과와 예외처리를 수행할 수 있다.  
 
 먼저 테스트를 위해 외부 서비스를 호출해서 결과를 제공하는 `ExternalService` 가 있다. 
 외부 서비스 요청과 응답 처리에 따른 `Blocking` 은 `sleep(100)` 을 통해 표현한다. 
@@ -1317,7 +1322,13 @@ INFO 11120 --- [     loadtest-2] c.w.r.springasyncweb.SpringAsyncWebTest  : java
 INFO 11120 --- [           main] c.w.r.springasyncweb.SpringAsyncWebTest  : total Elapsed : 305 millis
 ```  
 
-다음으로 만약 비동기 작업이 `ListenableFuture` 를 리턴하는 상황에서 `CompletableFuture` 를 사용하는 방법은 아래와 같다.  
+에러 처리 콜백은 가장 마지막 부분에 등록 돼있지만, 에러는 가장 첫번째 `requestToAsyncCompletableFuture` 호출에서 발생한다. 
+첫번째 호출에서 에러가 발생한 이후에도 다음 `requestToAsyncCompletableFuture` 호출은 수행되지 않는다. 
+계속해서 다음 콜백으로 넘어가면서 예외 처리 콜백을 만났을 때 콜백에 등록된 처리 방법대로 에러가 처리된다.   
+
+다음으로 만약 비동기 작업이 `ListenableFuture` 를 리턴하는 상황에서 `CompletableFuture` 를 사용하는 방법은 아래와 같다. 
+`lfToCf` 메소드는 `ListenableFuture` 를 인자로 받아 결과를 처리하는 `addCallback()` 메소드에 
+`CompletableFuture` 를 사용해서 결과를 등록하고 리턴하는 메소드이다.  
 
 ```java
 @RestController
