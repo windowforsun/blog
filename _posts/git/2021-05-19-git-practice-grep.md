@@ -25,7 +25,7 @@ toc: true
 ### 테스트 프로젝트
 테스트로 사용할 프로젝트의 파일 구성은 아래와 같이 총 4개의 파일로 구성과 각 파일의 내용은 아래와 같다.  
 
-```
+```bash
 .
 ├── hello-git
 ├── hello-java
@@ -53,7 +53,7 @@ world
 
 그리고 프로젝트의 커밋 로그는 아래와 같다.  
 
-```
+```bash
 $ git log -p --graph --pretty=short
 * commit 9a0d8d38a53eb1cf69d5df66346ed1b70e94d7bf
 | Author: windowforsun <window_for_sun@naver.com>
@@ -211,7 +211,7 @@ $ git log -p --graph --pretty=short
 더 자세한 설명은 [공식 문서](https://git-scm.com/docs/git-grep)
 에서 확인 할 수 있다.  
 
-```
+```bash
 $ git grep hello
 hello-git:hello
 hello-java:hello
@@ -221,7 +221,7 @@ hello-world:hello
 
 `-l` 옵션을 주면 파일의 내용은 포함하지 않고 파일내용이 포함된 파일만 결과로 얻을 수 있다.  
 
-```
+```bash
 $ git grep -l hello
 hello-git
 hello-java
@@ -232,7 +232,7 @@ hello-world
 그리고 명령어 뒤에 `git grep <bracn> <working-tree>` 와 같은 형식으로 
 특정 브랜치나 특정 경로를 지정해서 검색을 수행할 수 있다.  
 
-```
+```bash
 $ git grep hello master .
 master:hello-git:hello
 master:hello-java:hello
@@ -242,7 +242,7 @@ master:hello-world:hello
 
 정규식도 검색 조건으로 사용 가능하다.  
 
-```
+```bash
 $ git grep [a-z]
 hello-git:hello
 hello-git:git
@@ -257,7 +257,7 @@ hello-world:world
 
 조건이 여러개인 경우 `-e` 옵션과 `--or`, `--and`, `--not` 등을 사용해서 조건을 구성할 수 있다.  
 
-```
+```bash
 $ git grep -e [j] --and -e [~]
 hello-special:java~~
 ```  
@@ -268,7 +268,7 @@ hello-special:java~~
 먼저 특정 커밋 메시지를 검색하는 방법에 대해 살펴본다.  
 특정 문자열이 포함된 커밋 메시지의 검색은 `git log --grep <regex>` 와 같이 사용할 수 있다.  
 
-```
+```bash
 .. new 문자열이 포함된 커밋 메시지 ..
 $ git log --oneline --grep new
 577fae2 new special file
@@ -299,7 +299,7 @@ b986f27 new world file
 다음으로 커밋에서 파일 변경내용에 포함되는 추가되고 삭제된 내용을 검색하는 방법은 
 `git log -G<regex>` 와 같이 사용 할 수 있다.  
 
-```
+```bash
 .. 파일 변경 내용 중 java 가 포함되는 커밋 ..
 $ git log --oneline -p -Gjava
 9a0d8d3 (HEAD -> master) modify special file 4
