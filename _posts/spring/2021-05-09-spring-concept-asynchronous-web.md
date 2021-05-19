@@ -823,8 +823,8 @@ INFO 15380 --- [pool-1-thread-1] c.w.r.springasyncweb.SpringAsyncWebTest  : end 
 
 먼저 테스트를 위해 외부 서비스를 호출해서 결과를 제공하는 `ExternalService` 가 있다. 
 외부 서비스 요청과 응답 처리에 따른 `Blocking` 은 `sleep(100)` 을 통해 표현한다. 
-`ExternalService` 의 메소드들은 `AsyncRestTemplate`, `WebClient` 와 같이 비동기 웹 요청을 수행할 수 있는 라이브러리들을 
-사용해서 외부 `API`를 호출해서 결과를 리턴하는 동작을 수행한다고 가정한다. 
+`ExternalService` 의 메소드들은 `AsyncRestTemplate` 와 같이 비동기 웹 요청을 수행할 수 있는 라이브러리들을 
+사용해서 외부 `API`를 호출하고 결과를 리턴하는 동작을 수행한다고 가정한다. 
 그중 `requestToAsyncListenableFuture`  메소드는 `ListenableFuture` 방식으로 `Blocking` 처리에 대한 결과를 리턴하는 메소드이다.  
 
 ```java
