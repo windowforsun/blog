@@ -798,6 +798,101 @@ public void completableFuture_async_threadpool() throws Exception {
 그리고 다음 비동기 동작인 `thenApplyAsync()` 는 설정한 `myPool-1` 에서 수행되고, 
 이후 비동기 동작들은 모두 `myPool-2` 에서 실행되는 것을 확인 할 수 있다.  
 
+만약 `CompletableFuture` 를 사용해서 구성된 비동기 파이프라인에서 특정 동작의 리턴값이 `CompletableFuture` 이면, 
+`CompletableFuture<CompletableFuture<String>` 과 같은 형태가 된다. 
+이런 경우 `thenCompose()` 와 같은 메소드를 사용해서 처리 할 수 있다.  
+
+```java
+@Test
+public void completableFuture_thenCompose() throws Exception {
+    // when
+    printAndAddLog("start");
+    CompletableFuture<Void> completableFuture = CompletableFuture
+            .supplyAsync(() -> {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "completableFuture";
+            })
+            .thenCompose((str) -> {
+                printAndAddLog(str);
+                return CompletableFuture.completedFuture("Prefix-" + str);  // 리턴 값이 CompletableFuture
+            })
+            .thenApply((str) -> {
+                printAndAddLog(str);
+                return str;
+            })
+            .thenApply((str) -> str + "-Suffix")
+            .thenAccept((str) -> printAndAddLog(str));
+    printAndAddLog("end");
+
+    // then
+    Thread.sleep(200);
+    assertThat(resultQueue, hasSize(5));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "completableFuture",
+            "Prefix-completableFuture",
+            "Prefix-completableFuture-Suffix"
+    ));
+}
+```  
+
+결과 값에 `Prefix` 를 붙이는 부분의 리턴값이 `CompletableFuture` 이다. 
+만약 `thenCompose()` 가 아닌 `thenApply()` 을 사용한다면 이후 파이프라인 부터 사용하는 결과 값 또한 `CompletableFuture` 타입을 사용하게 된다.  
+
+다음으로 `CompletableFuture` 비동기 파이프라인 실행 중 예외가 발생한다면 `exceptionally()` 메소드에 예외 처리에 대한 내용을 정의해 주면된다.  
+
+```java
+@Test
+public void completableFuture_exceptionally() throws Exception {
+    // when
+    printAndAddLog("start");
+    CompletableFuture<Void> completableFuture = CompletableFuture
+            .supplyAsync(() -> {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return "completableFuture";
+            })
+            .thenApply((str) -> {
+                printAndAddLog(str);
+                return "Prefix-" + str;
+            })
+            .thenApply((str) -> {
+                if(1 == 1) {
+                    throw new RuntimeException(str + "-Exception");
+                }
+                printAndAddLog(str);
+                return str;
+            })
+            .thenApply((str) -> str + "-Suffix")
+            .exceptionally((e) -> e.getMessage())
+            .thenAccept((str) -> printAndAddLog(str));
+    printAndAddLog("end");
+
+    // then
+    Thread.sleep(200);
+    assertThat(resultQueue, hasSize(4));
+    assertThat(resultQueue, contains(
+            "start",
+            "end",
+            "completableFuture",
+            "java.lang.RuntimeException: Prefix-completableFuture-Exception"
+    ));
+}
+```  
+
+파이프라인 결과값에 `Prefix-` 까지 붙이고 나서 로그 출력 전에 예외가 발생했다. 
+그러므로 이후 파이프라인 스텝은 수행되지 않고, 
+`exceptionally()` 에 정의된 예외처리가 수행되고 결과로 리턴 되는 것을 확인 할 수 있다.  
+
+
 
 ---
 ## Reference
