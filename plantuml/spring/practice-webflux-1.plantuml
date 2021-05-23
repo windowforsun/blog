@@ -1,0 +1,30 @@
+@startuml
+
+'skinparam linetype polyline
+'skinparam linetype ortho
+left to right direction
+circle "Client" as c1
+circle "Client" as c2
+circle "Client" as c3
+
+c1 -d[hidden]- c2
+c2 -d[hidden]- c3
+
+queue "Queue" as q {
+	circle "Request" as r
+	circle "Request" as r1
+	circle "Request" as r2
+	circle "Request" as r3
+
+	r -u-> r1
+	r1 -u-> r2
+	r2 -u-> r3
+}
+hide r
+
+c1 --> r
+c2 --> r
+c3 --> r
+
+
+@enduml
