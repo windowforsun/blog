@@ -18,7 +18,8 @@ tags:
     - Reactive Streams
     - Spring WebFlux
     - Non-Blocking
-    - Event-Driven
+    - Event Driven
+    - Event Loop
 toc: true
 use_math: true
 ---  
