@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 개념] "
+title: "[Java 개념] Reactor Mono, Flux"
 header:
   overlay_image: /img/java-bg.jpg
-excerpt: ''
+excerpt: 'Reactor 의 Mono 와 Flux에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,13 +12,15 @@ categories :
 tags:
     - Concept
     - Java
-    - Asynchronous
 	- ReactiveStreams
+	- Reactor
+	- Mono
+	- Flux
 toc: true
 use_math: true
 ---  
 
-## Reactive Streams Core Features
+## Reactor Mono, Flux
 [Reactive Streams](({{site.baseurl}}{% link _posts/java/2021-04-18-java-concept-reactive-before-and-after.md %}))
 에서는 `Reactive Streams` 의 개념에 대해서 알아보았고,
 [Reactive Streams 활용](({{site.baseurl}}{% link _posts/java/2021-04-24-java-concept-ractivestreams-advanced.md %}))
@@ -30,7 +32,7 @@ use_math: true
 
 `Reactive Streams` 에서는 `Mono` 와 `Flux` 가 담는 요소의 수를 `카디널리티` 라고 칭한다. 
 그리고 스트림이라는 용어는 `Java 8` 의 스트림과 혼동의 여지가 있으므로 `Reactive Streams` 자체를 표현할 때가 아니면, 
-스트림이라는 표현보다는 시퀀스라는 용어를 사용한다.  
+스트림이라는 표현보다는 시퀀스(`Sequence`)라는 용어를 사용한다.  
 
 `Mono`, `Flux` 에서는 `CorePublisher<T>` 라는 인터페이스가 사용되는데 
 
@@ -73,369 +75,476 @@ public abstract class Mono<T> implements CorePublisher<T> {
 이는 `Runnable` 과 유사한 하나의 비동기 처리 표현으로 `Mono<Void>` 와 같이 만들 수 있다.  
 
 
+### 의존성 추가하기
+`Mono`, `Flux` 를 통한 `Reactive Streams` 를 사용하기 위해서는 의존성 추가가 필요하다. 
+만약 스프링을 사용하지 않는 다면 아래와 같이 `reactor-core` 를 의존성을 추가해서 `Java` 환경에서
+`Mono`, `Flux` 를 사용한 애플리케이션을 개발할 수 있다. 
 
+```groovy
+dependencies {
+	implementation group: 'io.projectreactor', name: 'reactor-core', version: '3.4.5'
+}
+```  
 
+그리고 `Spring Boot` 환경에서는 위와 같이 `reactor-core` 의존성을 추가해도 되지만, 
+`WebFlux` 의존성을 추가한다면 `Spring` 환경에서 `Mono`, `Flux` 를 사용한 웹 애플리케이션 개발이 가능하다.  
 
+```groovy
+dependencies {
+	implementationb 'org.springframework.boot:spring-boot-starter-webflux:2.4.2'
+}
+```  
 
+### Mono, Flux 시퀀스 생성하기
+`Mono`, `Flux` 시퀀스를 생성하는 가장 간단한 방법은 각 클래스에서 제공하는 팩토리 메소드를 사용하는 것이다. 
+아주 많은 방식으로 시퀀스를 생성할 수 있는 메소드를 제공하지만, `just()` 메소드에 대해서만 다뤄본다. 
 
+#### just()
 
+`Mono`, `Flux` 에서 공통으로 제공하는 `just()` 메소드는 파라미터로 받은 값을 사용해서 시퀀스를 생성해주는 팩토리 메소드이다. 
+먼저 `Mono` 에서의 동작 흐름은 아래와 같이 한개의 인자를 사용해서 사용할 수 있다.
 
-### Hot, Cold Publisher
-hot, cold publisher 먼저 정리하고 나서
-다시 아래 mono 만들기 다시 정리하기 ..
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-just.svg)  
 
+```java
+// long 형 아이템 1을 생성하는 Mono 시퀀스 생성
+Mono<Long> mono = Mono.just(1L);
 
+```  
 
+그리고 `Flux` 에서는 아래와 같이 한개 이상의 파라미터를 사용해서 사용할 수 있다. 
 
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-just.svg)
 
+```java
+// long 형 아이템 1, 2, 3을 순서대로 생성하는 Flux 시퀀스 생성
+Flux<Long> flux = Flux.just(1L, 2L, 3L);
+```  
 
+`Mono` 에는 `justOrEmpty()` 라는 메소드도 있는데 비어있는 `Mono` 시퀀스를 생성할 때 사용할 수 있다. 
+인자로 받을 수 있는 값은 아래와 같다. 
 
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-justorempty.svg)
 
+```java
+Mono<Long> mono = Mono.justOrEmpty(1L);
 
+Mono<Long> emptyMonoNull = Mono.justOrEmpty(null);
 
+Mono<Long> emptyMonoOptional = Mono.justOrEmpty(Optional.empty());
 
+Mono<Long> mono = Mono.justOrEmpty(1L);
 
+Mono<Long> monoOptional = Mono.justOrEmpty(Optional.of(1L));
+```  
 
+### 구독 메소드 
+`Mono`, `Flux` 의 시퀀스를 생성했다면 이를 구독해야 시퀀스의 데이터를 받아 처리할 수 있다. 
+`Mono` 와 `Flux` 에서는 아주 다양한 구독 관련 팩토리 메소드를 지원하지만, 
+이번 포트스테서는 구독관련 메소드 또한 간단한 몇가지에 대해서만 다뤄본다. 
 
+#### Mono block()
+`Mono` 의 `block()` 은 메소드 이름에서 알 수 있는 것처럼 시퀀스가 끝나거나 아이템하나를 받을 때까지 무한정 `Blocking` 방식으로 데이터를 받는 것을 의미한다. 
+테스트용이나 정말 해당 메소드가 필요한 경우가 아니라면 사용을 하지 않는 것이 좋을 것같다. 
+`Reactive Streams` 라는 `Non-Blocking` 흐름에서 하나의 `block()` 메소드로 인해 `Non-Blocking` 의 흐름이 깨져버릴 수 있기 때문이다.  
 
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-block.svg)
 
-
-
-### Mono 만들기
-`Mono` 는 `Publisher` 의 구현체인 만큼 데이터를 만들어내는 생산자의 역할을 한다.
-`Mono` 를 만드는 방법 중 가장 간단한 방법은 각 클래스내에 있는 팩토리 메소드를 사용하는 것이다. 
-먼저 최대 1개 아이템을 생산하는 `Mono` 를 생성하는 방법에 대해서 알아본다.  
-
-실제 테스트코드를 살펴보기 전에 이후 진행되는 설명은 예제 코드를 바탕으로 진행된다. 
-예제 코드에서 `Mono` 와 `Flux` 의 구독해서 사용하는 아래 2가지 `Subscirber` 를 사용한다.  
-
-먼저 `log()` 는 아래의 사진과 같이 `Reactive Streams` 의 시퀀스에서 `Publisher`, `Subscirber` 간에 주고받는 신호를 모니터링 가능하도록 로그로 보여주는 `Subscriber` 이다.
-
-[그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-log.svg)
-
-다음으로 `block()` 은 아래 사진과 같이 `Mono` 시퀀스에 존재하는 아이템을 `Blocking` 방식으로 모두 가져오는 `Subscriber` 이다.
-
-[그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-block.svg)
-
-
-#### empty, never, error
+위 그림처럼 `Mono` 시퀀스에 아이템이 존재하는 경우 해당 아이템을 `Blocking` 방식으로 리턴하고, 
+비어있는 시퀀스는 `null` 을 리턴하고 발생된 예외는 그대로 전파된다.
+아래는 간단한 `block()` 메소드의 예시이다. 
 
 ```java
 @Test
-public void mono_create_empty() {
+public void mono_block_item() {
 	// given
-	Mono<String> mono = Mono.empty();
+	Mono<Long> mono = Mono.just(1L);
 
 	// when
-	String actual = mono.log().block();
+	Long actual = mono.block();
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual, is(1L));
+}
+
+@Test
+public void mono_block_empty() {
+	// given
+	Mono<Long> mono = Mono.empty();
+
+	// when
+	Long actual = mono.block();
 
 	// then
 	assertThat(actual, nullValue());
 }
-```  
 
-```
-[main] INFO reactor.Mono.Empty.1 - onSubscribe([Fuseable] Operators.EmptySubscription)
-[main] INFO reactor.Mono.Empty.1 - request(unbounded)
-[main] INFO reactor.Mono.Empty.1 - onComplete()	
-```  
-`empty()` 는 비어있는(0개 아이템) `Mono` 시퀀스를 생성하는 메소드로 `block()` 메소드로 아이템을 리턴받아보면 `null` 임을 확인할 수 있다. 
-그리고 비어 있기 때문에 `reqeust()` 로 아이템을 요청하는 경우 바로 `onComplete()` 이 호출 된다.  
-
-```java
 @Test
-public void mono_create_never() {
+public void mono_block_exception() {
 	// given
-	Mono<Long> mono = Mono.never();
+	Mono<Long> mono = Mono.error(new Exception("mono block exception"));
 
 	// when
-	IllegalStateException actual = assertThrows(IllegalStateException.class, () -> mono.log().block(Duration.ofMillis(100L)));
+	Exception actual = assertThrows(Exception.class, () -> mono.block());
 
 	// then
-	assertThat(actual.getMessage(), startsWith("Timeout on blocking read"));
+	assertThat(actual, notNullValue());
+	assertThat(actual.getMessage(), is("java.lang.Exception: mono block exception"));
 }
 ```  
 
-```
-[main] INFO reactor.Mono.Never.1 - onSubscribe([Fuseable] Operators.EmptySubscription)
-[main] INFO reactor.Mono.Never.1 - request(unbounded)
-[main] INFO reactor.Mono.Never.1 - cancel()
-```  
-그리고 `never()` 는 시퀀스의 종료를 알리는 이벤트를 호출하지 않는 시퀀스를 생성하는 메소드이다.
-종료 이벤트인 `onError()`, `onComplete()` 가 호출되지 않기 때문에 무한한 시퀀스를 생성한다. 
-만약 이때 `block()` 을 호출하면 무한정 시퀀스를 대기하게 되기 때문에, 
-테스트 코드에서는 `block(Duration)` 을 사용해서 무한정 시퀀스를 대기하지 않고 `IllegalStateException` 과 함께 종료 될 수 있도록 진행했다.  
-출력된 로그를 보면 `cancel()` 호출을 통해 무한 시퀀스를 강제로 종료한 것을 확인 할 수 있다.  
+#### Flux blockFirst(), blockLast()
+`Flux` 에는 `blockFirst()` 와 `blockLast()` 메소드를 사용해서 시퀀스내 아이템을 `Blocking` 방식으로 리턴 받을 수 있다. 
+이 또한 모드 시퀀스가 종료되거나 아이템 하나를 받을 때까지 `Blocking` 되기 때문에 사용에는 주의가 필요하다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-blockfirst.svg)
+
+`blockFirst()` 는 말그대로 `Flux` 시퀀스에서 가장 첫번째 아이템을 리턴하는 메소드이다. 
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-blocklast.svg)
+
+그리고 `blockLast()` 는 마지막 아이템을 리턴한다. 
+다른 특징은 `Mono` 의 `block()` 과 동일하게 비어있는 시퀀스는 `null` 을 리턴하고 발생된 예외는 그대로 전파된다. 
+아래는 `blockFirst()` 와 `blockLast()` 의 간단한 예시이다. 
 
 ```java
 @Test
-public void mono_create_error() {
+public void flux_blockFirst_item() {
+	// given
+	Flux<Long> flux = Flux.just(1L, 2L, 3L);
+
+	// when
+	Long actual_1 = flux.blockFirst();
+	Long actual_2 = flux.blockFirst();
+
+	// then
+	assertThat(actual_1, notNullValue());
+	assertThat(actual_1, is(1L));
+	assertThat(actual_2, notNullValue());
+	assertThat(actual_2, is(1L));
+}
+
+@Test
+public void flux_blockLast_item() {
+	// given
+	Flux<Long> flux = Flux.just(1L, 2L, 3L);
+
+	// when
+	Long actual_1 = flux.blockLast();
+	Long actual_2 = flux.blockLast();
+
+	// then
+	assertThat(actual_1, notNullValue());
+	assertThat(actual_1, is(3L));
+	assertThat(actual_2, notNullValue());
+	assertThat(actual_2, is(3L));
+}
+
+@Test
+public void flux_blockFirst_empty() {
+	// given
+	Flux<Long> flux = Flux.empty();
+
+	// when
+	Long actual = flux.blockFirst();
+
+	// then
+	assertThat(actual, nullValue());
+}
+
+@Test
+public void flux_blockFirst_error() {
+	// given
+	Flux<Long> flux = Flux.error(new Exception("flux block exception"));
+
+	// when
+	Exception actual = assertThrows(Exception.class, () -> flux.blockFirst());
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual.getMessage(), is("java.lang.Exception: flux block exception"));
+}
+```  
+
+`Flux` 의 `blockFirst()`, `blockLast()` 메소드를 보면 계속 동일한 첫번재 아이템과 마지막 아이템을 리턴하는 것을 확인 할 수 있다.  
+
+
+#### log()
+`Mono`, `Flux` 에 모두 존재하는 `log()` 는 시퀀스내에서 이뤄지는 동작을 로그 출력을 통해 확인할 수 있는 구독 메소드이다. 
+`Reactive Streams` 에서 이뤄지는 모든 시그널을 `INFO`(`default`) 레벨 로그로 관찰 할수 있어 디버깅과 같은 용도로 사용하기에 좋다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-log.svg)
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-log.svg)
+
+위는 `Mono` 의 `log()` 에 대한 그림이고, 아래는 `Flux` 의 `log()` 에 대한 그림이다. 
+모두 동작과 메소드 구성은 동일하다. 
+`log()` 전용 카테고리도 추가할 수 있고, 필요에 따라 로그 레벨을 수정하는 등 다양한 설정으로 모니터링을 구성할 수 있다.  
+
+```java
+@Test
+public void mono_log() {
+	// given
+	Mono<Long> mono = Mono.just(1L);
+
+	// when
+	Long actual = mono.log().block();
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual, is(1L));
+}
+
+/*
+[main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+[main] INFO reactor.Mono.Just.1 - | request(unbounded)
+[main] INFO reactor.Mono.Just.1 - | onNext(1)
+[main] INFO reactor.Mono.Just.1 - | onComplete()
+ */
+
+@Test
+public void mono_log_category() {
+	// given
+	Mono<Long> mono = Mono.just(1L);
+
+	// when
+	Long actual = mono.log("myCategory.").block();
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual, is(1L));
+}
+
+/*
+[main] INFO myCategory.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+[main] INFO myCategory.Mono.Just.1 - | request(unbounded)
+[main] INFO myCategory.Mono.Just.1 - | onNext(1)
+[main] INFO myCategory.Mono.Just.1 - | onComplete()
+ */
+
+@Test
+public void mono_log_category_level() {
+	// given
+	Mono<Long> mono = Mono.just(1L);
+
+	// when
+	Long actual = mono.log("myCategory.", Level.WARNING).block();
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual, is(1L));
+}
+
+/*
+[main] WARN myCategory.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+[main] WARN myCategory.Mono.Just.1 - | request(unbounded)
+[main] WARN myCategory.Mono.Just.1 - | onNext(1)
+[main] WARN myCategory.Mono.Just.1 - | onComplete()
+ */
+
+@Test
+public void flux_log() {
+	// given
+	Flux<Long> flux = Flux.just(1L, 2L, 3L);
+
+	// when
+	Long actual_1 = flux.log().blockFirst();
+	Long actual_2 = flux.log().blockFirst();
+
+	// then
+	assertThat(actual_1, notNullValue());
+	assertThat(actual_1, is(1L));
+	assertThat(actual_2, notNullValue());
+	assertThat(actual_2, is(1L));
+}
+
+/*
+[main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO reactor.Flux.Array.1 - | request(unbounded)
+[main] INFO reactor.Flux.Array.1 - | onNext(1)
+[main] INFO reactor.Flux.Array.1 - | cancel()
+[main] INFO reactor.Flux.Array.2 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO reactor.Flux.Array.2 - | request(unbounded)
+[main] INFO reactor.Flux.Array.2 - | onNext(1)
+[main] INFO reactor.Flux.Array.2 - | cancel()
+ */
+```  
+
+`log()` 가 출력하는 로그를 보면 `block()` 메소드의 동작을 위해 내부적으로 수행되는 시그널들을 확인할 수 있다. 
+`onSubscribe()` 로 시퀀스를 구독하고, `request()` 로 아이템을 요청한 후, `onNext()` 로 아이템을 받으면,
+`Mono` 의 경우 `onComplete()` 로 시퀀스 구독을 완료하고, 
+`Flux` 는 `cancel()` 로 구독을 취소하는 것을 확인 할 수 있다.  
+
+`log()` 를 통해 `Flux` 의 `blockFirst()` 를 2번 호출 했을 때 동일한 첫번째 아이템을 리턴하는 이유를 시그널을 통해 확인 할 수 있다. 
+현재 `blockFirst()` 는 시퀀스를 구독하고 1개를 요청한 후 구독을 취소하는 동작만을 반복하기 때문에 계속해서 첫번째 아이템만 리턴하게 된다.
+
+
+#### subscribe()
+`subscribe()` 는 시퀀스내에 존재하는 모든 아이템을 소비하는 구독메소드이다. 
+주로 시퀀스 아이템에 대한 처리가 구현된 `Consumer<? super T>` 객체를 파라미터로 전달해서 수행된다. 
+그리고 시퀀스내에서 발생할 수 있는 예외는 `Consumer<? super Throwable>` 구현체를 사용해서 처리할 수 있다. 
+그 외에도 다양한 목적에서 사용할 수 있도록 오버로딩 돼있다. 
+이번 포스트에서는 그중 기본적인 몇가지에 종류에 대해서만 알아본다.  
+
+먼저 인자값으 받지 않는 `Mono`, `Flux` 의 subscribe()` 는 아래와 같다.
+
+```java
+@Test
+public void mono_subscribe() {
+	// given
+	Mono<Long> mono = Mono.just(1L);
+
+	// when
+	mono.log().subscribe();
+}
+
+/*
+[main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+[main] INFO reactor.Mono.Just.1 - | request(unbounded)
+[main] INFO reactor.Mono.Just.1 - | onNext(1)
+[main] INFO reactor.Mono.Just.1 - | onComplete()
+ */
+
+
+@Test
+public void flux_subscribe() {
+	// given
+	Flux<Long> flux = Flux.just(1L, 2L, 3L);
+	
+	// when
+	flux.log().subscribe();
+}
+
+/*
+[main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO reactor.Flux.Array.1 - | request(unbounded)
+[main] INFO reactor.Flux.Array.1 - | onNext(1)
+[main] INFO reactor.Flux.Array.1 - | onNext(2)
+[main] INFO reactor.Flux.Array.1 - | onNext(3)
+[main] INFO reactor.Flux.Array.1 - | onComplete()
+ */
+```  
+
+`Mono`, `Flux` 시퀀스에 존재하는 모든 아이템을 구독해서 소비하는 것을 로그로 확인할 수 있다.  
+
+다음으로는 시퀀스에서 제공하는 아이템에 대한 처리를 `Consumer` 구현 객체로 처리할 수 있는 `subscribe()` 는 아래와 같다.  
+
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-subscribe-consumer.svg)
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-subscribe-consumer.svg)
+
+
+```java
+@Test
+public void mono_subscribe_consumer() {
+	// given
+	Mono<Long> mono = Mono.just(1L);
+	List<Long> actual = new ArrayList<>();
+
+	// when
+	mono.log().subscribe(aLong -> actual.add(aLong));
+
+	// then
+	assertThat(actual, hasSize(1));
+	assertThat(actual.get(0), is(1L));
+}
+
+/*
+[main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+[main] INFO reactor.Mono.Just.1 - | request(unbounded)
+[main] INFO reactor.Mono.Just.1 - | onNext(1)
+[main] INFO reactor.Mono.Just.1 - | onComplete()
+ */
+
+@Test
+public void flux_subscribe_consumer() {
+	// given
+	Flux<Long> flux = Flux.just(1L, 2L, 3L);
+	List<Long> actual = new ArrayList<>();
+
+	// when
+	flux.log().subscribe(aLong -> actual.add(aLong));
+
+	// then
+	assertThat(actual, hasSize(3));
+	assertThat(actual.get(0), is(1L));
+	assertThat(actual.get(1), is(2L));
+	assertThat(actual.get(2), is(3L));
+}
+
+/*
+[main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO reactor.Flux.Array.1 - | request(unbounded)
+[main] INFO reactor.Flux.Array.1 - | onNext(1)
+[main] INFO reactor.Flux.Array.1 - | onNext(2)
+[main] INFO reactor.Flux.Array.1 - | onNext(3)
+[main] INFO reactor.Flux.Array.1 - | onComplete()
+ */
+```  
+
+마지막으로 시퀀스에서 발생하는 예외 처리에 대한 `Consumer` 까지 인자값으로 받는 `subscribe()` 는 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-subscribe-consumer-error.svg)
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-subscribe-consumer-error.svg)
+
+```java
+@Test
+public void mono_subscribe_consumer_error() {
 	// given
 	Mono<Long> mono = Mono.error(new Exception("mono error"));
+	List<Long> actual = new ArrayList<>();
+	List<Throwable> actualException = new ArrayList<>();
 
 	// when
-	Exception actual = assertThrows(Exception.class, () -> mono.log().block());
+	mono.log().subscribe(
+			aLong -> actual.add(aLong),
+			throwable -> actualException.add(throwable)
+	);
 
 	// then
-	assertThat(actual.getMessage(), is("java.lang.Exception: mono error"));
+	assertThat(actual, hasSize(0));
+	assertThat(actualException, hasSize(1));
+	assertThat(actualException.get(0).getMessage(), is("mono error"));
 }
-```  
 
-```
+/*
 [main] INFO reactor.Mono.Error.1 - onSubscribe([Fuseable] Operators.EmptySubscription)
 [main] INFO reactor.Mono.Error.1 - request(unbounded)
 [main] ERROR reactor.Mono.Error.1 - onError(java.lang.Exception: mono error)
 [main] ERROR reactor.Mono.Error.1 - 
-java.lang.Exception: mono error	
-```  
+java.lang.Exception: mono error
+ */
 
-마지막으로 `error()` 는 `request()` 를 통해 아이템을 요청하는 즉시 시퀀스 생성시에 정의한 에러를 바탕으로 `onError()` 이벤트를 전송하는 시퀀스를 생성한다. 
-출력된 로그를 보면 `request()` 이후 곧 바로 `onError()` 가 호출되었고, 전달된 예외의 메시지는 `mono error` 인 것을 확인 할 수 있다.  
-
-
-### just
-
-```java
 @Test
-public void mono_create_just() throws Exception {
+public void flux_subscribe_consumer_error() {
 	// given
-	Mono<Long> mono = Mono.just(System.currentTimeMillis());
-	Thread.sleep(100);
-	long current = System.currentTimeMillis();
+	Flux<Long> flux = Flux.error(new Exception("flux error"));
+	List<Long> actual = new ArrayList<>();
+	List<Throwable> actualException = new ArrayList<>();
 
 	// when
-	Thread.sleep(100);
-	long actual = mono.log().block();
+	flux.log().subscribe(
+	aLong -> actual.add(aLong),
+	throwable -> actualException.add(throwable)
+	);
 
 	// then
-	assertThat(actual, lessThan(current));
+	assertThat(actual, hasSize(0));
+	assertThat(actualException, hasSize(1));
+	assertThat(actualException.get(0).getMessage(), is("flux error"));
 }
+
+/*
+[main] INFO reactor.Flux.Error.1 - onSubscribe([Fuseable] Operators.EmptySubscription)
+[main] INFO reactor.Flux.Error.1 - request(unbounded)
+[main] ERROR reactor.Flux.Error.1 - onError(java.lang.Exception: flux error)
+[main] ERROR reactor.Flux.Error.1 - 
+java.lang.Exception: flux error
+ */
 ```  
-
-```
-[main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
-[main] INFO reactor.Mono.Just.1 - | request(unbounded)
-[main] INFO reactor.Mono.Just.1 - | onNext(1623581924528)
-[main] INFO reactor.Mono.Just.1 - | onComplete()
-```  
-
-`just()` 는 파라미터로 전달된 값을 아이템으로 사용하는 `Mono` 시퀀스를 즉시 생성한다. 
-여기서 즉시 생성한다는 것은 `just()` 메소드가 호출된 시점에 시퀀스가 바로 생성된다는 것을 의미한다. 
-`just()` 의 선언 즉시 시퀀스가 생성되는 동작은 이후 `fromXXX` 메소드의 동작과 비교 가능하므로 기억해 두는 것이 좋다. 
-위와 관련된 동작 테스트를 위해 `just()` 를 생성할때 현재 시간의 타임스템프를 가져오는 메소드를 사용했고, 
-이후 100밀리초 이후 `current` 라는 변수에 현재 시간의 타임스템프를 할당했다. 
-그리고 `block()` 메소드를 사용해서 `Mono` 시퀀스의 아이템을 가져와 비교하면 `current` 보다 작은 타임스템프를 갖는 것을 확인 할 수 있고, 
-이는 `current` 에 타임스템프가 할당되기 전에 이미 `Mono` 시퀀스에 아이템이 생성되었다는 것을 의미한다.  
-
-
-```java
-@Test
-public void mono_create_justOrEmpty() {
-	// given
-	Mono<String> mono = Mono.justOrEmpty(Optional.empty());
-//    Mono<String> mono = Mono.justOrEmpty(null);
-
-	// when
-	String actual = mono.log().block();
-
-	// then
-	assertThat(actual, nullValue());
-}
-```  
-
-```
-[main] INFO reactor.Mono.Empty.1 - onSubscribe([Fuseable] Operators.EmptySubscription)
-[main] INFO reactor.Mono.Empty.1 - request(unbounded)
-[main] INFO reactor.Mono.Empty.1 - onComplete()
-```  
-
-`justOrEmpty()` 는 `just()` 와 대부분 비슷하고 차이점으로는 `null` 값이나 ,
-`Otpional.empty()` 와 같은 빈값을 아이템으로 사용해서 `Mono` 를 생성할수 있다는 점이다. 
-실제로 `just()` 에 `null` 값을 파라미터로 사용하면 `NullPointException` 이 발생한다.  
-
-
-### from
-
-```java
-@Test
-public void mono_create_fromCallable() throws Exception {
-	// given
-	Mono<Long> mono = Mono.fromCallable(() -> System.currentTimeMillis());
-	Thread.sleep(100);
-	long current = System.currentTimeMillis();
-
-	// when
-	Thread.sleep(100);
-	long actual = mono.log().block();
-
-	// then
-	assertThat(actual, greaterThan(current));
-}
-```  
-
-```
-[main] INFO reactor.Mono.Callable.1 - | onSubscribe([Fuseable] Operators.MonoSubscriber)
-[main] INFO reactor.Mono.Callable.1 - | request(unbounded)
-[main] INFO reactor.Mono.Callable.1 - | onNext(1623607371982)
-[main] INFO reactor.Mono.Callable.1 - | onComplete()
-```  
-
-`fromCallable()` 은 아이템을 생성할 때 `Callable` 의 `call()` 메소드가 리턴하는 값으로 `Mono` 를 생성하는 메소드이다. 
-`just` 와 달리 `fromCallable()` 선언 시점에 `Mono` 시퀀스를 생성하지 않고, `Mono` 시퀀스를 사용하는 구독 시점에 시퀀스가 실제로 생성된다. (`Lazy` 처리)
-이런 특징으로 테스트 코드를 확인하면 `Mono` 시퀀스에서 생성한 타임스탬프(`actual`)가 `current` 보다 값이 큰 것을 확인 할 수 있고, 
-이는 `Mono` 시퀀스의 생성이 `current` 타임스탬프보다 이후에 수행되었다는 것을 알 수 있다.  
-
-```java
-@Test
-public void mono_create_fromRunnable() throws Exception {
-	// given
-	Mono<Void> mono = Mono.fromRunnable(() -> log.info("fromRunnable: {}", System.currentTimeMillis()));
-	Thread.sleep(100);
-	log.info("testMethod: {}", System.currentTimeMillis());
-
-	// when
-	Thread.sleep(100);
-	Void actual = mono.log().block();
-
-	// then
-	// console print log
-	assertThat(actual, nullValue());
-}
-```  
-
-```
-[main] INFO com.windowforsun.reactor.CreateMonoTest - testMethod: 1623607950685
-[main] INFO reactor.Mono.Runnable.1 - onSubscribe(MonoRunnable.MonoRunnableEagerSubscription)
-[main] INFO reactor.Mono.Runnable.1 - request(unbounded)
-[main] INFO com.windowforsun.reactor.CreateMonoTest - fromRunnable: 1623607950799
-[main] INFO reactor.Mono.Runnable.1 - onComplete()
-```  
-
-`fromRunnable()` 은 `Mono` 시퀀스 상에 아이템을 생성 및 제공하지는 않고, 
-`Runnable` 의 `run()` 메소드에 정의된 동작을 수행하는 메소드이다. 
-아이템은 생성하지 않기 때문에 `null` 을 리턴한다. 
-그리고 `fromCallable()` 과 동일하게 실제 동작 수행 시점이 `Mono` 시퀀스 선어 시점이 아닌, 
-구독 이후에 `Runnable` 에 정의된 동작이 수행되는 것을 확인 할 수 있다.  
-
-```java
-@Test
-public void mono_create_fromSupplier() throws Exception {
-	// given
-	Mono<Long> mono = Mono.fromSupplier(() -> System.currentTimeMillis());
-	Thread.sleep(100);
-	long current = System.currentTimeMillis();
-	
-	// when
-	Thread.sleep(100);
-	long actual = mono.log().block();
-
-	// then
-	assertThat(actual, greaterThan(current));
-}
-```  
-
-```
-[main] INFO reactor.Mono.Supplier.1 - | onSubscribe([Fuseable] Operators.MonoSubscriber)
-[main] INFO reactor.Mono.Supplier.1 - | request(unbounded)
-[main] INFO reactor.Mono.Supplier.1 - | onNext(1623608196332)
-[main] INFO reactor.Mono.Supplier.1 - | onComplete()
-```  
-
-`fromSuplier()` 는 `Java Streams` 에서 `Functional Interface` 중 하나인 `Suplier` 를 바탕으로 `Mono` 시퀀스를 생성하는 메소드이다. 
-이 메소드 또한 `Mono` 시퀀스 선언 시점이 아닌, 구독이 된 시점에 실제 시퀀스 생성이 이뤄지기 때문에 아이템의 값(`actual`) 이 `current` 보다 큰 것을 확인 할 수 있다.  
-
-```java
-@Test
-public void mono_create_defer() throws Exception {
-	// given
-	Mono<Long> mono = Mono.defer(() -> Mono.just(System.currentTimeMillis()));
-	Thread.sleep(100);
-	long current = System.currentTimeMillis();
-
-	// when
-	Thread.sleep(100);
-	long actual = mono.log().block();
-
-	// then
-	assertThat(actual, greaterThan(current));
-}
-```  
-
-```
-[main] INFO reactor.Mono.Defer.1 - onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
-[main] INFO reactor.Mono.Defer.1 - request(unbounded)
-[main] INFO reactor.Mono.Defer.1 - onNext(1623608704763)
-[main] INFO reactor.Mono.Defer.1 - onComplete()
-```  
-
-`fromDefer` 
-
-
-
-
-### Mono, Flux 만들기
-
-
-
-
-
-
-
-
-
-
-### Mono, Flux 구독하고 사용하기
-
-
-
-
-### 생산자와 소비자
-전에 `Reactive Streams` 에서 언급했던 것과 같이 `Reactive Streams` 는 생산자와 소비자의 관계로 구성된다. 
-생산자가 아무리 좋고 많은 아이템을 가지고 있더라도 소비자가 이를 받아 사용하지 않으면 아이템들은 의미가 없고 존재하지 않는 것과 마찬가지이다.  
-
-위 예시와 같이 `Mono`, `Flux` 도 마찬가지이다. 
-시퀀스를 만든다는 것은 시퀀스에 정의된 동작까지 수행되는 것을 의미하지 않는다. 
-`Subscriber` 까지 등록해 줘야 시퀀스 동작의 실행까지 이뤄진다.  
-
-시퀀스를 생성할 수 있는 많은 팩토리 메소드 중 `just()` 와 시퀀스를 구독해서 아이템을 받을 수 있는 `subscribe()` 메소드를 
-사용해서 구성한 테스트 코드는 아래와 같다.  
-
-```java
-@Test
-public void subscribe() throws Exception {
-	// given
-	Mono<Long> mono = Mono.just(System.currentTimeMillis());
-	Thread.sleep(100);
-	long created = System.currentTimeMillis();
-
-	// when
-	mono.subscribe(item -> {
-		// then
-		assertThat(item, lessThan(created));
-	});
-}
-```
-
-테스트 코드에서 `Mono` 의 값으로 현재시간의 타임스탬프 값을 설정한다. 
-테스트 결과를 보면 `created` 의 값이 `Mono` 의 `item` 값보다 100 밀리초 정도 더 큰 것을 확인 가능하다. 
-`Mono` 의 선언은 `created` 보다 100 밀리초 먼저 선언되었지만, 
-구독은 100 밀리초 후에 수행되었고 이때 선언한 `Mono` 에 등록된 수행되어서 위와 같은 결과가 나온 것이다.  
-
-### Flux 비동기 시퀀스 생성하기
-
-
-### Mono 비동기 시퀀스 생성하기
-
-
-### 구독하기
-- 취소
-
-### 구독 구현하기
-BaseSubscriber
-
-
-### 코드로 시퀀스 생성하기
-
 
 
 ---
