@@ -552,5 +552,5 @@ java.lang.Exception: flux error
 [4. Reactor Core Features](https://projectreactor.io/docs/core/release/reference/#core-features)  
 [Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html)  
 [Flux](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)  
-[Intro To Reactor Core | Baeldung](https://www.baeldung.com/reactor-core)  
+[Intro To Reactor Core Baeldung](https://www.baeldung.com/reactor-core)  
 
