@@ -47,7 +47,7 @@ public abstract class Flux<T> implements CorePublisher<T> {
 
 `Flux` 아이템의 흐름을 도식화하면 아래와 같다.  
 
-[그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-1.png)
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-1.svg)
 
 `Flux` 는 `Publisher` 와 동일하게 몇가지 메소드(이벤트)를 통해 구독자(`Subscriber`)가 발생시키면 그에 따라 동작을 수행한다. 
 위 그림은 `1, 2 3` 데이터는 `onNext()` 를 통해 데이터가 전달된 것이고 `4` 는 전달과정에서 에러가 발생해서 `onError()` 이벤트가 발생했다. 
@@ -69,6 +69,8 @@ public abstract class Mono<T> implements CorePublisher<T> {
 `Mono<T>` 는 최대 1개의 아이템 생산에 적합한 `Publisher<T>` 의 구현체로, 
 `onNext()` 이벤트 호출 후 `onComplete()` 이벤트 호추롤 시퀀스가 종료되거나, 
 `onError()` 이벤트로 시퀀스가 종료되는 경우가 있다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-1.svg)
 
 만약 별개의 `Mono<T>` 두개가 있을 때 이를 하나의 `Flux<T>` 로 합치는 등의 연산도 가능하다. 
 그리고 `Mono` 는 아이템은 존재하지 않고 시퀀스의 완료만 존재하는 구성으로도 사용할 수 있다. 
