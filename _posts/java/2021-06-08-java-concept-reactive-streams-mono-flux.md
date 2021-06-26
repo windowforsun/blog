@@ -10,12 +10,12 @@ header-style: text
 categories :
   - Java
 tags:
-    - Concept
-    - Java
-	- ReactiveStreams
-	- Reactor
-	- Mono
-	- Flux
+  - Concept
+  - Java
+  - ReactiveStreams
+  - Reactor
+  - Mono
+  - Flux
 toc: true
 use_math: true
 ---  
