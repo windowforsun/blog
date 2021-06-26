@@ -274,12 +274,15 @@ public void flux_blockFirst_error() {
 `Mono`, `Flux` 에 모두 존재하는 `log()` 는 시퀀스내에서 이뤄지는 동작을 로그 출력을 통해 확인할 수 있는 구독 메소드이다. 
 `Reactive Streams` 에서 이뤄지는 모든 시그널을 `INFO`(`default`) 레벨 로그로 관찰 할수 있어 디버깅과 같은 용도로 사용하기에 좋다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-log.svg)
+아래는 `Mono` 의 `log()` 의 동작을 도식화 한 그림이다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-log.svg)
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-log.svg)  
 
-위는 `Mono` 의 `log()` 에 대한 그림이고, 아래는 `Flux` 의 `log()` 에 대한 그림이다. 
-모두 동작과 메소드 구성은 동일하다. 
+아래는 `Flux` 의 `log()` 의 동작을 도식화 한 그림이다. 
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-log.svg)  
+
+`Mono`, `Flux` 모두 동작과 메소드 구성은 동일하다. 
 `log()` 전용 카테고리도 추가할 수 있고, 필요에 따라 로그 레벨을 수정하는 등 다양한 설정으로 모니터링을 구성할 수 있다.  
 
 ```java
@@ -387,7 +390,7 @@ public void flux_log() {
 그 외에도 다양한 목적에서 사용할 수 있도록 오버로딩 돼있다. 
 이번 포스트에서는 그중 기본적인 몇가지에 종류에 대해서만 알아본다.  
 
-먼저 인자값으 받지 않는 `Mono`, `Flux` 의 subscribe()` 는 아래와 같다.
+먼저 인자값으 받지 않는 `Mono`, `Flux` 의 `subscribe()` 는 아래와 같다.
 
 ```java
 @Test
@@ -430,8 +433,11 @@ public void flux_subscribe() {
 
 다음으로는 시퀀스에서 제공하는 아이템에 대한 처리를 `Consumer` 구현 객체로 처리할 수 있는 `subscribe()` 는 아래와 같다.  
 
+아래는 `Mono` 의 `subscribe(Consumer<? super T> consumer)`  
 
 ![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-subscribe-consumer.svg)
+
+아래는 `Flux` 의 `subscribe(Consumer<? super T> consumer)`  
 
 ![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-subscribe-consumer.svg)
 
@@ -486,7 +492,11 @@ public void flux_subscribe_consumer() {
 
 마지막으로 시퀀스에서 발생하는 예외 처리에 대한 `Consumer` 까지 인자값으로 받는 `subscribe()` 는 아래와 같다.  
 
+아래는 `Mono` 의 `subscribe(Consumer<? super T> consumer, Consumer<? super Throwable> errorConsumer)`  
+
 ![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-subscribe-consumer-error.svg)
+
+아래는 `Flux` 의 `subscribe(Consumer<? super T> consumer, Consumer<? super Throwable> errorConsumer)`
 
 ![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-subscribe-consumer-error.svg)
 
