@@ -30,10 +30,7 @@ use_math: true
 - `Cold Sequence` : 실제 구독(`Subscribe`) 전까지 시퀀스는 아무 동작을 수행하지 않고, 구독이 이뤄질 때 그때마다 시퀀스의 데이터생성 및 동작이 수행된다. 
   - 시퀀스가 매번 구독 때마다 가장 최신 혹은 초기화 과정까지 필요하다면 `Cold Sequence` 방식으로 생성하는 것이 좋다. 
 
->어떤 글에서는 `Cold Publisher`, `Hot Publisher` 라고 불리기도 한다. 
-
-`Reactive Streams` 의 특징으로 알고 있는 `Mono`, `Flux` 시퀀스를 구독하기 전까지 등록된 콜백의 수행이 되지 않는다는 
-우리가 흔히 알고 있는 `Reactive Streams` 의 동작방식은 `Cold Sequence`(?)
+>어떤 글에서는 `Cold Publisher`, `Hot Publisher` 라고 불리기도 한다.
 
 테스트는 각 시퀀스에서 아래 메소드를 사용해 아이템을 생성한다고 가정하고 진행한다. 
 아래 메소드는 인자값으로 로그에 출력할 문자열을 받고 리턴 값으로는 메소드가 호출된 밀리초를 리턴한다. 
