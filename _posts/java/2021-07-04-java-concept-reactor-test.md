@@ -1,21 +1,29 @@
 --- 
-layout: single classes: wide title: "[Java 개념] Reactor Testing"
+layout: single
+classes: wide
+title: "[Java 개념] Reactor Testing"
 header:
-overlay_image: /img/java-bg.jpg excerpt: ''
+  overlay_image: /img/java-bg.jpg 
+excerpt: 'Reactor 의 시퀀스를 테스트할 수 있는 reactor-test 로 검증하는 방법을 알아보자'
 author: "window_for_sun"
-header-style: text categories :
-
-- Java tags:
-- Concept
-- Java
-- Reactor
-- StepVerifier
-- Testing toc: true use_math: true
+header-style: text
+categories :
+  - Java
+tags:
+  - Concept
+  - Java
+  - Reactor
+  - StepVerifier
+  - Testing
+  - TestPublisher
+  - PublisherProbe
+  - reactor-test
+toc: true 
+use_math: true
 
 ---  
 
 ## Reactor Testing
-
 `Reactor` 에서 제공하는 다양한 연산자를 사용해서 시퀀스를 구성하고, 그 시퀀스가 체인을 바탕으로 여러 작업을 수행된다면 그에 따른 테스트가 필요하다.
 
 실제로 테스트를 수행할 수 있는 방법은 시퀀스가 이벤트에 따라 실제 동작이 잘 이뤄지는지 실제로 구독해 보는 것이다. 간단한 방법으로 아래 처럼 `block()` 메소드를 사용해서 시퀀스에서 실제로 생산한 아이템을
@@ -88,13 +96,13 @@ public void flux_stepVerifier(){
 
 	// then
 	StepVerifier
-	.create(source)
-	.expectNext("first")
-	.expectNextMatches(s->s.startsWith("sec"))
-	.expectComplete()
-	.verify()
+			.create(source)
+			.expectNext("first")
+			.expectNextMatches(s->s.startsWith("sec"))
+			.expectComplete()
+			.verify()
 	;
-	}
+}
 ```  
 
 1. `create()` 메소드로 테스트를 수행할 시퀀스를 인자로 전달한다.
@@ -126,12 +134,12 @@ public void flux_stepVerifier_count(){
 
 	// then
 	StepVerifier
-	.create(source)
-	.expectNextCount(2)
-	.expectComplete()
-	.verify()
+			.create(source)
+			.expectNextCount(2)
+			.expectComplete()
+			.verify()
 	;
-	}
+}
 
 @Test
 public void flux_stepVerifier_log(){
@@ -140,14 +148,14 @@ public void flux_stepVerifier_log(){
 
 	// then
 	StepVerifier
-	.create(source)
-	.expectNextCount(1)
-	.expectNext("second")
-	.expectComplete()
-	.log()
-	.verify()
+			.create(source)
+			.expectNextCount(1)
+			.expectNext("second")
+			.expectComplete()
+			.log()
+			.verify()
 	;
-	}
+}
 
 /*
 [main] DEBUG reactor.test.StepVerifier - Scenario:
@@ -158,34 +166,34 @@ public void flux_stepVerifier_log(){
  */
 
 @Test
-public void flux_stepVerifier_consume(){
+public void flux_stepVerifier_consume() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
-	.create(source)
-	.consumeNextWith(s->assertThat(s,is("first")))
-	.expectNext("second")
-	.verifyComplete();
-	}
+			.create(source)
+			.consumeNextWith(s -> assertThat(s, is("first")))
+			.expectNext("second")
+			.verifyComplete();
+}
 
 @Test
-public void flux_stepVerifier_then(){
+public void flux_stepVerifier_then() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
-	.create(source)
-	.then(()->log.info("before first"))
-	.expectNext("first")
-	.then(()->log.info("after first"))
-	.then(()->log.info("before second"))
-	.expectNext("second")
-	.then(()->log.info("after second"))
-	.verifyComplete();
-	}
+			.create(source)
+			.then(() -> log.info("before first"))
+			.expectNext("first")
+			.then(() -> log.info("after first"))
+			.then(() -> log.info("before second"))
+			.expectNext("second")
+			.then(() -> log.info("after second"))
+			.verifyComplete();
+}
 
 /*
 [main] INFO com.windowforsun.reactor.testing.StepVerifierTest - before first
@@ -206,56 +214,56 @@ public static class MyException extends Exception {
 	}
 }
 
-	@Test
-	public void flux_error_expectErrorMatches() {
-		// given
-		Flux<String> source = Flux
-			.just("first", "second")
-			.concatWith(Mono.error(new MyException("flux error")));
+@Test
+public void flux_error_expectErrorMatches() {
+	// given
+	Flux<String> source = Flux
+		.just("first", "second")
+		.concatWith(Mono.error(new MyException("flux error")));
 
-		// then
-		StepVerifier
-			.create(source)
-			.expectNextCount(2)
-			.expectErrorMatches(throwable ->
-				throwable instanceof MyException
-					&& throwable.getMessage().equals("flux error"))
-			.verify()
-		;
-	}
+	// then
+	StepVerifier
+		.create(source)
+		.expectNextCount(2)
+		.expectErrorMatches(throwable ->
+			throwable instanceof MyException
+				&& throwable.getMessage().equals("flux error"))
+		.verify()
+	;
+}
 
-	@Test
-	public void flux_error_expectErrorSatisfies() {
-		// given
-		Flux<String> source = Flux
-			.just("first", "second")
-			.concatWith(Mono.error(new MyException("flux error")));
+@Test
+public void flux_error_expectErrorSatisfies() {
+	// given
+	Flux<String> source = Flux
+		.just("first", "second")
+		.concatWith(Mono.error(new MyException("flux error")));
 
-		// then
-		StepVerifier
-			.create(source)
-			.expectNextCount(2)
-			.expectErrorSatisfies(throwable ->
-				assertThat(throwable, instanceOf(MyException.class)))
-			.verify()
-		;
-	}
+	// then
+	StepVerifier
+		.create(source)
+		.expectNextCount(2)
+		.expectErrorSatisfies(throwable ->
+			assertThat(throwable, instanceOf(MyException.class)))
+		.verify()
+	;
+}
 
-	@Test
-	public void flux_error_expectErrorMessage() {
-		// given
-		Flux<String> source = Flux
-			.just("first", "second")
-			.concatWith(Mono.error(new MyException("flux error")));
+@Test
+public void flux_error_expectErrorMessage() {
+	// given
+	Flux<String> source = Flux
+		.just("first", "second")
+		.concatWith(Mono.error(new MyException("flux error")));
 
-		// then
-		StepVerifier
-			.create(source)
-			.expectNextCount(2)
-			.expectErrorMessage("flux error")
-			.verify()
-		;
-	}
+	// then
+	StepVerifier
+		.create(source)
+		.expectNextCount(2)
+		.expectErrorMessage("flux error")
+		.verify()
+	;
+}
 ```  
 
 ### 시간기반 테스트
@@ -292,22 +300,22 @@ StepVerifier
 
 ```java
 @Test
-public void flux_longtime_virtualtime(){
-	Duration actual=StepVerifier
-	.withVirtualTime(()->Flux
-	.just("first","second","third")
-	.delayElements(Duration.ofDays(1)))
-	.expectSubscription()
-	.expectNoEvent(Duration.ofDays(1))
-	.expectNext("first")
-	.expectNoEvent(Duration.ofDays(1))
-	.expectNext("second")
-	.thenAwait(Duration.ofDays(1))
-	.expectNext("third")
-	.verifyComplete();
+public void flux_longtime_virtualtime() {
+	Duration actual = StepVerifier
+			.withVirtualTime(() -> Flux
+					.just("first", "second", "third")
+					.delayElements(Duration.ofDays(1)))
+			.expectSubscription()
+			.expectNoEvent(Duration.ofDays(1))
+			.expectNext("first")
+			.expectNoEvent(Duration.ofDays(1))
+			.expectNext("second")
+			.thenAwait(Duration.ofDays(1))
+			.expectNext("third")
+			.verifyComplete();
 
-	assertThat(actual,lessThanOrEqualTo(Duration.ofSeconds(1)));
-	}
+	assertThat(actual, lessThanOrEqualTo(Duration.ofSeconds(1)));
+}
 ```
 
 위 테스트 코드에서 시퀀스는 하루에 한번씩 `first`, `second`, `third` 문자열을 생산한다. 실제 구독해서 테스트를 수행한다면 3일이라는 시간이 걸려야 검증을 완료할 수 있다.
@@ -318,20 +326,21 @@ public void flux_longtime_virtualtime(){
 
 ```java
 @Test
-public void flux_longtime_realtime(){
-	Flux flux=Flux.just("first","second").delayElements(Duration.ofSeconds(2));
+public void flux_longtime_realtime() {
+	// given
+	Flux flux = Flux.just("first", "second").delayElements(Duration.ofSeconds(2));
 
-	Duration actual=StepVerifier
-	.withVirtualTime(()->flux)
-	.expectSubscription()
-	.expectNoEvent(Duration.ofSeconds(2))
-	.expectNext("first")
-	.thenAwait(Duration.ofSeconds(2))
-	.expectNext("second")
-	.verifyComplete();
+	Duration actual = StepVerifier
+			.withVirtualTime(() -> flux)
+			.expectSubscription()
+			.expectNoEvent(Duration.ofSeconds(2))
+			.expectNext("first")
+			.thenAwait(Duration.ofSeconds(2))
+			.expectNext("second")
+			.verifyComplete();
 
-	assertThat(actual,greaterThanOrEqualTo(Duration.ofSeconds(4)));
-	}
+	assertThat(actual, greaterThanOrEqualTo(Duration.ofSeconds(4)));
+}
 ```  
 
 위 테스트 코드는 시퀀스 초기화가 `withVirtualTime()` 메소드 람다식 외부에서 수행 되고 객체만 내부에서 리턴하고 있다. 시퀀스는 하루마다 아이템을 생성하는게 아니라, 2초마다 아이템을 생성하기
@@ -345,24 +354,24 @@ public void flux_longtime_realtime(){
 
 ```java
 @Test
-public void flux_expectNoEvent_too_long(){
-	Throwable actual=assertThrows(AssertionError.class,
-	()->StepVerifier
-	.withVirtualTime(()->Flux
-	.just("first")
-	.delayElements(Duration.ofDays(1))
-	)
-	.expectSubscription()
-	.expectNoEvent(Duration.ofDays(2))
-	.expectNext("first")
-	.verifyComplete()
+public void flux_expectNoEvent_too_long() {
+	Throwable actual = assertThrows(AssertionError.class,
+			() -> StepVerifier
+					.withVirtualTime(() -> Flux
+							.just("first")
+							.delayElements(Duration.ofDays(1))
+					)
+					.expectSubscription()
+					.expectNoEvent(Duration.ofDays(2))
+					.expectNext("first")
+					.verifyComplete()
 	);
 
-	assertThat(actual.getMessage(),allOf(
-	containsString("expected no event: onComplete()"),
-	containsString("expected no event: onNext(first)")
+	assertThat(actual.getMessage(), allOf(
+			containsString("expected no event: onComplete()"),
+			containsString("expected no event: onNext(first)")
 	));
-	}
+}
 ```  
 
 `thenAwait(Duration)` 메소드는 테스트 검증 수행만 주어진 시간만큼 딜레이 시키는 것이기 때문에 아래와 같은 경우가 있다.
@@ -372,19 +381,19 @@ public void flux_expectNoEvent_too_long(){
 
 ```java
 @Test
-public void flux_thenAwait_too_long(){
-	Duration actual=StepVerifier
-	.withVirtualTime(()->Flux
-	.just("first")
-	.delayElements(Duration.ofDays(1))
-	)
-	.expectSubscription()
-	.thenAwait(Duration.ofDays(2))
-	.expectNext("first")
-	.verifyComplete();
+public void flux_thenAwait_too_long() {
+	Duration actual = StepVerifier
+			.withVirtualTime(() -> Flux
+					.just("first")
+					.delayElements(Duration.ofDays(1))
+			)
+			.expectSubscription()
+			.thenAwait(Duration.ofDays(2))
+			.expectNext("first")
+			.verifyComplete();
 
-	assertThat(actual,lessThanOrEqualTo(Duration.ofSeconds(1)));
-	}
+	assertThat(actual, lessThanOrEqualTo(Duration.ofSeconds(1)));
+}
 ```  
 
 ### 시퀀스 검증 이후 검증 수행
@@ -395,32 +404,32 @@ public void flux_thenAwait_too_long(){
 
 ```java
 @Test
-public void flux_verifyThenAssertThat(){
+public void flux_verifyThenAssertThat() {
 	// given
-	Flux<String> source=Flux.create(fluxSink->{
-	fluxSink.next("first").next("second");
-	fluxSink.complete();
+	Flux<String> source = Flux.create(fluxSink -> {
+		fluxSink.next("first").next("second");
+		fluxSink.complete();
 
-	try{
-	Thread.sleep(100L);
-	}catch(Exception e){
-	e.printStackTrace();
-	}
+		try {
+			Thread.sleep(100L);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 
-	fluxSink.next("third");
+		fluxSink.next("third");
 	});
 
 	StepVerifier
-	.create(source)
-	.expectNext("first")
-	.expectNext("second")
-	.expectComplete()
-	.verifyThenAssertThat()
-	.hasDropped("third")
-	.tookMoreThan(Duration.ofMillis(100))
-	.tookLessThan(Duration.ofMillis(150))
+			.create(source)
+			.expectNext("first")
+			.expectNext("second")
+			.expectComplete()
+			.verifyThenAssertThat()
+			.hasDropped("third")
+			.tookMoreThan(Duration.ofMillis(100))
+			.tookLessThan(Duration.ofMillis(150))
 	;
-	}
+}
 ```  
 
 위 테스트는 `Flux.create()` 메소드를 사용해서 `first`, `second` 를 생산하고 `onComplete` 시그널이 수행된 후,
@@ -447,7 +456,7 @@ public static Flux<String> myUpperCase(Flux<String> source){
 
 @Test
 public void flux_testPublisher() {
-	// given
+    // given
 	TestPublisher<String> testPublisher = TestPublisher.create();
 	Flux<String> source = testPublisher.flux();
 
@@ -480,6 +489,7 @@ public void flux_testPublisher() {
 ```java
 @Test
 public void flux_testPublisher_allow_null() {
+    // given
 	TestPublisher<String> testPublisher = TestPublisher
 			.createNoncompliant(TestPublisher.Violation.ALLOW_NULL);
 	Flux<String> source = testPublisher.flux();
@@ -498,6 +508,7 @@ public void flux_testPublisher_allow_null() {
 
 @Test
 public void flux_testPublisher_cleanup_on_terminate() {
+    // given
 	TestPublisher<String> testPublisher = TestPublisher
 			.createNoncompliant(TestPublisher.Violation.CLEANUP_ON_TERMINATE);
 	Flux<String> source = testPublisher.flux();
@@ -524,10 +535,116 @@ public void flux_testPublisher_cleanup_on_terminate() {
 
 
 ### PublisherProbe
-.... 진행하기 ...
+시퀀스가 복잡한 체인으로 구성돼 있는 상태라면 조건에 따라 서로 다른 하위 시퀀스로 분기되는 상황이 있을 수 있다. 
+간단한 예시로 아래와 같이 `source` 가 비어있는 경우 `swithIfEmpty()` 를 사용해서 `Fallback` 을 수행하는 경우를 가정해 본다.  
+
+```java
+public Flux<String> doFallback(Flux<String> source, Publisher<String> fallback) {
+	return source
+			.flatMap(s -> Flux.just(s.toUpperCase()))
+			.switchIfEmpty(fallback);
+}
+
+@Test
+public void doFallback_notEmpty() {
+    // given
+	Flux<String> source = Flux.just("first", "second", "third");
+	Mono<String> fallback = Mono.just("empty");
+
+	StepVerifier
+			.create(doFallback(source, fallback))
+			.expectNext("FIRST", "SECOND", "THIRD")
+			.verifyComplete();
+}
+
+@Test
+public void doFallback_empty() {
+    // given
+	Flux<String> source = Flux.empty();
+	Mono<String> fallback = Mono.just("empty");
+
+	StepVerifier
+			.create(doFallback(source, fallback))
+			.expectNext("empty")
+			.verifyComplete();
+}
+```  
+
+위 테스트 처럼 시퀀스가 조건에 따라 서로다른 하위 시퀀스로 구성될 때, 
+시퀀스에 결과값이 존재하는 경우 모든 경우에 따라 하위 시퀀스들이 정상적으로 동작하는지는 결과값을 바탕으로 검증을 수행할 수 있다.  
+
+하지만 아래와 같이 조건에 따라 하위 시퀀스로 분기되지만 시퀀스에 결과 값이 존재하지 않는 경우를 생각해보자. 
+
+```java
+
+public Mono<Void> doFallbackVoid(Flux<String> source, Publisher<String> fallback) {
+	return source
+			.flatMap(s -> Flux.just(s.toUpperCase()))
+			.switchIfEmpty(fallback).then();
+}
+```  
+
+`source` 시퀀스가 비었는지 아닌지에 따라 하위 시퀀스가 분기되는 상태이다. 
+코드에서는 정확하게 표현되지 못했지만, 
+이렇게 시퀀스에 결과가 존재하지 않는 경우는 결과를 조건에 따란 서로 다른 외부 저장소에 저장한다는 등의 상황이 있을 수 있다. 
+위와 같은 상태에서는 외부 저장소를 통해서만 실제 하위 시퀀스가 정상적으로 수행되었는지 검증을 수행할 수 있다.  
+
+이때 `PublisherProbe` 로 시퀀스를 만들어 전달하게 되면 해당 시퀀스가 어떤 이벤트를 받았고 처리 됐는지 검증을 수행 할 수 있다. 
+`PublisherProbe` 를 사용해서 조건에 따라 하위 시퀀스를 분기해 처리하는 `doFallbackVoid()` 메소드를 테스트하면 아래와 같다.  
+
+```java
+@Test
+public void doFallbackVoid_notEmpty() {
+	// given
+	Flux<String> source = Flux.just("first", "second", "third");
+	PublisherProbe<String> probeSource = PublisherProbe.of(source);
+	PublisherProbe<String> probeFallback = PublisherProbe.of(Mono.just("empty"));
+
+	// when
+	StepVerifier
+			.create(doFallbackVoid(probeSource.flux(), probeFallback.mono()))
+			.verifyComplete();
+
+	// then
+	probeSource.assertWasSubscribed();
+	probeSource.assertWasRequested();
+	probeSource.assertWasNotCancelled();
+	probeFallback.assertWasNotSubscribed();
+	probeFallback.assertWasNotRequested();
+	probeSource.assertWasNotCancelled();
+}
+
+@Test
+public void doFallbackVoid_empty() {
+	// given
+	Flux<String> source = Flux.empty();
+	PublisherProbe<String> probeSource = PublisherProbe.of(source);
+	PublisherProbe<String> probeFallback = PublisherProbe.of(Mono.just("empty"));
+
+	// when
+	StepVerifier
+			.create(doFallbackVoid(probeSource.flux(), probeFallback.mono()))
+			.verifyComplete();
+
+	// then
+	probeSource.assertWasSubscribed();
+	probeSource.assertWasRequested();
+	probeSource.assertWasNotCancelled();
+	probeFallback.assertWasSubscribed();
+	probeFallback.assertWasRequested();
+	probeSource.assertWasNotCancelled();
+}
+```  
+
+테스트 코드를 보면 `PublisherProbe` 로 `doFallbackVoid()` 메소드에 전달할 시퀀스를 생성했다. 
+그리고 `source` 가 비어있지 않은 경우의 테스트를 보면 `probeSource` 는 `subscription`, `request` 등의 시그널이 수행되고, 
+`cancel` 은 이뤄지지 않았다. `probeFallback` 는 `subscription`, `request`, `cancel` 시그널이 모두 이뤄지지 않은 것을 확인 할 수 있다.  
+
+다음으로 `source` 가 비어있는 경우를 보면 `probeSource` 는 비어있지 않은 경우와 동일하게 `subscription`, `reuquest` 시그널만 이뤄졌지만, 
+`probeFallback` 은 `source` 가 비었기 때문에 `subscription`, `request` 시그널이 모두 수행된 것을 확인 할 수 있다.
+
 
 ### 테스트 실패한 스텝 찾기
-
 `StepVierfier` 를 사용해서 복잡한 시퀀스를 검증하는 과정에서 실패를 하게 될때, 검증 실패가 정확하게 어느 스텝에서 발생했는지 찾기 어려울 수 있다. 이러한 상황에서 `as(desc)`
 를 `expect*()` 메소드 뒤에 사용해서 검증문에 대한 설명을 추가할 수 있다. 해당 검증문이 실패하면 `as()` 메소드에 작성한 설명을 포함한 에러 메시지와 함께 출력된다. 마지막 종료
 검증문과 `verify()` 에는 사용할 수 없다.
@@ -540,19 +657,18 @@ public void flux_test_failures_as(){
 
 	// then
 	StepVerifier
-	.create(source)
-	.expectNext("first")
-	.as("first is not first")
-	.expectNext("third")
-	.as("second is not third")
-	.verifyComplete();
-	}
+			.create(source)
+			.expectNext("first")
+			.as("first is not first")
+			.expectNext("third")
+			.as("second is not third")
+			.verifyComplete();
+}
 ```  
 
 ---
-
 ## Reference
-
 [6. Testing](https://projectreactor.io/docs/core/release/reference/#testing)  
 [Testing Reactive Streams Using StepVerifier and TestPublisher](https://www.baeldung.com/reactive-streams-step-verifier-test-publisher)  
+[reactor-test](https://projectreactor.io/docs/test/release/api/index.html)  
 
