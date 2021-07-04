@@ -665,6 +665,13 @@ public void flux_test_failures_as(){
 }
 ```  
 
+```
+java.lang.AssertionError: expectation "second is not third" failed (expected value: third; actual value: second)
+```  
+
+위 테스트 코드는 시퀀스가 생성하는 2번째 아이템이 `third` 가 아니기 때문에 `expectNext("third")` 부분에서 실패하게 된다. 
+테스트가 실패하면 위처럼 검증문 아래 작성한 `second is not third` 가 출력되는 것을 확인 할 수 있다.  
+
 ---
 ## Reference
 [6. Testing](https://projectreactor.io/docs/core/release/reference/#testing)  
