@@ -33,15 +33,15 @@ use_math: true
 @Test
 public void mono_testing_block(){
 	// given
-	Mono<String> mono=Mono.just("item");
+	Mono<String> mono = Mono.just("item");
 
 	// when
-	String actual=mono.block();
+	String actual = mono.block();
 
 	// then
 	assertThat(actual,notNullValue());
 	assertThat(actual,is("item"));
-	}
+}
 ```  
 
 하지만 `block()` 을 사용한 테스트는 단순히 시퀀스가 종료되고 생산된 아이템에 대해서만 테스트를 할 수 있다. 그리고 `block()` 메소드 뿐만 아니라 `Mono`, `Flux` 에서 제공하는 다앙흔
@@ -54,7 +54,6 @@ public void mono_testing_block(){
 - `Maven`
 
 ```xml
-
 <dependency>
 	<groupId>io.projectreactor</groupId>
 	<artifactId>reactor-test</artifactId>
@@ -90,9 +89,9 @@ dependencies {
 
 ```java
 @Test
-public void flux_stepVerifier(){
+public void flux_stepVerifier() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first","second");
 
 	// then
 	StepVerifier
