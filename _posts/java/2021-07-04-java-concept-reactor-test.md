@@ -91,13 +91,13 @@ dependencies {
 @Test
 public void flux_stepVerifier() {
 	// given
-	Flux<String> source = Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
 			.create(source)
 			.expectNext("first")
-			.expectNextMatches(s->s.startsWith("sec"))
+			.expectNextMatches(s -> s.startsWith("sec"))
 			.expectComplete()
 			.verify()
 	;
@@ -127,9 +127,9 @@ public void flux_stepVerifier() {
 
 ```java
 @Test
-public void flux_stepVerifier_count(){
+public void flux_stepVerifier_count() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
@@ -141,9 +141,9 @@ public void flux_stepVerifier_count(){
 }
 
 @Test
-public void flux_stepVerifier_log(){
+public void flux_stepVerifier_log() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
