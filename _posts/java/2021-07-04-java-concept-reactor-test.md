@@ -674,6 +674,39 @@ java.lang.AssertionError: expectation "second is not third" failed (expected val
 위 테스트 코드는 시퀀스가 생성하는 2번째 아이템이 `third` 가 아니기 때문에 `expectNext("third")` 부분에서 실패하게 된다. 
 테스트가 실패하면 위처럼 검증문 아래 작성한 `second is not third` 가 출력되는 것을 확인 할 수 있다.  
 
+
+### recordedWith()
+`recordWith()` 메소드를 사용하면 외부에 정의해둔 `Collection` 객체에 시퀀스에서 생산한 아이템을 
+담아두고, `expectedRecordedMatches()`, `consumeRecordedWith()` 메소드를 사용해서 검증을 수행하 수 있다.  
+
+```java
+@Test
+public void flux_recordWith() {
+	// given
+	Flux<String> source = Flux.just("1", "2", "3", "first", "second", "third");
+	List<String> recordNumberItems = new ArrayList<>();
+	List<String> recordStringItems = new ArrayList<>();
+
+	StepVerifier
+			.create(source)
+			.recordWith(() -> recordNumberItems)
+			.recordWith(() -> recordNumberItems)
+			.recordWith(() -> recordNumberItems)
+			.consumeRecordedWith(actual -> {
+				assertThat(actual, hasSize(3));
+				assertThat(actual, contains("1", "2", "3"));
+			})
+			.recordWith(() -> recordStringItems)
+			.recordWith(() -> recordStringItems)
+			.recordWith(() -> recordStringItems)
+			.expectRecordedMatches(actual ->
+					actual.size() == 3
+							&& actual.containsAll(Arrays.asList("first", "second", "third"))
+			)
+			.verifyComplete();
+}
+```
+
 ---
 ## Reference
 [6. Testing](https://projectreactor.io/docs/core/release/reference/#testing)  
