@@ -675,9 +675,9 @@ java.lang.AssertionError: expectation "second is not third" failed (expected val
 테스트가 실패하면 위처럼 검증문 아래 작성한 `second is not third` 가 출력되는 것을 확인 할 수 있다.  
 
 
-### recordedWith()
+### recordWith()
 `recordWith()` 메소드를 사용하면 외부에 정의해둔 `Collection` 객체에 시퀀스에서 생산한 아이템을 
-담아두고, `expectedRecordedMatches()`, `consumeRecordedWith()` 메소드를 사용해서 검증을 수행하 수 있다.  
+담아두고, `expectedRecordedMatches()`, `consumeRecordedWith()` 메소드를 사용해서 검증을 수행할 수 있다.  
 
 ```java
 @Test
