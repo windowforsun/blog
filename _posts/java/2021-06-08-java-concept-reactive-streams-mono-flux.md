@@ -35,7 +35,7 @@ use_math: true
 스트림이라는 표현보다는 시퀀스(`Sequence`)라는 용어를 사용한다.  
 
 [Reactive Streams](({{site.baseurl}}{% link _posts/java/2021-04-18-java-concept-reactive-before-and-after.md %}))
-에도 관련 설명이 있지만, 어떠 이유로 `Mono`, `Flux` 를 사용해서 `Reactive Streams` 프로그래밍을 해야하는 지 의문이 생길 수 있다.
+에도 관련 설명이 있지만, 어떤 이유로 `Mono`, `Flux` 를 사용해서 `Reactive Streams` 프로그래밍을 해야하는 지 의문이 생길 수 있다.
 그 부분에 대한 답은 아래 링크에서 설명하고 있는 비동기 프로그래밍 방식을 살펴보면 알 수 있다.  
 
 - [Java 비동기 프로그래밍](({{site.baseurl}}{% link _posts/java/2021-05-02-java-concept-asynchronous-programming.md %}))
