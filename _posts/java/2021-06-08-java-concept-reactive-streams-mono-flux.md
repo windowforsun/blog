@@ -39,8 +39,8 @@ use_math: true
 그 부분에 대한 답은 아래 링크에서 설명하고 있는 비동기 프로그래밍 방식을 살펴보면 알 수 있다.  
 
 - [Java 비동기 프로그래밍](({{site.baseurl}}{% link _posts/java/2021-05-02-java-concept-asynchronous-programming.md %}))
-- [Spring 비동기 프로그래밍](({{site.baseurl}}{% link _posts/java/2021-05-05-spring-concept-asynchronous-programming.md %}))
-- [Spring Web 비동기 프로그래밍](({{site.baseurl}}{% link _posts/java/2021-05-09-spring-concept-asynchronous-web.md %}))
+- [Spring 비동기 프로그래밍](({{site.baseurl}}{% link _posts/spring/2021-05-05-spring-concept-asynchronous-programming.md %}))
+- [Spring Web 비동기 프로그래밍](({{site.baseurl}}{% link _posts/spring/2021-05-09-spring-concept-asynchronous-web.md %}))
 
 지금까지 `Java` 진영에서 비동기 프로그래밍을 위해서는 복잡한 코드의 구성이 필요했다. 
 그리고 몇가지 개선점으로 `Callback` 방식도 도입됐지만, 이는 `Callback Hell` 이 발생될 수 있는 구조였다. 
