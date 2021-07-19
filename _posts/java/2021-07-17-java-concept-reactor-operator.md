@@ -23,7 +23,9 @@ use_math: true
 에서 설명한것 처럼 `Operator` 는 `Reactive Streams` 흐름에 어떠한 동작을 추가하는 것을 의미한다. 
 `Reactor` 에서는 아주 많은 `Operator` 제공을 해주기 때문에 이를 활용해서, 
 필터링, 예외처리, 데이터 조작 등 다양한 동작을 수행할 수 있다. 
-`Operator` 의 종류를 역할별로 나누면 아래와 같다. 
+`Operator` 를 역할에 따라 잘 활용하면 `Reactive Streams` 의 시퀀스 내에서 
+애플리케이션에서 수행하고자 하는 대부분의 동작을 구성할 수 있을 것이다. 
+`Operator` 의 종류를 역할별로 나누면 아래와 같다.  
 - 생성 `Creating a New Sequence`
 - 변경 `Transforming an Existing Sequence`
 - 엿보기 `Peeking into a Sequence`
@@ -40,7 +42,9 @@ use_math: true
 
 이후 설명에서는 전체 `Operator` 에 대해서 모두 다루지는 못하고, 
 몇개에 대해서만 예제를 진행한다. 
-`Operator` 에 대해서 궁금한 점이 있다면 아래 링크에서 마블 다이어그램과 설명을 통해 보다 자세한 설명을 참고할 수 있다.  
+`Operator` 에 대해서 궁금한 점이 있다면 아래 링크에서 마블 다이어그램과 설명을 통해 보다 자세한 설명을 참고할 수 있다. 
+마블 다이어그램은 실제 메소드의 특징이나 전체적인 흐름을 구체적으로 한번에 확인할 수 있어서, 효율적으로 메소드에 대해 이해할 수 있다.  
+
 - [Mono](https://projectreactor.io/docs/core/3.4.6/api/index.html?reactor/core/publisher/Mono.html)
 - [Flux](https://projectreactor.io/docs/core/3.4.6/api/index.html?reactor/core/publisher/Flux.html)
 
@@ -244,7 +248,7 @@ public void flux_create_error() {
 
 구분|메소드|타입|설명
 ---|---|---|---
-기존 데이터 변형|map|Mono, Flux|시퀀스내 아이템 하나씩 변환
+기존 데이터 변형|map|Mono,Flux|시퀀스내 아이템 하나씩 변환
  |cast|Mono,Flux|시퀀스 아이템 하나씩 타입 변환(에러)
  |ofType|Mono,Flux|시퀀스 아이템 하나씩 타입 변환(스킵)
  |index|Mono,Flux|시퀀스내 아이템 하나씩 색인 추가
@@ -892,7 +896,195 @@ public void flux_expandDeep() {
 
 ### Peeking into a Sequence(시퀀스 엿보기)
 
+구분|메소드|타입|설명
+---|---|---|---
+최종 시퀀스에 영향 없음|doOnNext|Mono,Flux|시퀀스 아이템 방출 시그널 직전에 수행 할 동작
+ |doOnComplete|Flux|시퀀스 완료 시그널 직전에 수행 할 동작
+ |doOnSuccess|Mono|시퀀스 완료 시그널 직전에 수행 할 동작
+ |doOnError|Mono,Flux|시퀀스 에러 시그널 직전에 수행 할 동작
+ |doOnCancel|Mono,Flux|시퀀스 취소 시그널 직전에 수행 할 동작
+ |doFirst|Mono,Flux|시퀀스 구독 요청 시점에 수행할 동작
+ |doOnSubscribe|Mono,Flux|시퀀스 구독 시그널 전에 수행할 동작
+ |doOnRequest|Mono,Flux|시퀀스 방출 요청 시그널 전에 수행할 동작
+ |doOnTerminate|Mono,Flux|시퀀스 종료 시그널 전에 수행할 동작(완료, 에러 모두)
+ |doAfterTerminate|Mono,Flux|시퀀스 종료 시그널 이후에 수행할 동작(완료, 에러 모두)
+ |doOnEach|Mono,Flux|시퀀스에서 방출, 완료, 에러 시그널 전에 수행할 동작
+ |doFinally|Mono,Flux|시퀀스에서 완료, 에러, 취소 시그널 이후 수행할 동작
+ |materialize|Mono,Flux|시퀀스의 시그널이 아이템과 함께 방출
+ |dematerialize|Mono,Flux|`materialize` 동작의 역순으로 다시 시퀀스 아이템 방출
+ |log|Mono,Flux|시퀀스에서 수행되는 모든 시그널 및 동작에 대한 로그 출력
 
+#### log() 
+디버깅할때 굉장히 유용하게 사용될 수 있는 `log()` 의 테스트 코드 결과는 아래와 같다.  
+
+```java
+@Test
+public void flux_log() {
+	// given
+	Flux<String> source = Flux.just("first", "second", "third");
+
+	source.log().subscribe(s -> log.info("sub : {}", s));
+}
+```  
+
+```java
+[main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO reactor.Flux.Array.1 - | request(unbounded)
+[main] INFO reactor.Flux.Array.1 - | onNext(first)
+[main] INFO com.windowforsun.advanced.FluxTest - sub : first
+[main] INFO reactor.Flux.Array.1 - | onNext(second)
+[main] INFO com.windowforsun.advanced.FluxTest - sub : second
+[main] INFO reactor.Flux.Array.1 - | onNext(third)
+[main] INFO com.windowforsun.advanced.FluxTest - sub : third
+[main] INFO reactor.Flux.Array.1 - | onComplete()
+```  
+
+#### do*() 
+`do*()` 로 시작하는 `Listener` 성격을 갖는 메소드의 동작에 대한 예시는 아래와 같다. 
+실제로 각 메소드가 어느 시점에 등록되었는지에 따라 메소드 실행 순서는 차이가 있을 수 있다. 
+만약 `doOnEach()` 보다 `doOnNext()` 를 먼저 사용하면 `doOnNext()` 가 `doOnEach()` 보다 먼저 실행 되고, 
+그 반대라면 반대 순서대로 실행 될 것이다.  
+
+그리고 시퀀스에 구성은 돼있지만 메소드에 해당하는 시그널이 발생하지 않는다면 해당 메소드에 등록된 
+동작은 수행되지 않는다. 
+`doOnError()` 메소드를 시퀀스에 등록했다고 하더라도 실제 에러 시그널이 발생해야 메소드도 실행될 수 있다.  
+
+
+```java
+@Test
+public void flux_do_complete() {
+	// given
+	Flux<String> source = Flux.just("first", "second", "third");
+
+	source.log()
+			.doFirst(() -> log.info("doFirst"))
+			.doOnSubscribe(subscription -> log.info("doOnSubscribe"))
+			.doOnRequest(value -> log.info("doOnRequest : {}", value))
+			.doOnEach(stringSignal -> log.info("doOnEach : {}", stringSignal.get()))
+			.doOnNext(s -> log.info("doOnNext : {}", s))
+			.doOnComplete(() -> log.info("doOnComplete"))
+			.doOnTerminate(() -> log.info("doOnTerminate"))
+			.doAfterTerminate(() -> log.info("doOnAfterTerminate"))
+			.doFinally(signalType -> log.info("doFinally : {}", signalType.toString()))
+			.doOnError(throwable -> log.info("doOnError : {}", throwable.getMessage()))
+			.doOnCancel(() -> log.info("doOnCancel"))
+			.subscribe(s -> log.info("sub : {}", s), throwable -> log.info("error sub : {}", throwable.getMessage()));
+}
+
+/*
+[main] INFO com.windowforsun.advanced.FluxTest - doFirst
+[main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnSubscribe
+[main] INFO com.windowforsun.advanced.FluxTest - doOnRequest : 9223372036854775807
+[main] INFO reactor.Flux.Array.1 - | request(unbounded)
+[main] INFO reactor.Flux.Array.1 - | onNext(first)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : first
+[main] INFO com.windowforsun.advanced.FluxTest - doOnNext : first
+[main] INFO com.windowforsun.advanced.FluxTest - sub : first
+[main] INFO reactor.Flux.Array.1 - | onNext(second)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : second
+[main] INFO com.windowforsun.advanced.FluxTest - doOnNext : second
+[main] INFO com.windowforsun.advanced.FluxTest - sub : second
+[main] INFO reactor.Flux.Array.1 - | onNext(third)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : third
+[main] INFO com.windowforsun.advanced.FluxTest - doOnNext : third
+[main] INFO com.windowforsun.advanced.FluxTest - sub : third
+[main] INFO reactor.Flux.Array.1 - | onComplete()
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : null
+[main] INFO com.windowforsun.advanced.FluxTest - doOnComplete
+[main] INFO com.windowforsun.advanced.FluxTest - doOnTerminate
+[main] INFO com.windowforsun.advanced.FluxTest - doFinally : onComplete
+[main] INFO com.windowforsun.advanced.FluxTest - doOnAfterTerminate
+ */
+
+
+@Test
+public void flux_do_error() {
+	// given
+	Flux<String> source = Flux
+			.just("first")
+			.mergeWith(Mono.error(new Exception("my exception")))
+			.mergeWith(Mono.just("third"))
+			;
+
+	source.log()
+			.doFirst(() -> log.info("doFirst"))
+			.doOnSubscribe(subscription -> log.info("doOnSubscribe"))
+			.doOnRequest(value -> log.info("doOnRequest : {}", value))
+			.doOnEach(stringSignal -> log.info("doOnEach : {}", stringSignal.get()))
+			.doOnNext(s -> log.info("doOnNext : {}", s))
+			.doOnComplete(() -> log.info("doOnComplete"))
+			.doOnTerminate(() -> log.info("doOnTerminate"))
+			.doAfterTerminate(() -> log.info("doOnAfterTerminate"))
+			.doFinally(signalType -> log.info("doFinally : {}", signalType.toString()))
+			.doOnError(throwable -> log.info("doOnError : {}", throwable.getMessage()))
+			.doOnCancel(() -> log.info("doOnCancel"))
+			.subscribe(s -> log.info("sub : {}", s), throwable -> log.info("error sub : {}", throwable.getMessage()));
+}
+
+/*
+[main] INFO com.windowforsun.advanced.FluxTest - doFirst
+[main] INFO reactor.Flux.Merge.1 - onSubscribe(FluxFlatMap.FlatMapMain)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnSubscribe
+[main] INFO com.windowforsun.advanced.FluxTest - doOnRequest : 92233720368547758
+[main] INFO reactor.Flux.Merge.1 - request(unbounded)
+[main] INFO reactor.Flux.Merge.1 - onNext(first)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : first
+[main] INFO com.windowforsun.advanced.FluxTest - doOnNext : first
+[main] INFO com.windowforsun.advanced.FluxTest - sub : first
+[main] ERROR reactor.Flux.Merge.1 - onError(java.lang.Exception: my exception)
+[main] ERROR reactor.Flux.Merge.1 - 
+java.lang.Exception: my exception
+[main] INFO com.windowforsun.advanced.FluxTest - doOnEach : null
+[main] INFO com.windowforsun.advanced.FluxTest - doOnTerminate
+[main] INFO com.windowforsun.advanced.FluxTest - doOnError : my exception
+[main] INFO com.windowforsun.advanced.FluxTest - error sub : my exception
+[main] INFO com.windowforsun.advanced.FluxTest - doFinally : onError
+[main] INFO com.windowforsun.advanced.FluxTest - doOnAfterTerminate
+ */
+
+@Test
+public void flux_do_cancel() throws Exception{
+	// given
+	Flux<String> source = Flux.just("first", "second", "third").delayElements(Duration.ofMillis(100));
+
+	Disposable disposable = source.log()
+			.doFirst(() -> log.info("doFirst"))
+			.doOnSubscribe(subscription -> log.info("doOnSubscribe"))
+			.doOnRequest(value -> log.info("doOnRequest : {}", value))
+			.doOnEach(stringSignal -> log.info("doOnEach : {}", stringSignal.get()))
+			.doOnNext(s -> log.info("doOnNext : {}", s))
+			.doOnComplete(() -> log.info("doOnComplete"))
+			.doOnTerminate(() -> log.info("doOnTerminate"))
+			.doAfterTerminate(() -> log.info("doOnAfterTerminate"))
+			.doFinally(signalType -> log.info("doFinally : {}", signalType.toString()))
+			.doOnError(throwable -> log.info("doOnError : {}", throwable.getMessage()))
+			.doOnCancel(() -> log.info("doOnCancel"))
+			.subscribe(s -> log.info("sub : {}", s));
+
+	Thread.sleep(150);
+	disposable.dispose();
+}
+
+/*
+[main] INFO com.windowforsun.advanced.FluxTest - doFirst
+[main] INFO reactor.Flux.ConcatMap.1 - onSubscribe(FluxConcatMap.ConcatMapImmediate)
+[main] INFO com.windowforsun.advanced.FluxTest - doOnSubscribe
+[main] INFO com.windowforsun.advanced.FluxTest - doOnRequest : 9223372036854775807
+[main] INFO reactor.Flux.ConcatMap.1 - request(unbounded)
+[parallel-1] INFO reactor.Flux.ConcatMap.1 - onNext(first)
+[parallel-1] INFO com.windowforsun.advanced.FluxTest - doOnEach : first
+[parallel-1] INFO com.windowforsun.advanced.FluxTest - doOnNext : first
+[parallel-1] INFO com.windowforsun.advanced.FluxTest - sub : first
+[main] INFO com.windowforsun.advanced.FluxTest - doOnCancel
+[main] INFO reactor.Flux.ConcatMap.1 - cancel()
+[main] INFO com.windowforsun.advanced.FluxTest - doFinally : cancel
+ */
+```  
+
+
+
+### Filtering a Sequence(필터링)
 
 
 
