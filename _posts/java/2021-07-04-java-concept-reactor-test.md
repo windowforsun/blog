@@ -676,7 +676,7 @@ java.lang.AssertionError: expectation "second is not third" failed (expected val
 
 
 ### recordWith()
-`recordWith()` 메소드를 사용하면 외부에 정의해둔 `Collection` 객체에 시퀀스에서 생산한 아이템을 
+`recordWith()` 메소드를 사용하면 `Collection` 객체에 시퀀스에서 생산한 아이템을 
 담아두고, `expectedRecordedMatches()`, `consumeRecordedWith()` 메소드를 사용해서 검증을 수행할 수 있다.  
 
 ```java
@@ -705,11 +705,67 @@ public void flux_recordWith() {
 			)
 			.verifyComplete();
 }
-```
+```  
+
+### thenConsumeWhile
+`thenConsumeWhile()` 메소드를 사용하면 시퀀스에서 생산한 아이템 중 특정 조건에 만족하는 요소들만 골라 검증을 수행하거나(소비), 
+검증 절차를 따로 처리할 수 있다.  
+
+```java
+@Test
+public void flux_thenConsumeWhile() {
+	// given
+	Flux<Integer> source = Flux.range(1, 100);
+
+	StepVerifier
+			.create(source)
+			.thenConsumeWhile(integer -> integer < 95)
+			.expectNext(95, 96, 97, 98, 99, 100)
+			.verifyComplete();
+}
+
+@Test
+public void flux_thenConsumeWhile_Consume() {
+	// given
+	Flux<Integer> source = Flux.range(1, 100);
+
+	StepVerifier
+			.create(source)
+			.thenConsumeWhile(
+					integer -> integer < 95,
+					integer -> assertThat(integer, lessThan(95))
+			)
+			.expectNext(95, 96, 97, 98, 99, 100)
+			.verifyComplete();
+}
+
+@Test
+public void flux_thenConsumeWhile_recordWith() {
+	// given
+	Flux<Integer> source = Flux.range(1, 100);
+
+	StepVerifier
+			.create(source)
+			.recordWith(ArrayList::new)
+			.thenConsumeWhile(integer -> integer < (95 - 1))
+			.consumeRecordedWith(actual -> {
+				assertThat(actual, hasSize(94));
+				assertThat(actual, everyItem(lessThan(95)));
+			})
+			.recordWith(ArrayList::new)
+			.thenConsumeWhile(integer -> true)
+			.consumeRecordedWith(actual -> {
+				assertThat(actual, hasSize(6));
+				assertThat(actual, everyItem(greaterThanOrEqualTo(95)));
+			})
+			.verifyComplete();
+}
+```  
 
 ---
 ## Reference
 [6. Testing](https://projectreactor.io/docs/core/release/reference/#testing)  
 [Testing Reactive Streams Using StepVerifier and TestPublisher](https://www.baeldung.com/reactive-streams-step-verifier-test-publisher)  
 [reactor-test](https://projectreactor.io/docs/test/release/api/index.html)  
+[FluxDelaySequenceTest](https://github.com/reactor/reactor-core/blob/main/reactor-core/src/test/java/reactor/core/publisher/FluxDelaySequenceTest.java)  
 
