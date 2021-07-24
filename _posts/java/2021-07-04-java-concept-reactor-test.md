@@ -26,26 +26,28 @@ use_math: true
 ## Reactor Testing
 `Reactor` 에서 제공하는 다양한 연산자를 사용해서 시퀀스를 구성하고, 그 시퀀스가 체인을 바탕으로 여러 작업을 수행된다면 그에 따른 테스트가 필요하다.
 
-실제로 테스트를 수행할 수 있는 방법은 시퀀스가 이벤트에 따라 실제 동작이 잘 이뤄지는지 실제로 구독해 보는 것이다. 간단한 방법으로 아래 처럼 `block()` 메소드를 사용해서 시퀀스에서 실제로 생산한 아이템을
+테스트를 수행할 수 있는 방법은 시퀀스가 이벤트에 따라 실제 동작이 잘 이뤄지는지 구독해 보는 것이다. 
+간단한 방법으로 아래 처럼 `block()` 메소드를 사용해서 시퀀스에서 생산한 아이템을
 바탕으로 테스트를 진행할 수 있을 것이다.
 
 ```java
 @Test
 public void mono_testing_block(){
 	// given
-	Mono<String> mono=Mono.just("item");
+	Mono<String> mono = Mono.just("item");
 
 	// when
-	String actual=mono.block();
+	String actual = mono.block();
 
 	// then
 	assertThat(actual,notNullValue());
 	assertThat(actual,is("item"));
-	}
+}
 ```  
 
-하지만 `block()` 을 사용한 테스트는 단순히 시퀀스가 종료되고 생산된 아이템에 대해서만 테스트를 할 수 있다. 그리고 `block()` 메소드 뿐만 아니라 `Mono`, `Flux` 에서 제공하는 다앙흔
-구독관련 메소드를 사용해서 테스트를 수행하더라도, 테스트 코드가 오히려 더 복잡해 질 수 있고 다양한 제약 상황이 발생 할 수 있다.
+하지만 `block()` 을 사용한 테스트는 단순히 시퀀스가 종료되고 생산된 아이템에 대해서만 테스트를 할 수 있다. 
+그리고 `block()` 메소드 뿐만 아니라 `Mono`, `Flux` 에서 제공하는 다앙한
+구독관련 메소드를 사용해서 테스트를 수행하더라도, 테스트 코드가 오히려 더 복잡해 질 수 있고 많은 제약 상황이 발생 할 수 있다.
 
 이러한 이유로 `Reactor` 에서는 테스트에서 필요한 몇 가지 기능을 사용할 수
 있는 [reactor-test](https://github.com/reactor/reactor-core/tree/main/reactor-test)
@@ -54,7 +56,6 @@ public void mono_testing_block(){
 - `Maven`
 
 ```xml
-
 <dependency>
 	<groupId>io.projectreactor</groupId>
 	<artifactId>reactor-test</artifactId>
@@ -90,15 +91,15 @@ dependencies {
 
 ```java
 @Test
-public void flux_stepVerifier(){
+public void flux_stepVerifier() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
 			.create(source)
 			.expectNext("first")
-			.expectNextMatches(s->s.startsWith("sec"))
+			.expectNextMatches(s -> s.startsWith("sec"))
 			.expectComplete()
 			.verify()
 	;
@@ -128,9 +129,9 @@ public void flux_stepVerifier(){
 
 ```java
 @Test
-public void flux_stepVerifier_count(){
+public void flux_stepVerifier_count() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
@@ -142,9 +143,9 @@ public void flux_stepVerifier_count(){
 }
 
 @Test
-public void flux_stepVerifier_log(){
+public void flux_stepVerifier_log() {
 	// given
-	Flux<String> source=Flux.just("first","second");
+	Flux<String> source = Flux.just("first", "second");
 
 	// then
 	StepVerifier
@@ -665,6 +666,46 @@ public void flux_test_failures_as(){
 			.verifyComplete();
 }
 ```  
+
+```
+java.lang.AssertionError: expectation "second is not third" failed (expected value: third; actual value: second)
+```  
+
+위 테스트 코드는 시퀀스가 생성하는 2번째 아이템이 `third` 가 아니기 때문에 `expectNext("third")` 부분에서 실패하게 된다. 
+테스트가 실패하면 위처럼 검증문 아래 작성한 `second is not third` 가 출력되는 것을 확인 할 수 있다.  
+
+
+### recordWith()
+`recordWith()` 메소드를 사용하면 외부에 정의해둔 `Collection` 객체에 시퀀스에서 생산한 아이템을 
+담아두고, `expectedRecordedMatches()`, `consumeRecordedWith()` 메소드를 사용해서 검증을 수행할 수 있다.  
+
+```java
+@Test
+public void flux_recordWith() {
+	// given
+	Flux<String> source = Flux.just("1", "2", "3", "first", "second", "third");
+	List<String> recordNumberItems = new ArrayList<>();
+	List<String> recordStringItems = new ArrayList<>();
+
+	StepVerifier
+			.create(source)
+			.recordWith(() -> recordNumberItems)
+			.recordWith(() -> recordNumberItems)
+			.recordWith(() -> recordNumberItems)
+			.consumeRecordedWith(actual -> {
+				assertThat(actual, hasSize(3));
+				assertThat(actual, contains("1", "2", "3"));
+			})
+			.recordWith(() -> recordStringItems)
+			.recordWith(() -> recordStringItems)
+			.recordWith(() -> recordStringItems)
+			.expectRecordedMatches(actual ->
+					actual.size() == 3
+							&& actual.containsAll(Arrays.asList("first", "second", "third"))
+			)
+			.verifyComplete();
+}
+```
 
 ---
 ## Reference

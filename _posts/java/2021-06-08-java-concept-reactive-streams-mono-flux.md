@@ -34,7 +34,23 @@ use_math: true
 그리고 스트림이라는 용어는 `Java 8` 의 스트림과 혼동의 여지가 있으므로 `Reactive Streams` 자체를 표현할 때가 아니면, 
 스트림이라는 표현보다는 시퀀스(`Sequence`)라는 용어를 사용한다.  
 
-`Mono`, `Flux` 에서는 `CorePublisher<T>` 라는 인터페이스가 사용되는데 
+[Reactive Streams](({{site.baseurl}}{% link _posts/java/2021-04-18-java-concept-reactive-before-and-after.md %}))
+에도 관련 설명이 있지만, 어떤 이유로 `Mono`, `Flux` 를 사용해서 `Reactive Streams` 프로그래밍을 해야하는 지 의문이 생길 수 있다.
+그 부분에 대한 답은 아래 링크에서 설명하고 있는 비동기 프로그래밍 방식을 살펴보면 알 수 있다.  
+
+- [Java 비동기 프로그래밍](({{site.baseurl}}{% link _posts/java/2021-05-02-java-concept-asynchronous-programming.md %}))
+- [Spring 비동기 프로그래밍](({{site.baseurl}}{% link _posts/spring/2021-05-05-spring-concept-asynchronous-programming.md %}))
+- [Spring Web 비동기 프로그래밍](({{site.baseurl}}{% link _posts/spring/2021-05-09-spring-concept-asynchronous-web.md %}))
+
+지금까지 `Java` 진영에서 비동기 프로그래밍을 위해서는 복잡한 코드의 구성이 필요했다. 
+그리고 몇가지 개선점으로 `Callback` 방식도 도입됐지만, 이는 `Callback Hell` 이 발생될 수 있는 구조였다. 
+이러한 상황에서 `Reactor` 는 비동기 데이터 처리 흐름을 `Java Stream` 을 사용하는 것과 같이 선언형으로 구성해서 
+보다 자유롭고, 간편하고, 가독성 좋게 사용할 수 있다.  
+
+- 합성성과 가독성
+- 다양한 `Operation` 제공으로 데이터 변형
+- `Subscribe` 전 선언된 동작은 수행되지 않음(`Cold/Hot` 에 따라 동작확인 필요)
+- `Back-Pressure`
 
 ### Flux
 `Flux<T>` 는 `0 ~ N` 개의 아이템을 생산하는 비동기 시퀀스를 나타내는 `Publisher<T>` 의 구현체이다.  
@@ -99,7 +115,7 @@ dependencies {
 
 ### Mono, Flux 시퀀스 생성하기
 `Mono`, `Flux` 시퀀스를 생성하는 가장 간단한 방법은 각 클래스에서 제공하는 팩토리 메소드를 사용하는 것이다. 
-아주 많은 방식으로 시퀀스를 생성할 수 있는 메소드를 제공하지만, `just()` 메소드에 대해서만 다뤄본다. 
+아주 많은 방식으로 시퀀스를 생성할 수 있는 메소드를 제공하지만, `just()`, `create()` 메소드에 대해서 다뤄본다. 
 
 #### just()
 
@@ -139,6 +155,107 @@ Mono<Long> mono = Mono.justOrEmpty(1L);
 
 Mono<Long> monoOptional = Mono.justOrEmpty(Optional.of(1L));
 ```  
+
+#### create()
+`create()` 도 `Mono` 와 `Flux` 모두 제공하는 팩토리 메소드로 `just()` 처럼 단순이 값만 전달하는 것이 아니라, 
+시퀀스의 아이템을 프로그래밍 기반으로 생성할 수 있는 특징을 가지고 있다.  
+
+다음은 `Mono` 의 `create()` 메소드 동작을 도식화하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-mono-create.svg)
+
+```java
+Mono<T> create(Consumer<MonoSink<T>> callback)
+```  
+
+`Mono` 의 `create()` 는 `MonoSink` 를 사용해서 시퀀스 생성을 제어할 수 있다.  
+
+```java
+public interface MonoSink<T> {
+	void success();
+
+	void success(@Nullable T value);
+
+	void error(Throwable e);
+
+	Context currentContext();
+
+	MonoSink<T> onRequest(LongConsumer consumer);
+
+	MonoSink<T> onCancel(Disposable d);
+
+	MonoSink<T> onDispose(Disposable d);
+}
+```  
+
+실제로 `Mono.create()`를 활용하면 아래와 같다.  
+
+```java
+Mono.create(monoSink -> {
+  try {
+      monoSink.success(1);
+  } catch (RuntimeException e) {
+      monoSink.error(e);
+  }
+});
+```  
+
+그리고 `Flux` 의 `create()` 메소드 동작을 도식화하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactive-streams-mono-flux-flux-create.svg)
+
+```java
+Flux<T> create(Consumer<? super FluxSink<T>> emitter)
+```  
+
+`Flux` 의 `create()` 는 `FluxSink` 를 사용해서 시퀀스 생성을 제공할 수 있다.  
+
+```java
+public interface FluxSink<T> {
+
+	FluxSink<T> next(T t);
+
+	void complete();
+
+	void error(Throwable e);
+
+	Context currentContext();
+	
+	long requestedFromDownstream();
+	
+	boolean isCancelled();
+	
+	FluxSink<T> onRequest(LongConsumer consumer);
+	
+	FluxSink<T> onCancel(Disposable d);
+	
+	FluxSink<T> onDispose(Disposable d);
+
+	enum OverflowStrategy {
+		IGNORE,
+		ERROR,
+		DROP,
+		LATEST,
+		BUFFER
+	}
+}
+```  
+
+실제로 `Flux.create()`를 활용하면 아래와 같다.
+
+```java
+Flux.create(fluxSink -> {
+  try {
+      fluxSink.next(1);
+      fluxSink.next(2);
+      fluxSink.next(3);
+      fluxSink.complete();
+  } catch (RuntimeException e) {
+      fluxSink.error(e);
+  }
+})
+```  
+
 
 ### 구독 메소드 
 `Mono`, `Flux` 의 시퀀스를 생성했다면 이를 구독해야 시퀀스의 데이터를 받아 처리할 수 있다. 
