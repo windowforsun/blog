@@ -1578,6 +1578,10 @@ public void flux_onBackpressureBuffer() {
 
 ### Working with Time(시간 작업)
 
+구분|메소드|타입|설명
+---|---|---|---
+시퀀스 에러 발생|error|Mono,Flux|시퀀스가 방출 될때 에러가 시그널 발생(에러를 던지는 개념)
+
 ---
 ## Reference
 [Appendix A: Which operator do I need?](https://projectreactor.io/docs/core/release/reference/#which-operator)  
