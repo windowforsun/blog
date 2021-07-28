@@ -179,10 +179,10 @@ public class GitConfigServerApplication {
 			config:
 				server:
 					git:
- 						# 기본 브랜치 설정
+						# 기본 브랜치 설정
 						default-label: main
- 						# 저장소 주소
-			  			uri: https://github.com/windowforsun/public-cloud-config
+						# 저장소 주소
+						uri: https://github.com/windowforsun/public-cloud-config
 	```  
  
 - 저장소가 `Private` 인 경우 아래 절차를 따른다.
@@ -479,23 +479,12 @@ management:
       exposure:
         include: refresh
 
-visibility: local
-group:
-  key1: local1
-  key2: local2
-```  
+```
 
-- `application-failover.yaml`
+#### 테스트
+테스트에서는 앞서 미리 구성한 `Spring Cloud Config Server` 는 실제로도 구동중이고, 구동중인 상태라는 가정을 두고 진행한다. 
+먼저 각 환경별 설정값이 잘 설정되는지 테스트 해보면 아래와 같다.  
 
-```yaml
-spring:
-  config:
-    import: "optional:configserver:http://notexist"
-  cloud:
-    config:
-      name: notexist
-      profile: notexist
-```  
 
 - `application-lowercase-dev.yaml`
 
@@ -520,10 +509,6 @@ spring:
       name: uppercase
       profile: real
 ```  
-
-#### 테스트
-테스트에서는 앞서 미리 구성한 `Spring Cloud Config Server` 는 실제로도 구동중이고, 구동중인 상태라는 가정을 두고 진행한다. 
-먼저 각 환경별 설정값이 잘 설정되는지 테스트 해보면 아래와 같다.  
 
 ```java
 @ActiveProfiles("lowercase-dev")
@@ -580,7 +565,7 @@ public class GitConfigClientUpperCaseRealTest {
 1. 변경된 파일에 대해서 `Commit`, `Push` 를 수행한다. 
 1. 직접 `Spring Cloud Config Client` 의 엔드포인트의 `/actuator/refresh` 호출
 
-위 시나리오에 대해서 테스트를 수행하면 아래와 같다.  
+위 시나리오에 대해서 테스트를 수행하면 아래와 같다.
 
 ```java
 @ActiveProfiles("lowercase-dev")
@@ -613,6 +598,8 @@ public class GitConfigClientRefreshTest {
     @BeforeAll
     public static void setAll() throws Exception {
         // 외부 설정 저장소 로컬에 클론
+        // 외부 설정 저장소를 로컬에 클론하는 목적은 테스트 코드상에서 설정 값을 변경해서 반영하기 위함이다. 
+        // 클론한 저장소가 애플리케이션 설정값으로 적용되지는 않는다. 
         Util.gitClone();
     }
 
@@ -700,6 +687,54 @@ public class GitConfigClientRefreshTest {
 값을 갱신한 것이다. 
 그리고 `StaticProperties` 는 `DynamicProperties` 가 갱신한 값을 사용하게 되기 때문에 발생한 현상이다.  
 
+애플리케이션이 `Spring Cloud Config` 가 이미 적용된 상태에서 배포 중인 상황을 가정해보자. 
+이때 `Spring Cloud Config Server` 가 어떤 이슈에 의해 다운됐다면 배포중인 애플리케이션 서버는 설정 값을 불러오지 못하기 때문에, 
+에러가 발생하면서 정상적으로 구동되지 못할 것이다. 
+이런 상황에서 `Failover` 처리로 가능한 방법이 로컬 설정 파일에 미리 기본 값 등으로 설정 값을 채워 두는 것이다.  
+
+- `application-failover.yaml`
+
+```yaml
+spring:
+  config:
+    import: "optional:configserver:http://notexist"
+  cloud:
+    config:
+      name: notexist
+      profile: notexist
+
+
+visibility: local
+group:
+    key1: local1
+    key2: local2
+```  
+
+```java
+@ActiveProfiles("failover")
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+public class GitCloudConfigFailoverTest {
+    @Autowired
+    private StaticProperties staticProperties;
+    @Autowired
+    private DynamicProperties dynamicProperties;
+
+    @Test
+    public void failover_staticProperties() {
+        assertThat(this.staticProperties.getVisibility(), is("local"));
+        assertThat(this.staticProperties.getGroup().getKey1(), is("local1"));
+        assertThat(this.staticProperties.getGroup().getKey2(), is("local2"));
+    }
+
+    @Test
+    public void failover_dynamicProperties() {
+        assertThat(this.dynamicProperties.getVisibility(), is("local"));
+        assertThat(this.dynamicProperties.getGroup().getKey1(), is("local1"));
+        assertThat(this.dynamicProperties.getGroup().getKey2(), is("local2"));
+    }
+}
+```  
 
 ---
 ## Reference
