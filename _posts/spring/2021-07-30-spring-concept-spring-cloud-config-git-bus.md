@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] Spring Cloud Config with Spring Cloud Bus"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Cloud Config 의 소개와 Git 사용한 활용방법에 대해 알아보자'
+excerpt: 'Spring Cloud Config 를 Spring Cloud Bus 를 사용해서 손쉽게 갱신 동작을 수행해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,6 +15,8 @@ tags:
     - Spring Boot
     - Spring Cloud Config
     - Spring Cloud Bus
+    - RabbitMQ
+    - Kafka
 toc: true
 use_math: true
 ---  
@@ -31,6 +33,8 @@ use_math: true
 위와 같은 문제점을 해결할 수 있는 방법이 바로 `Spring Coud Bus` 를 사용하는 것이다. 
 `Spring Cloud Bus` 를 사용하면 `N` 번 호출을 하던 구조에서 `Spring Cloud Config Client` 에는 한번만 호출 해주게 되면, 
 그 외 `Spring Cloud Config` 들은 설정 변경 통지를 받고 설정 파일을 갱신하는 구조이다.  
+
+이후 진행할 예제에서는 `Docker Compose` 를 사용해서 간단하게 테스트 환경을 구성한다.   
 
 ### Spring Cloud Bus 구조
 아래 그림을 보면서 `Spring Cloud Bus` 를 사용한 구조와 방식에 대해서 이해해 보자.
@@ -64,6 +68,11 @@ $ ./gradlew <모듈이름>:bootBuildImage --imageName=<빌드 이미지 이름>
 $ ./gradlew bootBuildImage --imageName=<빌드 이미지 이름>
 
 $ ./gradlew gitconfigserver:bootBuildImage --imageName=gitconfigserver
+
+$ docker image ls gitconfigserver
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+gitconfigserver     latest              2b624fdc5d07        41 years ago        279MB
+
 ```  
 
 위 마지막 명령어와 같이 `gitconfigserver` 라는 이름으로 이미지를 빌드한다.  
@@ -94,6 +103,13 @@ dependencies {
 ```  
 
 #### application.yaml
+설정파일은 총 3개로 아래와 같다. 
+- `application.yaml`
+- `application-rabbit.yaml`
+- `application-kafka.yaml`
+
+먼저 공통 설정내용이 있는 `application.yaml` 은 아래와 같다. 
+`Spring Cloud Bus` 를 사용하면 갱신 요청경로가 기존 `/actuator/refresh` 에서 `/actuator/busrefresh` 로 변경된다.  
 
 ```yaml
 server:
@@ -179,6 +195,11 @@ $ ./gradlew <모듈이름>:bootBuildImage --imageName=<빌드 이미지 이름>
 $ ./gradlew bootBuildImage --imageName=<빌드 이미지 이름>
 
 $ ./gradlew gitbusconfigclient:bootBuildImage --imageName=gitbusconfigclient
+
+$ docker image ls gitbusconfigclient
+REPOSITORY           TAG                 IMAGE ID            CREATED             SIZE
+gitbusconfigclient   latest              33888f7652e9        41 years ago        296MB
+
 ```  
 
 ### RabbitMQ
@@ -188,54 +209,123 @@ $ ./gradlew gitbusconfigclient:bootBuildImage --imageName=gitbusconfigclient
 version: '3.7'
 
 services:
-  gitconfigserver:
-    image: gitconfigserver:latest
-    ports:
-      - 9000:8070
-    networks:
-      - my-net
+	gitconfigserver:
+		image: gitconfigserver:latest
+		ports:
+			- 9000:8070
+		networks:
+			- my-net
 
-  rabbitmq:
-    image: rabbitmq:3.7.5-management
-    ports:
-      - 15672:15672
-      - 5672:5672
-    networks:
-      - my-net
+	rabbitmq:
+		image: rabbitmq:3.7.5-management
+		ports:
+			- 15672:15672
+			- 5672:5672
+		networks:
+			- my-net
 
-  nginx:
-    image: nginx:1.19
-    volumes:
-      - ./default.conf:/etc/nginx/nginx.conf
-    ports:
-      - 9001:80
-    networks:
-      - my-net
-    depends_on:
-      - gitbusconfiglcient-1
+	gitbusconfiglcient-1:
+		image: gitbusconfigclient:latest
+		hostname: gitbusconfiglcient-1
+		ports:
+			- 9001:8071
+		environment:
+			- "SPRING_PROFILES_ACTIVE=rabbit"
+		networks:
+			- my-net
+		links:
+			- gitconfigserver
+		depends_on:
+			- rabbitmq
+			- gitconfigserver
 
-  gitbusconfiglcient-1:
-    image: gitbusconfigclient:latest
-    environment:
-      - "SPRING_PROFILES_ACTIVE=rabbit"
-    networks:
-      - my-net
-    depends_on:
-      - rabbitmq
-      - gitconfigserver
-    scale: 2
-    expose:
-      - 8071
+	gitbusconfiglcient-2:
+		image: gitbusconfigclient:latest
+		hostname: gitbusconfiglcient-2
+		ports:
+			- 9002:8071
+		environment:
+			- "SPRING_PROFILES_ACTIVE=rabbit"
+		networks:
+			- my-net
+		links:
+			- gitconfigserver
+		depends_on:
+			- rabbitmq
+			- gitconfigserver
 
 networks:
-  my-net:
+	my-net:
+```  
+
+간단한 예제 진행을 위해 `Spring Cloud Config Client` 는 총 2개로 `9001`, `9002` 포트를 각각 바인딩해서 구성했다. 
+아래 명령을 사용해서 템플릿 구성을 실행해 준다.  
+
+```bash
+$ docker-compose -f docker-compose-rabbit.yaml up --build
+Creating network "gitbusconfigclient_my-net" with the default driver
+Creating gitbusconfigclient_rabbitmq_1        ... done
+Creating gitbusconfigclient_gitconfigserver_1 ... done
+Creating gitbusconfigclient_gitbusconfiglcient-2_1 ... done
+Creating gitbusconfigclient_gitbusconfiglcient-1_1 ... done
+Attaching to gitbusconfigclient_gitconfigserver_1, gitbusconfigclient_rabbitmq_1, gitbusconfigclient_gitbusconfiglcient-2_1, gitbusconfigclient_gitbusconfiglcient-1_1
+
+.. 생략 ..
+```  
+
+먼저 현재 적용된 설정을 조회해보면 아래와 같다.  
+
+```bash
+$ curl localhost:9001/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-1",
+  "visibility": "public"
+  "group.key1": "dev1",
+  "group.key2": "dev2",
+}
+$ curl localhost:9002/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-2",
+  "visibility": "public",
+  "group.key1": "dev1"
+  "group.key2": "dev2",
+}
+```  
+
+원격 `Git Repository` 에 있는 `lowercase-dev.yaml` 파일 내용을 아래와 같이 변경하고 `Commit/Push` 까지 수행한다.  
+
+```yaml
+visibility: public-rabbit
+group:
+  key1: dev1-rabbit
+  key2: dev2-rabbit
+```  
+
+그리고 2개의 클라이언트 중 9001 포트에만 `/actuator/busrefresh` 를 통해 갱신하주면, 
+아래와 같이 2개 클라이언트 모두 설정 변경이 적용된 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X POST localhost:9001/actuator/busrefresh
+
+$ curl localhost:9001/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-1",
+  "visibility": "public-rabbit"
+  "group.key1": "dev1-rabbit",
+  "group.key2": "dev2-rabbit",
+}
+$ curl localhost:9002/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-2",
+  "visibility": "public-rabbit",
+  "group.key1": "dev1-rabbit"
+  "group.key2": "dev2-rabbit",
+}
 ```  
 
 
-
-
 ### Kafka
-`Kafka` 를 사용해서 `Spring Cloud Bus` 를 구성하는 `docker-compose-kafka.yaml` 파일 내용은 아래와 같다.
+`Kafka` 를 사용해서 `Spring Cloud Bus` 를 구성하는 `docker-compose-kafka.yaml` 파일 내용은 아래와 같다. 
 
 ```yaml
 version: '3.7'
@@ -254,7 +344,6 @@ services:
       - "2181:2181"
     networks:
       - my-net
-	
   kafka:
     image: wurstmeister/kafka:2.12-2.5.0
     ports:
@@ -273,39 +362,111 @@ services:
     depends_on:
       - zookeeper
 
-  nginx:
-    image: nginx:1.19
-    volumes:
-      - ./default.conf:/etc/nginx/nginx.conf
-    ports:
-      - 9001:80
-    networks:
-      - my-net
-    depends_on:
-      - gitbusconfiglcient-1
-
   gitbusconfiglcient-1:
     image: gitbusconfigclient:latest
+    hostname: gitbusconfiglcient-1
+    ports:
+      - 9001:8071
     environment:
       - "SPRING_PROFILES_ACTIVE=kafka"
     networks:
       - my-net
+    links:
+      - gitconfigserver
     depends_on:
       - kafka
       - gitconfigserver
-    scale: 2
-    expose:
-      - 8071
+
+  gitbusconfiglcient-2:
+    image: gitbusconfigclient:latest
+    hostname: gitbusconfiglcient-2
+    ports:
+      - 9002:8071
+    environment:
+      - "SPRING_PROFILES_ACTIVE=kafka"
+    networks:
+      - my-net
+    links:
+      - gitconfigserver
+    depends_on:
+      - kafka
+      - gitconfigserver
 
 networks:
   my-net:
 ```  
 
+`Kafka` 를 사용한 테스트 구성도 앞서 살펴본 `RabbitMQ` 를 사용한 구성에서 `Kafka` 를 구성하는 부분 외에는 거의 동일하다. 
+아래 명령으로 `Kafka` 구성을 실행해 준다.  
+
+```bash
+$ docker-compose -f docker-compose-kafka.yaml up --build
+Creating network "gitbusconfigclient_my-net" with the default driver
+Creating gitbusconfigclient_zookeeper_1       ... done
+Creating gitbusconfigclient_gitconfigserver_1 ... done
+Creating gitbusconfigclient_kafka_1           ... done
+Creating gitbusconfigclient_gitbusconfiglcient-1_1 ... done
+Creating gitbusconfigclient_gitbusconfiglcient-2_1 ... done
+Attaching to gitbusconfigclient_zookeeper_1, gitbusconfigclient_gitconfigserver_1, gitbusconfigclient_kafka_1, gitbusconfigclient_gitbusconfiglcient-2_1, gitbusconfigclient_gitbusconfiglcient-1_1
+
+.. 생략 ..
+```
 
 
+먼저 현재 적용된 설정을 조회해보면 아래와 같다. (설정 파일 내용을 초기값으로 되돌린 후 진행 한다.)
 
+```bash
+$ curl localhost:9001/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-1",
+  "visibility": "public"
+  "group.key1": "dev1",
+  "group.key2": "dev2",
+}
+$ curl localhost:9002/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-2",
+  "visibility": "public",
+  "group.key1": "dev1"
+  "group.key2": "dev2",
+}
+```  
 
+원격 `Git Repository` 에 있는 `lowercase-dev.yaml` 파일 내용을 아래와 같이 변경하고 `Commit/Push` 까지 수행한다.
 
+```yaml
+visibility: public-kafka
+group:
+  key1: dev1-kafka
+  key2: dev2-kafka
+```  
+
+그리고 2개의 클라이언트 중 이번에는 9002 포트에만 `/actuator/busrefresh` 를 통해 갱신하주면,
+`RabbitMQ` 의 결과와 동일하게, 2개 클라이언트 모두 설정 변경이 적용된 것을 확인 할 수 있다.
+
+```bash
+$ curl -X POST localhost:9002/actuator/busrefresh
+
+$ curl localhost:9001/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-1",
+  "visibility": "public-kafka"
+  "group.key1": "dev1-kafka",
+  "group.key2": "dev2-kafka",
+}
+$ curl localhost:9002/dynamic | jq ''
+{
+  "applicationName": "gitbusconfiglcient-2",
+  "visibility": "public-kafka",
+  "group.key1": "dev1-kafka"
+  "group.key2": "dev2-kafka",
+}
+```  
+
+`RabbitMQ`, `Kafka` 를 사용해서 `Spring Cloud Bus` 를 구성하는 간단한 예제를 진행해 보았다. 
+실무에서는 서버 앞단에 로드밸런서를 두고 `N` 대의 애플리케이션 서버를 백단에 두는 구조를 주로 사용한다. 
+이러한 구조에서 로드밸런서를 통해 설정 갱신 요청만 한번 해주면, 
+`Message Broker` 에 연결된 `N` 대의 애플리케이션 모두 설정 변경을 수행할 수 있는 방식으로 활용할 수 있다.  
 
 ---
 ## Reference
