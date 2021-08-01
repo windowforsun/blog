@@ -217,7 +217,7 @@ public class DbConfigServerApplication {
 }
 ```  
 
-### MySQL(JDBC)
+### MySQL(JDBC) 테스트
 먼저 `MySQL` 을 설정 저장소로 사용해서 `Spring Cloud Config Server` 와 연동하는 테스트를 살펴본다. 
 `Spring Boot Test` 를 기반으로 테스트를 진행하고, 
 `MySQL` 은 `TestContainers` 를 사용해서 테스트 애플리케이션에서 사용할 수 있도록 구성한다. 
@@ -346,7 +346,7 @@ public class JdbcConfigServerTest {
 }
 ```  
 
-### Redis
+### Redis 테스트
 다음으로는 `Redis` 를 설정저장소로 사용해서 `Config Server` 와 연동하는 테스트다. 
 먼저 진행한 `MySQL` 와 큰 차이는 없고 대부분 동일한 방식으로 테스트를 진행한다. 
 `@BeforeEach` 메소드에서는 `Redis HashMap` 에 설정내용을 추가하고 있는 것을 확인 할 수 있다.  
