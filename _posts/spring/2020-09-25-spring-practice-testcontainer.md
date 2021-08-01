@@ -945,7 +945,7 @@ COPY from-string /from-string
 런타임 시점에 `Properties` 값을 `Programmatically` 하게 변경하는 방법은 `ApplicationContextInitializer` 를 사용해서 가능하다.  
 
 ```java
-@SpringBootApplication
+@SpringBootTest
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(initializers = TestContainerInitializerTest.Initializer.class)
 public class TestContainerInitializerTest {
