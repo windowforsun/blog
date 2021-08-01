@@ -937,6 +937,62 @@ COPY from-string /from-string
 ```  
 
 
+## Spring Boot Properties 설정
+`Spring Boot` 환경에서 로컬 테스트를 진행할때 `Docker` 컨테이너 설정값을 `Properties` 에 반영해야 하는 경우가 있다. 
+대표적으로 `MySQL`, `Redis` 등의 접속관련 호스트, 포트 등이 있다. 
+`Spring Boot Redis` 를 사용해서 테스트 환경을 구성하고 `Spring Boot` 런타임이 `TestContainers` 로 구동된 컨테이너에 맞춰 설정될 수 있도록 진행해 본다.  
+
+런타임 시점에 `Properties` 값을 `Programmatically` 하게 변경하는 방법은 `ApplicationContextInitializer` 를 사용해서 가능하다.  
+
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(initializers = TestContainerInitializerTest.Initializer.class)
+public class TestContainerInitializerTest {
+    @ClassRule
+    public static GenericContainer redis = new GenericContainer(DockerImageName.parse("redis:5.0"))
+            .withExposedPorts(6379);
+
+    static {
+        redis.start();
+    }
+
+    public static class Initializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
+        @Override
+        public void initialize(ConfigurableApplicationContext applicationContext) {
+            TestPropertyValues.of(
+                    "spring.redis.host=" + redis.getHost(),
+                    "spring.redis.port=" + redis.getFirstMappedPort()
+            ).applyTo(applicationContext.getEnvironment());
+        }
+    }
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+
+    @Test
+    public void check_redis_data_useful() {
+        // given
+        String key = "key123";
+        String value = "value123";
+        this.redisTemplate.opsForValue().set(key, value);
+
+        // when
+        String actual = this.redisTemplate.opsForValue().get(key);
+
+        // then
+        assertThat(actual, is("value123"));
+    }
+}
+```  
+
+지금 `application.yaml` 에는 `Redis` 관련 아무 설정도 되어있지 않은 상태이다. 
+`Redis` 컨테이너를 `6379` 포트를 바인딩해서 실행시킨 후, 
+`ApplicationContextInitializer` 구현체인 `Initializer` 에서 `initialize()` 메소드를 사용해서 `Redis` 관련 `Properties` 설정을 해준다. 
+그 이후 `RedisTemplate` 를 사용해서 `Redis` 관련 `Operation` 을 수행해주면 모두 정상적으로 동작 가능한 것을 확인 할 수 있다.  
+
+
+
 ---
 ## Reference
 [Testcontainers](https://www.testcontainers.org/)  
