@@ -63,6 +63,9 @@
   top:0;
   left:0;
   right:0;
+  padding: 0.5em;
+  border-bottom: 1px solid $border-color;
+  background-color: $background-color;
 
   .site-nav {
     margin-left: 0;
