@@ -1742,5 +1742,6 @@ Mono<T> 에 대한 블로킹|block|Mono|요소를 얻을 때까지 블로킹(타
 ---
 ## Reference
 [Appendix A: Which operator do I need?](https://projectreactor.io/docs/core/release/reference/#which-operator)  
+[사용하면서 알게 된 Reactor, 예제 코드로 살펴보기](https://tech.kakao.com/2018/05/29/reactor-programming/)  
 
 
