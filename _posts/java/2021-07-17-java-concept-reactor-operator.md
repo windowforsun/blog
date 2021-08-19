@@ -33,7 +33,7 @@ use_math: true
 - 에러 처리 `Handling Errors`
 - 시간 작업 `Working with Time`
 - `Flux` 나누기 `Splitting a Flux`
-- 동기로 변경 `Going Back to the Synchronous World`
+- 비동기에서 동기로 변경 `Going Back to the Synchronous World`
 - `Flux` 멀티캐스킹 `Multicasting a Flux to several Subscribers`
 
 이렇게 다양한 `Operator` 는 내부적으로 시퀀스를 구독(`Subscripber`)하고, 생산(`Publisher`)하는 동작을 적절히 활용해서 구현되어 있다. 
@@ -1696,10 +1696,52 @@ public void flux_timeout_fallback() {
 }
 ```  
 
+### Splitting a Flux(`Flux` 나누기)
+
+구분|메소드|타입|설명
+---|---|---|---
+`Flux<T>`를 `Flux<Flux<T>>` 로 분리|window|Flux|방출되는 요소 크기 혹은 시간을 기준으로 분리
+ |windowTimeout|Flux|방출되는 요소 크기와 시간을 기준으로 분리
+ |windowUntil|Flux|`Predicate` 의 `Boolean` 값이 `true` 인 요소 다음 부터 분리
+ |windowWhile|Flux|`Predicate` 의 `Boolean` 값이 `true` 인 요소는 제외하고 다음 부터 분리
+ |windowWhen|Flux|`Publisher` 의 신호의 경계 값을 기준으로 분리
+`Flux<T>`를 `Flux<List<T>` 로 분리|buffer|Flux|방출되는 요소 크기 혹은 시간을 기준으로 분리
+ |bufferTimeout|Flux|방출되는 요소 크기와 시간을 기준으로 분리
+ |bufferUntil|Flux|`Predicate` 의 `Boolean` 값이 `true` 인 요소 다음 부터 분리
+ |bufferWhile|Flux|`Predicate` 의 `Boolean` 값이 `true` 인 요소는 제외하고 다음 부터 분리
+ |bufferWhen|Flux|`Publisher` 의 신호의 경계 값을 기준으로 분리
+`Flux<T>`를 `Flux<GroupedFlux<K, T>>` 로 같은 특정을 가진 것들로 분리|groupBy|Flux|`Function` 로직에서 같은 특정을 갖는 요소들 끼리 그룹지어 분리
+
+
+### Going Back to the Synchronous World(비동기에서 동기로 변경)
+
+>`Non-Blocking Only` 로 표시된 `Subscriber` 에서 동기로 변환 메소드를 호출하면 `UnsupportedOperatorException` 예외를 던진다. 
+
+구분|메소드|타입|설명
+---|---|---|---
+`Flux<T>` 에 대한 블로킹|blockFirst|Flux|첫번째 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
+ |blockLast|Flux|마지막 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
+ |toIterable|Flux|시퀀스를 `Iterable<T>` 로 전환할때 까지 블로킹
+ |toStream|Flux|시퀀스를 `Stream<T>` 로 전환할때 까지 블로킹
+Mono<T> 에 대한 블로킹|block|Mono|요소를 얻을 때까지 블로킹(타임아웃 설정 가능)
+ |toFuture|Mono|시퀀스를 `CompletableFuture<T>` 로 전환 할떄까지 블로킹
+
+
+### Multicasting a Flux to several Subscribers(`Flux` 멀티캐스킹)
+
+구분|메소드|타입|설명
+---|---|---|---
+시퀀스 하나에 여러 `Subscriber` 연결|publish().connect()|Flux|리턴된 `ConnectableFlux` 를 사용해서 여러 `Subscriber` 를 연결하고 `connect()` 호출
+ |share|Mono,Flux|시퀀스가 현재 `Subscriber` 에 의해 요소을 방출 중일때 다른 `Subscriber` 가 구독하면 동일한 요소를 방출 
+ |publish().autoConnect(n)|Flux|`publish.connect` 동작에서 `autoConnect` 에 설정한 숫자만큼 구독되면 자동으로 `connect()` 호출
+ |publish().refCount(n)|Flux|`publish.autuConnect` 동작에서 `refCount` 에 설정된 숫자만큼 구독자가 발생하지 않으면 구독을 취소 
+시퀀스의 요소를 캐싱해두고 모든 구독자에게 방출|cache|Mono,Flux|`cache` 에 설정한 갯수 혹은 `Duration` 동안 요소를 캐싱
+ |replay|Flux|`replay` 에 설정한 갯수 혹은 `Duration` 동안 가장 최근에 구독된 시퀀스의 방출 및 시그널을 그대로 수행
 
 
 ---
 ## Reference
 [Appendix A: Which operator do I need?](https://projectreactor.io/docs/core/release/reference/#which-operator)  
+[사용하면서 알게 된 Reactor, 예제 코드로 살펴보기](https://tech.kakao.com/2018/05/29/reactor-programming/)  
 
 
