@@ -1715,16 +1715,19 @@ public void flux_timeout_fallback() {
 
 ### Going Back to the Synchronous World(비동기에서 동기로 변경)
 
+
 >`Non-Blocking Only` 로 표시된 `Subscriber` 에서 동기로 변환 메소드를 호출하면 `UnsupportedOperatorException` 예외를 던진다. 
 
-구분|메소드|타입|설명
----|---|---|---
-`Flux<T>` 에 대한 블로킹|blockFirst|Flux|첫번째 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
- |blockLast|Flux|마지막 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
- |toIterable|Flux|시퀀스를 `Iterable<T>` 로 전환할때 까지 블로킹
- |toStream|Flux|시퀀스를 `Stream<T>` 로 전환할때 까지 블로킹
-Mono<T> 에 대한 블로킹|block|Mono|요소를 얻을 때까지 블로킹(타임아웃 설정 가능)
- |toFuture|Mono|시퀀스를 `CompletableFuture<T>` 로 전환 할떄까지 블로킹
+
+
+|구분|메소드|타입|설명
+|---|---|---|---
+|`Flux<T>` 에 대한 블로킹|blockFirst|Flux|첫번째 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
+| |blockLast|Flux|마지막 요소를 얻을 때까지 블로킹(타입아웃 설정 가능)
+| |toIterable|Flux|시퀀스를 `Iterable<T>` 로 전환할때 까지 블로킹
+| |toStream|Flux|시퀀스를 `Stream<T>` 로 전환할때 까지 블로킹
+|Mono<T> 에 대한 블로킹|block|Mono|요소를 얻을 때까지 블로킹(타임아웃 설정 가능)
+| |toFuture|Mono|시퀀스를 `CompletableFuture<T>` 로 전환 할떄까지 블로킹
 
 
 ### Multicasting a Flux to several Subscribers(`Flux` 멀티캐스킹)
