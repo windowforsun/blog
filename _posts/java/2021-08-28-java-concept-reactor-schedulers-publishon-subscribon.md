@@ -14,8 +14,10 @@ tags:
   - Java
   - Reactor
   - Schedulers
-  - PublishOn
-  - SubscribeOn
+  - publishOn
+  - subscribeOn
+  - boundedElastic
+  - transform
 toc: true 
 use_math: true
 ---  
