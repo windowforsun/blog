@@ -133,7 +133,7 @@ Flux<Integer> source = Flux
 
 ```java
 @Test
-public void heavyPublisher_subscriber() {
+public void heavyPublisher_lightSubscriber() {
 	// given
 	Flux<Integer> source = Flux
 			.<Integer>create(integerFluxSink -> {
@@ -210,7 +210,7 @@ source.subscribe(integer -> {
 
 ```java
 @Test
-public void publisher_heavySubscriber() {
+public void lightPublisher_heavySubscriber() {
 	// given
 	Flux<Integer> source = Flux
 			.<Integer>create(integerFluxSink -> {
@@ -318,7 +318,7 @@ public static class MySubscribeOn<T> implements Publisher<T> {
 
 ```java
 @Test
-public void heavyPublisher_myPublishOn_subscriber_shorttime() {
+public void heavyPublisher_myPublishOn_lightSubscriber_shorttime() {
 	// given
 	ExecutorService es = Executors.newFixedThreadPool(16, new CustomizableThreadFactory("subscribeOn-"));
 	Flux<Integer> source = Flux
@@ -441,7 +441,7 @@ public static class MyPublishOn implements Processor<Integer, Integer> {
 
 ```java
 @Test
-public void publisher_myPublishOn_heavySubscriber_shorttime() {
+public void lightPublisher_myPublishOn_heavySubscriber_shorttime() {
 	// given
 	Flux<Integer> source = Flux
 			.<Integer>create(integerFluxSink -> {
@@ -507,10 +507,458 @@ public void publisher_myPublishOn_heavySubscriber_shorttime() {
 
 
 ### publishOn()
+`publishOn()` 을 사용했을 때 `Schedulers` 에 의해 동작하는 시그널은 아래와 같다. 
+- `onNext()`
+- `onComplete()`
+- `onError()`
+
+`publishOn()` 이 위와같은 특징을 가질 때, `heavyPublisher`, `heavySubscriber` 에 대해서 어떠한 동작 결과를 보일지 생각해보자. 
+시퀀스에서 `downstream`(`Subscriber`) 쪽으로 요소를 방출하는 시그널에 대해서만 비동기로 동작하기 때문에 `heavySubscriber` 와 같이 
+`Subscriber` 에서 지연이 발생하는 경우 지연시간을 단축할 수 있을 것이다.
+
+Publisher|Subscriber|소요시간
+---|---|---
+heavyPublisher|lightSubscriber|longtime
+lightPublisher|heavySubscriber|shorttime
+heavyPublisher|heavySubscriber|longtime
+
+실제로 위와 같은 결과가 나오는지 테스트 코드를 통해 살펴본다.  
+
+#### heavyPublisher, lightSubscriber
+먼저 `heavyPublisher` 와 `lightSubscriber` 가 사용되는 경우의 결과는 아래와 같다.  
+
+```java
+@Test
+public void heavyPublisher_publishOn_lightSubscriber_longtime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					sleep(1000);
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.publishOn(Schedulers.newParallel("publishOn"))
+			.log(log.getName());
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribe(integer -> {
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribe(integer -> {
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, hasItems(1, 2, 3));
+	assertThat(actual_2, hasItems(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(5500L), lessThan(6500L)));
+}
+```  
+
+```
+18:13:41.341 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:13:41.343 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:13:42.367 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:13:42.369 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+18:13:43.376 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:13:43.377 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+18:13:44.390 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:13:44.390 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+18:13:44.391 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:13:44.391 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+18:13:44.391 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:13:45.405 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:13:45.405 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+18:13:46.413 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:13:46.413 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+18:13:47.426 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:13:47.426 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+18:13:47.426 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+```  
+
+`heavyPublisher` 인 상태에서 `publishOn()` 을 사용하게 되면 `publishOn()` 이 `heavyPublisher` 를 구독하는 동작은 동기로 이뤄지기 때문에, 
+모든 구독이 완료된 이후에야 다음 구독이 수행될 수 있으므로 구독 횟수만큼 지연이 발생하게 된다.  
+
+#### lightPublisher, heavySubscriber
+다음으로 `lightPublisher` 와 `heavySubscriber` 가 사용되는 경우의 결과는 아래와 같다.  
+
+```java
+@Test
+public void lightPublisher_publishOn_heavySubscriber_shorttime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.publishOn(Schedulers.newParallel("publishOn"))
+			.log(log.getName());
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, hasItems(1, 2, 3));
+	assertThat(actual_2, hasItems(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(2500L), lessThan(3500L)));
+}
+```  
+
+```
+18:29:44.148 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:29:44.152 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:29:44.162 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:29:44.162 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:29:44.162 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:29:44.163 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:29:45.175 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+18:29:45.175 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+18:29:45.175 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:29:45.175 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:29:46.186 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+18:29:46.186 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+18:29:46.186 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:29:46.186 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:29:47.200 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+18:29:47.200 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+18:29:47.201 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+18:29:47.201 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+```  
+
+`heavySubscriber` 인 상태에서 `publishOn()` 을 사용하면 `publishOn()` 이 `lightPublisher` 를 구독하는 동작은 매우 빠르게 이뤄지고 
+`publishOn()` 이 `heavySubscriber` 쪽으로 요소를 방출하는 시그널이 비동기로 동작되기 때문에 여러번 구독하더도 지연은 발생하지 않는다.  
+
+
+#### heavyPublisher, heavySubscriber
+마지막으로 `heavyPublisher` 와 `heavySubscriber` 가 함께 사용되는 경우는 아래와 같다.  
+
+```java
+@Test
+public void heavyPublisher_publishOn_heavySubscriber_longtime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					sleep(1000);
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.publishOn(Schedulers.newParallel("publishOn"))
+			.doOnNext(integer -> log.info("publish : {}", integer))
+			.log();
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, hasItems(1, 2, 3));
+	assertThat(actual_2, hasItems(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(5500L), lessThan(6500L)));
+}
+```  
+
+```
+18:41:08.891 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:41:08.895 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:41:09.906 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:41:10.912 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+18:41:10.912 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:41:11.921 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+18:41:11.921 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:41:11.922 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onSubscribe([Fuseable] FluxPublishOn.PublishOnSubscriber)
+18:41:11.922 [main] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | request(unbounded)
+18:41:12.936 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+18:41:12.936 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(1)
+18:41:12.937 [publishOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+18:41:13.943 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+18:41:13.943 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(2)
+18:41:14.949 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+18:41:14.949 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onNext(3)
+18:41:15.963 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+18:41:15.963 [publishOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - | onComplete()
+```  
+
+`heavyPublisher`, `heavySubscriber` 인 상태에서 `publisherOn` 을 사용하면 `heavyPublisher` 의 지연과 `heavySubscriber` 의 지연이 복합적으로 발생된다. 
+그러므로 `heavyPublisher` 만 사용된 상태보다 더 큰 지연시간을 보이게 된다. 
+만약 여기서 구독을 한번 더 하게 되면 3초가 추가된 10초 정도 지연이 발생하게 될 것이다.  
 
 
 ### subscribeOn()
+`subscribeOn()` 을 사용했을 때 `Schedulers` 에 의해 동작하는 시그널은 아래와 같다. 
+- `onSubscribe()`
+- `onRequest()`
+- `onNext()`
+- `onComplete()`
+- `onError()`
 
+`subscribeOn()` 이 위와같은 특징을 가질 때, `heavyPublisher`, `heavySubscriber` 에 대해서 어떠한 동작 결과를 보일지 생각해보자.
+`subscribeOn()` 이 `uptream`(`Publisher`) 를 구독하고 `downstream`(`Subscriber`) 에게 `upstream` 의 시그널을 전달하는 것까지 모두 
+비동기로 동작되기 때문에, `Publisher`, `Subscriber` 모두에 지연에 발생하더라도 해결이 가능할 것이다.  
+
+Publisher|Subscriber|소요시간
+---|---|---
+heavyPublisher|lightSubscriber|shorttime
+lightPublisher|heavySubscriber|shorttime
+heavyPublisher|heavySubscriber|shorttime
+
+실제로 위와 같은 결과가 나오는지 테스트 코드를 통해 살펴본다.
+
+#### heavyPublisher, lightSubscriber
+먼저 `heavyPublisher` 가 사용되는 결과는 아래와 같다.  
+
+```java
+@Test
+public void heavyPublisher_subscribeOn_lightSubscriber_shorttime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					sleep(1000);
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.log(log.getName());
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+	Scheduler scheduler = Schedulers.newParallel("subscribeOn");
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, hasItems(1, 2, 3));
+	assertThat(actual_2, hasItems(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(2500L), lessThan(3500L)));
+}
+```  
+
+```
+20:16:06.383 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:16:06.383 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:16:06.388 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:16:06.388 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:16:07.410 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:16:07.410 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:16:07.410 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+20:16:07.410 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+20:16:08.425 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:16:08.425 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:16:08.425 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+20:16:08.425 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+20:16:09.433 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:16:09.433 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+20:16:09.434 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+20:16:09.434 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:16:09.434 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+20:16:09.434 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+```  
+
+`heavyPublisher` 인 상태라도 `subscribeOn()` 은 `heavyPublisher` 를 구독하는 동작부터 비동기로 이뤄지기 때문에, 
+구독 횟수에 따른 지연은 발생하지 않는다.  
+
+
+#### lightPublisher, heavySubscriber
+다음으로 `heavySubscriber` 가 사용되는 테스트 결과는 아래와 같다.  
+
+```java
+@Test
+public void lightPublisher_subscribeOn_heavySubscriber_shorttime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.log(log.getName());
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+	Scheduler scheduler = Schedulers.newParallel("subscribeOn");
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, contains(1, 2, 3));
+	assertThat(actual_2, contains(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(2500L), lessThan(3500L)));
+}
+```  
+
+```
+20:12:17.932 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:12:17.932 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:12:17.937 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:12:17.937 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:12:17.943 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:12:17.943 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:12:18.947 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+20:12:18.947 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+20:12:18.947 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:12:18.947 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:12:19.966 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+20:12:19.966 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+20:12:19.966 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:12:19.966 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:12:20.973 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+20:12:20.973 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+20:12:20.973 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+20:12:20.973 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+```  
+
+`heavySubscriber` 인 경우에 `subscriberOn()` 을 사용한 경우에도 `lightPublisher` 를 구독하는 시점 부터 비동기로 이뤄지기 때문에 
+구독 횟수에 따른 지연은 발생하지 않는다.  
+
+#### heavyPublisher, heavySubscriber
+마지막으로 `heavyPublisher` 와 `heavySubscriber` 가 사용되는 경우의 테스트 결과는 아래와 같다.  
+
+```java
+@Test
+public void heavyPublisher_subscribeOn_heavySubscriber_shorttime() {
+	Flux<Integer> source = Flux
+			.<Integer>create(integerFluxSink -> {
+				IntStream.range(1, 4).forEach(value -> {
+					sleep(1000);
+					integerFluxSink.next(value);
+				});
+
+				integerFluxSink.complete();
+			})
+			.log(log.getName());
+	List<Integer> actual_1 = new ArrayList<>();
+	List<Integer> actual_2 = new ArrayList<>();
+	Scheduler scheduler = Schedulers.newParallel("subscribeOn");
+
+	StopWatch stopWatch = new StopWatch();
+	stopWatch.start();
+	Disposable disposable_1 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_1.add(integer);
+				log.info("subscribe_1 : {}", integer);
+			});
+	Disposable disposable_2 = source
+			.subscribeOn(scheduler)
+			.subscribe(integer -> {
+				sleep(1000);
+				actual_2.add(integer);
+				log.info("subscribe_2 : {}", integer);
+			});
+
+	waitSubscribe(disposable_1, disposable_2);
+	stopWatch.stop();
+
+	assertThat(actual_1, contains(1, 2, 3));
+	assertThat(actual_2, contains(1, 2, 3));
+	assertThat(stopWatch.getTotalTimeMillis(), allOf(greaterThan(5500L), lessThan(6500L)));
+}
+```  
+
+```
+20:08:37.671 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:08:37.671 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onSubscribe(FluxCreate.BufferAsyncSink)
+20:08:37.675 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:08:37.675 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - request(unbounded)
+20:08:38.689 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:08:38.689 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(1)
+20:08:39.703 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 1
+20:08:39.703 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 1
+20:08:40.703 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:08:40.703 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(2)
+20:08:41.714 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 2
+20:08:41.714 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 2
+20:08:42.717 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:08:42.717 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onNext(3)
+20:08:43.731 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_1 : 3
+20:08:43.731 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - subscribe_2 : 3
+20:08:43.731 [subscribeOn-2] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+20:08:43.731 [subscribeOn-1] INFO com.windowforsun.reactor.scheduler.SchedulersTest - onComplete()
+```  
+
+`heavyPublisher` 와 `heavySubscriber` 가 모두 사용되는 경우에 `subscribeOn()` 을 사용하면,  
+소요시간은 총 6초가 나오지만 이는 구독 수에 따른 추가 지연은 발생하지 않았다. 
+6초가 걸린 이유는 `heavyPublisher` 가 요소를 하나 방출하는데 1초가 걸리고 방출된 요소를 `heavySubscriber` 가 받는데 까지 1초가 소요되므로 
+요소하나에 대해 2초가 소요된다. 
+이러한 이유로 구독 한번이 모두 완료 될때까지 총 6초가 소요되기 때문에 추가 지연은 발생되지 않은 것이다.  
 
 
 ### Schedulers Thread Model
