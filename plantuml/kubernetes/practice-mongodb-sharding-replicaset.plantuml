@@ -1,0 +1,72 @@
+@startuml
+
+rectangle "MongoS(Router)" as ms {
+	rectangle "MongoS-1" as ms1 {
+	}
+	rectangle "MongoS-2" as ms2 {
+	}
+
+'	ms1 <-d-> ms2
+'	ms1 <-d-> ms3
+'	ms2 <-r-> ms3
+}
+
+rectangle "Shard-1(ReplicaSet)" as s1 {
+	rectangle "MongoDB(Primary)" as mdbp-1 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-1-1 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-1-2 {
+	}
+
+	"mdbp-1" -d-> "mdbs-1-1"
+	"mdbp-1" -d-> "mdbs-1-2"
+	"mdbs-1-1" -r-> "mdbs-1-2"
+}
+
+
+rectangle "Shard-2(ReplicaSet)" as s2 {
+	rectangle "MongoDB(Primary)" as mdbp-2 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-2-1 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-2-2 {
+	}
+
+	"mdbp-2" -d-> "mdbs-2-1"
+	"mdbp-2" -d-> "mdbs-2-2"
+	"mdbs-2-1" -r-> "mdbs-2-2"
+}
+
+rectangle "Shard-3(ReplicaSet)" as s3 {
+	rectangle "MongoDB(Primary)" as mdbp-3 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-3-1 {
+	}
+	rectangle "MongoDB(Secondary)" as mdbs-3-2 {
+	}
+
+	"mdbp-3" -d-> "mdbs-3-1"
+	"mdbp-3" -d-> "mdbs-3-2"
+	"mdbs-3-1" -r-> "mdbs-3-2"
+}
+
+rectangle "ConfigServer" as cs {
+	rectangle "ConfigServer(Primary)" as csp {
+	}
+	rectangle "ConfigServer(Secondary)" as css-1 {
+	}
+	rectangle "ConfigServer(Secondary)" as css-2 {
+	}
+
+	"csp" -d-> "css-1"
+	"csp" -d-> "css-2"
+	"css-1" -r-> "css-2"
+}
+
+ms --> s1
+ms --> s2
+ms --> s3
+
+
+@enduml
