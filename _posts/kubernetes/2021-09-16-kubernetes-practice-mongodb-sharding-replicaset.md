@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kubernetes 실습] K3S 소개와 클러스터 구성"
+title: "[Kubernetes 실습] MongoDB Sharding 구성 하기(StatefulSet)"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: 'Lightweight Kubernetes 도구인 K3S에 대해 알아보고 클러스터를 구성하는 방법에 대해서도 알아보자'
+excerpt: 'StatefulSet 을 사용해서 MongoDB Sharding 을 구성하고 각 Shard 는 ReplicaSet 의 구조로 구성해 본다.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,8 +12,13 @@ categories :
 tags:
   - Kubernetes
   - Practice
-  - K3S
+  - MongoDB
   - Cluster
+  - Sharding
+  - StatefulSet
+  - ReplicaSet
+  - Mongos
+  - ConfigServer
 toc: true
 use_math: true
 ---  
@@ -923,7 +928,7 @@ mongos> sh.shardCollection("sharding-test.items", {"index":"hashed"});
 이제 실제로 10000개의 데이터를 `sharding-test.items` 컬렉션에 넣어 실제 샤딩이 잘 이뤄지는지 확인해 본다.  
 
 ```bash
-.. 데이터 추가전 row 수 카운트 ..
+.. 데이터 추가전 레코드 수 카운트 ..
 mongos> db.items.count();
 0
 
@@ -935,7 +940,7 @@ WriteResult({ "nInserted" : 1 })
 mongos> db.items.count();
 10000
 
-.. shard-01 Pod 에 접속해서 items 의 row 수 확인 ..
+.. shard-01 Pod 에 접속해서 items 의 레코드 수 확인 ..
 $ kubectl exec -it mongodb-shard-01-statefulset-0 -- bash
 root@mongodb-shard-01-statefulset-0:/# mongo
 MongoDB shell version v4.4.4
@@ -949,7 +954,7 @@ switched to db sharding-test
 shard-01:PRIMARY> db.items.count();
 4993
 
-.. shard-02 Pod 에 접속해서 items 의 row 수 확인 ..
+.. shard-02 Pod 에 접속해서 items 의 레코드 수 확인 ..
 $ kubectl exec -it mongodb-shard-02-statefulset-0 -- bash
 root@mongodb-shard-02-statefulset-0:/# mongo
 MongoDB shell version v4.4.4
@@ -1103,6 +1108,68 @@ b-shard-03-service.default.svc.cluster.local:27017",
 }
 ```  
 
+바로 `Mongos` 에서 `sharding-test.items` 의 총 개수를 확인하면 아래와 같이 10000개가 넘는 레코드 수가 나온다. 
+이는 현재 새로 추가된 사드에 대해서 [Cluster Balancer](https://docs.mongodb.com/manual/core/sharding-balancer-administration/#std-label-sharding-internals-balancing) 
+동작을 수행하고 있는 과정이라고 추측할 수 있다. 
+
+```bash
+.. mongos .. 
+mongos> use sharding-test;
+switched to db sharding-test
+mongos> db.items.count();
+12506
+
+.. shard-01 ..
+shard-01:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-01:PRIMARY> db.items.count();
+4993
+
+.. shard-02 ..
+shard-02:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-02:PRIMARY> db.items.count();
+5007
+
+.. shard-03 ..
+shard-03:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-03:PRIMARY> db.items.count();
+2506
+```  
+
+
+아래 처럼 `shard-01 ~ 3` 의 각 샤드에서 레코드 수의 합도 10000가 넘고 새로 추가된 `shard-03` 에도 레코드가 생긴것을 확인 할 수 있다. 
+이는 시간이 지나 밸런싱 동작이 완료되면 `Mongos` 에서도 10000 레코드가 표기되고 각 샤드의 레코드 합도 10000이 되는 것을 확인 할 수 있다.  
+
+```bash
+.. wait some minutes .. 
+.. mongos .. 
+mongos> use sharding-test;
+switched to db sharding-test
+mongos> db.items.count();
+10000
+
+.. shard-01 ..
+shard-01:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-01:PRIMARY> db.items.count();
+2487
+
+.. shard-02 ..
+shard-02:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-02:PRIMARY> db.items.count();
+5007
+
+.. shard-03 ..
+shard-03:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-03:PRIMARY> db.items.count();
+2506
+```
+
+
 `shard-03` 샤드가 추가된 상태에서 다시 10000개의 데이터를 추가해서 샤드 동작을 확인해 본다.  
 
 ```bash
@@ -1113,13 +1180,236 @@ mongos> db.items.count();
 mongos> for(var n=10001; n<=20000; n++) db.items.insert({index:n, name:"test"})
 WriteResult({ "nInserted" : 1 })
 
-.. shard-03 추가 시점 부터 12506 개로 전체 레코드 수가 늘어나 있음 원인 파악 필요 ..
+.. mongos ..
 mongos> db.items.count();
-22506
+20000
+
+.. shard-01 ..
+shard-01:PRIMARY> db.items.count();
+5030
+
+.. shard-02 ..
+shard-02:PRIMARY> db.items.count();
+9859
+
+.. shard-03 ..
+shard-03:PRIMARY> db.items.count();
+5111
 ```  
 
 ### Shard 삭제
+구성된 샤드 클러스터에서 샤드 하나를 삭제하는 방법에 대해 살펴본다. 
+샤드 클러스터에서 샤드 삭제는 정해진 스텝을 통해 이뤄진다.  
 
+순서|설명
+---|---
+1|`sh.getBalancerState()` 명령을 통해 `Balancer Proces` 가 `true`(활성화)인지 확인
+2|`db.adminCommand( { listShards: 1 } )` 명령으로 현재 구성된 샤드 클러스터 중 삭제할 샤드 클러스터 정보 확인
+3|`db.adminCommand( { removeShard: "<remove-shard>" } )` 명령으로 샤드의 청크 삭제과정 시작
+4|`db.adminCommand( { removeShard: "<remove-shard>" } )` 명령을 다시한번 수행해서 `Migration` 상태 확인 잔여 `chunk` 가 0인지
+5|4번 스텝에서 `Migration` 이 필요한 `db` 가 있는 경우 `db.adminCommand( { movePrimary: "<source-db>", to: "<target-shard>" })` 명령을 삭제할 샤드 `Primary` 에서 실행
+5|`db.adminCommand( { removeShard: "mongodb0" } )` 명령을 수행해서 샤드 삭제 및 데이터 `Migration` 완료 확인
+
+테스트에서는 `shard-03` 을 삭제할 것이다. 
+먼저 1, 2스텝과 `sharding-test.items` 의 레코드 수는 아래와 같다. 
+
+```bash
+mongos> use admin;
+switched to db admin
+mongos>  sh.getBalancerState()
+true
+mongos> db.adminCommand( { listShards: 1 } )
+{
+        "shards" : [
+                {
+                        "_id" : "shard-01",
+                        "host" : "shard-01/mongodb-shard-01-statefulset-0.mongodb-shard-01-service.default.svc.cluster.local:270
+17,mongodb-shard-01-statefulset-1.mongodb-shard-01-service.default.svc.cluster.local:27017,mongodb-shard-01-statefulset-2.mongod
+b-shard-01-service.default.svc.cluster.local:27017",
+                        "state" : 1
+                },
+                {
+                        "_id" : "shard-02",
+                        "host" : "shard-02/mongodb-shard-02-statefulset-0.mongodb-shard-02-service.default.svc.cluster.local:270
+17,mongodb-shard-02-statefulset-1.mongodb-shard-02-service.default.svc.cluster.local:27017,mongodb-shard-02-statefulset-2.mongod
+b-shard-02-service.default.svc.cluster.local:27017",
+                        "state" : 1
+                },
+                {
+                        "_id" : "shard-03",
+                        "host" : "shard-03/mongodb-shard-03-statefulset-0.mongodb-shard-03-service.default.svc.cluster.local:270
+17,mongodb-shard-03-statefulset-1.mongodb-shard-03-service.default.svc.cluster.local:27017,mongodb-shard-03-statefulset-2.mongod
+b-shard-03-service.default.svc.cluster.local:27017",
+                        "state" : 1
+                }
+        ],
+        "ok" : 1,
+        "operationTime" : Timestamp(1632077094, 1),
+        "$clusterTime" : {
+                "clusterTime" : Timestamp(1632077094, 1),
+                "signature" : {
+                        "hash" : BinData(0,"ahk7vYjjN9q8J09heOrjvnjlicM="),
+                        "keyId" : NumberLong("7009299026919030798")
+                }
+        }
+}
+
+mongos> use sharding-test;
+switched to db sharding-test
+mongos> db.items.count();
+20000
+```  
+
+3번 스텝인 샤드 삭제 명령어를 처음으로 실행해서 `chunk` 에 대한 `Migration` 을 시작하면 아래와 같다.  
+
+```bash
+mongos> db.adminCommand({removeShard: "shard-03"});
+{
+        "msg" : "draining started successfully",
+        "state" : "started",
+        "shard" : "shard-03",
+        "note" : "you need to drop or movePrimary these databases",
+        "dbsToMove" : [ ],
+        "ok" : 1,
+        "operationTime" : Timestamp(1632077920, 3),
+        "$clusterTime" : {
+                "clusterTime" : Timestamp(1632077920, 3),
+                "signature" : {
+                        "hash" : BinData(0,"2L8UAJjuZHJ/f8H8d1xrCVYSiEs="),
+                        "keyId" : NumberLong("7009299026919030798")
+                }
+        }
+}
+```  
+
+위 명령어 실행으로 샤드 클러스터는 `shard-03` 에 있는 `chunk` 들을 다른 샤드로 옮기는 작업을 수행한다. 
+작업은 비교적 느리게 수행 되는데, 이유는 샤드 클러스터 전체에 과한 부하를 피하기 위해서 이다. 
+각 샤드의 성능 및 네트워크 등으로 최소 몇분에서 길게는 몇일 까지 소요될 수 있다. 
+
+그리고 4번 스텝으로 삭제 명령을 한번더 수행해서 상태를 확인 하면 아래와 같다.  
+
+```bash
+mongos> db.adminCommand({removeShard: "shard-03"});
+{
+        "msg" : "draining ongoing",
+        "state" : "ongoing",
+        "remaining" : {
+                "chunks" : NumberLong(226),
+                "dbs" : NumberLong(0),
+                "jumboChunks" : NumberLong(0)
+        },
+        "note" : "you need to drop or movePrimary these databases",
+        "dbsToMove" : [ ],
+        "ok" : 1,
+        "operationTime" : Timestamp(1632078062, 37),
+        "$clusterTime" : {
+                "clusterTime" : Timestamp(1632078062, 37),
+                "signature" : {
+                        "hash" : BinData(0,"A5inSyb97LvNOm/7SyZXqiEQ7zA="),
+                        "keyId" : NumberLong("7009299026919030798")
+                }
+        }
+}
+```  
+
+`remaining` 을 보면 아직 이전작업이 완료되지 않는 `chunk` 가 남아 있는 것을 확인 할 수 있다. 
+그리고 지금 결과에는 출력 되지 않았지만, 아래와 같이 `dbsToMove` 에 추가로 이전이 필요한 `db` 리스트가 출력 될 수 있다.  
+
+```json
+"dbsToMove" : [
+      "fizz",
+      "buzz"
+   ],
+```  
+
+이렇게 출력되는 경우 5번 스텝을 통해 직접 삭제하는 샤드의 `Primary` 에서 아래 명령을 통해 직접 어느 샤드에 디비를 옮길지 명령을 수행해 준다.  
+
+```bash
+shard-01:PRIMARY> db.adminCommand( { movePrimary: "fizz", to: "shard-01" })
+shard-01:PRIMARY> db.adminCommand( { movePrimary: "buzz", to: "shard-02" })
+```  
+
+모든 삭제할 샤드의 모든 데이터가 다른 샤드로 이전이 완료되면 6번 스텝으로 다시 삭제 명령을 수행했을 때 아래와 같은 출력 결과를 확인 할 수 있다.  
+
+```bash
+mongos> db.adminCommand({removeShard: "shard-03"});
+{
+        "msg" : "removeshard completed successfully",
+        "state" : "completed",
+        "shard" : "shard-03",
+        "ok" : 1,
+        "operationTime" : Timestamp(1632078485, 3),
+        "$clusterTime" : {
+                "clusterTime" : Timestamp(1632078485, 3),
+                "signature" : {
+                        "hash" : BinData(0,"h5IY2NM5XocJtBSg4HfE21g2kws="),
+                        "keyId" : NumberLong("7009299026919030798")
+                }
+        }
+}
+```  
+
+이제 다시 샤드 클러스터의 구성과 `sharding-test.items` 전체 레코드 수와 `shard-01 ~ 3` 의 레코드 수를 출력하면 아래와 같다.  
+
+```bash
+.. 샤드 클러스터 구성 ..
+mongos> db.adminCommand( { listShards: 1 } )
+{
+        "shards" : [
+                {
+                        "_id" : "shard-01",
+                        "host" : "shard-01/mongodb-shard-01-statefulset-0.mongodb-shard-01-service.default.svc.cluster.local:270
+17,mongodb-shard-01-statefulset-1.mongodb-shard-01-service.default.svc.cluster.local:27017,mongodb-shard-01-statefulset-2.mongod
+b-shard-01-service.default.svc.cluster.local:27017",
+                        "state" : 1
+                },
+                {
+                        "_id" : "shard-02",
+                        "host" : "shard-02/mongodb-shard-02-statefulset-0.mongodb-shard-02-service.default.svc.cluster.local:270
+17,mongodb-shard-02-statefulset-1.mongodb-shard-02-service.default.svc.cluster.local:27017,mongodb-shard-02-statefulset-2.mongod
+b-shard-02-service.default.svc.cluster.local:27017",
+                        "state" : 1
+                }
+        ],
+        "ok" : 1,
+        "operationTime" : Timestamp(1632078642, 1),
+        "$clusterTime" : {
+                "clusterTime" : Timestamp(1632078642, 1),
+                "signature" : {
+                        "hash" : BinData(0,"5RcuHEiN/3NiTkJaYEyRDWZFf8g="),
+                        "keyId" : NumberLong("7009299026919030798")
+                }
+        }
+}
+
+.. sharding-test.items 전체 레코드 수 ..
+mongos> use sharding-test;
+switched to db sharding-test
+mongos> db.items.count();
+20000
+
+.. shard-01 ..
+shard-01:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-01:PRIMARY> db.items.count();
+10141
+
+.. shard-02 ..
+shard-02:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-02:PRIMARY> db.items.count();
+9859
+
+.. shard-03 .. 
+shard-03:PRIMARY> use sharding-test;
+switched to db sharding-test
+shard-03:PRIMARY> db.items.count();
+5111
+```  
+
+샤드 클러스터는 현재 `shard-01`, `shard-02` 로만 구성된 상태이다. 
+샤드 클러스터에서 삭제한 `shard-03` 에 데이터는 실제로 삭제되지 않았지만, 
+`shard-03` 의 5111개의 레코드가 모두 `shard-01` 로 이전 된 것을 확인 할 수 있다. 
 
 
 
@@ -1129,6 +1419,8 @@ mongos> db.items.count();
 [Sharding in MongoDB](https://www.mongodb.com/basics/sharding)  
 [Sharded Mongodb in Kubernetes StatefulSets on GKE](https://medium.com/google-cloud/sharded-mongodb-in-kubernetes-statefulsets-on-gke-ba08c7c0c0b0)  
 [pkdone/gke-mongodb-shards-demo](https://github.com/pkdone/gke-mongodb-shards-demo)  
+[Add Shards to a Cluster](https://docs.mongodb.com/manual/tutorial/add-shards-to-shard-cluster/)  
+[Remove Shards from an Existing Sharded Cluster](https://docs.mongodb.com/manual/tutorial/remove-shards-from-cluster/)  
 
 
 
