@@ -48,13 +48,12 @@ config server|`config server` 는 전체 `MongoDB Sharding Cluster` 를 구성�
 
 ```
 .
+├── README.md
 ├── key.txt
 ├── mongodb-configserver-statefulset.yaml
 ├── mongodb-mongos-statefulset.yaml
 ├── mongodb-pv-template.yaml
-├── mongodb-shard-1-statefulset.yaml
-├── mongodb-shard-2-statefulset.yaml
-├── mongodb-shard-3-statefulset.yaml
+├── mongodb-shard-template-statefulset.yaml
 └── mongodb-storageclass.yaml
 ```  
 
@@ -494,8 +493,7 @@ persistentvolume/mongodb-pv-2g-shard-02-2   2Gi        RWO            Delete    
 
 ```bash
 .. shard-01 ..
-$ kubectl exec -it mongodb-shard-01-statefulset-0 -- bash
-root@mongodb-shard-01-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-shard-01-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 > rs.initiate({
@@ -527,8 +525,7 @@ false
 
 
 .. shard-02 ..
-$ kubectl exec -it mongodb-shard-02-statefulset-0 -- bash
-root@mongodb-shard-02-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-shard-02-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 > rs.initiate({
@@ -695,8 +692,7 @@ mongodb-mongos-statefulset-1   1/1     Running   0          2m1s
 샤드 등록은 `Primiary` 만 수행해 주면 된다.  
 
 ```bash
-$ kubectl exec -it mongodb-mongos-statefulset-0 -- bash
-root@mongodb-mongos-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-mongos-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 
@@ -941,8 +937,7 @@ mongos> db.items.count();
 10000
 
 .. shard-01 Pod 에 접속해서 items 의 레코드 수 확인 ..
-$ kubectl exec -it mongodb-shard-01-statefulset-0 -- bash
-root@mongodb-shard-01-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-shard-01-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 shard-01:PRIMARY> use admin;
@@ -955,8 +950,7 @@ shard-01:PRIMARY> db.items.count();
 4993
 
 .. shard-02 Pod 에 접속해서 items 의 레코드 수 확인 ..
-$ kubectl exec -it mongodb-shard-02-statefulset-0 -- bash
-root@mongodb-shard-02-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-shard-02-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 shard-02:PRIMARY> use admin;
@@ -1046,8 +1040,7 @@ Successfully added user: {
 이제 `Mongos` 에 접속해서 새로 구성한 `shard-03` 을 샤드로 추가해 준다.  
 
 ```bash
-$ kubectl exec -it mongodb-mongos-statefulset-0 -- bash
-root@mongodb-mongos-statefulset-0:/# mongo
+$ kubectl exec -it mongodb-mongos-statefulset-0 -- mongo
 MongoDB shell version v4.4.4
 connecting to: mongodb://127.0.0.1:27017/?compressors=disabled&gssapiServiceName=mongodb
 mongos> use admin;
