@@ -144,7 +144,48 @@ config server|`config server` 는 전체 `MongoDB Sharded Cluster` 를 구성하
 그 외 샤드에 대한 읽기/쓰기 동작은 가능하므로 특정 노드의 장애가 `MongoDB` 전체 장애를 발생시키지 않는다.  
 
 
-### Considerations Before Sharding
+## Considerations Before Sharding(주의 사항)
+`Sharded Cluster` 는 단일 샤드만 사용하는 환경보다는 더욱 큰 용량과 많은 요청을 처리할 수 있는 구조인것은 분명하다. 
+하지만 추가 인프라적인 요구사항과 그에 따른 복잡성이 수반되기 때문에, 
+신중한 계획에 따른 수행 및 지속적인 유지보수를 필요로한다.  
+
+그리고 하나의 `Collection` 이 샤딩되면, 
+`MongoDB` 에서는 샤딩된 컬렉션을 다시 해제하는 방법은 지원하지 않는다.  
+
+`Shard Key` 관련해서는 키의 분포가 좋지 못할때 `reshard` 동작을 수행할 수 있지만, 
+이는 확장성과 성능 문제와 관련있으므로 초기부터 키 선택을 신중하게 고려해야 한다. 
+관련해서 `Shard Key` 선택에 대한 문서는 [여기](https://docs.mongodb.com/manual/core/sharding-choose-a-shard-key/#std-label-sharding-shard-key-selection)
+에서 확인 가능하다.  
+
+`Mongos` 에서 수행되는 쿼리의 `Shard Key` 가 접두사를 포함하지 않는 경우, 
+`Mongos` 는 구성된 클러스터 전체에 쿼리 수행을 요청하게 된다. 
+그러므로 통계/수집과 같이 오랜 시간 소요될 수 있는 쿼리에는 주의가 필요하다.  
+
+
+## Sharded and Non-Sharded Collections
+
+
+## Connection to a Sharded Cluster
+
+## Sharding Strategy
+
+### Hashed Sharding
+
+### Ranged Sharding
+
+## Zones in Sharded Clusters
+
+
+## Collections in Sharding
+
+## Change Streams
+
+## Transactions
+
+
+
+
+
 
 
 
