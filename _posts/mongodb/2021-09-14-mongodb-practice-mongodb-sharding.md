@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[MongoDB 개념] "
+title: "[MongoDB 개념] MongoDB Sharding (Shared Cluster)"
 header:
   overlay_image: /img/mongodb-bg.png
-excerpt: ''
+excerpt: 'MongoDB 에서 Sharding 과 Shared Cluster 의 특징과 주의할 점에 대해서 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,10 +14,10 @@ tags:
   - Concept
   - MongoDB
   - Sharding
+  - Shared Cluster
 toc: true
 use_math: true
 ---  
-
 
 ## MongoDB Sharding
 `MongoDB` 는 `Database` 엔진 자체적으로 `Sharding` 아키텍쳐를 지원한다. 
@@ -164,40 +164,118 @@ config server|`config server` 는 전체 `MongoDB Sharded Cluster` 를 구성하
 
 ## Sharded and Non-Sharded Collections
 
+![그림 1]({{site.baseurl}}/img/mongodb/concept-mongodb-sharding-2.svg)
+
+`MongoDB` 데이터베이스에는 샤딩된 컬렉션과 샤딩되지 않은 컬렉션이 함께 공존할 수 있다. 
+샤드 컬렉션은 [partition](https://docs.mongodb.com/manual/reference/glossary/#std-term-data-partition)
+단위로 분할되어 클러스터의 각 샤드에 분산되어 저장된다. 
+그리고 샤드되지 않은 컬렉션은 [primary shard]()(기본 샤드)
+에만 저장된다. 
+모든 `MongoDB` 데이터베이스에는 기본 샤드가 기본적으로 존재한다.  
+
 
 ## Connection to a Sharded Cluster
 
+![그림 1]({{site.baseurl}}/img/mongodb/concept-mongodb-sharding-3.svg)
+
+하나의 컬렉션이 여러 조각으로 나눠진 `Sharded Cluaster` 에서 정상적인 데이터 연산을 수행하기 위해서는 라우터 역할을 하는 [mongos](https://docs.mongodb.com/manual/reference/glossary/#std-term-mongos)
+에 연결해서 연산을 수행해야 한다. 
+`mongos` 는 샤드 컬렉션, 샤드되지 않는 컬렉션 모두 데이터 연산을 수행할 수 있다. 
+만약 데이터 연산을 위해 특정 단일 샤드에 연결한 경우 해당 샤드에 있는 데이터만 연산 대상이 되기 때문에 주의가 필요하다.  
+
+기존 [mongod](https://docs.mongodb.com/manual/reference/program/mongod/#mongodb-binary-bin.mongod)
+에 연결하는 방법과 동일하게 
+[mongosh](https://docs.mongodb.com/mongodb-shell/#mongodb-binary-bin.mongosh), 
+[MongoDB driver](https://docs.mongodb.com/drivers/?jump=docs)
+를 사용해서 `mongos` 에 연결 할 수 있다.  
+
+mongosh 또는 MongoDB 드라이버를 사용하여 mongod에 연결하는 것과 동일한 방식으로 mongos에 연결할 수 있습니다.
+
 ## Sharding Strategy
+샤드 키의 선택은 `Shared Cluster` 의 성능, 효율, 확장성 등과 같이 많은 부분에 영향을 미치는 중요한 포인트이다. 
+최상의 하드웨어 및 인프라 자원을 갖춘 상태라도 샤드키의 선택에 따라 병목현상이 발생할 수 있음을 주의 해야 한다. 
+그리고 샤드 키의 선택은 `Sharding Strategy` 에 따라 그 효율이 달라질 수 있으므로 샤딩 전략에 알맞는 샤드 키 선택이 필요하다.  
+
+`MongoDB` 는 `Sharded Cluster` 에 데이터를 분산 시킬 수 있는 두가지 샤딩 전략을 제공한다.  
 
 ### Hashed Sharding
 
+![그림 1]({{site.baseurl}}/img/mongodb/concept-mongodb-sharding-4.svg)
+
+`Hashed Sharding` 은 지정된 샤드 키 필드 값을 바탕으로 해시 계산된 해시값이 포함되는 `chunk` 에 할당된다. 
+여기서 언급된 해시함수 계산은 `MongoDB` 에서 샤딩을 위해 자동으로 수행하는 동작이기 때문에 애플리케이션에서 별도로 해시관련 연산을 수행할 필요는 없다.  
+
+해시 샤딩을 사용할 때 샤드 키의 값이 인접해 있더라도 해당 값들이 동일한 청크에 있을 가능성은 거의 없다. 
+그러므로 해시 값을 바탕으로 데이터 분산은 샤드 키가 [monotonically](https://docs.mongodb.com/manual/core/sharding-choose-a-shard-key/#std-label-shard-key-monotonic)(단순하게)
+변하는 데이터 세트에서도 더욱 고른 분포의 데이터 분산을 보여줄 수 있다.  
+
+해시 함수를 사용하게 되면 특정 데이터 셋이 있을때 해당 데이터가 하나의 샤드에만 포함될 확률은 현저하게 낮다는 것을 의미한다. 
+그러므로 하나의 데이터 세트 연산 동작을 위해서는 전체 클러스터에 대해서 [broadcast operation](https://docs.mongodb.com/manual/core/sharded-cluster-query-router/#std-label-sharding-mongos-broadcast)
+이 불가피 하다는 단점이 있다.  
+
+`Hashed Sharding` 관련 더 자세한 내용은 [여기](https://docs.mongodb.com/manual/core/hashed-sharding/)
+에서 확인 가능하다.  
+
 ### Ranged Sharding
+
+![그림 1]({{site.baseurl}}/img/mongodb/concept-mongodb-sharding-5.svg)
+
+`Ranged Sharding` 은 샤드 키의 값 기준으로 데이터의 범위를 나누는 것을 의미한다. 
+그리고 샤드 키는 범위에 해당하는 `chunk` 에 할당된다.  
+
+범위 샤딩을 사용할때 샤드 키의 값이 인접해 있다면 해당 값들은 동일한 청크에 있을 가능성이 매우 높다. 
+이러한 특징으로 연산이 필요한 데이터가 인접해 있을 경우 특정 샤드에만 요청해서 작업을 수행하는 방법을 사용할 수 있다.  
+
+위와 같은 특징으로 `Ranged Sharding` 의 효율은 샤드 키 선택에 좌우 된다. 
+잘 고려되지 않는 샤드 키는 고르지 않은 데이터 분포를 가져올 수 있고, 
+이는 샤딩의 장점 일부가 상실되거나 성능적으로 병목 지점이 될 수 있다. 
+샤드 키 선택 관련해서는 [여기](https://docs.mongodb.com/manual/core/ranged-sharding/#std-label-sharding-ranged-shard-key)
+에서 더 자세한 내용을 확인 할 수 있다.  
+
+`Ranged Sharding` 과 관련해서 더 자세한 내용은 [여기](https://docs.mongodb.com/manual/core/ranged-sharding/)
+에서 확인 가능하다.  
 
 ## Zones in Sharded Clusters
 
+![그림 1]({{site.baseurl}}/img/mongodb/concept-mongodb-sharding-6.svg)
+
+[Zones](https://docs.mongodb.com/manual/reference/glossary/#std-term-zone) 
+은 여러 데이터 센터로 구성된 `Shared Cluster` 에서 데이터의 인접성을 개선하는데 도움이 될 수 있다. 
+즉 하나의 `Shared Cluster` 에서 샤드 키를 기반으로 샤드에 대해서 사용자가 정의한 `Zone`을 만들 수 있다. (사용자 정의 `Sub Cluster` 라고 할 수 있음)
+각 `Zone` 은 클러스터에서 하나 이상의 샤드를 포함하게 된다. 
+그리고 각 샤드도 하나 이상의 `Zone`에 포함될 수 있는 `N:N` 의 관계를 갖는다.  
+
+그리고 균형이 잡힌 `Sharded Cluster` 에서 `MongoDB` 는 `Zone` 에 포함된 샤드에 대해서만 `chunk` 마이그레이션을 수행한다. 
+각 `Zone` 은 하나 이상의 샤드 키 값 범위가 있어야 한다. 
+`Zone` 의 샤드 키 범위는 하한 범위는 포함하지만 상한 범위는 제외한다. (`start <= zone range < end`)  
+
+새로운 `Zone` 을 생성 할때는 샤드 키에 포함되는 필드를 사용해서 범위를 정의해야 한다. 
+복합 샤드 키를 사용하는 경우라면 `Zone` 범위에는 샤드 키의 범두사가 포함되야 한다. 
+`Zone` 범위 정의 관련 더 자세한 내요은 [여기](https://docs.mongodb.com/manual/core/zone-sharding/#std-label-zone-sharding-shard-key)
+에서 확인 가능하다.  
 
 ## Collections in Sharding
 
 ## Change Streams
+`MongoDB 3.6` 부터 `Replica Set` , `Shared Cluster` 에 대해서 [Change Stream](https://docs.mongodb.com/manual/changeStreams/)
+을 사용할 수 있다. 
+`Change Streams` 을 사용하면 애플리케이션에서 `oplog` 를 `tailing` 해서 변경사항을 감지하는 복잡하고 안정적이지 않는 방법 대신, 
+실시간으로 데이터의 변경사항에 액세스 할 수 있다. 
+애플리케이션은 `Change Stream` 을 사용해서 데이터 수집, 컬렉션의 데이터 변경사항 구독 등의 동작을 수행할 수 있다.  
 
 ## Transactions
+`MongoDB 4.2` 부터 [distributed transactions](https://docs.mongodb.com/manual/core/transactions/)
+이 도입 돼어 `Shared Cluster` 에서도 `Multi-Document` 에 대해 트랙잭션을 사용할 수 있다.  
 
+트랜잭션이 커밋되기 전까지는 트랜잭션에서 수행된 데이터 변경은 트랜잭션 외부에서 변경사항을 확인 할 수 없다. 
+트랜잭션이 실제로 커밋된 이후에 다른 트랜잭션에서 실제 변경사항이 반영된 결과를 조회할 수 있다는 의미이다.  
 
+트랜잭션이 여러 샤드에 반영(커밋)될 때 모든 외부의 다른 읽기 작업들이 해당 트랜잭션이 모든 샤드에 커밋 될때까지 기다릴 필요는 없다. 
+만약 트랜잭션이 A, B 샤드에 2라는 값으로 커밋될 때 A샤드만 커밋이 완료된 상태라면, B 샤드에서 읽기 동작을 수행하는 외부 읽기 동작에서는 여전이 1이 조회 될 수 있다.  
 
-
-
-
-
-
-### Shard Key Strategy
-.. 아래 쪽에 그림 있는거랑 같이 설명 ..
-
-
-
-그렇다면 먼저 `Sharding` 을 하지 않고, 단일 노드에 매우 큰 데이터를 저장하고 높은 처리량을 요구한다고 가정해보자. 
-데이터가 매우 크고, 이후에도 지속적으로 데이터의 크기가 커진다면 해당 노드에 계속해서 
-
-
+트랜잭션 관련 더 자세한 링크는 아래와 같다.  
+- [Production Considerations](https://docs.mongodb.com/manual/core/transactions-production-consideration/)
+- [Production Considerations (Sharded Clusters)](https://docs.mongodb.com/manual/core/transactions-sharded-clusters/)
 
 
 
