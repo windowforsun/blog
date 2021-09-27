@@ -184,10 +184,8 @@ public interface MyTestRepository extends MongoRepository<MyTest, String> {
 ```  
 
 
-### MongoDB 예제 코드
-
-#### Model
-간단한 테스트를 위해 `MongoDB` 의 `Collection` 과 매핑되는 `User` 라는 모델 클래스를 아래와 같이 정의 한다.  
+### MongoDB Model
+간단한 테스트를 위해 `MongoDB` 의 `user` 라는 `Collection` 의 `Document` 모델 클래스를 아래와 같이 정의 한다.  
 
 ```java
 @Document
@@ -215,25 +213,50 @@ public class EmailAddress {
 }
 ```  
 
-`@Document` `Annotation` 을 선언해 주면 해당 클래스는 `MongoDB` 의 `Collection` 와 같은 테이블 역할을 하게 된다.  
+`@Document` `Annotation` 을 선언해 주면 해당 클래스는 `MongoDB` 의 `Collection` 에 저장되는 `Document` 의 구조를 정의할 수 있다. 
 
 
-
-#### Repository
-아래는 `User` 모델을 사용해서 `MongoDB` 의 `user` 이름을 갖는 `Collection` 에 연산을 수행할 수 있는 `Repository` 클래스이다.  
-
-```java
-public interface UserRepository extends MongoRepository<User, String> {
-}
-```  
 
 
 ### MongoTemplate 사용 하기
-`MongoTemplate` 에서 제공하는 `API` 중 간단하게 `CRUD` 에 해당하는 부분만 살펴 본다.  
+`MongoTemplate` 에서 제공하는 `API` 중 간단하게 `CRUD` 에 해당하는 부분만 살펴 본다. 
+앞서 언급한 것과 같이 `MongoTemplate` 은 별도의 `POJO` 선언 없이도 사용이 가능하다. (ex) HashMap)
+예제에서는 앞서 선언한 `User` 모델을 사용해서 진행하도록 한다.  
+
+`MongoTemplate` 의 테스트를 수행하는 `MongoTemplateTest` 클래스에서 `Test Method` 를 제외한 나머지 내용은 아래와 같다.  
+
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+public class MongoTemplateTest extends MongoDbTest {
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
+    @BeforeAll
+    public static void init() {
+        MongoTemplateConfig.dbName = "test";
+        MongoTemplateConfig.mongoConnectionString = new StringBuilder()
+                .append("mongodb://")
+                .append(MongoDbTest.MONGO_DB.getHost())
+                .append(":")
+                .append(MongoDbTest.MONGO_DB.getFirstMappedPort())
+                .append("/")
+                .append(MongoTemplateConfig.dbName)
+                .toString();
+    }
+
+    @BeforeEach
+    public void setUp() {
+        this.mongoTemplate.dropCollection(User.class);
+    }
+
+    // Test Method
+}
+```  
 
 #### Insert
 `insert` 는 `Collection` 에 존재하지 않는 새로운 데이터를 추가하는 것을 의미한다. 
-만약 기존에 `insert` 된 데이터를 다시 수행하면 `DuplicateKeyException` 예외가 발생한다.  
+만약 기존에 `insert` 된(`id` 존재) 데이터를 다시 수행하면 `DuplicateKeyException` 예외가 발생한다.  
 
 ```java
 @Test
@@ -281,12 +304,275 @@ public void givenExistUser_whenInsert_thenThrowsDuplicateKeyException() {
 }
 ```  
 
-### save
+#### save
+`save` 는 `insert-or-update` 라고 할 수 있다. 
+만약 `save` 하려는 `id` 가 존재하면 `update` 를 수행하고, 존재하지 않는다면 `insert` 를 수행한다.  
+
+```java
+@Test
+public void givenNewUser_whenSave_thenCreatedUserId() {
+	// given
+	User user = new User();
+	user.setName("myName");
+
+	// when
+	User actual = this.mongoTemplate.save(user, "user");
+
+	// then
+	assertThat(actual.getId(), not(emptyOrNullString()));
+}
+
+@Test
+public void givenExistsUser_whenSave_thenUpdateName() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.save(user, "user");
+
+	// when
+	user.setName("myName2");
+	User actual = this.mongoTemplate.save(user, "user");
+
+	// then
+	assertThat(actual.getId(), is(user.getId()));
+	assertThat(actual.getName(), is("myName2"));
+}
+```  
+
+####  UpdateFirst
+`updateFirst` 는 조건이 해당하는 도큐먼트 중 가장 첫번째에 있는 도튜먼트를 업데이트 한다.  
+
+```java
+@Test
+public void givenTwoUser_whenUpdateFirst_thenFirstUserNameUpdated() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2 = this.mongoTemplate.insert(user_2);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	UpdateResult actual = this.mongoTemplate.updateFirst(query, update, User.class);
+
+	// then
+	User afterUser_1 = this.mongoTemplate.findById(user_1.getId(), User.class);
+	User afterUser_2 = this.mongoTemplate.findById(user_2.getId(), User.class);
+	assertThat(actual.getModifiedCount(), is(1L));
+	assertThat(afterUser_1.getName(), is("myName1"));
+	assertThat(afterUser_2.getName(), is("myName"));
+}
+```  
+
+#### UpdateMulti
+`updateMulti` 는 조건이 해당하는 모든 도큐먼트를 업데이트 한다.  
+
+```java
+@Test
+public void givenTwoUser_whenUpdateMulti_thenTwoUserNameUpdated() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2 = this.mongoTemplate.insert(user_2);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	UpdateResult actual = this.mongoTemplate.updateMulti(query, update, User.class);
+
+	// then
+	User afterUser_1 = this.mongoTemplate.findById(user_1.getId(), User.class);
+	User afterUser_2 = this.mongoTemplate.findById(user_2.getId(), User.class);
+	assertThat(actual.getModifiedCount(), is(2L));
+	assertThat(afterUser_1.getName(), is("myName1"));
+	assertThat(afterUser_2.getName(), is("myName1"));
+}
+```  
+
+#### FindAndModify
+`findAndModify` 는 실제 동작은 `updateFirst` 와 동일하게 조건에 해당하는 도큐먼트 중 가장 첫번째 도큐먼트를 업데이트 한다. 
+그리고 업데이트 전의 도큐먼트 내용을 리턴한다.  
+
+```java
+@Test
+public void givenSingleUser_whenFindAndModify_thenModified() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	User actual = this.mongoTemplate.findAndModify(query, update, User.class);
+
+	// then
+	assertThat(actual.getId(), is(user.getId()));
+	assertThat(actual.getName(), is("myName"));
+	User afterUser_1 = this.mongoTemplate.findById(user.getId(), User.class);
+	assertThat(afterUser_1.getName(), is("myName1"));
+
+}
+
+@Test
+public void givenTwoUser_whenFindAndModify_thenModified() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2 = this.mongoTemplate.insert(user_2);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	User actual = this.mongoTemplate.findAndModify(query, update, User.class);
+
+	// then
+	assertThat(actual.getId(), is(user_1.getId()));
+	assertThat(actual.getName(), is("myName"));
+	User afterUser_1 = this.mongoTemplate.findById(user_1.getId(), User.class);
+	assertThat(afterUser_1.getName(), is("myName1"));
+	User afterUser_2 = this.mongoTemplate.findById(user_2.getId(), User.class);
+	assertThat(afterUser_2.getName(), is("myName"));
+}
+```  
+
+#### Upsert
+`upsert` 는 조건에 해당하는 도큐먼트가 존재하는 경우 `Update`를 수행하고, 
+존재하지 않는다면 `Insert`를 수행한다. 
+`save` 와 비슷한 동작이지만, `save` 는 `id` 필드의 존재 여부로 수행되고 `upsert` 는 다양한 조건을 사용할 수 있다.  
+
+```java
+@Test
+public void whenUpsert_thenCreateUser() {
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	UpdateResult actual = this.mongoTemplate.upsert(query, update, User.class);
+
+	// then
+	assertThat(actual.getModifiedCount(), is(0L));
+	String upsertedId = actual.getUpsertedId().asObjectId().getValue().toString();
+	assertThat(upsertedId, not(emptyOrNullString()));
+	User user = this.mongoTemplate.findById(upsertedId, User.class);
+	assertThat(user.getName(), is("myName1"));
+}
+
+@Test
+public void givenExistsUser_whenUpsert_thenUpdatedUser() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	Update update = new Update();
+	update.set("name", "myName1");
+	UpdateResult actual = this.mongoTemplate.upsert(query, update, User.class);
+
+	// then
+	assertThat(actual.getModifiedCount(), is(1L));
+	User afterUser = this.mongoTemplate.findById(user.getId(), User.class);
+	assertThat(afterUser.getName(), is("myName1"));
+}
+```  
 
 
+#### Remove
+`remove` 는 특정 도큐먼트를 삭제할 수도 있고, 
+조건을 사용해서 여러 도큐먼트를 한번에 삭제할 수도 있다.  
+
+```java
+@Test
+public void givenExistsUser_whenRemove_thenRemovedUser() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	DeleteResult actual = this.mongoTemplate.remove(user);
+
+	// then
+	assertThat(actual.getDeletedCount(), is(1L));
+	User afterUser = this.mongoTemplate.findById(user.getId(), User.class);
+	assertThat(afterUser, nullValue());
+}
+
+@Test
+public void givenNotExistsUser_whenRemove_thenDeleteCountIsZero() {
+	// given
+	User user = new User();
+	user.setId("test");
+	user.setName("myName");
+
+	 // when
+	DeleteResult actual = this.mongoTemplate.remove(user);
+
+	// then
+	assertThat(actual.getDeletedCount(), is(0L));
+}
+
+@Test
+public void givenExistsUser_whenRemoveQuery_thenRemovedUser() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("yourName");
+	user_2 = this.mongoTemplate.insert(user_2);
+	User user_3 = new User();
+	user_3.setName("myName");
+	user_3 = this.mongoTemplate.insert(user_3);
+
+	// when
+	Query query = new Query();
+	query.addCriteria(Criteria.where("name").is("myName"));
+	DeleteResult actual = this.mongoTemplate.remove(query, User.class);
+
+	// then
+	assertThat(actual.getDeletedCount(), is(2L));
+	User afterUser_1 = this.mongoTemplate.findById(user_1.getId(), User.class);
+	assertThat(afterUser_1, nullValue());
+	User afterUser_2 = this.mongoTemplate.findById(user_2.getId(), User.class);
+	assertThat(afterUser_2, not(nullValue()));
+	User afterUser_3 = this.mongoTemplate.findById(user_3.getId(), User.class);
+	assertThat(afterUser_3, nullValue());
+}
+```  
 
 
+### MongoRepository 사용 하기
 
+
+#### Repository
+아래는 `User` 모델을 사용해서 `MongoDB` 의 `user` 이름을 갖는 `Collection` 에 연산을 수행할 수 있는 `Repository` 클래스이다.
+
+```java
+public interface UserRepository extends MongoRepository<User, String> {
+}
+```  
 
 
 
