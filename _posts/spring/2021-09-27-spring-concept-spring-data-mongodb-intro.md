@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 개념] "
+title: "[Spring 개념] Spring Data MongoDB 소개 및 사용 방법"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Data MongoDB 에 대해 알아보고 설정과 간단하게 사용하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,7 +14,7 @@ tags:
     - Spring
     - Spring Boot
     - Spring Data MongoDB
-    - 
+    - MongoDB
 toc: true
 use_math: true
 ---  
@@ -110,7 +110,7 @@ public class MongoDbTest {
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
-        // yaml 쪽에 설정이 필요한 경우 
+        // yaml 에 설정이 필요한 경우 
 //        registry.add("spring.data.mongodb.host", MONGO_DB::getHost);
 //        registry.add("spring.data.mongodb.port", MONGO_DB::getFirstMappedPort);
         log.info("mongodb test container info host : {}, port : {}", MONGO_DB.getHost(), MONGO_DB.getFirstMappedPort());
@@ -214,6 +214,7 @@ public class EmailAddress {
 ```  
 
 `@Document` `Annotation` 을 선언해 주면 해당 클래스는 `MongoDB` 의 `Collection` 에 저장되는 `Document` 의 구조를 정의할 수 있다. 
+그리고 도큐먼트의 필드 중 아이디에 해당하는 필드에 `@Id` `Annotation` 을 선언해 주면 아이디와 매핑 되게 된다.  
 
 
 
@@ -250,7 +251,7 @@ public class MongoTemplateTest extends MongoDbTest {
         this.mongoTemplate.dropCollection(User.class);
     }
 
-    // Test Method
+    // Test Method ..
 }
 ```  
 
@@ -304,7 +305,7 @@ public void givenExistUser_whenInsert_thenThrowsDuplicateKeyException() {
 }
 ```  
 
-#### save
+#### Save
 `save` 는 `insert-or-update` 라고 할 수 있다. 
 만약 `save` 하려는 `id` 가 존재하면 `update` 를 수행하고, 존재하지 않는다면 `insert` 를 수행한다.  
 
@@ -564,10 +565,10 @@ public void givenExistsUser_whenRemoveQuery_thenRemovedUser() {
 
 
 ### MongoRepository 사용 하기
-
-
-#### Repository
-아래는 `User` 모델을 사용해서 `MongoDB` 의 `user` 이름을 갖는 `Collection` 에 연산을 수행할 수 있는 `Repository` 클래스이다.
+`MongoRepository` 를 사용하면 `MongoTemplate` 보다 좀더 간편하게 쿼리 수행이 가능하다. 
+하지만 별도로 `POJO` 를 선언해 줘야 하고, `POJO` 와 매핑되는 `Repository` 또한 선언이 필요하다. 
+테스트에서는 아래 `UserRepository` 를 사용한다. 
+그리고 테스트는 `MongoRepository` 에서 기본으로 제공하는 몇가지 `API` 에 대해서만 알아본다.  
 
 ```java
 public interface UserRepository extends MongoRepository<User, String> {
@@ -575,8 +576,333 @@ public interface UserRepository extends MongoRepository<User, String> {
 ```  
 
 
+`MongoRepository` 테스트를 수행하는 `MongoRepositoryTest` 클래스에서 `Test Method` 를 제외한 나머지 내용은 아래와 같다.  
+
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+public class MongoRepositoryTest extends MongoDbTest {
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+    @Autowired
+    private UserRepository userRepository;
+
+    @BeforeAll
+    public static void init() {
+        MongoTemplateConfig.dbName = "test";
+        MongoTemplateConfig.mongoConnectionString = new StringBuilder()
+                .append("mongodb://")
+                .append(MongoDbTest.MONGO_DB.getHost())
+                .append(":")
+                .append(MongoDbTest.MONGO_DB.getFirstMappedPort())
+                .append("/")
+                .append(MongoTemplateConfig.dbName)
+                .toString();
+    }
+
+    @BeforeEach
+    public void setUp() {
+        this.mongoTemplate.dropCollection(User.class);
+    }
+    
+    // Test Method ..
+}
+```  
+
+#### Insert
+`insert` 는 `Collection` 에 존재하지 않는 새로운 데이터를 추가하는 것을 의미한다.
+만약 기존에 `insert` 된(`id` 존재) 데이터를 다시 수행하면 `DuplicateKeyException` 예외가 발생한다.
+
+```java
+@Test
+public void givenNewUser_whenInsert_thenCreatedUserId() {
+	// given
+	User user = new User();
+	user.setName("myName");
+
+	// when
+	User actual = this.userRepository.insert(user);
+
+	// then
+	assertThat(actual.getId(), not(emptyOrNullString()));
+}
+
+@Test
+public void givenNewUser_whenInsert_thenExistsDb() {
+	// given
+	User user = new User();
+	user.setName("myName");
+
+	// when
+	User actual = this.userRepository.insert(user);
+
+	// then
+	User afterUser = this.mongoTemplate.findById(actual.getId(), User.class);
+	assertThat(actual.getId(), is(afterUser.getId()));
+}
+
+@Test
+public void givenExistUser_whenInsert_thenThrowsDuplicateKeyException() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	this.mongoTemplate.insert(user, "user");
+
+	// when
+	user.setName("myName2");
+	Executable executable = () -> this.userRepository.insert(user);
+
+	// then
+	assertThrows(DuplicateKeyException.class, executable);
+}
+```  
+
+
+#### Save
+`save` 는 `insert-or-update` 라고 할 수 있다.
+만약 `save` 하려는 `id` 가 존재하면 `update` 를 수행하고, 존재하지 않는다면 `insert` 를 수행한다.  
+
+```java
+@Test
+public void givenNewUser_whenSave_thenCreatedUserId() {
+	// given
+	User user = new User();
+	user.setName("myName");
+
+	// when
+	User actual = this.userRepository.save(user);
+
+	// then
+	assertThat(actual.getId(), not(emptyOrNullString()));
+}
+
+@Test
+public void givenExistsUser_whenSave_thenUpdateName() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.save(user, "user");
+
+	// when
+	user.setName("myName2");
+	User actual = this.userRepository.save(user);
+
+	// then
+	assertThat(actual.getId(), is(user.getId()));
+	assertThat(actual.getName(), is("myName2"));
+}
+```  
+
+#### Delete
+`delete` 와 `deleteById` 는 특정 도큐먼트 혹은 도큐먼트에 해당하는 아이디를 사용해서 삭제를 수행할 수 있다.  
+
+```java
+@Test
+public void givenExistsUser_whenDelete_thenRemovedUser() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	this.userRepository.delete(user);
+	User actual = this.mongoTemplate.findById(user.getId(), User.class);
+
+	// then
+	assertThat(actual, nullValue());
+}
+
+@Test
+public void givenExistsUser_whenDeleteById_thenRemovedUser() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	this.userRepository.deleteById(user.getId());
+	User actual = this.mongoTemplate.findById(user.getId(), User.class);
+
+	// then
+	assertThat(actual, nullValue());
+}
+```  
+
+#### FindOne
+`findOne` 은 도큐먼트 객체를 사용해서 일치하는 가장 첫 번째 도큐먼트를 찾을 수 있다. 
+도큐먼트 객체에 설정된 필드 값과 동일한 도큐먼트를 찾아 리턴한다.  
+
+```java
+@Test
+public void givenMultipleUser_whenFindOneByName_thenReturnUser() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2 = this.mongoTemplate.insert(user_2);
+	User example = new User();
+	example.setName("myName");
+
+	// when
+	User actual = this.userRepository.findOne(Example.of(example)).orElse(null);
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual.getId(), is(user_1.getId()));
+}
+
+@Test
+public void givenMultipleUser_whenFindOneByNameAge_thenReturnUser() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1.setAge(1);
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2.setAge(2);
+	user_2 = this.mongoTemplate.insert(user_2);
+	User example = new User();
+	example.setName("myName");
+	example.setAge(2);
+
+	// when
+	User actual = this.userRepository.findOne(Example.of(example)).orElse(null);
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual.getId(), is(user_2.getId()));
+}
+```  
+
+#### FindById
+`findById` 는 도큐먼트 아이디와 일치하는 도큐먼트를 찾아 리턴한다.  
+
+```java
+@Test
+public void givenExistsUser_whenFindById_thenReturnUser() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	User actual = this.userRepository.findById(user.getId()).orElse(null);
+
+	// then
+	assertThat(actual, notNullValue());
+	assertThat(actual.getId(), is(user.getId()));
+	assertThat(actual.getName(), is(user.getName()));
+}
+```  
+
+#### Exists
+`exists` 는 `findOne` 과 동일하게 도큐먼트 객체를 사용해서 필드의 값과 일치하는 도큐먼트가 존재하는지 리턴한다.  
+
+```java
+@Test
+public void givenExistsUser_whenExists_thenReturnTrue() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+	User example = new User();
+	user.setName("myName");
+
+	// when
+	boolean actual = this.userRepository.exists(Example.of(example));
+
+	// then
+	assertThat(actual, is(true));
+}
+```  
+
+#### ExistsById
+`existsById` 는 특정 도큐먼트 아이디가 존재하는지 리턴한다.  
+
+```java
+@Test
+public void givenExistsUser_whenExistsById_thenReturnTrue() {
+	// given
+	User user = new User();
+	user.setName("myName");
+	user = this.mongoTemplate.insert(user);
+
+	// when
+	boolean actual = this.userRepository.existsById(user.getId());
+
+	// then
+	assertThat(actual, is(true));
+}
+```  
+
+#### FindAll With Sort
+`findAll` 은 컬렉션에 존재하는 모든 도큐먼트를 가져올 수 있는데, 
+`Sort` 를 사용하면 특정 조건을 기준으로 정렬된 리스트로 결과값을 리턴 받을 수 있다.  
+
+```java
+@Test
+public void givenThreeUser_whenFindAllWithSort_thenSortedDescByName() {
+	// given
+	User user_1 = new User();
+	user_1.setName("1");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("2");
+	user_2 = this.mongoTemplate.insert(user_2);
+	User user_3 = new User();
+	user_3.setName("3");
+	user_3 = this.mongoTemplate.insert(user_3);
+
+	// when
+	List<User> actual = this.userRepository.findAll(Sort.by(Sort.Direction.DESC, "name"));
+
+	// then
+	assertThat(actual, hasSize(3));
+	assertThat(actual.get(0).getName(), is("3"));
+	assertThat(actual.get(1).getName(), is("2"));
+	assertThat(actual.get(2).getName(), is("1"));
+}
+```  
+
+#### FindAll With Pageable
+`findAll` 은 컬렉션 전체 데이터에 대해서 `Pageable` 을 사용해서 페이징 처리 해서 가져올 수 있다.  
+
+```java
+@Test
+public void givenThreeUser_whenFindAllWithPageable_thenReturnPaginationList() {
+	// given
+	User user_1 = new User();
+	user_1.setName("1");
+	user_1 = this.mongoTemplate.insert(user_1);
+	User user_2 = new User();
+	user_2.setName("2");
+	user_2 = this.mongoTemplate.insert(user_2);
+	User user_3 = new User();
+	user_3.setName("3");
+	user_3 = this.mongoTemplate.insert(user_3);
+	Pageable firstPageRequest = PageRequest.of(0, 2);
+	Pageable secondPageRequest = PageRequest.of(1, 2);
+
+	// when
+	List<User> actualFirstPage = this.userRepository.findAll(firstPageRequest).getContent();
+	List<User> actualSecondPage = this.userRepository.findAll(secondPageRequest).getContent();
+
+	// then
+	assertThat(actualFirstPage, hasSize(2));
+	assertThat(actualFirstPage.get(0).getName(), is("1"));
+	assertThat(actualFirstPage.get(1).getName(), is("2"));
+	assertThat(actualSecondPage, hasSize(1));
+	assertThat(actualSecondPage.get(0).getName(), is("3"));
+}
+```  
+
 
 
 
 ---
 ## Reference
+[Introduction to Spring Data MongoDB](https://www.baeldung.com/spring-data-mongodb-tutorial)  
