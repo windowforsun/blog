@@ -575,6 +575,7 @@ public interface UserRepository extends MongoRepository<User, String> {
 }
 ```  
 
+> `MongoRepository` 사용을 위해서는 `@EnableMongoRepositories` 선언이 필요하다.  
 
 `MongoRepository` 테스트를 수행하는 `MongoRepositoryTest` 클래스에서 `Test Method` 를 제외한 나머지 내용은 아래와 같다.  
 
