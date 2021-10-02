@@ -784,6 +784,25 @@ configurations {
 }
 ```  
 
+`QueryDSL` 에서 사용할 모델에는 아래와 같이`@QueryEntity` `Annotation` 추가가 필요하다.  
+
+```java
+@QueryEntity
+@Document
+@Getter
+@Setter
+@ToString
+public class User {
+    @Id
+    private String id;
+    private String name;
+    private Integer age;
+
+    private EmailAddress emailAddress;
+    private Integer yearOfBirth;
+}
+```  
+
 `build.gradle` 설정이 정상적으로 완료 됐는지 테스트 하기 위해서 아래 명령어를 사용해서 `QueryDSL` 에서 사용할 `QClass` 를 생성한다.  
 
 ```bash
