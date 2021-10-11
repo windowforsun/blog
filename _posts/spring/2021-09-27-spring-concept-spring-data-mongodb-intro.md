@@ -198,19 +198,9 @@ public class User {
     private String name;
     private Integer age;
 
-    private EmailAddress emailAddress;
     private Integer yearOfBirth;
 }
 
-@Document
-@Getter
-@Setter
-@ToString
-public class EmailAddress {
-	@Id
-	private String id;
-	private String value;
-}
 ```  
 
 `@Document` `Annotation` 을 선언해 주면 해당 클래스는 `MongoDB` 의 `Collection` 에 저장되는 `Document` 의 구조를 정의할 수 있다. 
