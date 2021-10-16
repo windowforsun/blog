@@ -270,6 +270,8 @@ public interface UserQueryMethodsRepository extends MongoRepository<User, String
 	List<User> findByOrderByAgeDesc();
 
 	List<User> findByNameLikeOrderByAgeDesc(String name);
+
+	Page<User> findByNameOrderByAgeDesc(String name, Pageable pageable);
 }
 ```  
 
@@ -545,6 +547,59 @@ public void givenExistsUser_whenFindByNameLikeOrderByAgeDesc_thenFoundNameLikedA
 	assertThat(actual.get(1).getAge(), is(20));
 }
 ```  
+
+#### Limit
+`Spring Data MongoDB` 에서 `QueryMethod` 를 사용할 때 `Limit` 관련 연산은, 
+`PageRepository` 를 통해 사용할 수 있다. 
+
+`MongoRepository` 인터페이스 정의를 보면 아래와 같이 `PagingAndSortingRepository` 의 하위 클래스이기 때문에 `Page` 관련 기능을 사용할 수 있다.  
+
+```java
+public interface MongoRepository<T, ID> extends PagingAndSortingRepository<T, ID>, QueryByExampleExecutor<T> {
+    // ......
+}
+```  
+
+간단한 `QueryMethod` 정의 예시는 아래와 같다.  
+
+```java
+Page<User> findByNameOrderByAgeDesc(String name, Pageable pageable);
+```  
+
+이름이 `myName` 으로 같은 3명이 유저가 있는데 `age` 값은 모두 다르고 `user_2` 가 가장 큰 값을 가지고 있다. 
+여기서 `findByNameOrderByAgeDesc` 메소드의 파라미터로 하나의 콘텐츠를 가지는 `Pageable` 을 전달하게 되면 `Limit 1` 과 동일한 결과를 얻을 수 있다.
+
+```java
+@Test
+public void givenMultipleSameNameAndDiffAge_whenFindByNameOrderByAgeDescPage1_thenFoundMaxAgeUserByName() {
+	// given
+	User user_1 = new User();
+	user_1.setName("myName");
+	user_1.setAge(40);
+	user_1 = this.mongoTemplate.insert(user_1, "user");
+	User user_2 = new User();
+	user_2.setName("myName");
+	user_2.setAge(60);
+	user_2 = this.mongoTemplate.insert(user_2, "user");
+	User user_3 = new User();
+	user_3.setName("myName");
+	user_3.setAge(20);
+	user_3 = this.mongoTemplate.insert(user_3, "user");
+	Pageable pageable = PageRequest.of(0, 1);
+
+	// when
+	Page<User> actual = this.userQueryMethodsRepository.findByNameOrderByAgeDesc("myName", pageable);
+
+	// then
+	assertThat(actual.getTotalPages(), is(3));
+	assertThat(actual.getTotalElements(), is(3L));
+	assertThat(actual.get().count(), is(1L));
+	List<User> actualList = actual.getContent();
+	assertThat(actualList, hasSize(1));
+	assertThat(actualList.get(0).getId(), is(user_2.getId()));
+}
+```  
+
 
 
 ### Json QueryMethods
