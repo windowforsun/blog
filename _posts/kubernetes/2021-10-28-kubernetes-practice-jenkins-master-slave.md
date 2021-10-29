@@ -4,7 +4,7 @@ classes: wide
 title: "[Kubernetes 실습] Kubernetes Jenkins Master Slave(Agent) 구성 및 사용하기"
 header:
   overlay_image: /img/kubernetes-bg.jpg
-excerpt: ''
+excerpt: 'Kubernetes 클러스터에서 동적으로 Jenkins Agent 를 실행하는 Jenkins Master/Slave 구조를 구성해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,8 @@ tags:
   - Practice
   - Jenkins
   - Jenkins Agent
+  - Jenkins Master/Slave
+  - Jnlp
 toc: true
 use_math: true
 ---  
@@ -88,37 +90,197 @@ subjects:
 아래 명령어로 위 템플릿을 `Kubernetes` 에 적용해 준다.  
 
 ```bash
-$ kubectl get serviceaccount,rolebinding -n jenkins
+$ kubectl get serviceaccount,role,rolebinding -n jenkins
 NAME                     SECRETS   AGE
 serviceaccount/default   1         2d19h
 serviceaccount/jenkins   1         24s
+
+NAME                                     CREATED AT
+role.rbac.authorization.k8s.io/jenkins   2021-10-28T14:45:49Z
 
 NAME                                            ROLE           AGE
 rolebinding.rbac.authorization.k8s.io/jenkins   Role/jenkins   24s
 ```  
 
-### Jenkins 플러그인 추가
-`Kubernetes` 클러스터에 `Master/Slave` 를 적용하기 위해서는 아래와 같은 플러그인이 필요하다. 
+### Jenkins 플러그인 추가 및 설정
+`Kubernetes` 클러스터에 `Master/Slave` 를 적용하기 위해서는 `Kubernetes` 플러그인이 필요한데, `Jenkins 관리 > 플러그인 관리 > 설치 가능` 을 눌러 검색하고 설치해 준다.  
 
-- Kubernetes
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-1.png)  
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-1-1.png)  
 
-Jenkins 관리 > 플러그인 관리 > 설치 가능
+설치가 완료되면 `Jenkins 관리 > 시스템 설정 > Cloud(가장 아래쪽)` 으로 가서 아래 버튼을 눌러 주고 사진을 따라 설정을 해준다. 
 
-practice-jenkins-master-slave-1.png
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-2.png)  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-3.png)  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-4.png)  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-5.png)  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-6.png)  
+
+이제 `Save` 혹은 `Apply` 를 눌러 설정을 적용해 준다.  
+
+### Kubernetes Jenkins Slave(Agent) 생성하기 
+`새로운 Item` 을 눌러 `test-agent` 라는 `Pipeline` 아이템을 생성한다. 
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-7.png)  
+
+이제 아래 `Script` 에 `Agent` 로 실행할 템플릿을 작성해 주면된다. 
+템플릿 작성 관련해서는 [여기](https://github.com/jenkinsci/kubernetes-plugin#configuration-reference)
+를 참고할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-8.png)  
+
+#### Simple Template
+가장 먼저 기본으로 실행하는 `jnlp` 컨테이너만 실행하고 간단한 `echo` 명령을 수행하는 템플릿을 테스트해 본다.  
+
+```groovy
+ podTemplate(
+         containers: [
+             containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent:4.10-2-jdk11')
+         ]
+     )
+ {
+     node(POD_LABEL) {
+         stage('Run shell') {
+             sh 'hostname'
+             sh 'echo hello world'
+         }
+     }
+ }
+```  
+
+기본으로 실행하는 `jnlp` 컨테이너 이미지나 관련 설정 변경이 필요한 경우 위와 같이 `containerTemplate` 을 사용해서 수정 할 수 있다.  
+`Build Now` 를 눌러 빌드를 실행하면, `Jenkins 관리 > 노드 관리` 에 들어가면 아래와 같이 `test-agent` 로 시작하는 `Agent` 가 실행 된것을 확인 할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-9.png)  
+
+`Kubernetes` 클러스터에서도 실행된 `Pod` 을 확인 할 수 있다.  
+
+```bash
+$ kubectl get pod -n jenkins
+NAME                             READY   STATUS    RESTARTS   AGE
+jenkins-0                        1/1     Running   0          71m
+test-agent-1-0zb9x-8sh3j-kfdrk   1/1     Running   0          22s
+```  
+
+실행된 `Agent Pod` 는 작업을 완료하고 종료된다. 
+그리고 `Build History` 에서 로그를 확인하면 아래와 같이, `jnlp` 컨테이너에서 템플릿에 작성한 명령이 수행된 것을 확인 할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-10.png)  
 
 
-Jenkins 관리 > 시스템 설정 > Cloud(가장 아래쪽)
+#### Multiple Container Template
+이번에는 기본 컨테이너인 `jnlp` 외에 빌드 혹은 배치 작업을 수행하는 용도로 사용할 수 있는 추가 컨테이너를 실행하는 템플릿을 작성해 본다.  
+
+```groovy
+ podTemplate(yaml: '''
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       labels: 
+         some-label: some-label-value
+     spec:
+       containers:
+       - name: busybox
+         image: busybox
+         command:
+         - sleep
+         args:
+         - 99d
+       - name: ubuntu
+         image: ubuntu
+         command:
+         - sleep
+         args:
+         - 99d
+     '''
+     ,containers: [
+         containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent:4.10-2-jdk11')
+     ]) {
+     node(POD_LABEL) {
+       container('busybox') {
+         echo POD_CONTAINER // displays 'busybox'
+         sh 'hostname'
+         echo 'Im busybox'
+       }
+        container('ubuntu') {
+            echo POD_CONTAINER // displays 'ubuntu'
+            sh 'hostname'
+            echo 'Im ubuntu'
+        }
+     }
+ }
+```  
+
+결과는 아래와 같이 추가한 `busybox`, `ubuntu` 컨테이너에서 정의된 명령이 수행된 것을 확인 할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-11.png)  
 
 
+#### Multiple Stage Template
+지금까지는 단일 `Stage` 로 구성된 템플릿을 사용했는데, 아래와 같이 여러 스테이지를 정의해서 파이프라인을 구성할 수 있다.  
+
+```groovy
+ podTemplate(yaml: '''
+     apiVersion: v1
+     kind: Pod
+     metadata:
+       labels: 
+         some-label: some-label-value
+     spec:
+       containers:
+       - name: busybox
+         image: busybox
+         command:
+         - sleep
+         args:
+         - 99d
+       - name: ubuntu
+         image: ubuntu
+         command:
+         - sleep
+         args:
+         - 99d
+     '''
+    ,containers: [
+    containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent:4.10-2-jdk11')
+]) {
+    node(POD_LABEL) {
+        stage('Run Busybox') {
+            container('busybox') {
+                echo POD_CONTAINER // displays 'busybox'
+                sh 'hostname'
+                echo 'Im busybox stage'
+            }
+        }
+        stage('Run Ubuntu') {
+            container('ubuntu') {
+                echo POD_CONTAINER // displays 'ubuntu'
+                sh 'hostname'
+                echo 'Im ubuntu stage'
+            }
+        }
+    }
+}
+```  
 
 
+결과는 아래와 같이 추가한 `busybox`, `ubuntu` 컨테이너가 각 스테이지에서 명령이 수행된 것을 확인 할 수 있다.
 
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-12.png)  
 
+그리고 아래처럼 구성한 스테이지와 각 스테이지의 소요 시간도 확인할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-13.png)  
 
 
 ---
 ## Reference
 [HOW TO INSTALL JENKINS ON A KUBERNETES CLUSTER](https://admintuts.net/server-admin/how-to-install-jenkins-on-a-kubernetes-cluster/)  
+[jenkinsci/kubernetes-plugin](https://github.com/jenkinsci/kubernetes-plugin)  
 
 
 
