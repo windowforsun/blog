@@ -373,9 +373,11 @@ podTemplate(
 
 `Jenkins Agent Pod` 에 `docker` 를 사용할 수 있는 컨테이너를 추가로 올리고 해당 컨테이너와 호스트의 `Docker Daemon` 을 마운트한다. 
 그리고 마운트한 `docker` 컨테이너에서 배치 잡으로 사용할 이미지를 도커 컨테이너로 다시 실행하는 방법으로 수행된다. 
-실행된 배치의 출력 로그는 아래와 같다.  
+실행된 배치의 출력 로그와 결과는 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-13.png)  
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-14.png)  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-15.png)  
 
 
 ---
