@@ -277,6 +277,107 @@ test-agent-1-0zb9x-8sh3j-kfdrk   1/1     Running   0          22s
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-13.png)  
 
 
+#### Execute Docker Image
+이번에는 배치 잡처럼 주기적으로 특정 동작을 `Docker Image` 를 통해 수행하는 방법에 대해서 알아본다. 
+아래는 배치 1 ~ 10까지 차례대로 출력하는 간단한 배치잡 테스트용 `Dockerfile` 이다.  
+
+```dockerfile
+FROM centos:7
+
+ENV param=default
+
+RUN echo "#!/bin/bash" >> /exec.sh
+RUN echo "for ((i=1; i<= 10; i++)) do" >> /exec.sh
+RUN echo "echo \"Running \$i \$param\";" >> /exec.sh
+RUN echo "sleep 1" >> /exec.sh
+RUN echo "done" >> /exec.sh
+
+RUN chmod 755 /exec.sh
+ENTRYPOINT ["/bin/bash", "-c", "/exec.sh"]
+```  
+
+`jenkins-job` 이라는 태그로 빌드하고 테스트를 위해 `Docker Hub` 에 푸시해준다.  
+
+```bash
+$ docker build -t windowforsun/jenkins-job .
+Sending build context to Docker daemon  3.072kB
+Step 1/8 : FROM centos:7
+ ---> eeb6ee3f44bd
+ 
+ .. 생략 ..
+ 
+Step 8/8 : ENTRYPOINT ["/bin/bash", "-c", "/exec.sh"]
+ ---> Running in 31fd2207a339
+Removing intermediate container 31fd2207a339
+ ---> 0697e3e2161e
+Successfully built 0697e3e2161e
+Successfully tagged windowforsun/jenkins-job:latest
+
+$ docker push windowforsun/jenkins-job
+Using default tag: latest
+The push refers to repository [docker.io/windowforsun/jenkins-job]
+
+.. 생략 ..
+
+latest: digest: sha256:b270c80616337cefd4c8a6368f5afd884d9b4e360ebb3ba7322349fcc5098f78 size: 1771
+```  
+
+아래는 `jenkins-job` 이라는 이미지를 `Jenkins Agent` 로 실행하는 파이프라인 템플릿이다.  
+
+```groovy
+def LABEL = "agent-${UUID.randomUUID().toString()}"
+def IMAGE = "windowforsun/jenkins-job:latest"
+def PARAM = "Jenkins Test!"
+
+podTemplate(
+        label: LABEL,
+        containers: [
+            containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent:4.10-2-jdk11'),
+            containerTemplate(name: 'docker', image: 'docker', commant: 'cat', ttyEnabled: true)
+        ],
+        volumes: [
+            hostPathVolume(mountPath: '/var/run/docker.sock', hostPath: '/var/run/docker.sock')
+        ]
+)
+{
+    node(LABEL) {
+        try {
+            stage('Pull Docker Image') {
+                container('docker') {
+                    sh """
+                        docker pull ${IMAGE}
+                    """
+                }
+            }
+            
+            stage('Run Batch') {
+                container('docker') {
+                    sh """
+                        docker run -e param=${JOB} --rm ${IMAGE}
+
+                    """
+                }
+            }
+            
+            currentBuild.result = 'SUCCESS'
+        } catch(err) {
+            currentBuild.result = 'FAILURE'
+        } finally {
+            // if(currentBuild.getPreviousBuild().result == 'FAILURE' && currentBuild.result == 'SUCCESS') {
+            //     currentBuild.result = 'FIX'
+            // }
+        }
+    }        
+}
+```  
+
+`Jenkins Agent Pod` 에 `docker` 를 사용할 수 있는 컨테이너를 추가로 올리고 해당 컨테이너와 호스트의 `Docker Daemon` 을 마운트한다. 
+그리고 마운트한 `docker` 컨테이너에서 배치 잡으로 사용할 이미지를 도커 컨테이너로 다시 실행하는 방법으로 수행된다. 
+실행된 배치의 출력 로그는 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-13.png)  
+
+
 ---
 ## Reference
 [HOW TO INSTALL JENKINS ON A KUBERNETES CLUSTER](https://admintuts.net/server-admin/how-to-install-jenkins-on-a-kubernetes-cluster/)  
