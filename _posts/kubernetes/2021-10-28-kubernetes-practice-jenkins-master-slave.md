@@ -118,7 +118,15 @@ rolebinding.rbac.authorization.k8s.io/jenkins   Role/jenkins   24s
 
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-5.png)  
 
+`Kubernetes URL` 은 `Jenkins Master` 가 사용할 `Kubernetes Cluster` 의 `URL` 을 등록하는 곳이다. 
+현재 `Jenkins Master` 는 `Kubernetes Cluster` 상에 구도되고 있고, 앞서 `jenkins-rbac.yaml` 템플릿을 사용해서, 
+`Kubernetes API` 를 사용해서 `Pod` 관련 생성 등의 동작을 수행할 수 있도록 권한을 등록해 두었기 때문에 `Kubernetes Service Discovery DNS` 를 작성해 주면 된다. 
+작성한 후 `Test Connection` 을 눌러 `Kubernetes` 에 접근이 가능한지 확인 한다.  
+
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-6.png)  
+
+`Jenkins URL` 에는 현재 `Jenkins` 의 `Web UI` 에 접근 할 수 있는 `Kubernetes` 내부 `URL` 을 작성해 준다. 
+그리고 `Jenkins tunnel` 에는 `jenkins-jnlp` 의 서비스 포트로 등록해 준다. 
 
 이제 `Save` 혹은 `Apply` 를 눌러 설정을 적용해 준다.  
 
