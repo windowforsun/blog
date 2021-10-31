@@ -285,7 +285,7 @@ test-agent-1-0zb9x-8sh3j-kfdrk   1/1     Running   0          22s
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-13.png)  
 
 
-#### Execute Docker Image
+#### Execute Docker Image Batch
 이번에는 배치 잡처럼 주기적으로 특정 동작을 `Docker Image` 를 통해 수행하는 방법에 대해서 알아본다. 
 아래는 배치 1 ~ 10까지 차례대로 출력하는 간단한 배치잡 테스트용 `Dockerfile` 이다.  
 
@@ -386,6 +386,64 @@ podTemplate(
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-14.png)  
 
 ![그림 1]({{site.baseurl}}/img/kubernetes/practice-jenkins-master-slave-15.png)  
+
+
+#### Execute Pod Batch
+바로 `Jenkins Agent Pod` 에 직접 배치를 수행할 애플리케이션을 템플릿으로 지정해 수행할 수도 있다. 
+`Docker Image` 의 `EntryPoint` 에서 배치 애플리케이션 실행을 지정해 주었더라도,
+템플릿에 작성된 것과 같이 `command` 로 `Override` 해준 후 별도의 `Stage` 에서 직접 `Shell` 명령으로 배치 애플리케이션을 실행해 주어야 한다.  
+
+
+아래는 `Spring Boot` 애플리케이션을 `Jib` 를 사용해 `Docker Image` 로 만든 경우의 예시 이다. 
+아래와 같이 템플릿을 작성해서 `Pod` 기반으로 배치작업을 실행할 수 있다.
+
+```groovy
+def JOB = "testBatchJob"
+def LABEL = "${JOB}-${UUID.randomUUID().toString()}"
+def IMAGE = "windowforsun/batch-application:${BATCH_TAG}"
+
+podTemplate(
+        label: LABEL,
+        containers: [
+                containerTemplate(name: 'jnlp', image: 'jenkins/inbound-agent:4.10-2-jdk11')
+        ],
+        yaml: """
+        apiVersion: v1
+        kind: Pod
+        spec:
+          containers:
+          - name: batch
+            image: ${IMAGE}  
+            imagePullPolicy: "IfNotPresent"          
+            env:
+            - name: SPRING_BATCH_JOB_NAMES
+              value: ${JOB}
+            - name: SPRING_PROFILES_ACTIVE
+              value: ${SPRING_PROFILE}
+            command:
+            - cat
+            tty: true
+        """
+)
+{
+	node(LABEL) {
+		try {
+			stage('Run Batch') {
+				container('batch') {
+					sh "java -cp \$( cat /app/jib-classpath-file ) \$( cat /app/jib-main-class-file )"
+				}
+			}
+			currentBuild.result = 'SUCCESS'
+		} catch(err) {
+			currentBuild.result = 'FAILURE'
+		} finally {
+			// if(currentBuild.getPreviousBuild().result == 'FAILURE' && currentBuild.result == 'SUCCESS') {
+			//     currentBuild.result = 'FIX'
+			// }
+		}
+	}
+}
+```  
 
 
 ---
