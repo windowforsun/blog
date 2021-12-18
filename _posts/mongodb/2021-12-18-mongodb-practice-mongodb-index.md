@@ -1,0 +1,480 @@
+--- 
+layout: single
+classes: wide
+title: "[MongoDB 개념] MongoDB Index"
+header:
+  overlay_image: /img/mongodb-bg.png
+excerpt: ''
+author: "window_for_sun"
+header-style: text
+categories :
+  - MongoDB
+tags:
+  - MongoDB
+  - Concept
+  - MongoDB
+  - Index
+toc: true
+use_math: true
+---  
+
+## MongoDB Indexes
+여타 다른 데이터베이스와 동일하게 `MongoDB` 의 `Index` 또한 `Read` 쿼리는 수행하는데 있어 효율성을 가져다주는 방법중 하나이다. 
+만약 `Index` 를 사용하지 않는다면 `Read` 쿼리가 수행될때 `Collection Scan` 을 수행하게 된다. 
+여기서 `Collection Scan` 이란 `Collection` 에 있는 전체 `Document` 를 모두 하나씩 읽으면서 쿼리와 매칭시키기 때문에 성능 효율성 입장에서는 최악의 방법이다. 
+만약 `Read` 쿼리에 사용될 수 있는 적절한 `Index` 가 있는 경우라면 `MongoDB` 는 해당 `Index` 를 사용해서 모든 `Document` 를 사용하지 않기 때문에 성능적인 이점이 있다.  
+
+이러한 장점이 있는 `MongoDB Index` 의 특징과 몇가지 종류에 대해 간단하게 알아본다.  
+
+`Index` 는 하나의 `DataSet` 에서 작은 부분을 탐색하기 좋은 구조로 저장해놓은 특수한 데이터 구조이다. 
+`Index` 로 지정된 필드는 하나의 필드 혹은 여러 필드의 집합으로 구성할 수 있다. 
+이렇게 `Index` 로 지정된 필드를 사용해서 쿼리를 수행하면 `Equal`, `Range` 등의 작업에서 효율적인 탐색을 수행할 수 있고, 
+정렬관련 조건에도 좋은 성능을 보여준다.  
+
+아래는 쿼리의 조건에 맞춰 `Index` 가 사용되고 정렬하는 과정을 도식화 한 그림이다.  
+
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-1.svg)  
+
+앞서 설명한 내용과 위 그림에서 알수 있듯이 기본적으로 `MongoDB` 의 `Index` 는 여타 데이터베이스들이 `Index` 와 크게 다르지 않다. 
+`MongoDB` 는 `Collection` 레벨에서 `Index` 를 정의하고, `Doucment` 의 필드 혹은 `Imbedded Document` 의 필드를 `Index` 로 지정할 수 있다. 
+
+
+
+그리고 쿼리에서는 한 `Index` 만 사용 ??
+
+
+
+### B-Tree
+
+
+### 환경 구성
+`MongoDB Index` 를 사용해볼 환경을 간단하게 `Docker Container` 로 구성해본다. 
+아래 명령어를 사용해서 `MongoDB` 컨테이너를 실행하고, 컨테이너를 거쳐 `MongoDB` 에 접속한다. 
+
+```bash
+$ docker run -d --rm --name mongodb-test -p 27017:27017 mongo:5.0
+
+$ docker exec -it mongodb-test /bin/bash
+root@ab6ffa5823af:/# mongo
+MongoDB shell version v5.0.5
+>
+```  
+
+다음 과정은 `admin` 데이터베이스에서 인증정보를 설정하는 과정이다.  
+
+```bash
+> use admin
+switched to db admin
+> db.createUser({user:'root',pwd:'root',roles:['root']})
+Successfully added user: { "user" : "root", "roles" : [ "root" ] }
+```  
+
+생성한 인증정보를 사용해서 로그인 하는 방법은 아래 2가지가 있다.  
+
+```bash
+$ mongo admin -u root -p 'root' --authenticationDatabase admin
+
+or
+
+$ mongo
+> use admin
+switched to db admin
+> db.auth('root','root')
+1
+```  
+
+마지막으로 `Index` 테스트에 사용할 `test-index` 라는 `Collection` 을 생성해 준다.  
+
+```bash
+> use test-index
+switched to db test-index
+
+```  
+
+
+## Default `_id` Index
+`MongoDb` 는 `Collection` 에 `Document` 를 추가할때 기본으로 [_id](https://docs.mongodb.com/manual/core/document/#std-label-document-id-field) 라는 [Unique Index](https://docs.mongodb.com/manual/core/index-unique/#std-label-index-type-unique) 를 생성한다. 
+`_id` 를 통해 `Client` 가 중복되는 `Document` 가 `Collection` 에 추가되는 것을 방지하고, 필요에 따라 `_id` 필드는 삭제할 수 있다.  
+`_id` 필드는 `Primary Key` 와 같은 역할로 `MongoDB` 에서 자동으로 생성하는 `Unique` 한 값으로 설정된다. 
+
+아래 명령을 사용해서 `user` 컬렉션에 10개의 데이터를 추가해 하고 조회하면 아래와 같이, `_id` 필드가 자동 생성된 것을 확인 할 수 있다.  
+
+```bash
+> for (i = 0; i< 10; i++) {
+... db.user.insert({
+... "user_id":i,
+... "name":"name-"+i,
+... "age":(i%80),
+... "datetime":new Date()
+... })
+... }
+WriteResult({ "nInserted" : 1 })
+> db.user.find();
+{ "_id" : ObjectId("61bda35785b01a24b6a67331"), "user_id" : 0, "name" : "name-0", "age" : 0, "datetime" : ISODate("2021-12-18T09:01:11.734Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67332"), "user_id" : 1, "name" : "name-1", "age" : 1, "datetime" : ISODate("2021-12-18T09:01:11.758Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67333"), "user_id" : 2, "name" : "name-2", "age" : 2, "datetime" : ISODate("2021-12-18T09:01:11.759Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67334"), "user_id" : 3, "name" : "name-3", "age" : 3, "datetime" : ISODate("2021-12-18T09:01:11.759Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67335"), "user_id" : 4, "name" : "name-4", "age" : 4, "datetime" : ISODate("2021-12-18T09:01:11.760Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67336"), "user_id" : 5, "name" : "name-5", "age" : 5, "datetime" : ISODate("2021-12-18T09:01:11.760Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67337"), "user_id" : 6, "name" : "name-6", "age" : 6, "datetime" : ISODate("2021-12-18T09:01:11.761Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67338"), "user_id" : 7, "name" : "name-7", "age" : 7, "datetime" : ISODate("2021-12-18T09:01:11.761Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a67339"), "user_id" : 8, "name" : "name-8", "age" : 8, "datetime" : ISODate("2021-12-18T09:01:11.761Z") }
+{ "_id" : ObjectId("61bda35785b01a24b6a6733a"), "user_id" : 9, "name" : "name-9", "age" : 9, "datetime" : ISODate("2021-12-18T09:01:11.762Z") }
+
+```  
+
+그리고 `user` 컬렉션에 생성된 `Index` 를 조회하면 아래와같이 `_id_` 라는 이름의 `Index` 만 존재하는 것을 확인 할 수 있다.  
+
+```bash
+> db.user.getIndexes();
+[ { "v" : 2, "key" : { "_id" : 1 }, "name" : "_id_" } ]
+```  
+
+## Create Index
+`Collection` 에 `Index` 를 생성은 `db.<collection>.createIndex()` 를 통해 할 수 있다. 
+위 에서 미리 만들어 놓은 `user` 컬렉션의 `name` 필드에 `Index` 를 생성하는 예시는 아래와 같다.  
+
+```bash
+> db.user.createIndex({name:1})
+{
+        "numIndexesBefore" : 1,
+        "numIndexesAfter" : 2,
+        "createdCollectionAutomatically" : false,
+        "ok" : 1
+}
+> db.user.getIndexes();
+[
+        {
+                "v" : 2,
+                "key" : {
+                        "_id" : 1
+                },
+                "name" : "_id_"
+        },
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : 1
+                },
+                "name" : "name_1"
+        }
+]
+```  
+
+`createIndex({name:1})` 은 `name` 필드를 오름차순(`ASC`)을 사용한다는 의미이다. 
+반대로 `createIndex({name:-1})` 는 내림차순(`DESC`)을 의미한다.  
+
+### Index Names
+`createIndex` 명령을 사용해서 생성된 인덱스의 이름은 기본적으로 아래 규칙을 따른다.  
+
+```
+<field name>_<order direction>_<field name2>_<order direction2>
+```  
+
+즉 위에서 생성한 `name` 필드 인덱스 이름이 `name_1` 인것은 `name` 필드에서 정렬 방향이 `1`(오름차순) 인 인덱스를 의미한다. 
+만약 `name` 필드에 정렬 방향이 `-1`(내림차순) 인 인덱스를 만들게 되면 이름은 `name_-1` 이 될 것이다. 
+그리고 `Index` 이름에 커스텀한 설정을 원하는 경우 `createIndex({name:1},{name:<index-name>})` 와 같이 사용해주면 된다.  
+예를 위해 몇가지 인덱스를 `user` 컬렉션에 추가한다.  
+
+```bash
+> db.user.createIndex({name:-1, age:1});
+{
+        "numIndexesBefore" : 2,
+        "numIndexesAfter" : 3,
+        "createdCollectionAutomatically" : false,
+        "ok" : 1
+}
+> db.user.createIndex({name:1, datetime:-1}, {name: "name-asc-datetime-desc"})
+{
+        "numIndexesBefore" : 3,
+        "numIndexesAfter" : 4,
+        "createdCollectionAutomatically" : false,
+        "ok" : 1
+}
+> db.user.getIndexes();
+[
+        .. 생략 ..
+        
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : -1,
+                        "age" : 1
+                },
+                "name" : "name_-1_age_1"
+        },
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : 1,
+                        "datetime" : -1
+                },
+                "name" : "name-asc-datetime-desc"
+        }
+]
+```  
+
+
+## Index Types
+`MongoDB` 는 다양한 유형의 데이터 및 쿼리를 지원하기 위해 몇가지 종류의 인덱스를 제공한다.  
+
+### Single Field
+[Single Field Indexes](https://docs.mongodb.com/manual/core/index-single/)
+는 사용자가 원하는 하나의 `Document Field` 에 `Asc/Desc` 중 하나의 타입을 선택해서 생성하는 인덱스이다. 
+대표적으로 앞서 설명한 기본으로 생성되는 `_id Index` 가 `Single Field` 인덱스에 해당한다. 
+
+```bash
+> db.user.createIndex({score:1})
+
+> db.user.find({score: 1000})
+> db.user.find({score: {$gt: 500}})
+```  
+
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-2.svg)  
+
+`Single Field` 인덱스에서도 `Asc/Desc` 중 하나의 타입으로 선택할 수 있다고 말했지만, 
+실제로는 어느 것을 선택하든 동작에 큰 차이는 없다. 
+단일 인덱스 특성상 정령이 어떤 방식으로 되었던 간에 데이터 탐색에 있어서는 동일하기 때문이다.  
+
+#### Embedded Field Index
+`Embedded Field` 
+`Embedded Document` 를 사용하는 경우 전체 `Embedded Document` 를 포함하지 않고 특정 `Embedded Field` 만 인덱스에 포함하는 할 수 있다. 
+`Embedded Field` 를 인덱스로 추가할때는 `dot notation(.)` 을 사용한다. 
+아래와 같은 `user` 컬렉션의 `location` 필드에 `Embedded Doucment` 가 있다. 
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z"),
+	"location": { state: "NY", city: "New York" }
+}
+```  
+
+아래와 같이 `Embedded Field` 인덱스를 생성할 수 있다.  
+
+```bash
+> db.user.createIndex({"location.state" : 1})
+> db.user.getIndexes()
+[
+        .. 생략 ..
+        
+        {
+                "v" : 2,
+                "key" : {
+                        "location.state" : 1
+                },
+                "name" : "location.state_1"
+        }
+]
+
+> db.user.find({"location.state": "NY"})
+```  
+
+#### Embedded Document Index
+다음으로는 `Embedded Document` 전체를 인덱스 필드로 지정하는 방법이 있다.  
+
+```bash
+> db.user.createIndex({location: 1})
+{
+        "numIndexesBefore" : 5,
+        "numIndexesAfter" : 6,
+        "createdCollectionAutomatically" : false,
+        "ok" : 1
+}
+> db.user.getIndexes();
+[
+        .. 생략 ..
+        
+        {
+                "v" : 2,
+                "key" : {
+                        "location" : 1
+                },
+                "name" : "location_1"
+        }
+]
+
+> db.user.find({location: {state: "NY", state: "New York"}})
+```  
+
+
+
+### Compound Index
+[Compound Index](https://docs.mongodb.com/manual/core/index-compound/)
+는 번역하면 `복합 인덱스` 로 사용자가 원하는 여러개 `Document Field` 를 사용해서 구성하는 인덱스를 의미한다. 
+
+```bash
+> db.user.createIndex({userid:1,score:-1})
+
+> db.user.find({userid:"aa1", score: 1000})
+> db.user.find({userid:"aa1", score: {$gt: 1000}})
+```  
+
+`Compound Index` 는 여러개의 키로 인덱스를 생성하기 때문에 정렬 순서를 어느 것으로 구성하느냐에 따라 유의미한 차이를 보인다. 
+`createIndex({name:1,age:-1})` 라는 인덱스를 생성했다면 먼저 `name` 필드 기준 오름차순으로 정렬되고, 
+동일한 `name` 이 존재하는 경우 `age` 필드 기준 내림차순으로 정렬된다.  
+
+
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-2.svg)  
+
+
+#### Sort Order
+`Compound Index` 를 생성할때 필드의 순서와 정렬 방향은 이후 `sort()` 연산에 많은 영향을 미친다.
+`db.user.createIndex({userid:1,score:1})` 와 같은 인덱스를 생성했다면 `sort()` 연산의 종류마다 특징은 아래와 같다. 
+- `db.user.find().sort({userid:1, score:1})` : 가장 좋음
+- `db.user.find().sort({score:1, userid:1})` : 성능에 좋지 않음
+- `db.user.find().sort({userid:-1, score:1})` : 성능에 좋음
+- `db.user.find().sort({userid:1, score:-1})` : 성능에 좋지 않음
+- `db.user.find().sort({userid:-1, score:-1})` : 성능에 좋지 않음
+
+#### Prefixes
+`Index Prefixes` 는 인덱스를 구성하는 필드의 순서대로 시작부터 끝까지의 부분집합을 의미한다. 
+아래와 같은 `Compound Index` 가 있다고 가정해 본다.  
+
+```
+db.user.createIndex({userid:1,score:1,age:1})
+```  
+
+여기서 가능한 `Index Prefixes` 를 나열하면 아래와 같다.  
+
+- `{userid:1}`
+- `{userid:1,score:1}`
+- `{userid:1,score:1,age:1}`
+
+즉 다시 설명하면 `{userid:1,score:1,age:1}` 인덱스를 생성하면 위 3가지 인덱스를 생성한 것과 동일하게 쿼리에서 인덱스가 사용될수 있다는 것이다. 
+몇가지 예제로 어떤 쿼리에서 어떤 `Index Prefixes` 가 사용되는지 살펴 본다.  
+
+쿼리|사용된 `Index Prefixes`
+---|---
+`db.user.find().sort({userid:1})`|`{userid:1}`
+`db.user.find().sort({userid:-1})`|`{userid:1}`
+`db.user.find().sort({userid:-1, score:1})`|`{userid:1, score:1}`
+`db.user.find().sort({userid:-1, score:-1})`|`{userid:1, score:1}`
+`db.user.find().sort({userid:1, score:1,age:1})`|`{userid:1, score:1, age:1}`
+`db.user.find(userid:{$gt:"a"}).sort({userid:1, score:1})`|`{userid:1, score:1}`
+
+만약 `sort()` 연산의 조건이 `Index Prefixes` 를 만족하지 못하는 경우라면, 
+`find()` 연산 조건이 `Equality` 상태이면 `Index Prefixes` 조건이 만족된다. 
+해당하는 몇가지 케이스를 나열하면 아래와 같다.  
+
+쿼리| 사용된 `Index Prefixes`
+---|---
+`db.user.find({userid:"aa"}).sort({score:1,age:1})`|`{userid:1,score:1,age:1}`
+`db.user.find({age:20,userid:"aa"}).sort({age:1})`|`{userid:1,score:1,age:1}`
+`db.user.find({userid:"aa", score:{$gt: 1000}}).sort({score:1})`|`{userid:1,score:1}`
+
+다음은 `find()` 조건이 `Equality` 가 아니면서 인덱스의 선행키가 아닌 경우므로 인덱스가 효과적으로 사용되지 못하는 쿼리이다.  
+
+|쿼리|
+|---|
+`db.user.find({userid:{$gt:"a"}}).sort({age:1})`
+`db.user.find({age:20).sort({age:1})`
+
+#### Index Intersection
+`Index Intersection`(인덱스 교차)는 `MongoDB 2.6` 부터 지원되는 기능이다. 
+이는 인덱스의 종류보다는 인덱스의 작동방식에 대한 부분으로 `Collection` 에서 각 1개 이상의 `Single Field Index`, `Compound Index` 가 정의 됐다고 했을 때, 
+하나의 쿼리에서 적절한 여러개의 쿼리를 내부에서 교집합처럼 동작해서 성능을 높이는 방식을 의미한다. 
+
+아래와 같은 2개 인덱스를 생성했다고 가정해 보자.
+
+```bash
+> db.user.createIndex({userid:1})
+> db.user.createIndex({score:1})
+```  
+
+그리고 사용할 쿼리는 아래와 같다.  
+
+```bash
+> db.user.find({score:1000, userid:{$gt:"a"}})
+```  
+
+위 쿼리를 사용하면 `Index Intersection` 이 적용되어 인덱스를 활용해서 쿼리가 수행된다. 
+하지만 인덱스 교차의 경우 명시적인 부분이 아니기 때문에 `explain` 을 통해 확인을 해줘야 한다. 
+인덱스 교차가 사용되면 `explain` 에서 `AND_SORTED` 혹은 `AND_HASH` 스테이지를 확인할 수 있다. 
+
+인덱스 교차는 `Compound Index` 에 비해 고려해야하는(필드 순서, 필드 정렬 조건, `Index Prefixes`) 사항들이 비교적 적다는 장점이 있다. 
+하지만 쿼리의 `find()` 연산 조건에 사용된 인덱스와 별개로 선언된 인덱스를 정렬 조건으로 사용할수 없고, 
+전반적으로 `Compound Index` 와 비교해서 성능이 느리다는 점들이 있다.  
+
+다음 케이스로 아래와 같은 인덱스가 생성된 상태를 가정해 본다.  
+
+```bash
+> db.user.createIndex({userid:1})
+> db.user.createIndex({score:1, age:-1})
+> db.user.createIndex({score:1})
+> db.user.createIndex({age:-1})
+```  
+
+위 인덱스인 상태에서 아래 쿼리는 인덱스 교차가 불가능하다.  
+
+```bash
+> db.user.find({userid:{$gt:"a"}}).sort({score:1})
+```  
+
+적용되지 않는 이유는 `userid` 의 인덱스와 `score` 인덱스가 별도의 인덱스이기 때문이다.  
+
+그리고 아래 쿼리는 정상적으로 인덱스 교차가 적용된다.  
+
+```bash
+> db.user.find({userid:{$gt:"a"},score:1000}).sort({age:-1})
+```  
+
+다른 경우로 아래와 같은 인덱스가 있다고 다시 가정해 본다.  
+
+```bash
+> db.user.createIndex({score:1, age:-1})
+```  
+
+인덱스 적용이 가능한 쿼리와 불가능한 쿼리는 아래와 같다.  
+
+```bash
+.. 인덱스가 적용되는 쿼리 ..
+> db.user.find({score:{$in:[1000, 1500]}})
+> db.user.find({age:{$gt:20},score:{$in:[1000, 1500]}})
+
+.. 인덱스가 적용 되지 않는 쿼리(선행 인덱스가 정의되지 않았기 때문) ..
+> db.user.find({age:{$gt:20}})
+> db.user.find({}).sort({age:1})
+```  
+
+아래와 같이 인덱스를 다시 생성해주면 교차 인덱스가 적용되면서 뭐든 쿼리에 인덱스 적용이 가능하다.  
+
+```bash
+> db.user.createIndex({score:1})
+> db.user.createIndex({age:-1})
+```  
+
+### Multikey Index
+
+
+### Geospatial Index
+
+
+### Text Index
+
+### Hash Index
+
+
+## Index Properties
+
+
+
+
+
+
+
+---
+## Reference
+[MongoDB Indexes](https://docs.mongodb.com/manual/indexes/)  
+
+
+
+
+
+
+
+
