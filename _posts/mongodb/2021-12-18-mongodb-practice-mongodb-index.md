@@ -4,7 +4,7 @@ classes: wide
 title: "[MongoDB 개념] MongoDB Index"
 header:
   overlay_image: /img/mongodb-bg.png
-excerpt: ''
+excerpt: 'MongoDB 의 Index 에 대한 개념과 사용할 수 있는 Index 종류와 특징에 대해 알아보자.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,17 @@ tags:
   - Concept
   - MongoDB
   - Index
+  - Compound Index
+  - Hidden Index
+  - TTL Index
+  - Sparse Index
+  - Partial Index
+  - Unique Index
+  - Hashed Index
+  - Text Index
+  - Geospatial Index
+  - Multikey Index
+  - Single Field Index
 toc: true
 use_math: true
 ---  
@@ -36,15 +47,7 @@ use_math: true
 ![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-1.svg)  
 
 앞서 설명한 내용과 위 그림에서 알수 있듯이 기본적으로 `MongoDB` 의 `Index` 는 여타 데이터베이스들이 `Index` 와 크게 다르지 않다. 
-`MongoDB` 는 `Collection` 레벨에서 `Index` 를 정의하고, `Doucment` 의 필드 혹은 `Imbedded Document` 의 필드를 `Index` 로 지정할 수 있다. 
-
-
-
-그리고 쿼리에서는 한 `Index` 만 사용 ??
-
-
-
-### B-Tree
+`MongoDB` 는 `Collection` 레벨에서 `Index` 를 정의하고, `Doucment` 의 필드 혹은 `Imbedded Document` 의 필드를 `Index` 로 지정할 수 있다.
 
 
 ### 환경 구성
@@ -666,7 +669,7 @@ db.user.createIndex({userid:1,score:1,age:1})
 > db.test_collection.find().count();
 > 1
 
-.. 전체 조회시 hint() 로 x:1 인덱스를 사용하도록 강제하면 조회 되지 않음 ..
+.. 전체 조회시 hint() 로 {x:1} 인덱스를 사용하도록 강제하면 조회 되지 않음 ..
 > db.test_collection.find().hint({x:1}).count();
 > 0
 ```  
@@ -679,23 +682,117 @@ db.user.createIndex({userid:1,score:1,age:1})
 `TTL Index` 는 인덱스를 생성할 때 `expireAfterSeconds` 필드에 초값을 기입해서 생성할 수 있고, 
 아래 쿼리는 `eventlog` 컬렉션에 있는 `lastModifiedDate` 필드를 기준으로 `expireAfterSeconds` 값과 비교해서 판별한다.  
 
+만약 `TTL Index` 로 지정한 필드 값이 날짜 값의 배열이라면, 배열에 있는 가장 이른 날짜 값을 사용해서 만료 임계값을 계산한다. 
+임계값은 (필드의 날짜값) + (인덱스에 설정한 초) 로 계산된다.  
 
+그리고 인덱스 필드가 없거나, 날짜 값이 아니거나 배열에 날짜값이 존재하지 않는 경우 해당 `Document` 는 만료되지 않는다. 
+더 자세한 내용은 [Expire Data from Collections by Setting TTL](https://docs.mongodb.com/manual/tutorial/expire-data/) 에서 확인 할 수 있다.  
+
+아래와 같이 `TTL Index` 를 생성할 수 있다. 
 
 ```bash
+.. insert 수행후 3600 초후 삭제된다 ..
 > db.eventlog.createIndex( { "lastModifiedDate": 1 }, { expireAfterSeconds: 3600 } )
+> db.eventlog.insertOne({
+  "logType":"debug",
+  "message":"test log",
+  "lastModifiedDate": new Date()
+})
+
+
+.. insert 수행후 expiredDate 시점에 삭제 된다 ..
+> db.eventlog.createIndex( { "expiredDate": 1 }, { expireAfterSeconds: 0 } )
+> db.eventlog.insertOne({
+  "logType":"debug",
+  "message":"test log",
+  "expiredDate": new Date('12 22, 2021 14:00:00')
+})
+```  
+
+### Hidden Indexes
+[Hidden Indexes](https://docs.mongodb.com/manual/core/index-hidden/)
+는 `Query Planner` 에서 표시되지 않도록 하고, 쿼리에서도 설정된 인덱스는 사용되지 않도록 한다. 
+이러한 인덱스가 있는 이유는 이미 존재하는 인덱스를 `Hidden Index` 로 만듬으로써 실제 인덱스를 삭제하지 않으면서, 
+인덱스를 삭제 했을 때와 동일하게 발생될 수 있는 영향에 대해서 검토할 수 있다. 
+해당 인덱스가 다시 필요한 경우 다시 `Hidden Index` 취소 시킬 수 있다.  
+
+```bash
+.. create hidden index ..
+> db.user.createIndex({name:1}, {hidden:true})
+> db.user.getIndexes()
+[
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : 1
+                },
+                "name" : "name_1",
+                "hidden" : true
+        }
+]
+
+.. unhide index ..
+> db.user.unhideIndex({name:1});
+{ "hidden_old" : true, "hidden_new" : false, "ok" : 1 }
+> db.user.getIndexes();
+[
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : 1
+                },
+                "name" : "name_1"
+        }
+]
+
+.. make hidden existing index
+> db.user.hideIndex({name:1});
+{ "hidden_old" : false, "hidden_new" : true, "ok" : 1 }
+> db.user.getIndexes();
+[
+        {
+                "v" : 2,
+                "key" : {
+                        "name" : 1
+                },
+                "name" : "name_1",
+                "hidden" : true
+        }
+]
 ```  
 
 
+## Index Use
+지금까지 설명한 인덱스를 사용해서 데이터 타입과 구성에 맞는 읽기 작업의 효율성을 향상시킬 수 있다. 
+관련해서 자세한 내용은 [Analyze Query Performance](https://docs.mongodb.com/manual/tutorial/analyze-query-plan/)
+에서 다양한 정보를 확인할 수 있다. 
+그리고 `MongoDB` 가 실제로 쿼리를 수행할때 어떤 인덱스를 선택해서 사용하는지는 [Query Plans](https://docs.mongodb.com/manual/core/query-plans/#std-label-read-operations-query-optimization)
+를 통해 확인할 수 있다.  
 
 
+### Covered Queries
+`MongoDB` 의 쿼리는 아래의 그림과 같이 `<collection><Query Criteria><Projection>` 으로 이뤄져 있다. 
+[Covered Queries](https://docs.mongodb.com/manual/core/query-optimization/#std-label-read-operations-covered-query)
+이때 `Query Criteria`, `Projection` 이 모두 인덱스의 필드만 포함하는 경우 `MongoDB` 는 스토리지에 저장된 `Document` 를 읽거나, 
+`Document` 를 메모리로 로드하는 작업을 수행하지 않고 인덱스만 사용해서 결과를 반환한다. 
+위 조건이 인덱스를 사용할때 `Read` 동작의 성능을 가장 잘 끌어올릴수 있는 상황이라고 할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-5.svg)
 
 
+### Index Intersection
+`Single Field Index` 에서 먼저 설명했던 것처럼, 
+[Index Intersection](https://docs.mongodb.com/manual/core/index-intersection/)
+은 인덱스의 교집합점을 사용해서 쿼리를 수행하는 것을 말한다. 
+`Compound Index` 로 지정된 몇개의 인덱스 필드 셋이 있을 때 한 인덱스가 쿼리 조건 일부를 충족하고, 
+다른 인덱스가 쿼리 조건의 다른 부분을 충족하는 상황에서, 
+두 인덱스의 교집합점을 사용하여 쿼리를 수행할 수 있다. 
+실제로 `Compound Index` 를 사용하는지 `Index Intersection` 이 사용되는지는 쿼리의 조건, 인덱스 구성에 따라 달라질 수 있다.  
 
 
-
-
-
-
+### Restrictions
+인덱스를 생성할때 주의할 점들이 있는데 인덱스 키의 길이, 컬렉션당 인덱스 수등에 대한 제사한 내용은 [Index Limitations](https://docs.mongodb.com/manual/reference/limits/#std-label-index-limitations)
+에서 확인 할 수 있다.  
 
 
 ---
