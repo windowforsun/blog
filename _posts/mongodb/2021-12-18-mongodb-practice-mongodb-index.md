@@ -237,7 +237,6 @@ WriteResult({ "nInserted" : 1 })
 단일 인덱스 특성상 정령이 어떤 방식으로 되었던 간에 데이터 탐색에 있어서는 동일하기 때문이다.  
 
 #### Embedded Field Index
-`Embedded Field` 
 `Embedded Document` 를 사용하는 경우 전체 `Embedded Document` 를 포함하지 않고 특정 `Embedded Field` 만 인덱스에 포함하는 할 수 있다. 
 `Embedded Field` 를 인덱스로 추가할때는 `dot notation(.)` 을 사용한다. 
 아래와 같은 `user` 컬렉션의 `location` 필드에 `Embedded Doucment` 가 있다. 
@@ -319,7 +318,7 @@ WriteResult({ "nInserted" : 1 })
 동일한 `name` 이 존재하는 경우 `age` 필드 기준 내림차순으로 정렬된다.  
 
 
-![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-2.svg)  
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-3.svg)  
 
 
 #### Sort Order
@@ -449,17 +448,249 @@ db.user.createIndex({userid:1,score:1,age:1})
 ```  
 
 ### Multikey Index
+[Multikey Index](https://docs.mongodb.com/manual/core/index-multikey/) 
+를 사용하면 `Embedded Document` 필드를 사용해서 인덱스를 생성할 수 있다. 
+`Single Field Index` 에서 언급했었던 `Embedded Field Index` 가 바로 `Multikey Index` 를 의미한다. 
+
+아래 와 같은 `Document` 가 있다고 가정해 본다.  
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z"),
+	"location": { 
+		state: "NY", 
+		city: "New York" 
+	},
+	"addr" : [
+		{"zip": "10036"},
+		{"zip": "94301"}
+	],
+	"hobby" : [
+		"movie", "soccer", "music"
+	]
+}
+```  
+
+아래와 같이 `Multipkey Index` 를 생성할 수 있다. 
+
+```bash
+> db.user.createIndex({"addr.zip":1})
+> db.user.createIndex({"location.state":1})
+> db.user.createIndex({"hobby":1})
+
+> db.user.find({"addr.zip":10036})
+> db.user.find({"location.state":"NY"})
+> db.user.find({"hobby":"movie"})
+```  
+
+![그림 1]({{site.baseurl}}/img/mongodb/practice-mongodb-index-4.svg)
+
+`Multikey Index` 를 사용할때는 인덱스를 사용한 필드명과 동일하게 사용해야 적용이 가능하다. 
+
+```bash
+.. 불가능 ..
+
+> db.user.find({addr:{zip: 10036}})
+> db.user.find({location:{state: "NY"}})
+```  
+
+그리고 `Multikey Index` 는 아래와 같은 제약 사항들이 있다. 
+- `Shard Key` 로 설정 불가능
+- `Hashed Index` 불가능
+- 조건부 `Covered Queries` 적용
 
 
 ### Geospatial Index
+지리공산 좌표 데이터(위도, 경도)의 효율적인 쿼리를 위해 `MongoDB` 는 아래와 같은 2가지 특수 인덱스를 제공한다. 
+
+- [2d Indexes](https://docs.mongodb.com/manual/core/2d/), [2d Index Internals](https://docs.mongodb.com/manual/core/geospatial-indexes/) : 평면 형상을 사용하는 좌표 인덱스
+- [2dsphere Index](https://docs.mongodb.com/manual/core/2dsphere/) : 구형 형상을 사용하는 좌표 인덱스
+
+아래와 같은 `Document` 가 있다고 해보자. 
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z"),
+	"location" : {
+		"2d_loc" : [ 55.5, 42.3],
+		"2dsphere_loc" : {
+			"type" : "Point",
+			"coordinates" : [55.5, 42.3]
+		}
+	}
+}
+```  
+
+```bash
+.. 2d index ..
+> db.user.createIndex({"location.2d_loc":"2d"})
+> db.user.find({"location.2d_loc":{$near:[11, 22]}})
+
+.. 2d sphere index ..
+> db.user.createIndex({"location.2dsphere_loc":"2dsphere"})
+> db.user.createIndex({"location.2dsphere_loc":{$near:{"type":"Point", coordinates:[11, 22]}}})
+```  
+
+`Geospatial Index` 는 `Covered Quries` 가 될수 없고, `Shard Key` 로도 사용할 수 없지만 샤딩된 컬렉션에 `Geospatial Index` 를 생성해 사용할 수는 있다.  
 
 
 ### Text Index
+[Text Index](https://docs.mongodb.com/manual/core/index-text/)
+는 `MongoDB` 컬렉션에서 문자열 내용 검색을 지원하는 유형의 인덱스이다. 
+문자열, 문자열 배열 필드에 적용 할 수 있고 컬렉션은 하나의 `Text Index` 만 가질 수 있다.  
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z"),
+	"introduction" : "Hi. Im aa",
+	"keyword" : ["Seoul", "Coffee", "Movie"]
+}
+```  
+
+```bash
+> db.user.createIndex({introduction: "text", keyword:"text"})
+
+> db.user.find({$text:{$search:"Hi"}})
+> db.user.find({$text:{$search:"Coffee"}})
+```  
 
 ### Hash Index
+[Hash Index](https://docs.mongodb.com/manual/core/index-hashed/)
+은 `Hash based Sharding` 을 지원하기 위해 필드 값의 해시값으 사용하는 인덱스이다. 
+`Hash Index` 는 데이터 범위에 다라 값이 랜덤하게 분포된다는 장점이 있지만 `Equality` 연산만 제공하고 `Range` 연산은 제공하지 않는다. 
+그리고 `Multikey Index` 를 지원하지 않기 때문에 필드 값이 배열이라면 에러가 발생한다. 
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z"),
+	"securitynumber" : "123456-1234567"
+}
+```  
+
+```bash
+> db.user.createIndex({securitynumber:"hashed"})
+
+> db.user.find({securitynumber:"123456-1234567"})
+```  
+
+
+
 
 
 ## Index Properties
+### Unique Indexes
+[Unique Indexes](https://docs.mongodb.com/manual/core/index-unique/)
+는 `Collection` 에서 유니크한 값이 보장되는 필드 혹은 필드 조합 인덱스에 설정할 수 있는 값이다. 
+만약 `Unique Index` 로 설정된 필드의 값이 비었다면 단 하나의 도큐먼트는 추가될수 있지만, 
+이후에 한번더 동일한 필드값이 빈 도큐먼트를 추가하면 에러가 발생한다. 
+
+
+```bash
+> db.user.createIndex({userid: 1}, {unique: true})
+
+> db.user.createIndex({name: 1, group: 1, category:1}, {unique: true})
+```  
+
+
+### Partial Indexes
+[Partial Indexes](https://docs.mongodb.com/manual/core/index-partial/)(부분 인덱스)
+는 지정된 필터 조건에 해당하는 `Collection` 의 `Document` 만 인덱싱한다. 
+`Collection` 에 존재하는 전체 `Document` 를 인덱싱하지 않고 특정 조건에 맞는 것만 인덱싱 하기 때문에, 
+저장소 요구사항을 좀더 낮출 수 있고 인덱스 생성 및 유지 관리에 대한 비용을 감소 할 수 있다. 
+
+아래와 같은 `user` 도큐먼트가 있다고 가정해 본다. 
+
+```json
+{
+	"_id": ObjectId("570c04a4ad233577f97dc459"),
+	"userid": 1034,
+	"name": "aa",
+	"score": 1000,
+	"age": 10,
+	"datetime" : ISODate("2021-12-18T09:01:11.762Z")
+}
+```  
+
+`Partial Index` 를 생성하면 아래와 같다.  
+
+```bash
+.. age 가 20 보다 큰 경우에만 partial index 생성 ..
+> db.user.createIndex({name:1, score:1}, {partialFilterExpression:{age:{$gt:20}}})
+
+.. partial index 사용 ..
+> db.user.find({name:"aa", age:{$gt:20}})
+> db.user.find({name:"aa", age:{$gt:60}})
+
+.. partial index 사용 불가능 ..
+> db.user.find({name:"aa", age:{$lt:80}})
+> db.user.find({name:"aa"})
+```  
+
+위와 같이 `Partial Index` 는 `MongoDB` 에서 기본적으로는 사용되지 않는 인덱스이고, 
+`Partial Index` 를 생성할 때 명시한 조건과 동일하거나 모두 포함되는 조건을 명시해 줘야 사용될 수 있다. 
+
+
+### Sparse Indexes
+[Sparse Indexes](https://docs.mongodb.com/manual/core/index-sparse/)
+는 인덱스로 지정된 필드가 `null` 값을 같거나 존재하지 않더라도, 값이 있는 `Document` 만 인덱스를 구성할 수 있도록 한다. 
+이는 `Unique Index` 의 필수 조건중 하나인 인덱스 필드가 존지하지 않을 때 `insert` 가 실패하는 현상을 회피할 수 있는 방법이다. 
+
+
+```
+> db.test_collection.insertOne( { _id: 1, y: 1 } );
+
+.. x 필드를 인덱스 필드로 하는 sparse 인덱스 생성 ..
+> db.test_collection.createIndex({x:1}, {sparse:true});
+
+.. 전체 조회시 x필드가 없더라도 조회됨 ..
+> db.test_collection.find().count();
+> 1
+
+.. 전체 조회시 hint() 로 x:1 인덱스를 사용하도록 강제하면 조회 되지 않음 ..
+> db.test_collection.find().hint({x:1}).count();
+> 0
+```  
+
+
+### TTL Indexes
+[TTL Indexes](https://docs.mongodb.com/manual/core/index-ttl/)
+는 `Collection` 에 `Document` 가 추가되고 나서 인덱스에 설정한 일정 시간 후에 자동으로 삭제하도록 설정할 수 있는 `Single Field` 인덱스이다. 
+이는 제한된 시간동안만 유효한 이벤트 데이터, 로그, 세션 등에 사용될 수 있다. 
+`TTL Index` 는 인덱스를 생성할 때 `expireAfterSeconds` 필드에 초값을 기입해서 생성할 수 있고, 
+아래 쿼리는 `eventlog` 컬렉션에 있는 `lastModifiedDate` 필드를 기준으로 `expireAfterSeconds` 값과 비교해서 판별한다.  
+
+
+
+```bash
+> db.eventlog.createIndex( { "lastModifiedDate": 1 }, { expireAfterSeconds: 3600 } )
+```  
+
+
+
+
+
+
+
 
 
 
