@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[MongoDB 개념] MongoDB Aggregation"
 header:
-overlay_image: /img/mongodb-bg.png
+  overlay_image: /img/mongodb-bg.png
 excerpt: 'MongoDB 에서 여러 Document 기반으로 데이터를 처리할 수 있는 Aggregation 의 개념과 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
