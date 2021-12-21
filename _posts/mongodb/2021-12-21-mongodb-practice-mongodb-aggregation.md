@@ -548,6 +548,69 @@ db.collection.aggregate([ {<stage>}, ... ])
 ```  
 
 
+### $count
+[$count](https://docs.mongodb.com/manual/reference/operator/aggregation/count/#mongodb-pipeline-pipe.-count)
+는 `Stage` 에 입력된 `Document` 의 수를 다음 `Stage` 로 전달한다.  
+
+- format
+
+  ```json
+  { $count: <string> }
+  ```  
+
+`<string>` 은 카운트를 값으로 가지는 출력 필드 이름이다. 
+빈문자열, `$`, `.` 문자열 포함할 수 없다.  
+
+
+```bash
+> db.test.insertMany([
+  {_id: 1, strType: "a", numType: 10, value: 1},
+  {_id: 2, strType: "b", numType: 20, value: 2},
+  {_id: 3, strType: "c", numType: 30, value: 4},
+  {_id: 4, strType: "d", numType: 40, value: 8},
+  {_id: 5, strType: "e", numType: 50, value: 16},
+  {_id: 6, strType: "f", numType: 60, value: 32},
+  {_id: 7, strType: "g", numType: 70, value: 64},
+  {_id: 8, strType: "h", numType: 80, value: 128},
+  {_id: 9, strType: "i", numType: 90, value: 256},
+  {_id: 10, strType: "j", numType: 100, value: 512},
+  {_id: 11, strType: "k", numType: 110, value: 1024},
+  {_id: 12, strType: "l", numType: 120, value: 2048},
+  {_id: 13, strType: "m", numType: 130, value: 4096},
+  {_id: 14, strType: "n", numType: 140, value: 8192},
+  {_id: 15, strType: "o", numType: 150, value: 16384},
+]);
+```  
+
+```bash
+> db.test.aggregate([
+  {
+    $count: "all_count"
+  }
+]);
+
+.. output ..
+{ "all_count" : 15 }
+
+
+> db.test.aggregate([
+  {
+    $match: {
+      value: {$gt: 1000}
+    }
+  },
+  {
+    $count: "gt_1000_count"
+  }
+]);
+
+.. output ..
+{ "gt_1000_count" : 5 }
+```  
+
+
+
+
 ---
 
 ## Reference
