@@ -77,7 +77,7 @@ CacheMono                            // or CacheFlux
 
 위 내용을 도식화 하면 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/java/concept-reactor-extra-cache-mono-flux-1)  
+![그림 1]({{site.baseurl}}/img/java/concept-reactor-extra-cache-mono-flux-1.png)  
 
 
 ## CacheMono
