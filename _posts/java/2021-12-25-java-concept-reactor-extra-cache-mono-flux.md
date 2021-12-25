@@ -75,6 +75,11 @@ CacheMono                            // or CacheFlux
   .andWriteWith((k, signal) -> {..}) // 캐시 값 쓰기 : onCacheMissResume() 에서 전달된 key에 해당하는 값(signal) 을 캐시 저장소에 저장한다. 
 ```  
 
+위 내용을 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/java/concept-reactor-extra-cache-mono-flux-1)  
+
+
 ## CacheMono
 먼저 `Mono` 타입을 캐싱하는 방법에 대해 알아본다. 
 전체적인 흐름은 앞서 설명한 3단계로 구성된다. 
@@ -552,7 +557,8 @@ INFO 79528 --- [           main] c.w.r.cachemonoflux.CacheFluxTest        : look
 
 
 > reactor-extra 3.4.2 버전을 사용했을 때 `CacheFlux` 를 사용하면서 `lookup` 에서 정상적으로 캐시 키에 해당하는 값을 리턴하더라도, 
-> `onCacheMissResume` 이 호출되는 버그가 있는 것을 확인 했다. 관련해서 이미 [issue](https://github.com/reactor/reactor-addons/issues/234) 
+> `onCacheMissResume` 이 호출되는 버그가 있었다. 
+> 관련해서 이미 [issue](https://github.com/reactor/reactor-addons/issues/234) 
 > 가 올려져 있고 3.4.6 버전으로 올려 해결 했다. 
 
 

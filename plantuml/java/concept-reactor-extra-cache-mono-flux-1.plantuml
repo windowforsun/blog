@@ -1,0 +1,17 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+
+start
+
+if (lookup()) then(cache exists)
+  :return value;
+else (cache not eixsts)
+  :onCacheMissResume();
+  :andWriteWith();
+endif
+
+stop
+
+
+@enduml
