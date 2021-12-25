@@ -548,8 +548,13 @@ public void fluxCacheBuilderCacheMiss_cacheFlux_key_exists() {
 
 ```java
 INFO 79528 --- [           main] c.w.r.cachemonoflux.CacheFluxTest        : lookup key exists:testKey
-INFO 79528 --- [           main] c.w.r.cachemonoflux.CacheFluxTest        : onCacheMissResume
 ```  
+
+
+> reactor-extra 3.4.2 버전을 사용했을 때 `CacheFlux` 를 사용하면서 `lookup` 에서 정상적으로 캐시 키에 해당하는 값을 리턴하더라도, 
+> `onCacheMissResume` 이 호출되는 버그가 있는 것을 확인 했다. 관련해서 이미 [issue](https://github.com/reactor/reactor-addons/issues/234) 
+> 가 올려져 있고 3.4.6 버전으로 올려 해결 했다. 
+
 
 ### Provide Map(FluxCacheBuilderMapMiss)
 다음은 `CacheMono` 와 동일하게 `Map` 타입의 캐시 저장소를 `lookup()` 메소드에 함께 전달하는 방법이다.  
