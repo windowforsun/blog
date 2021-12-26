@@ -80,6 +80,16 @@ CacheMono                            // or CacheFlux
 ![그림 1]({{site.baseurl}}/img/java/concept-reactor-extra-cache-mono-flux-1.png)  
 
 
+`CacheMono`, `CacheFlux` 를 사용하기 위해서는 `reactor-extra` 의존성 추가가 필요하다.  
+
+```groovy
+dependencies {
+	implementation 'io.projectreactor:reactor-core:3.4.6'
+	implementation 'io.projectreactor.addons:reactor-extra:3.4.6'
+}
+```  
+
+
 ## CacheMono
 먼저 `Mono` 타입을 캐싱하는 방법에 대해 알아본다. 
 전체적인 흐름은 앞서 설명한 3단계로 구성된다. 
