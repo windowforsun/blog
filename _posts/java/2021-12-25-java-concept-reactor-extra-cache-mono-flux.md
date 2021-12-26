@@ -84,8 +84,25 @@ CacheMono                            // or CacheFlux
 
 ```groovy
 dependencies {
+	implementation 'org.springframework:spring-context'
+	implementation 'org.springframework.boot:spring-boot-autoconfigure'
+	implementation 'org.slf4j:slf4j-api'
+
 	implementation 'io.projectreactor:reactor-core:3.4.6'
+	// reactor-extra 의존성
 	implementation 'io.projectreactor.addons:reactor-extra:3.4.6'
+
+
+	testImplementation 'io.projectreactor:reactor-test'
+	testImplementation 'io.projectreactor.tools:blockhound:1.0.3.RELEASE'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+	compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
+	annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.14'
+
+	testCompileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
+	testAnnotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.14'
 }
 ```  
 
