@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "GeoJSON Format"
 header:
-  overlay_image: /img/blog-bg.png
+  overlay_image: /img/blog-bg.jpg
 excerpt: 'JSON 타입으로 지리좌표 공간(위치정보)을 표현 할 수 있는 GeoJSON 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
