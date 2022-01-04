@@ -269,18 +269,232 @@ mysql> select `name`, ST_AsGeoJSON(`geometrycollection`) from ex_geo_table;
 
 Function|Desc
 ---|---
-ST_Equal(g1, g2)|g1, g2가 동일하면 True, 동일하지 않으면 False
-ST_Disjoint(g1, g2)|g1, g2가 겹치는 곳이 없으면 True, 겹치는 곳이 있다면 False
-ST_Within(g1, g2)|g1이 g2 영역안에 포함된다면 True, 포함되지 않는다면 False
-ST_Contains(g1, g2)|g2가 g1 영역안에 포함된다면 True, 포함되지 않는다면 False
-ST_Overlap(g1, g2)|g1, g2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
-ST_Intersect(g1, g2)|g1, g2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
-ST_Touches(g1, g2)|g1, g2의 경계 부분만 겹친다면 True, 경계 외 영역이 겹치거나 겹치지 않는다면 False
-ST_Distance(g1, g2)|g1과 g2 사이의 거리를 반환
+ST_Equals(geometry1, geometry2): boolean|geometry1, geometry2가 동일하면 True, 동일하지 않으면 False
+ST_Disjoint(geometry1, geometry2)|geometry1, geometry2가 겹치는 곳이 없으면 True, 겹치는 곳이 있다면 False
+ST_Contains(geometry1, geometry2)|geometry2가 geometry1 영역안에 포함된다면 True, 포함되지 않는다면 False
+ST_Within(geometry1, geometry2)|geometry1이 geometry2 영역안에 포함된다면 True, 포함되지 않는다면 False
+ST_Overlaps(geometry1, geometry2)|geometry1, geometry2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
+ST_Intersects(geometry1, geometry2)|geometry1, geometry2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
+ST_Touches(geometry1, geometry2)|geometry1, geometry2의 경계 부분만 겹친다면 True, 경계 외 영역이 겹치거나 겹치지 않는다면 False
+ST_Distance(geometry1, geometry2)|geometry1과 geometry2 사이의 거리를 반환
+
+테스트는 아래 사진과 같은 `red`, `blue`, `green`, `yellow`, `purple` `black` 과 같은 `Polygon` 데이터를 생성해서 진행 한다.  
+
+practice-spatial-data-queries-1.png
+
+```bash
+mysql> set @red = ST_GeomFromText('POLYGON((3 3, 6 3, 6 6, 3 6, 3 3))');
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set @blue = ST_GeomFromText('POLYGON((2 2, 3 2, 3 3, 2 3, 2 2))');
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set @green = ST_GeomFromText('POLYGON((6 3, 7 3, 7 4, 6 4, 6 3))');
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set @yellow = ST_GeomFromText('POLYGON((5 5, 7 5, 7 7, 5 7, 5 5))');
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set @purple = ST_GeomFromText('POLYGON((0 7, 1 7, 1 8, 0 8, 0 7))');
+Query OK, 0 rows affected (0.00 sec)
+
+mysql> set @black = ST_GeomFromText('POLYGON((4 4, 5 4, 5 5, 4 5, 4 4))');
+Query OK, 0 rows affected (0.00 sec)
+
+```  
 
 
+#### ST_Equal
+geometry1, geometry2가 동일하면 True, 동일하지 않으면 False
+
+```bash
+mysql> SELECT ST_Equals(@red, @red), ST_Equals(@blue, @blue), ST_Equals(@green, @green);
++---------------------+---------------------+---------------------+
+| ST_Equals(@g1, @g1) | ST_Equals(@g2, @g2) | ST_Equals(@g1, @g2) |
++---------------------+---------------------+---------------------+
+|                   1 |                   1 |                   0 |
++---------------------+---------------------+---------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Equals(@red, @yellow), ST_Equals(@red, @green), ST_Equals(@red, @black);
++--------------------------+-------------------------+-------------------------+
+| ST_Equals(@red, @yellow) | ST_Equals(@red, @green) | ST_Equals(@red, @black) |
++--------------------------+-------------------------+-------------------------+
+|                        0 |                       0 |                       0 |
++--------------------------+-------------------------+-------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Disjoint
+geometry1, geometry2가 겹치는 곳이 없으면 True, 겹치는 곳이 있다면 False
+
+```bash
+mysql> SELECT ST_Disjoint(@purple, @red), ST_Disjoint(@blue, @black), ST_Disjoint(@green, @yellow);
++----------------------------+----------------------------+------------------------------+
+| ST_Disjoint(@purple, @red) | ST_Disjoint(@blue, @black) | ST_Disjoint(@green, @yellow) |
++----------------------------+----------------------------+------------------------------+
+|                          1 |                          1 |                            1 |
++----------------------------+----------------------------+------------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Disjoint(@red, @blue), ST_Disjoint(@red, @yellow), ST_Disjoint(@red, @green), ST_Disjoint(@red, @black);
++--------------------------+----------------------------+---------------------------+---------------------------+
+| ST_Disjoint(@red, @blue) | ST_Disjoint(@red, @yellow) | ST_Disjoint(@red, @green) | ST_Disjoint(@red, @black) |
++--------------------------+----------------------------+---------------------------+---------------------------+
+|                        0 |                          0 |                         0 |                         0 |
++--------------------------+----------------------------+---------------------------+---------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Contains
+geometry2가 geometry1 영역안에 포함된다면 True, 포함되지 않는다면 False
+
+```bash
+mysql> SELECT ST_Contains(@red, @black);
++---------------------------+
+| ST_Contains(@red, @black) |
++---------------------------+
+|                         1 |
++---------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Contains(@red, @blue), ST_Contains(@red, @yellow), ST_Contains(@black, @red);
++--------------------------+----------------------------+---------------------------+
+| ST_Contains(@red, @blue) | ST_Contains(@red, @yellow) | ST_Contains(@black, @red) |
++--------------------------+----------------------------+---------------------------+
+|                        0 |                          0 |                         0 |
++--------------------------+----------------------------+---------------------------+
+1 row in set (0.00 sec)
+```  
+
+#### ST_Within
+geometry1이 geometry2 영역안에 포함된다면 True, 포함되지 않는다면 False
+
+```bash
+mysql> SELECT ST_Within(@black, @red);
++-------------------------+
+| ST_Within(@black, @red) |
++-------------------------+
+|                       1 |
++-------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Within(@red, @black), ST_Within(@yellow, @red), ST_Within(@green, @red);
++-------------------------+--------------------------+-------------------------+
+| ST_Within(@red, @black) | ST_Within(@yellow, @red) | ST_Within(@green, @red) |
++-------------------------+--------------------------+-------------------------+
+|                       0 |                        0 |                       0 |
++-------------------------+--------------------------+-------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Overlaps
+geometry1, geometry2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
+
+```bash
+mysql> SELECT ST_Overlaps(@red, @yellow);
++----------------------------+
+| ST_Overlaps(@red, @yellow) |
++----------------------------+
+|                          1 |
++----------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Overlaps(@red, @black), ST_Overlaps(@black, @red), ST_Overlaps(@black, @yellow), ST_Overlaps(@red, @blue), ST_Overlaps(@red, @green);
++---------------------------+---------------------------+------------------------------+--------------------------+---------------------------+
+| ST_Overlaps(@red, @black) | ST_Overlaps(@black, @red) | ST_Overlaps(@black, @yellow) | ST_Overlaps(@red, @blue) | ST_Overlaps(@red, @green) |
++---------------------------+---------------------------+------------------------------+--------------------------+---------------------------+
+|                         0 |                         0 |                            0 |                        0 |                         0 |
++---------------------------+---------------------------+------------------------------+--------------------------+---------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Intersects
+geometry1, geometry2 영역 간 교집합이 존재한다면 True, 존재하지 않는다면 False
+
+```bash
+mysql> SELECT ST_Intersects(@red, @black), ST_Intersects(@black, @red), ST_Intersects(@black, @yellow), ST_Intersects(@red, @blue), ST_Intersects(@red, @green), ST_Intersects(@red, @yellow);
++-----------------------------+-----------------------------+--------------------------------+----------------------------+-----------------------------+------------------------------+
+| ST_Intersects(@red, @black) | ST_Intersects(@black, @red) | ST_Intersects(@black, @yellow) | ST_Intersects(@red, @blue) | ST_Intersects(@red, @green) | ST_Intersects(@red, @yellow) |
++-----------------------------+-----------------------------+--------------------------------+----------------------------+-----------------------------+------------------------------+
+|                           1 |                           1 |                              1 |                          1 |                           1 |         1                    |
++-----------------------------+-----------------------------+--------------------------------+----------------------------+-----------------------------+------------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Intersects(@red, @purple), ST_Intersects(@green, @yellow), ST_Intersects(@blue, @black);
++------------------------------+--------------------------------+------------------------------+
+| ST_Intersects(@red, @purple) | ST_Intersects(@green, @yellow) | ST_Intersects(@blue, @black) |
++------------------------------+--------------------------------+------------------------------+
+|                            0 |                              0 |                            0 |
++------------------------------+--------------------------------+------------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Touches
+geometry1, geometry2의 경계 부분만 겹친다면 True, 경계 외 영역이 겹치거나 겹치지 않는다면 False
+
+```bash
+mysql> SELECT ST_Touches(@red, @blue), ST_Touches(@red, @green), ST_Touches(@black, @yellow);
++-------------------------+--------------------------+-----------------------------+
+| ST_Touches(@red, @blue) | ST_Touches(@red, @green) | ST_Touches(@black, @yellow) |
++-------------------------+--------------------------+-----------------------------+
+|                       1 |                        1 |                           1 |
++-------------------------+--------------------------+-----------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Touches(@red, @black), ST_Touches(@red, @yellow), ST_Touches(@purple, @green);
++--------------------------+---------------------------+-----------------------------+
+| ST_Touches(@red, @black) | ST_Touches(@red, @yellow) | ST_Touches(@purple, @green) |
++--------------------------+---------------------------+-----------------------------+
+|                        0 |                         0 |                           0 |
++--------------------------+---------------------------+-----------------------------+
+1 row in set (0.00 sec)
+
+```  
+
+#### ST_Distance
+geometry1과 geometry2 사이의 거리를 반환
+
+```bash
+mysql> SELECT ST_Distance(@red, @black), ST_Distance(@red, @yellow), ST_Distance(@red, @green), ST_Distance(@red, @blue);
++---------------------------+----------------------------+---------------------------+--------------------------+
+| ST_Distance(@red, @black) | ST_Distance(@red, @yellow) | ST_Distance(@red, @green) | ST_Distance(@red, @blue) |
++---------------------------+----------------------------+---------------------------+--------------------------+
+|                         0 |                          0 |                         0 |                        0 |
++---------------------------+----------------------------+---------------------------+--------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT ST_Distance(@red, @purple), ST_Distance(@blue, @yellow), ST_Distance(@purple, @blue), ST_Distance(@green, @black);
++----------------------------+-----------------------------+-----------------------------+-----------------------------+
+| ST_Distance(@red, @purple) | ST_Distance(@blue, @yellow) | ST_Distance(@purple, @blue) | ST_Distance(@green, @black) |
++----------------------------+-----------------------------+-----------------------------+-----------------------------+
+|           2.23606797749979 |          2.8284271247461903 |           4.123105625617661 |                           1 |
++----------------------------+-----------------------------+-----------------------------+-----------------------------+
+1 row in set (0.01 sec)
+
+```  
 
 
+### Spatial Operator Functions
+[Spatial Operator Functions](https://dev.mysql.com/doc/refman/5.7/en/spatial-operator-functions.html)
+는 직역하면 공간 연산 함수로 인자의 두 공간을 연산해서 결과로 새로운 공간 객체을 반환하는 함수를 의미한다.  
+
+
+Function|Desc
+---|---
+ST_Intersection(geometry1, geometry2): geometry|geometry1, geometry2의 교집합인 공간 객체 리턴
+ST_Union(geometry1, geometry2): geometry|geometry1, geometry2의 합집합 공간 객체 리턴
+ST_Difference(geometry1, geometry2): geometry|geometry1, geometry2의 차집합 공간 객체 리턴
+ST_Buffer(geometry1, double): geometry|geometry1 에서 double 거리만큼 확장된 공간 객체 리턴
+ST_Envelop(geometry1): Polygon|geometry1 을 포함하는 최소 MBR인 Polygon 리턴
+ST_StartPoint(linestring1): Point|linestring1 의 첫 번째 Point 리턴
+ST_EndPoint(linestring1): Point|linestring1 의 마지막 Point 리턴
+ST_PointN(linestring1, number): Point|linestring1 에서 number 번째 Point 리턴
 
 
 
@@ -289,4 +503,5 @@ ST_Distance(g1, g2)|g1과 g2 사이의 거리를 반환
 ## Reference
 [Spatial Data Types](https://dev.mysql.com/doc/refman/8.0/en/spatial-types.html)  
 [Spatial Function Reference](https://dev.mysql.com/doc/refman/8.0/en/spatial-function-reference.html)
+[Geometry Property Functions](https://dev.mysql.com/doc/refman/8.0/en/gis-property-functions.html)
 [MySQL 5.7.5 Spatial Data Support](https://dev.mysql.com/doc/relnotes/mysql/5.7/en/news-5-7-5.html#mysqld-5-7-5-spatial-support)
