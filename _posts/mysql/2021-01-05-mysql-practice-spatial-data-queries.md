@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[MySQL 실습] "
+title: "[MySQL 실습] MySQL Spatial Data Queries(공간 데이터 쿼리)"
 header:
   overlay_image: /img/mysql-bg.png
-excerpt: ''
+excerpt: 'MySQL 에서 공간 데이터를 처리할 수 있는 Spatial Data 와 Spatial Index에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,8 @@ categories :
 tags:
   - MySQL
   - Practice
+  - Spatial Data
+  - Spatial Index
 toc: true
 use_math: true
 ---  
