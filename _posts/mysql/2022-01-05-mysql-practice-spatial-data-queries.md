@@ -614,6 +614,6 @@ mysql> SELECT ST_AsText(ST_StartPoint(@black_line)), ST_AsText(ST_EndPoint(@blac
 ---
 ## Reference
 [Spatial Data Types](https://dev.mysql.com/doc/refman/8.0/en/spatial-types.html)  
-[Spatial Function Reference](https://dev.mysql.com/doc/refman/8.0/en/spatial-function-reference.html)
-[Geometry Property Functions](https://dev.mysql.com/doc/refman/8.0/en/gis-property-functions.html)
-[MySQL 5.7.5 Spatial Data Support](https://dev.mysql.com/doc/relnotes/mysql/5.7/en/news-5-7-5.html#mysqld-5-7-5-spatial-support)
+[Spatial Function Reference](https://dev.mysql.com/doc/refman/8.0/en/spatial-function-reference.html)  
+[Geometry Property Functions](https://dev.mysql.com/doc/refman/8.0/en/gis-property-functions.html)  
+[MySQL 5.7.5 Spatial Data Support](https://dev.mysql.com/doc/relnotes/mysql/5.7/en/news-5-7-5.html#mysqld-5-7-5-spatial-support)  
