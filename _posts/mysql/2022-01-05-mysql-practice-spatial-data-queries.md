@@ -584,6 +584,10 @@ mysql> select ST_AsText(ST_Buffer(ST_GeomFromText('POINT(1 1)'), 1));
 
 #### ST_Envelop
 geometry1 을 포함하는 최소 MBR인 Polygon 리턴.
+
+> `MBR` 이란 `Minimum Bounding Rectangles 의 약자로, 최소 경계 사각형을 의미한다. 
+> 좌표상의 임의의 사각형 구혁이라고 할 수 있다. 
+
 `LineString` 을 포함하는 최소 `Polygon` 을 리턴한다.  
 
 ```bash
