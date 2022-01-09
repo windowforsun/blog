@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 개념] Spring Reactor Cache 구현"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Reactor Extra의 CacheMono, CacheFlux 를 사용해서 Spring Cache 와 같이 Mono, Flux 를 캐싱할 수 있도록 구현해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -18,6 +18,7 @@ tags:
     - Reactor
     - Reactor Cache
     - Caffeine
+    - Reactor Extra
 toc: true
 use_math: true
 ---  
