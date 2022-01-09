@@ -39,13 +39,14 @@ Flux.<>.block();
 
 ## 구현하기
 `Spring Cache` 에서 제공하는 무수히 많은 기능과 특징들이 있지만, 
-그 모든 기능과 특징을 구현하기에는 양이 많기 때문에 몇가지 특징만 뽑아 실제로 동일하게 동작할 수 있도록 구현해 본다.  
+그 모든 기능과 특징을 구현하기에는 양이 많기 때문에 1차적으로 몇가지 특징만 뽑아 실제로 동일하게 동작할 수 있도록 구현해 본다.  
 
 - `Annotation` 기반 캐싱
 - `Multiple CacheManager`
 - `Multiple KeyGenerator`
 
 ### build.gradle
+구현을 위해 추가한 의존성은 아래와 같다.  
 
 ```groovy
 dependencies {
@@ -66,7 +67,6 @@ dependencies {
 	implementation 'io.projectreactor:reactor-core:3.4.6'
 	implementation 'io.projectreactor.addons:reactor-extra:3.4.6'
 	testImplementation 'io.projectreactor:reactor-test'
-	testImplementation 'io.projectreactor.tools:blockhound:1.0.6.RELEASE'
 	// Third Party
 	compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.12'
 	annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.14'
@@ -74,6 +74,10 @@ dependencies {
 	testAnnotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.14'
 }
 ```  
+
+### Annotation
+`Spring Cache` 에는 `@Cacheable`, `@CachePut`, `@CacheEvict`
+
 
 
 ---
