@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "Synchronous/Asychronous, Blcking/Non-Blcking"
+title: "Synchronous/Asychronous, Blocking/Non-Blocking"
 header:
   overlay_image: /img/blog-bg.jpg
 excerpt: 'Sync/Async 와 Blocking/Non-Blocking 의 각 개념과 차이 및 조합 등에 대해 알아보자 '
