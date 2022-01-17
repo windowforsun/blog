@@ -14,8 +14,8 @@ tags:
   - Concept
   - Synchronous
   - Asynchronous
-  - Blcking
-  - Non-Blcking
+  - Blocking
+  - Non-Blocking
 toc: true
 use_math: true
 ---  
@@ -50,28 +50,133 @@ use_math: true
 `Async` 는 `CPU` 시간을 적절히 맞추지 않고 모두 함께 한번에 사용하게 되는 경우도 발생한다고 생각하면 쉽다.  
 
 ### Synchronous
-`Synchronous` 는 `Main` 이 호출하는 `Task` 인 `Sub` 의 작업 완료에 대한 리턴을 기다리거나, `Sub` 의 리턴은 바로 받더라도 이후에 작업 완료 여부를 계속해서 확인하는 동작을 의미한다.  
+`Synchronous` 는 `Main` 이 호출하는  `Sub` 의 작업 완료에 대한 리턴을 기다리거나, `Sub` 의 리턴은 바로 받더라도 이후에 작업 완료 여부를 계속해서 확인하는 동작을 의미한다.  
 
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-1.drawio.png)  
 
+위 그림은 `Synchronous thread` 에 대한 그림으로 `Main thread` 가 `Sub thread` 생성 후, 
+`Sub thread` 가 종료될 떄까지 대기하고 `Sub thread` 가 종료가 된 후에야 `Main thread` 가 작업을 수행이 가능하다는 그림이다.  
 
+이는 `Thread` 의 관계에서만 적용되는 것이아니라 함수가 다른 함수를 호출하는 관계에 대입해도 동일한 설명과 개념이 될 수 있다.  
 
-
+앞서 설명한 개념중 `Sub` 호출 후 `Main` 에서 완료 여부를 계속해서 확인하는 경우 또한 `Main` 에서 확인 하는 과정 중간 중간 다른 작업은 수행 할 수는 있지만, 
+이 또한 `Sync` 동작임을 기억해야 한다.  
 
 
 ### Asynchronous
-`Asynchronous` 는 `Main` 이 호출하는 `Task` 인 `Sub` 에 `Callback`(주로 사용하는 방법)을 전달해서, 
+`Asynchronous` 는 `Main` 이 호출하는 `Sub` 에 `Callback`(주로 사용하는 방법)을 전달해서, 
 `Main` 이 `Sub` 의 리턴값 혹은 작업 완료 여부를 기다리거나 확인 하는 동작 없이 `Sub` 이 완료되면 `Callback` 을 수행해서 완료 동작을 수행하는 것을 의미한다.  
 
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-2.drawio.png)  
 
+위 그림은 `Asynchronous thread` 에 대한 그림으로 `Main thread` 가 `Sub thread` 생성 후, 
+`Main`, `Sub` 모두 동시에 작업 수행이 가능하다는 그림이다.  
 
+이 또한 `thread` 가 아닌 함수의 관게에서 보더라도 동일한 설명과 개념을 의미한다.  
 
 
 ## Blocking/Non-Blocking
+`Blocking/Non-Blocking` 은 제어권의 관점에서 볼 수 있다. (다른 말로 하자만 리턴을 바로 하느냐 마느냐)
+즉 `Sync/Async` 와 서로 관점이 다르기 때문에 서로 비슷한 개념을 언급하는 것 같지만 서로가 다른 부분에 관심을 두고 있다는 의미이다.  
+주로 `Blocking/Non-Blocking` 은 직접적으로 제어할수 없는 대상을 어떤 식으로 처리하느냐에 따라 나뉜다고 할 수 있다. 
+앞서 제어권을 언급한 것도 직접적으로 제어할 수 없는 대상을 처리할때 제어권을 넘겨 주는지, 제어권을 넘겨주지 않고 온전히 가지고 있는지에 따라 나뉜다고 할 수 있다. 
+여기서 직접적으로 제어할 수 없는 대상의 대표적인 예로는 `IO`, `멀티쓰레드 동기화` 등이 있다.  
+
+### Blocking
+`Blocking` 은 `Main` 이 호출하는 `Sub` 에 제어권을 넘겨줘서 `Sub` 이 작업을 수행하고, 
+`Sub` 이 완료 될때까지 제어권을 돌려주지 않기 때문에 `Main` 은 계속 대기하게 되는 동작을 의미한다.  
+
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-3.drawio.png)  
+
+위 그림을 보면 `Synchronous` 와 거의 유사하지만 `제어권` 에 대한 설명만 포함된 그림이라고 할 수 있다. 
+`Main` 이 제어권을 `Sub` 으로 넘겨준 순감 부터 `Sub` 이 주체적으로 작업을 수행하게 되고 `Main` 은 `Sub` 이 다시 제어권을 돌려주길 만을 기다리고 있는 것이다. 
+`Sub` 의 작업이 완료되고 제어권을 돌려 받으면 그때서야 `Main` 은 자신의 작업을 이어서 할 수 있다.  
+
+> `Synchronous` 는 작업의 완료 여부를 기다린 것이지, 제어권을 기다린 것이 아니다. 
+
+### Non-Blocking
+`Non-Blocking` 은 `Main` 이 호출하는 `Sub` 이 호출과 동시에 바로 리턴해서 `Main` 에 바로 제어권을 넘겨 준다. 
+그러므로 `Main` 과 `Sub` 은 동시에 각자 작업을 수행할 수 있는 것을 의미한다.  
+
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-4.drawio.png)
+
+`Non-Blocking` 그림도 `Asynchronous` 와 거의 유사하지만 `제어권` 에 대한 설명만 포함된 그림이라고 할 수 있다. 
+`Main` 이 제어권을 `Sub` 에 넘겨주면 `Sub` 은 바로 리턴을 수행하며 제어권을 다시 `Main` 에서 넘겨주게 되면서, 
+`Main` 또한 작업을 수행할 수 있는 기회를 얻는 것이다.  
+
+
+## 중간 정리
+중간 개념 정리와 추가 적인 설명을 더하고 다음 설명을 진행하려고 한다. 
+`Multithreading` 모델을 보면 대부분 중간에 `Waiting Queue` 를 가지고 있는 경우가 있다. 
+`Waiting Queue` 가 존재하는 작업의 경우 `Wating Queue` 에 추가된 작업은 대기 상태에 들어가기 때문에 `Blcoking` 이라고 볼 수 있다. 
+즉 반대로 말하면 `Waiting Queue` 에 들어가지 않는 경우를 `Non-Blocking` 이라고 할 수 있다.  
+
+그리고 `Asychronous` 와 `Non-Blocking` 는 모두 즉시 리턴한다는 보장이 있는 동작이다. 
+이 둘의 차이는 결과값을 함께 리턴 하느냐 마느냐로 나뉠 수 있다. 
+`Asynchronous` 는 `Callback` 이 결과값 처리를 하기 때문에 당연히 결과값이 리턴떄 함께 올 수 없지만, 
+`Non-Blocking` 은 결과값과 함께 즉시 리턴되는 동작을 의미한다.  
+
+마지막으로 `Sychronous` 와 `Blocking` 모두 호출한 결과 및 리턴을 기다린다는 공통점을 가지고 있다. 
+이를 `Waiting Queue` 의 관점에서 본다면 `Synchronous` 는 `Waiting Queue` 가 필수가 아니고, `Blocking` 은 `Waiting Queue` 가 필수적으로 필요하다.  
+
+위 내용을 다시 한번 표로 정리하면 아래와 같다.  
+
+
+구분|Synchronous|Blocking|Asynchronous|Non-Blocking
+---|---|---|---|---
+시스템 콜의 완료를 기다리는지|O|O|X|X
+값과 함께 리턴하는지|O|O|X|O
+즉시 리턴 하는지|X|X|O|O
+대기큐에서 기다리는지|X|O|X|X
+
 
 ## 다양한 조합과 종류
 
-이후 설명에서는 주로 2개의 `Task` 인 `Main`, `Sub` 을 사용해서 설명을 진행한다.
-`Main` 에서 새롭게 생성되고 실행되는 `Task` 가 `Sub` 이라고 생각하면 된다.
+### Sync-Blocking
+가장 일반적이면서 자주 사용되는 흐름으로 단순한 동작이다.  
+
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-3.drawio.png)
+
+`Main` 은 `Sub` 의 리턴값을 필요로 하기 때문에 `Blocking` 이라고 할 수 있다. 
+그러므로 제어권을 `Sub` 으로 넘겨주고 `Sub` 이 완료 될 때까지 기다려야 하므로 `Sync` 이다. (제어권을 넘겨줄 떄까지)  
+
+일반적으로 함수가 다른 함수를 호출하는 경우를 생각하면 쉽다.  
+
+### Sync-NonBlocking
+`Sync` 를 `Non-blcoking` 처럼 동작 시킬 수도 있는데, 
+호출 되는 함수는 바로 리턴하지만 호출하는 함수는 호출된 함수의 완료 여부를 계속해서 확인하는 경우가 될 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-5.drawio.png)
+
+`Main` 은 `Sub` 의 실행과 동시에 리턴을 받으면서 제어권도 돌려 받는다. (`Non-Blocking`)
+하지만 `Main` 은 계속해서 `Sub` 에게 완료 여부를 묻는 동작을 수행한다. (`Sync`) 
+물론 `Sub` 의 완료 여부를 검사하며 다른 동작도 수행은 가능하다.  
+
+이와 관련되 간단한 예시로는 아래 코드처럼 `Future` 를 `Non-Blocking` 하게 실행했지만, 
+`while` 문을 통해 종료 여부를 검사하는 것과 같다.  
+
+```java
+Future future = Executors.newSingleThreadExecutor().submit(() -> sub());
+
+while(!future.isDone()) {
+    // do something..
+}
+```  
+
+### Async-NonBlocking
+`Async-NonBlocking` 은 호출 된 함수에게 바로 제어권을 받고, 
+호출 된 함수의 결과 처리는 `Callback` 으로 처리하기 때문에 
+성능과 자원의 효율적 사용관점에서 가장 유리한 모델인  이다.  
+
+
+
+
+
+
+
+
+
+
 
 ---
 
