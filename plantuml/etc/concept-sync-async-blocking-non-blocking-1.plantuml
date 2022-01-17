@@ -1,0 +1,22 @@
+@startuml
+'skinparam linetype polyline
+'skinparam linetype ortho
+participant "A Thread" as A
+participant "counter" as c
+participant "B Thread" as B
+
+A -> c : get count = 0
+activate c
+A <- c : do count += 1
+deactivate c
+B -> c : get count = 1
+activate c
+B <- c : do count += 1
+deactivate c
+
+
+
+
+
+
+@enduml
