@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "Sync/Async, Blcking/Non-Blcking"
+title: "Synchronous/Asychronous, Blcking/Non-Blcking"
 header:
   overlay_image: /img/blog-bg.jpg
-excerpt: ''
+excerpt: 'Sync/Async 와 Blocking/Non-Blocking 의 각 개념과 차이 및 조합 등에 대해 알아보자 '
 author: "window_for_sun"
 header-style: text
 categories :
@@ -98,7 +98,7 @@ use_math: true
 `Non-Blocking` 은 `Main` 이 호출하는 `Sub` 이 호출과 동시에 바로 리턴해서 `Main` 에 바로 제어권을 넘겨 준다. 
 그러므로 `Main` 과 `Sub` 은 동시에 각자 작업을 수행할 수 있는 것을 의미한다.  
 
-![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-4.drawio.png)
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-4.drawio.png)  
 
 `Non-Blocking` 그림도 `Asynchronous` 와 거의 유사하지만 `제어권` 에 대한 설명만 포함된 그림이라고 할 수 있다. 
 `Main` 이 제어권을 `Sub` 에 넘겨주면 `Sub` 은 바로 리턴을 수행하며 제어권을 다시 `Main` 에서 넘겨주게 되면서, 
@@ -135,7 +135,7 @@ use_math: true
 ### Sync-Blocking
 가장 일반적이면서 자주 사용되는 흐름으로 단순한 동작이다.  
 
-![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-3.drawio.png)
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-3.drawio.png)  
 
 `Main` 은 `Sub` 의 리턴값을 필요로 하기 때문에 `Blocking` 이라고 할 수 있다. 
 그러므로 제어권을 `Sub` 으로 넘겨주고 `Sub` 이 완료 될 때까지 기다려야 하므로 `Sync` 이다. (제어권을 넘겨줄 떄까지)  
@@ -146,7 +146,7 @@ use_math: true
 `Sync` 를 `Non-blcoking` 처럼 동작 시킬 수도 있는데, 
 호출 되는 함수는 바로 리턴하지만 호출하는 함수는 호출된 함수의 완료 여부를 계속해서 확인하는 경우가 될 수 있다.  
 
-![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-5.drawio.png)
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-5.drawio.png)  
 
 `Main` 은 `Sub` 의 실행과 동시에 리턴을 받으면서 제어권도 돌려 받는다. (`Non-Blocking`)
 하지만 `Main` 은 계속해서 `Sub` 에게 완료 여부를 묻는 동작을 수행한다. (`Sync`) 
@@ -168,13 +168,31 @@ while(!future.isDone()) {
 호출 된 함수의 결과 처리는 `Callback` 으로 처리하기 때문에 
 성능과 자원의 효율적 사용관점에서 가장 유리한 모델인  이다.  
 
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-6.drawio.png)  
+
+`Main` 은 `Sub` 의 실행과 동시에 제어권 및 리턴을 바로 받는다. (`Non-Blocking`)
+그러므로 `Main` 또한 계속해서 다른 동작을 수행할 수 있다. 
+그리고 `Sub` 을 호출 할때 `Callback` 을 함께 넘겼고, 
+`Sub` 은 완료되면 전달받은 `Callback` 을 호출해서 결과값 처리를 하게 될것이다. (`Async`)
+
+최근 들어 많은 프로그래밍 또는 서버 애플리케이션에서 사용하는 모델이라고 할 수 있다. 
+`Node.js`, `Java Reactor`, `Spring Webflux`, `Netty` 등  더 많음 위 모델과 관련된 기술과 라이브러리, 프레임워크, 서버가 존재한다.  
 
 
+### Async-Blocking
+가장 마지막은 `Async` 이지만 `Blocking` 이여서 제어권을 받지 못해 대기 하는 경우인 `Async-Blocking` 이다.  
 
+![그림 1]({{site.baseurl}}/img/etc/concept-sync-async-blocking-non-blocking-7.drawio.png)  
 
+`Main` 은 `Sub` 의 완료와 리턴값을 대기하지 않기 위해 `Callback` 을 함께 전달한다. (`Async`)
+하지만 `Main` 은 `Sub` 을 실행할 때 제어권을 넘겨주고 돌려 받지 못해 제어권을 받을 때까지(`Sub` 완료) 계속 대기하게 된다. (`Blocking`) 
 
-
-
+이 모델은 굉장히 아이러니 한 모델이라고 할 수 있다. 
+의도적으로는 마주하기 쉽지 않다고 말할 수 있지만, 
+`Non-Blocking`(`Reactive`) 모델을 사용하다 보면 한번 쯤은 마주 해본 모델일 수도 있다. 
+바로 `Async-NonBlocking` 과정에서 하나의 `Blocking` 이라도 포함돼 있다면, 
+이는 `Async-Blocking` 이 되버리기 때문이다. 
+`Webflux + JDBC` 을 사용하는 경우라던가, `Node.js + MySQL` 등이 있을 수 있다.  
 
 
 
