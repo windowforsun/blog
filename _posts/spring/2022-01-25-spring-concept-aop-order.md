@@ -66,7 +66,7 @@ public class SomeService {
 1. B AOP
 1. Target method
 1. B AOP
-1  A AOP
+1.  A AOP
    
 위와 같이 실행된다면 `A` 가 `B` 보다 우선순위가 높다고 할 수 있다. 
 
