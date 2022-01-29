@@ -859,7 +859,7 @@ public class ReactiveHashOperationsTest implements DockerRedisTest {
 }
 ```  
 
-#### ReactiveSetOperations
+### ReactiveSetOperations
 `Redis` 에서 `Key-Set(value1, value2 ...)` 구조의 데이터를 조작할 수 있는 인터페이스이다. 
 집합 관련 연산이 제공되고(`difference`, `intersect`, `union`) 내부 원소는 순서 보장이 되지 않고, 중복값은 허용하지 않는다.  
 
