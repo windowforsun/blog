@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 개념] "
+title: "[Spring 개념] Spring Reactive Redis"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring 에서 Reactive Redis 를 사용하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -17,6 +17,13 @@ tags:
     - Spring Reactive Redis
     - Reactor
     - Reactive Stream
+    - ReactiveValueOperations
+    - ReactiveListOperations
+    - ReactiveHashOperations
+    - ReactiveSetOperations
+    - ReactiveZSetOperations
+    - ReactiveGeoOperations
+    - ReactiveHyperLogLogOperations
 toc: true
 use_math: true
 ---  
@@ -1091,13 +1098,498 @@ public class ReactiveSetOperationsTest implements DockerRedisTest {
 
 
 ### ReactiveZSetOperations
+`Redis` 에서 `Key-Set((value1, score1), (value2, score2) ...)` 구조의 데이터를 조작할 수 있는 인터페이스로 
+`ReactiveSetOperations` 와 동일한 인터페이스를 제공하면서 추가적으로 `score` 과 `value` 를 기준으로 정렬된 `Set` 연산을 수행할 수 있다. 
+`ReactiveSetOperations` 과 동일한 집합연산과 중복된 `value` 를 허용하지 않는 다는 점이 동일하다. 
+그리고 추가적으로 `rank`, `reverseRange`, `rageByScore` 등과 같은 정렬 관련 연산을 제공한다.  
 
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@EnableRedisRepositories
+public class ReactiveZSetOperationsTest implements DockerRedisTest {
+    @Autowired
+    private ReactiveRedisTemplate reactiveRedisTemplate;
+    private ReactiveZSetOperations<String, String> reactiveZSetOperations;
+
+    @BeforeEach
+    public void setUp() {
+        this.reactiveZSetOperations = this.reactiveRedisTemplate.opsForZSet();
+        this.reactiveRedisTemplate.scan().subscribe(o -> {
+            this.reactiveRedisTemplate.delete(o);
+        });
+    }
+
+    @Test
+    public void add_addAll_popMax_popMin() {
+        Mono<Boolean> addMono = this.reactiveZSetOperations.add("testKey", "a", 0d);
+        StepVerifier
+                .create(addMono)
+                .expectNext(true)
+                .verifyComplete();
+
+        addMono = this.reactiveZSetOperations.add("testKey", "a", 1d);
+        StepVerifier
+                .create(addMono)
+                .expectNext(false)
+                .verifyComplete();
+
+        addMono = this.reactiveZSetOperations.add("testKey", "abcd", 1d);
+        StepVerifier
+                .create(addMono)
+                .expectNext(true)
+                .verifyComplete();
+
+        // TypedTuple.of 2.5
+        Mono<Long> addAllMono = this.reactiveZSetOperations.addAll("testKey", Arrays.asList(ZSetOperations.TypedTuple.of("b", 2d), ZSetOperations.TypedTuple.of("c", 3d)));
+        StepVerifier
+                .create(addAllMono)
+                .expectNext(2L)
+                .verifyComplete();
+
+        // 2.6
+        Mono<ZSetOperations.TypedTuple<String>> podMaxMono = this.reactiveZSetOperations.popMax("testKey");
+        StepVerifier
+                .create(podMaxMono)
+                .expectNext(ZSetOperations.TypedTuple.of("c", 3d))
+                .verifyComplete();
+
+        // 2.6
+        Mono<ZSetOperations.TypedTuple<String>> popMinMono = this.reactiveZSetOperations.popMin("testKey");
+        StepVerifier
+                .create(popMinMono)
+                .expectNext(ZSetOperations.TypedTuple.of("a", 1d))
+                .verifyComplete();
+    }
+
+    @Test
+    public void differenceWithScores_intersectWithScores_unionWithScores() {
+        this.reactiveZSetOperations.addAll(
+                "testKey1",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("a", 1d),
+                        ZSetOperations.TypedTuple.of("b", 2d),
+                        ZSetOperations.TypedTuple.of("c", 3d),
+                        ZSetOperations.TypedTuple.of("d", 4d),
+                        ZSetOperations.TypedTuple.of("e", 5d)
+                )
+        ).subscribe();
+        this.reactiveZSetOperations.addAll(
+                "testKey2",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("a", 11d),
+                        ZSetOperations.TypedTuple.of("b", 12d),
+                        ZSetOperations.TypedTuple.of("c", 13d)
+                        )
+        ).subscribe();
+        this.reactiveZSetOperations.addAll(
+                "testKey3",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("a", 21d),
+                        ZSetOperations.TypedTuple.of("c", 23d),
+                        ZSetOperations.TypedTuple.of("d", 24d)
+                )
+        ).subscribe();
+
+        // 2.6
+        Flux<ZSetOperations.TypedTuple<String>> differenceWithScoresFlux = this.reactiveZSetOperations.differenceWithScores("testKey1", "testKey2");
+        StepVerifier
+                .create(differenceWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(2));
+                    assertThat(typedTuples, contains(
+                            ZSetOperations.TypedTuple.of("d", 4d),
+                            ZSetOperations.TypedTuple.of("e", 5d)));
+                })
+                .verifyComplete();
+
+        differenceWithScoresFlux = this.reactiveZSetOperations.differenceWithScores("testKey1", Arrays.asList("testKey2", "testKey3"));
+        StepVerifier
+                .create(differenceWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(1));
+                    assertThat(typedTuples, contains(ZSetOperations.TypedTuple.of("e", 5d)));
+                })
+                .verifyComplete();
+
+        // 2.6
+        Flux<ZSetOperations.TypedTuple<String>> intersectWithScoresFlux = this.reactiveZSetOperations.intersectWithScores("testKey1", "testKey2");
+        StepVerifier
+                .create(intersectWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(3));
+                    assertThat(typedTuples, containsInAnyOrder(
+                            ZSetOperations.TypedTuple.of("a", 12d),
+                            ZSetOperations.TypedTuple.of("b", 14d),
+                            ZSetOperations.TypedTuple.of("c", 16d)));
+                })
+                .verifyComplete();
+
+        intersectWithScoresFlux = this.reactiveZSetOperations.intersectWithScores("testKey1", Arrays.asList("testKey2", "testKey3"));
+        StepVerifier
+                .create(intersectWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(2));
+                    assertThat(typedTuples, containsInAnyOrder(
+                            ZSetOperations.TypedTuple.of("a", 33d),
+                            ZSetOperations.TypedTuple.of("c", 39d)));
+                })
+                .verifyComplete();
+
+        // 2.6
+        Flux<ZSetOperations.TypedTuple<String>> unionWithScoresFlux = this.reactiveZSetOperations.unionWithScores("testKey1", "testKey2");
+        StepVerifier
+                .create(unionWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(5));
+                    assertThat(typedTuples, containsInAnyOrder(
+                            ZSetOperations.TypedTuple.of("a", 12d),
+                            ZSetOperations.TypedTuple.of("b", 14d),
+                            ZSetOperations.TypedTuple.of("c", 16d),
+                            ZSetOperations.TypedTuple.of("d", 4d),
+                            ZSetOperations.TypedTuple.of("e", 5d)
+                    ));
+                })
+                .verifyComplete();
+
+        unionWithScoresFlux = this.reactiveZSetOperations.unionWithScores("testKey1", Arrays.asList("testKey2", "testKey3"));
+        StepVerifier
+                .create(unionWithScoresFlux)
+                .recordWith(ArrayList::new)
+                .thenConsumeWhile(stringTypedTuple -> true)
+                .consumeRecordedWith(typedTuples -> {
+                    assertThat(typedTuples, hasSize(5));
+                    assertThat(typedTuples, containsInAnyOrder(
+                            ZSetOperations.TypedTuple.of("a", 33d),
+                            ZSetOperations.TypedTuple.of("b", 14d),
+                            ZSetOperations.TypedTuple.of("c", 39d),
+                            ZSetOperations.TypedTuple.of("d", 28d),
+                            ZSetOperations.TypedTuple.of("e", 5d)
+                    ));
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    public void range_reverseRange_rangeByScore_rangeWithScores_rangeByScoreWithScores() {
+        this.reactiveZSetOperations.addAll(
+                "testKey",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("a", 11d),
+                        ZSetOperations.TypedTuple.of("d", 44d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("e", 55d)
+                )
+        ).subscribe();
+
+        // all rank
+        Flux<String> rangeFlux = this.reactiveZSetOperations.range("testKey", Range.unbounded());
+        StepVerifier
+                .create(rangeFlux)
+                .expectNext("a", "b", "c", "d", "e")
+                .verifyComplete();
+
+        // 1 <= rank <= 3
+        rangeFlux = this.reactiveZSetOperations.range("testKey", Range.open(1L, 3L));
+        StepVerifier
+                .create(rangeFlux)
+                .expectNext("b", "c", "d")
+                .verifyComplete();
+
+        // 1 <= rank <= 3
+        rangeFlux = this.reactiveZSetOperations.range("testKey", Range.closed(1L, 3L));
+        StepVerifier
+                .create(rangeFlux)
+                .expectNext("b", "c", "d")
+                .verifyComplete();
+
+        // reverse all rank
+        Flux<String> reverseRangeFlux = this.reactiveZSetOperations.reverseRange("testKey", Range.unbounded());
+        StepVerifier
+                .create(reverseRangeFlux)
+                .expectNext("e", "d", "c", "b", "a")
+                .verifyComplete();
+
+        // reverse 1 <= rank <= 3
+        reverseRangeFlux = this.reactiveZSetOperations.reverseRange("testKey", Range.closed(1L, 3L));
+        StepVerifier
+                .create(reverseRangeFlux)
+                .expectNext("d", "c", "b")
+                .verifyComplete();
+
+        // reverse 1 <= rank <= 3
+        reverseRangeFlux = this.reactiveZSetOperations.reverseRange("testKey", Range.open(1L, 3L));
+        StepVerifier
+                .create(reverseRangeFlux)
+                .expectNext("d", "c", "b")
+                .verifyComplete();
+
+        // 22 < score < 44
+        Flux<String> rangeByScoreFlux = this.reactiveZSetOperations.rangeByScore("testKey", Range.open(22d, 44d));
+        StepVerifier
+                .create(rangeByScoreFlux)
+                .expectNext("c")
+                .verifyComplete();
+
+        // 22 <= score <= 44
+        rangeByScoreFlux = this.reactiveZSetOperations.rangeByScore("testKey", Range.closed(22d, 44d));
+        StepVerifier
+                .create(rangeByScoreFlux)
+                .expectNext("b", "c", "d")
+                .verifyComplete();
+
+        // 1 <= rank <= 3
+        Flux<ZSetOperations.TypedTuple<String>> rangeWithScoresFlux = this.reactiveZSetOperations.rangeWithScores("testKey", Range.open(1L, 3L));
+        StepVerifier
+                .create(rangeWithScoresFlux)
+                .expectNext(
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("d", 44d)
+                )
+                .verifyComplete();
+
+        // 1 <= rank <= 3
+        rangeWithScoresFlux = this.reactiveZSetOperations.rangeWithScores("testKey", Range.closed(1L, 3L));
+        StepVerifier
+                .create(rangeWithScoresFlux)
+                .expectNext(
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("d", 44d)
+                )
+                .verifyComplete();
+
+        // all score
+        Flux<ZSetOperations.TypedTuple<String>> rangeByScoreWithScoresFlux = this.reactiveZSetOperations.rangeByScoreWithScores("testKey", Range.unbounded());
+        StepVerifier
+                .create(rangeByScoreWithScoresFlux)
+                .expectNext(
+                        ZSetOperations.TypedTuple.of("a", 11d),
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("d", 44d),
+                        ZSetOperations.TypedTuple.of("e", 55d)
+                )
+                .verifyComplete();
+
+        // 22 < score < 44
+        rangeByScoreWithScoresFlux = this.reactiveZSetOperations.rangeByScoreWithScores("testKey", Range.open(22d, 44d));
+        StepVerifier
+                .create(rangeByScoreWithScoresFlux)
+                .expectNext(ZSetOperations.TypedTuple.of("c", 33d))
+                .verifyComplete();
+    }
+
+    @Test
+    public void rank_reverseRank() {
+        this.reactiveZSetOperations.addAll(
+                "testKey",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("a", 11d),
+                        ZSetOperations.TypedTuple.of("d", 44d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("e", 55d)
+                )
+        ).subscribe();
+
+        Mono<Long> rankMono = this.reactiveZSetOperations.rank("testKey", "a");
+        StepVerifier
+                .create(rankMono)
+                .expectNext(0L)
+                .verifyComplete();
+
+        rankMono = this.reactiveZSetOperations.rank("testKey", "e");
+        StepVerifier
+                .create(rankMono)
+                .expectNext(4L)
+                .verifyComplete();
+
+        Mono<Long> reverseRankMono = this.reactiveZSetOperations.reverseRank("testKey", "a");
+        StepVerifier
+                .create(reverseRankMono)
+                .expectNext(4L)
+                .verifyComplete();
+
+        reverseRankMono = this.reactiveZSetOperations.reverseRank("testKey", "e");
+        StepVerifier
+                .create(reverseRankMono)
+                .expectNext(0L)
+                .verifyComplete();
+    }
+
+    @Test
+    public void remove_removeRange_removeRankByScore() {
+        this.reactiveZSetOperations.addAll(
+                "testKey",
+                Arrays.asList(
+                        ZSetOperations.TypedTuple.of("b", 22d),
+                        ZSetOperations.TypedTuple.of("a", 11d),
+                        ZSetOperations.TypedTuple.of("d", 44d),
+                        ZSetOperations.TypedTuple.of("c", 33d),
+                        ZSetOperations.TypedTuple.of("e", 55d),
+                        ZSetOperations.TypedTuple.of("f", 66d),
+                        ZSetOperations.TypedTuple.of("g", 77d),
+                        ZSetOperations.TypedTuple.of("h", 88d),
+                        ZSetOperations.TypedTuple.of("i", 99d)
+                )
+        ).subscribe();
+
+        Mono<Long> removeMono = this.reactiveZSetOperations.remove("testKey", "a", "h");
+        StepVerifier
+                .create(removeMono)
+                .expectNext(2L)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveZSetOperations.range("testKey", Range.unbounded()))
+                .expectNext("b", "c", "d", "e", "f", "g", "i")
+                .verifyComplete();
+
+        Mono<Long> removeRangeMono = this.reactiveZSetOperations.removeRange("testKey", Range.closed(0L, 2L));
+        StepVerifier
+                .create(removeRangeMono)
+                .expectNext(3L)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveZSetOperations.range("testKey", Range.unbounded()))
+                .expectNext("e", "f", "g", "i")
+                .verifyComplete();
+
+        Mono<Long> removeRangeWithScoreMono = this.reactiveZSetOperations.removeRangeByScore("testKey", Range.open(11d, 99d));
+        StepVerifier
+                .create(removeRangeWithScoreMono)
+                .expectNext(3L)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveZSetOperations.range("testKey", Range.unbounded()))
+                .expectNext("i")
+                .verifyComplete();
+
+    }
+}
+```  
 
 ### ReactiveGeoOperations
 
 
 ### ReactiveHyperLogLogOperations
+`Redis` 에서 `Key-HyperLogLog(value1, value2, ..)` 와 같은 데이터 구조를 가지면서, 
+`Key` 에 해당하는 집합의 원소 개수를 추정하는 인터페이스를 제공한다. 
+말 그대로 `Key` 에 해당하는 유니크한 `value` 의 수를 연산하는데 최적화된 데이터 구조이다.  
 
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+@EnableRedisRepositories
+public class ReactiveHyperLogLogOperationsTest implements DockerRedisTest{
+    @Autowired
+    private ReactiveRedisTemplate reactiveRedisTemplate;
+    private ReactiveHyperLogLogOperations reactiveHyperLogLogOperations;
+
+    @BeforeEach
+    public void setUp() {
+        this.reactiveHyperLogLogOperations = this.reactiveRedisTemplate.opsForHyperLogLog();
+        this.reactiveRedisTemplate.scan().subscribe(o -> this.reactiveRedisTemplate.delete(o));
+    }
+
+    @Test
+    public void add() {
+        Mono<Long> addMono = this.reactiveHyperLogLogOperations.add("testKey", "a");
+        StepVerifier
+                .create(addMono)
+                .expectNext(1L)
+                .verifyComplete();
+
+        addMono = this.reactiveHyperLogLogOperations.add("testKey", "b", "c");
+        StepVerifier
+                .create(addMono)
+                .expectNext(1L)
+                .verifyComplete();
+
+        addMono = this.reactiveHyperLogLogOperations.add("testKey", "a");
+        StepVerifier
+                .create(addMono)
+                .expectNext(0L)
+                .verifyComplete();
+
+        addMono = this.reactiveHyperLogLogOperations.add("testKey", "b", "d");
+        StepVerifier
+                .create(addMono)
+                .expectNext(1L)
+                .verifyComplete();
+    }
+
+    @Test
+    public void size() {
+        Mono<Long> sizeMono = this.reactiveHyperLogLogOperations.size("testKey");
+        StepVerifier
+                .create(sizeMono)
+                .expectNext(0L)
+                .verifyComplete();
+
+        this.reactiveHyperLogLogOperations.add("testKey", "a", "a").subscribe();
+        StepVerifier
+                .create(sizeMono)
+                .expectNext(1L)
+                .verifyComplete();
+
+        this.reactiveHyperLogLogOperations.add("testKey", "b", "c", "d").subscribe();
+        StepVerifier
+                .create(sizeMono)
+                .expectNext(4L)
+                .verifyComplete();
+    }
+
+    @Test
+    public void union() {
+        this.reactiveHyperLogLogOperations.add("testKey1", "a1", "b1", "c1").subscribe();
+        this.reactiveHyperLogLogOperations.add("testKey2", "a2", "b2", "c2").subscribe();
+        this.reactiveHyperLogLogOperations.add("testKey3", "a3", "b3", "c3").subscribe();
+
+        Mono<Boolean> unionMono = this.reactiveHyperLogLogOperations.union("newKey", "testKey1");
+        StepVerifier
+                .create(unionMono)
+                .expectNext(true)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveHyperLogLogOperations.size("newKey"))
+                .expectNext(3L)
+                .verifyComplete();
+
+        unionMono = this.reactiveHyperLogLogOperations.union("newKey", "testKey2", "testKey3");
+        StepVerifier
+                .create(unionMono)
+                .expectNext(true)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveHyperLogLogOperations.size("newKey"))
+                .expectNext(9L)
+                .verifyComplete();
+
+        unionMono = this.reactiveHyperLogLogOperations.union("newKey", "testKey1");
+        StepVerifier
+                .create(unionMono)
+                .expectNext(true)
+                .verifyComplete();
+        StepVerifier
+                .create(this.reactiveHyperLogLogOperations.size("newKey"))
+                .expectNext(9L)
+                .verifyComplete();
+    }
+}
+```  
 
 
 
