@@ -47,6 +47,13 @@ use_math: true
 `Spring Cache` 에서 캐시 동작을 `AOP + Annotation` 기반으로 수행하기 때문에, 
 테스트 구현 또한 `AOP + Annotation` 기반으로 수행한다.  
 
+위 그림을 보면 `LocalCache` 가 먼저 수행되고, `GlobalCache` 가 그 다음에 수행되는 순서임을 기억해야 한다. 
+그리고 이 구현은 `AOP` 를 바탕으로 구현되기 때문에 `AOP` 가 실행되는 순서가 중요한데 이에 대한 자세한 내용은
+[Spring AOP Order]({{site.baseurl}}{% link _posts/spring/2022-01-31-spring-practice-reactor-multi-layer-cache.md %})
+에서 확인할 수 있다. 
+간단하게 설명하면 `@Order` 를 사용해서도 순서를 지정할 수 있고, `Bean` 이 등록되는 순서를 가지고도 순서 지정이 가능하다.  
+
+
 ### build.gradle
 
 ```groovy
@@ -176,12 +183,470 @@ public class ExternalLayerCacheAspect {
 }
 ```  
 
-### 
+`AOP` 에서 메소드 동작을 `Supplier` 로 랩핑하는 `ThrowingSupplier` 내용은 아래와 같다.  
+
+```java
+@FunctionalInterface
+public interface ThrowingSupplier<T> extends Supplier<T> {
+    @Override
+    default T get() {
+        try {
+            return getThrows();
+        } catch(Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    T getThrows() throws Throwable;
+}
+```  
+
+### CustomCacheManager
+`Reactive Stream` 흐름에서 `CacheMono`, `CacheFlux` 와 캐시 저장소를 사용해서 캐싱 동작을 수행하는 `LayerCacheManager` 의 내용은 아래와 같다.  
+
+```java
+@Slf4j
+@Component
+public class LayerCacheManager {
+
+    public CorePublisher executeCacheable(Map<String, Object> cacheMap, Type rawType, String key, Supplier supplier, Class classType) {
+        if (rawType.equals(Mono.class)) {
+            return this.findCacheMono(cacheMap, key, supplier, classType);
+        } else {
+            return this.findCacheFlux(cacheMap, key, supplier);
+        }
+    }
+
+    public <T> Mono<T> findCacheMono(Map<String, Object> cacheMap, String key, Supplier<Mono<T>> retriever, Class<T> classType) {
+        return CacheMono
+                .lookup(k -> {
+
+                    T result = (T) cacheMap.get(key);
+                    log.info("[mono cache get] key: {}, value: {}", k, result);
+
+                    return Mono.justOrEmpty(result).map(Signal::next);
+                }, key)
+                .onCacheMissResume(Mono.defer(retriever))
+                .andWriteWith((k, signal) -> Mono.fromRunnable(() -> {
+                    if (!signal.isOnError()) {
+                        T value = (T) signal.get();
+                        log.info("[mono cache put] key: {}, value: {}", k, value);
+
+                        cacheMap.put(k, value);
+                    }
+                }));
+    }
+
+    public <T> Flux<T> findCacheFlux(Map<String, Object> cacheMap, String key, Supplier<Flux<T>> retriever) {
+        return CacheFlux
+                .lookup(k -> {
+                    List<T> result = (List<T>) cacheMap.get(key);
+                    log.info("[flux cache get] key: {}, value: {}", k, result);
+
+                    return Mono.justOrEmpty(result)
+                            .flatMap(list -> Flux.fromIterable(list).materialize().collectList());
+                }, key)
+                .onCacheMissResume(Flux.defer(retriever))
+                .andWriteWith((k, signals) -> Flux.fromIterable(signals)
+                        .dematerialize()
+                        .collectList()
+                        .doOnNext(list -> {
+                            log.info("[flux cache put] key: {}, value: {}", k, list);
+                            cacheMap.put(k, list);
+                        })
+                        .then());
+
+    }
+}
+```  
+
+캐시 저장소를 인자로 받아 캐싱 처리를 수행하고, 자세한 동작과 관련 설명은
+[CacheMono, CacheFlux]({{site.baseurl}}{% link _posts/java/2021-12-25-java-concept-reactor-extra-cache-mono-flux.md %}), 
+[Spring Reactor Cache]({{site.baseurl}}{% link _posts/spring/2022-01-07-spring-concept-spring-cache-reactor.md %})
+에서 확인 할 수 있다.  
 
 
+### Repository
+구현된 캐싱 동작이 `Annotation` 을 사용해서 적용되는 `Repository` 클래스이다.  
 
+```java
+@Repository
+@Slf4j
+public class MonoRepository {
+    public static String STR = "";
 
+    @LocalLayerCacheable
+    @ExternalLayerCacheable
+    public Mono<String> getCacheStr() {
+        log.info("MonoRepository.getCacheStr : {}", STR);
+        return Mono.just(STR);
+    }
+}
+```  
 
+```java
+@Repository
+@Slf4j
+public class FluxRepository {
+    public static String STR = "";
+
+    @ExternalLayerCacheable
+    @LocalLayerCacheable
+    public Flux<String> getCacheStr() {
+        log.info("FluxRepository.getCacheStr : {}", STR);
+        return Flux.just(STR, STR, STR);
+    }
+}
+```  
+
+### Test
+테스트 코드에서 `LocalLayerCacheAspect` 빈을 먼저 선언하고 그 다음 `ExternalLayerCacheAspect` 을 선언했다. 
+이렇게 되면 `LocalLayerCacheAspect` 의 우선순위가 더 높아지기 때문에 의도한 바와 동일하게, 
+`LocalCache` 가 먼서 수행 된후 `ExternalCache` 가 수행된다.  
+
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+public class LocalFirstExternalSecondMonoRepositoryTest {
+    @TestConfiguration
+    public static class TestConfig {
+        @Autowired
+        private LayerCacheManager layerCacheManager;
+
+        @Bean
+        public LocalLayerCacheAspect localLayerCacheAspect() {
+            return new LocalLayerCacheAspect(this.layerCacheManager);
+        }
+
+        @Bean
+        public ExternalLayerCacheAspect externalLayerCacheAspect() {
+            return new ExternalLayerCacheAspect(this.layerCacheManager);
+        }
+    }
+
+    @Autowired
+    private MonoRepository monoRepository;
+
+    @BeforeEach
+    public void setUp() {
+        LocalLayerCacheAspect.localCacheMap.clear();
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+    }
+
+    @Test
+    public void getCacheStr() {
+        MonoRepository.STR = "a";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     */
+
+    @Test
+    public void getCacheStr_cached() {
+        MonoRepository.STR = "a";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+
+        MonoRepository.STR = "b";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     */
+
+    @Test
+    public void getCacheStr_evict_all() {
+        MonoRepository.STR = "a";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+
+        LocalLayerCacheAspect.localCacheMap.clear();
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+        MonoRepository.STR = "b";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("b")
+                .verifyComplete();
+    }
+    /**
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : b
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: b
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: b
+     */
+
+    @Test
+    public void getCacheStr_evict_local() {
+        MonoRepository.STR = "a";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+
+        LocalLayerCacheAspect.localCacheMap.clear();
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     */
+
+    @Test
+    public void getCacheStr_evict_external() {
+        MonoRepository.STR = "a";
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+
+        StepVerifier
+                .create(this.monoRepository.getCacheStr())
+                .expectNext("a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: ExternalLayer::MonoRepository::getCacheStr, value: null
+     * INFO 21676 --- [           main] c.w.s.r.MonoRepository                   : MonoRepository.getCacheStr : a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: ExternalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache put] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     * INFO 21676 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 21676 --- [           main] c.w.s.r.LayerCacheManager                : [mono cache get] key: LocalLayer::MonoRepository::getCacheStr, value: a
+     */
+}
+```  
+
+```java
+@SpringBootTest
+@ExtendWith(SpringExtension.class)
+public class LocalFirstExternalSecondFluxRepositoryTest {
+    @TestConfiguration
+    public static class TestConfig {
+        @Autowired
+        private LayerCacheManager layerCacheManager;
+
+        @Bean
+        public LocalLayerCacheAspect localLayerCacheAspect() {
+            return new LocalLayerCacheAspect(this.layerCacheManager);
+        }
+
+        @Bean
+        public ExternalLayerCacheAspect externalLayerCacheAspect() {
+            return new ExternalLayerCacheAspect(this.layerCacheManager);
+        }
+    }
+
+    @Autowired
+    private FluxRepository fluxRepository;
+
+    @BeforeEach
+    public void setUp() {
+        LocalLayerCacheAspect.localCacheMap.clear();
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+    }
+
+    @Test
+    public void getCacheStr() {
+        FluxRepository.STR = "a";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : a
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     */
+
+    @Test
+    public void getCacheStr_cached() {
+        FluxRepository.STR = "a";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+
+        FluxRepository.STR = "b";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : a
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     */
+
+    @Test
+    public void getCacheStr_evict_all() {
+        FluxRepository.STR = "a";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+
+        LocalLayerCacheAspect.localCacheMap.clear();
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+        FluxRepository.STR = "b";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("b", "b", "b")
+                .verifyComplete();
+    }
+    /**
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : a
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : b
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [b, b, b]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [b, b, b]
+     */
+
+    @Test
+    public void getCacheStr_evict_local() {
+        FluxRepository.STR = "a";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+
+        LocalLayerCacheAspect.localCacheMap.clear();
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : a
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     */
+
+    @Test
+    public void getCacheStr_evict_external() {
+        FluxRepository.STR = "a";
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+
+        ExternalLayerCacheAspect.externalCacheMap.clear();
+
+        StepVerifier
+                .create(this.fluxRepository.getCacheStr())
+                .expectNext("a", "a", "a")
+                .verifyComplete();
+    }
+    /**
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.ExternalLayerCacheAspect         : [before external layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: ExternalLayer::FluxRepository::getCacheStr, value: null
+     * INFO 10568 --- [           main] c.w.s.r.FluxRepository                   : FluxRepository.getCacheStr : a
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: ExternalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache put] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     * INFO 10568 --- [           main] c.w.s.r.LocalLayerCacheAspect            : [before local layer]
+     * INFO 10568 --- [           main] c.w.s.r.LayerCacheManager                : [flux cache get] key: LocalLayer::FluxRepository::getCacheStr, value: [a, a, a]
+     */
+}
+```  
 
 ---
 ## Reference
