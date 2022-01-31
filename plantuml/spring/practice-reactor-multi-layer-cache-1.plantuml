@@ -1,0 +1,48 @@
+@startuml
+
+actor User as user
+participant LocalCache as local
+participant GlobalCache as global
+participant DataSource as data
+
+group cached in local
+	user -> local : find local cache
+	activate local
+	user <- local : return local cache
+	deactivate local
+end
+'newpage
+
+group cached in global
+	user -> local : find local cache
+	activate local
+
+	local -> global : find global cache
+	activate global
+	local <- global : return global cache
+	deactivate global
+
+	user <- local : return local cache
+	deactivate local
+end
+'newpage
+
+group nothing cached
+	user -> local : find local cache
+	activate local
+
+	local -> global : find global cache
+	activate global
+
+	global -> data : find data
+	activate data
+	global <- data : return data
+	deactivate data
+
+	local <- global : return global cache
+	deactivate global
+
+	user <- local : return local cache
+	deactivate local
+end
+@enduml
