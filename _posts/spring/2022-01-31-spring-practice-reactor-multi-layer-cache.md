@@ -1,18 +1,23 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Reactor Multi Layer Cache 구현"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring 에서 Reactor Extra 의 CacheMono, CacheFlux 를 사용해서 다중 캐싱 레이어 동작을 구현해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
   - Spring
 tags:
-    - Concept
+    - Practice
     - Spring
     - Spring Boot
+    - Reactor
+    - Spring Webflux
+    - Cache
+    - Reactor Cache
+    - Reactor Extra
 toc: true
 use_math: true
 ---  
