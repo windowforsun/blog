@@ -26,6 +26,9 @@ use_math: true
 `ReactJS` 를 기반으로 `Front-end` 스크립트가 작성된다. 
 그리고 빌드는 `Gradle` 을 사용하는 구조이다.  
 
+> 해당 내용으로 실무에서 사용할지는 고민이 필요한 부분이 많다. 
+> 사용은 할 순 있겠지만, 여러부분에서 복잡성과 관리에 어려움이 있을 수 있다. 
+
 ### Spring Boot Web
 #### build.gradle
 `build.gradle` 파일 내용은 아래와 같다.  
@@ -286,7 +289,7 @@ task copyReactBuildFiles(type: Copy) {
 `IDE` 에서 `Spring Boot Application` 을 실행해 주거나, 
 아래 `./gradlew build` 명렁을 사용해서 빌드한 `.jar` 파일을 실행해준다.  
 
-실제 빌드후 타겟 `ReactJS` 의 타겟 결로인 `resources/static` 을 확인하면 아래와 같다.  
+실제 빌드후 타겟 `ReactJS` 의 타겟 경로인 `resources/static` 을 확인하면 아래와 같다.  
 
 ```
 resources/static
