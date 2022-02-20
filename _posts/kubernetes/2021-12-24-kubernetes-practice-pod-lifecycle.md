@@ -1255,6 +1255,10 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
     }
   ]
   ```  
+  
+### 정리
+
+......
 
 ---
 ## Reference
