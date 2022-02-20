@@ -1,0 +1,26 @@
+@startuml
+
+rectangle Pending as pen {
+}
+rectangle Running as run {
+}
+rectangle Succeeded as succ {
+}
+rectangle Failed as fail {
+}
+rectangle Unknown as un {
+}
+
+pen -down-> run
+pen -down-> un
+pen -up-> fail
+run -down-> succ
+run -right-> fail
+un --> pen
+un --> run
+un -right-> succ
+un -right-> fail
+
+
+
+@enduml
