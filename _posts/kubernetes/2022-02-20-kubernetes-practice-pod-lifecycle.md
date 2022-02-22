@@ -186,7 +186,55 @@ pod/all-ok created
     NAME       READY   STATUS    RESTARTS   AGE
     test-pod   0/1     Pending   0          2m45s
     ```  
+
+- `.spec.volumes` 에 볼륨으로 정의된 `PVC` 마운트에 문제가 있을 때 
+
+ ```yaml
+  spec:
+    volumes:
+      - name: test-volume
+        persistentVolumeClaim:
+        claimName: no-pvc
+ ```  
+
+  ```bash
+  $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.phase'
+  pod/test-pod created
+  "Pending"
+  
+    .. 계속 유지 ..
+  
+  $ kubectl get pod test-pod
+  NAME       READY   STATUS    RESTARTS   AGE
+  test-pod   0/1     Pending   0          44s
+  ```  
+
+- `postStart` 가 종료되지 않은 경우
+  - `.lifecycle.postStart.exec.command` 를 아래와 같이 변경한다.
+
+    ```yaml
+    spec:
+    containers:
+      - name: test-pod-con
+      lifecycle:
+        postStart:
+        exec:
+          command: ["/bin/bash", "-c", "sleep 999999999"]
+    ```  
+
+    ```bash
+    $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.phase'
+    pod/test-pod created
+    "Pending"
+    "Pending"
+    "Pending"
+  
+    .. 계속 유지 ..
     
+    $ kubectl get pod test-pod
+    NAME       READY   STATUS            RESTARTS   AGE
+    test-pod   0/1     PodInitializing   0          2m10s
+    ```  
 
 #### Succeeded
 `Succeeded` 는 말그대로 `Pod` 의 모든 컨테이너가 주어진 동작을 모두 마치고 정상적으로 종료된 단계이다.  
@@ -215,6 +263,34 @@ test-pod   0/1     Completed   0          53s
 ```  
 
 `Running` 을 지나 `Succeeded` 단계로 진입하는 것을 확인 할 수 있다. 
+
+
+
+- `.containers.lifecycle.postStart` 가 실패하는 경우
+
+  ```yaml
+  spec:
+    containers:
+      - name: test-pod-con
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/bash", "-c", "nocommand"]
+  ```  
+
+  ```bash
+  $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.phase'
+  pod/test-pod created
+  "Pending"
+  "Pending"
+  "Pending"
+  "Running"
+  "Succeeded"
+  
+  $ kubectl get pod test-pod
+  NAME       READY   STATUS      RESTARTS   AGE
+  test-pod   0/1     Completed   0          82s
+  ```  
 
 #### Failed
 `Failed` 는 `initContainers` 를 포함해서 `Pod` 를 구성하는 컨테이너 중 하나가 실패로 종료된 경우이다. 
@@ -728,7 +804,38 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
     NAME       READY   STATUS    RESTARTS   AGE
     test-pod   0/1     Pending   0          59s
     ```  
-   
+
+
+- `.spec.volumes` 에 볼륨으로 정의된 `PVC` 마운트에 문제가 있을 때
+
+ ```yaml
+  spec:
+    volumes:
+      - name: test-volume
+        persistentVolumeClaim:
+        claimName: no-pvc
+ ```  
+
+  ```bash
+  $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.conditions'
+  pod/test-pod created
+  [
+    {
+      "lastProbeTime": null,
+      "lastTransitionTime": "2022-02-22T17:38:05Z",
+      "message": "0/1 nodes are available: 1 persistentvolumeclaim \"no-pvc\" not found.",
+      "reason": "Unschedulable",
+      "status": "False",
+      "type": "PodScheduled"
+    }
+  ]
+  
+    .. 계속 유지 ..
+  
+  $ kubectl get pod test-pod
+  NAME       READY   STATUS    RESTARTS   AGE
+  test-pod   0/1     Pending   0          44s
+  ```  
 
 #### Initialized
 `Initialized` 검사 실패는 `initContainers` 에 대한 부분으로 예시는 아래와 같다.  
@@ -995,6 +1102,58 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   test-pod   0/1     Completed   0          82s
   ```  
 
+- `postStart` 가 종료되지 않은 경우
+  - `.lifecycle.postStart.exec.command` 를 아래와 같이 변경한다.
+
+    ```yaml
+    spec:
+    containers:
+    - name: test-pod-con
+    lifecycle:
+      postStart:
+      exec:
+      command: ["/bin/bash", "-c", "sleep 999999999"]
+    ```  
+
+    ```bash
+    $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.conditions'
+    pod/test-pod created
+    [
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-02-22T18:01:04Z",
+        "status": "True",
+        "type": "Initialized"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-02-22T18:00:58Z",
+        "message": "containers with unready status: [test-pod-con]",
+        "reason": "ContainersNotReady",
+        "status": "False",
+        "type": "Ready"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-02-22T18:00:58Z",
+        "message": "containers with unready status: [test-pod-con]",
+        "reason": "ContainersNotReady",
+        "status": "False",
+        "type": "ContainersReady"
+      },
+      {
+        "lastProbeTime": null,
+        "lastTransitionTime": "2022-02-22T18:00:58Z",
+        "status": "True",
+        "type": "PodScheduled"
+      }
+    ]
+    
+    $ kubectl get pod test-pod
+    NAME       READY   STATUS            RESTARTS   AGE
+    test-pod   0/1     PodInitializing   0          2m10s
+    ```  
+
 - `Container probes` 가 실패하는 경우(`startupProbe`, `livenessProbe`, `readinessProbe`)
 
 
@@ -1106,7 +1265,7 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
 
 - `readinessGates` 설정되었지만, `status` 값이 `False` 인 경우
   - 먼저 아래 처럼 `readinessGates` 를 설정해 준다.  
-	
+  
   ```yaml
   spec:
     readinessGates:
@@ -1114,7 +1273,7 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   ```  
   
   - 현재 상태에서 `Pod` 을 실행하면 `start-routing` 상태를 찾을 수 없다는 이유로 `Ready` 가 실패한다. 하지만 `kubectl get` 에서는 `Ready` 가 `1/1` 이지만, 연결된 서비스에 요청을 해도 요청을 수행되지 않는다. 
-	
+  
   ```bash
   $ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.conditions'
   pod/test-pod created
@@ -1153,13 +1312,13 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   ```  
   
   - `readinessGates` 는 `Kubernetes Cluster API` 를 사용해서 업데이트가 필요하므로 프록시 설정을 해준다.  
-	
+  
   ```bash
   $ kubectl proxy --port 12345 &
   Starting to serve on 127.0.0.1:12345
   ```  
   - `readinessGates` 설정을 위해 `curl` 을 사용해 `starting-routing` 컨디션을 `True` 로 만들어 준다. 
-	
+  
   ```bash
   $ curl -k \
      -H "Content-Type: application/json-patch+json" \
@@ -1169,7 +1328,7 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   ```  
   
   - 그후 다시 컨디션을 조회하면 아래와 같이 모든 상태가 `True` 로 정상인 상태인 것을 확인 할 수 있다. `readinessGates` 가 있는 경우 해당 시점 부터 `Pod` 으로 실제 트래픽이 전달되게 된다. 
-	
+  
   ```bash
   $ kubectl get pod -w test-pod -o json | jq '.status.conditions'
   [
@@ -1211,7 +1370,7 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   ```  
 
   - 다시 `readinessGates` 상태를 `False` 로 변경하고 싶다면 동일하게 `curl` 을 사용해서 `start-routing` 컨디션을 `False` 로 변경하면 `Read` 컨디션 검사까지 실패하고, `Pod` 은 더이상 트래픽을 받지 않는다. 
-	
+  
   ```bash
   $ curl -k \
      -H "Content-Type: application/json-patch+json" \
@@ -1258,7 +1417,24 @@ kubectl get pod <pod-name> -o json | jq '.status.conditions'
   
 ### 정리
 
-......
+```bash
+$ kubectl apply -f test-pod.yaml; kubectl get pod -w test-pod -o json | jq '.status.phase,.status.conditions,.status.containerStatuses[].state'
+```  
+
+
+Pod Phase|Pod Conditions|Containers States|경우
+---|---|---|---
+Pending|PodScheduled False|NaN|- `.resources` 에 설정한 리소스로 인해 스케쥴링에 실패한 경우<br> - `.nodeSelector`, `.affinity` 에 의해 스케쥴링에 실패한 경우<br> - `.spec.volumes` 에 볼륨으로 정의된 `PVC` 마운트에 문제가 있을 때<br>
+Pending|Initialized False|Waiting|- `.initContainers.image` 의 이미지를 못 찾는 경우<br> - `.initContainers.command` 가 실패하거나 종료되지 않은 경우<br>
+Pending|ContainerReady False|Waiting|- `.containers.image` 를 못 찾는 경우<br> - `postStart` 가 종료되지 않은 경우<br>
+Running|ContainerReady False|Running|- `Container probes` 가 실패하는 경우(`startupProbe`, `livenessProbe`, `readinessProbe`)
+Running|Ready False|Running|- `readinessGates` 설정되었지만, `status` 값이 `False` 인 경우
+Running|All True|Running|- 모든 상태가 정상이므로 라우팅이 가능하고 실제 트래픽을 바을 수 있는 상태
+Failed|Initialized False|Waiting|- `initContainers` 가 실패한 경우
+Failed|All True(경우에 따라 ContainersReady or Ready False)|Terminated|- `Pod` 의 컨테이너 중 하나에서 실행 실패
+Succeeded|ContainersReady False|Terminated|- `.containers.lifecycle.postStart` 가 실패하는 경우<br> 
+Succeeded|All True(경우에 따라 ContainersReady or Ready False|Terminated|- `Pod` 의 모든 컨테이너가 정상 종료 됨
+
 
 ---
 ## Reference
