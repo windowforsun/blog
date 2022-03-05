@@ -1,0 +1,20 @@
+@startuml
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <b><color:#b8861b><&key></color> x</b>
+!define foreign_key(x) <color:#aaaaaa><&key></color> x
+hide methods
+hide stereotypes
+
+table(MEMBER) {
+  primary_key(ID) <<PK>>
+  foreign_key(TEAM_ID) <<FK>>
+  NAME
+}
+
+table(TEAM) {
+  primary_key(ID) <<PK>>
+  NAME
+}
+
+MEMBER }o..o| TEAM
+@enduml
