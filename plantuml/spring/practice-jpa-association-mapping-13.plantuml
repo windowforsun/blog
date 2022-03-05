@@ -1,0 +1,55 @@
+@startuml
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <b><color:#b8861b><&key></color> x</b>
+!define foreign_key(x) <color:#aaaaaa><&key></color> x
+hide methods
+hide stereotypes
+
+'skinparam linetype ortho
+'skinparam linetype polyline
+entity (Member) {
+  primary_key(id)
+  name
+}
+
+entity (Team) {
+  primary_key(id)
+  name
+  teamMembers
+}
+
+entity (TeamMember) {
+  team
+  member
+  timestamp
+}
+
+Team "1" <-down- "*" TeamMember
+Team "1" ..> "*" TeamMember
+Member "1" <-up- "*" TeamMember
+
+
+table(MEMBER) {
+  primary_key(ID) <<PK>>
+  NAME
+}
+
+table(TEAM) {
+  primary_key(ID) <<PK>>
+  NAME
+}
+
+table(TEAM_MEMBER) {
+  primary_key(TEAM_ID) <<PK, FK>>
+  primary_key(MEMBER_ID) <<PK, FK>>
+  timestamp
+}
+
+TEAM ||--o{ TEAM_MEMBER
+TEAM_MEMBER }o--|| MEMBER
+
+TeamMember -right-> TEAM_MEMBER :team -> TEAM_ID
+Member -[hidden]right- MEMBER :rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+Team --> TEAM_MEMBER :id -> TEAM_ID
+Member -up-> TEAM_MEMBER :id -> MEMBER_ID
+@enduml

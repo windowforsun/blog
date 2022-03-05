@@ -1,0 +1,40 @@
+@startuml
+!define table(x) class x << (T,#FFAAAA) >>
+!define primary_key(x) <b><color:#b8861b><&key></color> x</b>
+!define foreign_key(x) <color:#aaaaaa><&key></color> x
+hide methods
+hide stereotypes
+
+entity (Member) {
+  primary_key(id)
+  address
+  name
+}
+
+entity (Address) {
+  primary_key(id)
+  addressMain
+  addressDetail
+}
+
+Member "1" --> "1" Address
+Member "1" <.. "1" Address
+
+
+table(MEMBER) {
+  primary_key(ID) <<PK>>
+  NAME
+}
+
+table(ADDRESS) {
+  primary_key(MEMBER_ID) <<PK, FK>>
+  ADDRESS_MAIN
+  ADDRESS_DETAIL
+  NAME
+}
+
+MEMBER |o--o| ADDRESS
+
+Member ..> ADDRESS :address -> MEMBER_ID
+Address -right-> ADDRESS :member -> MEMBER_ID
+@enduml
