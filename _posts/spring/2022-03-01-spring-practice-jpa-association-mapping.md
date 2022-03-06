@@ -132,7 +132,7 @@ Team team = member.getTeam();
 @OneToOne|`1:1` 관계 매핑에 사용된다.
 @ManyToMany|`N:M` 관계 매핑에 사용된다.
 @JoinColumn|관계 매핑에 사용하는 외래키의 테이블 컬럼명을 지정한다. 
-@MapsId|엔티티에 포함된 임베디드 엔티티의 `PK` 를 엔티티의 `PK` 로 설정한다. ??????
+@MapsId|엔티티에 존재하는 내장 엔티티의 `PK` 를 현재 엔티티의 `PK` 로 설정한다.
 
 
 ## 테스트 환경 구성
