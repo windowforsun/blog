@@ -40,32 +40,13 @@
 </details>
 
 ```sql
- create table team_4_rel_iden
- (
-	 id   bigint not null,
-	 name varchar(255),
-	 primary key (id)
- );
-create table member_4_rel_iden
+create table member_default
 (
-	id   bigint not null,
+	id   bigint  not null,
+	age  integer not null,
 	name varchar(255),
 	primary key (id)
-);
-create table team_member_4_rel_iden
-(
-	timestamp timestamp,
-	member_id bigint not null,
-	team_id   bigint not null,
-	primary key (member_id, team_id)
-);
-
-alter table team_member_4_rel_iden
-	add constraint FKnxwvehycu9ays0qnwdabioyoh foreign key (member_id) references member_4_rel_iden;
-alter table team_member_4_rel_iden
-	add constraint FKd2amsbqfbb96mbbdiiug3i2ep foreign key (team_id) references team_4_rel_iden;
-
-
+)
 
 
 
