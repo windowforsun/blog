@@ -187,23 +187,13 @@ test {
 
 ```yaml
 spring:
-  h2:
-    console:
-      enabled: true
-  datasource:
-    hikari:
-      driver-class-name: org.h2.Driver
-      jdbc-url: jdbc:h2:./data/testdb
-      username: sa
-      password:
   jpa:
     hibernate:
       ddl-auto: create-drop
     properties:
-      hibernates:
-        show_sql: true # 쿼리 출력
+      hibernate:
+        #show_sql: true # 쿼리 출력
         format_sql: true # 쿼리 이쁘게 출력
-    show-sql: true # 뭐든 쿼리 출력(ddl 포함)
 ```  
 
 ## 객체 연관관계 다중성 매핑

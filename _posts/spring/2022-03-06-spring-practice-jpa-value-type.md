@@ -109,7 +109,7 @@ spring:
       ddl-auto: create-drop
     properties:
       hibernate:
-    #        show_sql: true # 쿼리 출력
+        #show_sql: true # 쿼리 출력
         format_sql: true # 쿼리 이쁘게 출력
 ```  
 
