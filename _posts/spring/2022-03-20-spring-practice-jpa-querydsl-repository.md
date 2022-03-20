@@ -23,7 +23,7 @@ use_math: true
 
 ## Spring JPA QueryDSL Repository
 `Spring JPA` 를 사용하면 `Repository` 에 `QueryMethod` 를 사용해서 쿼리를 간편하게 수행할 수 있다. 
-[JPA QueryDSL 설정 및 기본 사용]({{site.baseurl}}{% link _posts/spring/2022-03-19-spring-practice-jpa-querydsl-intro.md.md %})
+[JPA QueryDSL 설정 및 기본 사용]({{site.baseurl}}{% link _posts/spring/2022-03-19-spring-practice-jpa-querydsl-intro.md %})
 에서 설명했던 것 처럼 `Spring JPA Repository` 의 `QueryMethod` 의 경우 복잡한 쿼리에 대한 제약사항이 있기 때문에, 
 문자열 기반인 `JPQL` 을 불가피하게 사용할 수 밖에 없다.  
 
