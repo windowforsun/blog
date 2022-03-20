@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] JPA QueryDSL 설정 및 기본 사용"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring JPA '
+excerpt: 'Spring JPA 에서 타입에 안전하게 쿼리를 생성 관리할 수 있는 QueryDSL 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -107,17 +107,16 @@ queryFactory
 - 환경
   - `Spring Boot 2.5`
   - `Gradle 6.8`
+  - `Java 11`
 	
 
 - `build.gradle`
 
 ```groovy
 plugins {
-    id 'org.springframework.boot' version '2.5.0'
-    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
-	// QueryDSL 에 필요한 QClass 생성해주는 plugin(Entity 기반)
-    id 'com.ewerk.gradle.plugins.querydsl' version '1.0.10'
-    id 'java'
+	id 'org.springframework.boot' version '2.5.0'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
 }
 
 group = 'com.windowforsun.querydslexam'
@@ -125,47 +124,31 @@ version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '11'
 
 repositories {
-    mavenCentral()
+	mavenCentral()
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	
-    compileOnly "org.projectlombok:lombok"
-    testCompileOnly "org.projectlombok:lombok"
-    annotationProcessor "org.projectlombok:lombok"
-    testAnnotationProcessor "org.projectlombok:lombok"
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	compileOnly "org.projectlombok:lombok"
+	testCompileOnly "org.projectlombok:lombok"
+	annotationProcessor "org.projectlombok:lombok"
+	testAnnotationProcessor "org.projectlombok:lombok"
+	implementation "com.querydsl:querydsl-jpa"
+	runtimeOnly 'com.h2database:h2'
 
-    runtimeOnly 'com.h2database:h2'
-
-	// QueryDSL 관련 의존성
-    implementation 'com.querydsl:querydsl-jpa'
-    implementation 'com.querydsl:querydsl-apt'
+	annotationProcessor(
+		// java.lang.NoClassDefFoundError(javax.annotation.Entity) 발생 대응
+		"jakarta.persistence:jakarta.persistence-api",
+		// java.lang.NoClassDefFoundError(javax.annotation.Generated) 발생 대응
+		"jakarta.annotation:jakarta.annotation-api",
+		// Querydsl JPAAnnotationProcessor 사용 지정
+		"com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jpa"
+	)
 }
 
 test {
-    useJUnitPlatform()
-}
-
-// 아래는 QueryDSL QClass 를 생성할 파일 위치 지정에 대한 설정
-def querydslSrcDir = "$buildDir/generated/querydsl"
-
-querydsl {
-    jpa = true
-    querydslSourcesDir = querydslSrcDir
-}
-
-sourceSets {
-    main.java.srcDirs querydslSrcDir
-}
-
-configurations {
-    querydsl.extendsFrom compileClasspath
-}
-
-compileQuerydsl{
-    options.annotationProcessorPath = configurations.querydsl
+	useJUnitPlatform()
 }
 ```  
 
@@ -226,7 +209,7 @@ public interface UserRepository extends JpaRepository<User, String> {
 
 - `QClass` 생성
   - `QClass` 생성은 앞선 구성들이 모두 완료된 상태에서 빌드를 수행해주면 된다. 
-  - 빌드를 하게 되면 아래처럼 `build/genterated/querydsl` 하위에 `@Entity` 가 붙은 클래스와 매핑되는 `QClass` 가 생성된다.
+  - 빌드를 하게 되면 아래처럼 `build/genterated/sources/annotationProcessor` 하위에 `@Entity` 가 붙은 클래스와 매핑되는 `QClass` 가 생성된다.
 	
     ![그림 1]({{site.baseurl}}/img/spring/practice-jpa-querydsl-intro-1.png)
 
