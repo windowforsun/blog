@@ -85,6 +85,8 @@ $ docker-compose up --build
 `Spring Boot` 애플리케이션 구현에 필요한 내용은 아래와 같다.  
 
 - `build.gradle`
+
+
 ```groovy
 plugins {
     id 'org.springframework.boot' version '2.5.0'
