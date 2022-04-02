@@ -1,0 +1,20 @@
+@startuml
+
+
+rectangle Client {
+}
+
+rectangle Server {
+	rectangle Nginx as "Nginx\n[80 port]" {
+
+	}
+
+	rectangle WAS as "WAS\n [8080 port]" {
+	}
+}
+
+
+Client <-r-> Nginx : GET /index HTTP 1.1 Keepalive
+Nginx <-r-> WAS : GET /index
+
+@enduml
