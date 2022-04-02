@@ -1,0 +1,16 @@
+@startuml
+
+
+rectangle Docker {
+	rectangle Nginx as "Nginx\n[80 port]" {
+
+	}
+
+	rectangle WAS as "WAS(Spring Boot)\n [8080 port]" {
+	}
+}
+
+
+Nginx <-r-> WAS
+
+@enduml
