@@ -201,7 +201,7 @@ upstream-application                                          latest            
 FROM nginx:latest
 
 RUN apt update
-RUN apt install -y vim tcpdump net-tools
+RUN apt install -y vim tcpdump net-tools apache2-utils
 
 # if use nginx.conf
 COPY nginx.conf /etc/nginx/nginx.conf
@@ -779,6 +779,8 @@ Concurrency level|128|128
 Total Request|50000|50000
 테스트 소요시간|5.55s|13.97s
 RPS|9008|3579
+
+성능 테스트에는 `apache2-utils` 의 서버 벤치마크 툴인 `ab` 를 사용한다.  
 
 `WAS` 의 `application.yaml` 은 동일하게 아래 설정으로 진행했다.  
 
