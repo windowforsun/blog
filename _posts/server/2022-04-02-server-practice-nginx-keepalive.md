@@ -267,11 +267,12 @@ $ docker build -t nginx:test .
 ### Client Keepalive
 `Client-Nginx` 간의 `Keepalive` 관련된 `Nginx` 설정 필드는 아래와 같다.  
 
-필드|예시|설명
+필드|기본값|설명
 ---|---|---
-keepalive_timeout|keepalive_timeout 10|keepalive 커넥션을 최대 10초 동안 유지한다. 
-keepalive_disable|keepalive_disable msie6|keepalive 를 사용하지 않을 브라우저를 명시할 수 있다. 
-keepalive_requests|keepalive_requests 1000|keepalive 커넥션 마다 사용할 수 있는 최대 요청 수를 설정한다. 
+keepalive_timeout|keepalive_timeout 75s;|keepalive 커넥션을 최대 10초 동안 유지한다. 
+keepalive_disable|keepalive_disable msie6;|keepalive 를 사용하지 않을 브라우저를 명시할 수 있다. 
+keepalive_requests|keepalive_requests 1000;|keepalive 커넥션 마다 사용할 수 있는 최대 요청 수를 설정한다. 
+keepalive_time|keepalive_time 1h;|keepalive 커넥션의 최대 연결 시간을 설정한다. 시간에 도달한 커넥션은 마지막 요청을 처리하고 종료한다.  
 
 
 `Cleint - Nginx` 간의 `Keepalive` 설정은 설정에 주의가 필요하다. 
@@ -452,6 +453,9 @@ proxy_set_header Connection "";|-|응답 헤더에 `Connection` 헤더를 추가
 ---|---
 server.tomcat.connection-timeout: 1s|클라이언트(`Nginx`) 와 연결 타임아웃시간을 설정한다. 
 server.tomcat.keep-alive-timeout: 2s|클라이언트(`Nginx`) 와 `Keepalive` 연결 유지 시간을 설정한다. 만약 해당 프로퍼티가 설정되지 않으면 `connection-timeout` 프로퍼티값을 따른다.
+
+
+![그림 1]({{site.baseurl}}/img/server/practice-nginx-keepalive-5.png)
 
 ---
 #### keepalive 동작 테스트
@@ -766,8 +770,226 @@ reading from file dump, link-type EN10MB (Ethernet), snapshot length 262144
 
 ---
 #### 성능 테스트
+`Nginx-WAS` 구간에 `Keepalive` 를 사용하는 경우와 사용하지 않는 경우 비교를 위해 성능 테스트를 진행해 본다. 
+테스트는 절대적인 수치에 대한 내용이 아니라 어느정도 성능차이가 발생한다는 부분을 보여주기 위함이다.  
 
-......
+구분|Keepliave On|Keepalive Off
+---|---|---
+Concurrency level|128|128
+Total Request|50000|50000
+테스트 소요시간|5.55s|13.97s
+RPS|9008|3579
+
+`WAS` 의 `application.yaml` 은 동일하게 아래 설정으로 진행했다.  
+
+```yaml
+server:
+  tomcat:
+    threads:
+      max: 128
+      min-sparse: 32
+   keep-alive-timeout: -1
+```  
+
+`Keepalive` 를 활성화한 `Nginx` 설정은 아래와 같다.  
+
+```
+user  nginx;
+worker_processes  8;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    log_format main '$remote_addr [$time_local] "$request" $status $body_bytes_sent $request_time $connection';
+
+    keepalive_timeout  0;
+
+    upstream app {
+        server springapp:8080;
+        keepalive 128;
+    }
+
+    server {
+      listen 80;
+
+      access_log /dev/stdout main;
+      error_log /logs/error.log warn;
+
+      location / {
+          proxy_pass http://app;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+      }
+
+      location = /server-status {
+          stub_status on;
+          access_log off;
+      }
+    }
+}
+```  
+
+`Keepalive` 를 활성화 했을 때 성능 테스트 결과는 아래와 같다.  
+
+```bash
+$ ab -n 50000 -c 128 localhost/test
+This is ApacheBench, Version 2.3 <$Revision: 1879490 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking localhost (be patient)
+Completed 5000 requests
+Completed 10000 requests
+Completed 15000 requests
+Completed 20000 requests
+Completed 25000 requests
+Completed 30000 requests
+Completed 35000 requests
+Completed 40000 requests
+Completed 45000 requests
+Completed 50000 requests
+Finished 50000 requests
+
+
+Server Software:        nginx/1.21.6
+Server Hostname:        localhost
+Server Port:            80
+
+Document Path:          /test
+Document Length:        2 bytes
+
+Concurrency Level:      128
+Time taken for tests:   5.550 seconds
+Complete requests:      50000
+Failed requests:        0
+Total transferred:      7800000 bytes
+HTML transferred:       100000 bytes
+Requests per second:    9008.64 [#/sec] (mean)
+Time per request:       14.209 [ms] (mean)
+Time per request:       0.111 [ms] (mean, across all concurrent requests)
+Transfer rate:          1372.41 [Kbytes/sec] received
+
+Connection Times (ms)
+min  mean[+/-sd] median   max
+Connect:        0    5   1.0      5      11
+Processing:     2    9   1.3      9      19
+Waiting:        1    7   1.1      7      14
+Total:          6   14   1.3     14      22
+
+Percentage of the requests served within a certain time (ms)
+50%     14
+66%     14
+75%     15
+80%     15
+90%     16
+95%     17
+98%     18
+99%     19
+100%     22 (longest request)
+```  
+
+`Keepalive` 를 비활성화한 `Nginx` 설정은 아래와 같다.  
+
+```
+user  nginx;
+worker_processes  8;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    log_format main '$remote_addr [$time_local] "$request" $status $body_bytes_sent $request_time $connection';
+
+    keepalive_timeout  0;
+
+    upstream app {
+        server springapp:8080;
+    }
+
+    server {
+      listen 80;
+
+      access_log /dev/stdout main;
+      error_log /logs/error.log warn;
+
+      location / {
+          proxy_pass http://app;
+      }
+
+      location = /server-status {
+          stub_status on;
+          access_log off;
+      }
+    }
+}
+```  
+
+`Keepalive` 를 비활성화 했을 때 성능 테스트 결과는 아래와 같다.  
+
+```bash
+$ ab -n 50000 -c 128 localhost/test
+This is ApacheBench, Version 2.3 <$Revision: 1879490 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking localhost (be patient)
+Completed 5000 requests
+Completed 10000 requests
+Completed 15000 requests
+Completed 20000 requests
+Completed 25000 requests
+Completed 30000 requests
+Completed 35000 requests
+Completed 40000 requests
+Completed 45000 requests
+Completed 50000 requests
+Finished 50000 requests
+
+
+Server Software:        nginx/1.21.6
+Server Hostname:        localhost
+Server Port:            80
+
+Document Path:          /test
+Document Length:        2 bytes
+
+Concurrency Level:      128
+Time taken for tests:   13.970 seconds
+Complete requests:      50000
+Failed requests:        0
+Total transferred:      7800000 bytes
+HTML transferred:       100000 bytes
+Requests per second:    3579.18 [#/sec] (mean)
+Time per request:       35.762 [ms] (mean)
+Time per request:       0.279 [ms] (mean, across all concurrent requests)
+Transfer rate:          545.27 [Kbytes/sec] received
+
+Connection Times (ms)
+min  mean[+/-sd] median   max
+Connect:        0    0   0.3      0       6
+Processing:     8   35   5.2     36      65
+Waiting:        1   35   5.2     35      65
+Total:          8   36   5.1     36      68
+
+Percentage of the requests served within a certain time (ms)
+50%     36
+66%     38
+75%     39
+80%     40
+90%     42
+95%     44
+98%     47
+99%     49
+100%     68 (longest request)
+```  
+
+
+`Nginx-WAS` 구간에서 `Keepalive` 설정만으로도 어느정도의 성능적인 이점이 있다는 것을 확인 할 수 있다. 
+연결을 유지하고 재사용을 한다는 것은 효율측면에서는 좋을 순 있지만, 
+커넥션 관리에 대한 주의가 필요하고 각 서버 환경이나 스펙에 맞게 알맞은 설정을 해줘야 올바른 동작이 가능하다는 점을 기억해야 한다.  
 
 
 
