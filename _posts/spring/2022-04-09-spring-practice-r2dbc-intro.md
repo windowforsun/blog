@@ -129,6 +129,18 @@ logging:
     org.springframework.r2dbc: DEBUG
 ```  
 
+`R2DBC` 커넥션 풀 관련 커스텀한 설정이 필요하다면 아래 설정으로 가능하다.  
+
+```yaml
+spring:
+  r2dbc:
+    pool:
+      enabled: true # r2dbc-pool 의존성이 있다면 자동 활성화
+      max-size: 150 # default 10
+      initial-size: 50 # default 10
+
+```  
+
 ### 엔티티 
 `Spring Data R2DBC` 에서 엔티티를 생성하는 방법은 `Spring Data JPA` 와 거의 유사하다. 
 하지만 약간에 차이가 있고, 연관관계 매핑과 같은 부분은 아직 공식적으로 지원하지 않는 것으로 보인다.  
