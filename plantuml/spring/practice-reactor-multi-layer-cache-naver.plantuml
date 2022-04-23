@@ -1,0 +1,84 @@
+@startuml
+
+
+participant TargetMethod as target
+participant Refresh as refresh
+participant LocalCache as local
+participant RedisCache as redis
+participant DB as data
+
+group cached in local
+	target -> refresh : check refresh
+	activate refresh
+	refresh -> local : find local cache
+	activate local
+	refresh <- local : return local cache
+	deactivate local
+	target <- refresh : return local cache
+	deactivate refresh
+end
+'newpage
+
+group cached in redis
+
+	target -> refresh : check refresh
+	activate refresh
+	refresh -> local : find local cache
+	activate local
+	local -> redis : find redis cache
+	activate redis
+	local <- redis : return redis cache
+	deactivate redis
+	refresh <- local : return local cache
+	deactivate local
+	target <- refresh : return local cache
+	deactivate refresh
+end
+'newpage
+
+group nothing cached
+	target -> refresh : check refresh
+	activate refresh
+	refresh -> local : find local cache
+	activate local
+	local -> redis : find redis cache
+	activate redis
+
+	redis -> data : find data
+	activate data
+	redis <- data : return data
+	deactivate data
+	local <- redis : return redis cache
+	deactivate redis
+	refresh <- local : return local cache
+	deactivate local
+	target <- refresh : return local cache
+	deactivate refresh
+end
+
+
+group key changed
+	target -> refresh : check refresh
+	activate refresh
+	group background job
+		refresh -> redis : check key
+		activate refresh
+		activate redis
+		refresh <- redis : key not exist
+		deactivate redis
+		refresh -> data : find new data
+		activate data
+		refresh <- data : return new data
+		deactivate data
+		refresh -> redis : refresh new data
+		refresh -> local : refresh new data
+		deactivate refresh
+	end
+	refresh -> local : find local cache
+	activate local
+	refresh <- local : return local cache
+	deactivate local
+	target <- refresh : return local cache
+	deactivate refresh
+end
+@enduml
