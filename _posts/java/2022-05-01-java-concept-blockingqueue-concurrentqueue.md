@@ -310,4 +310,7 @@ Blocking Behavior|대기열이 비었을 때나, 대기열이 꽉찼을 때 발�
 ## Reference
 [LinkedBlockingQueue vs ConcurrentLinkedQueue](https://www.baeldung.com/java-queue-linkedblocking-concurrentlinked)  
 [LinkedBlockingQueue vs ConcurrentLinkedQueue in Java](https://www.javacodestuffs.com/2020/07/linkedblockingqueue-vs.html)  
+[LinkedBlockingQueue](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/LinkedBlockingQueue.html)  
+[BlockingQueue](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/BlockingQueue.html)  
+[ConcurrentLinkedQueue](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ConcurrentLinkedQueue.html#size())  
 
