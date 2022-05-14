@@ -405,6 +405,10 @@ offer 스레드 수|poll 스레드 수|LinkedBlockingQueue(ms)|ConcurrentLinkedQ
 하지만 `다수 생산자-단일 소비자` 의 경우에는 비교적 `ConcurrentLinkedQueue` 와 큰 차이 없는 성능을 보여줬기 때문에, 
 해당 모델에서는 사용을 검토해도 좋을 것같다.  
 
+그리고 전체 결과의 추이를 봤을때 `생산자 < 소비자` 인 경우의 생산자와 소비자의 개수 차이가 클수록 `LinkedBlockingQueue`, `ConcurrentLinkedQueue` 
+모두 다른 경우보다(`생산자 > 소비자`, `생산자 = 소비자`) 성능 저하가 더 큰 것을 확인 할 수 있다. 
+위 상황에서 특히 `LinkedBlockingQueue` 가 아주 큰 폭으로 성능 저하가 발생 했다.  
+
 
 ---
 ## Reference
