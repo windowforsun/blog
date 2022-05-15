@@ -129,7 +129,7 @@ varnishadm ban req.http.host == www.example.com '&&' req.url '~' '\\.png$'
 
 위 그림을 통해 크게 아래 두가지 흐름으로 나눌 수 있다.  
 
-1. 캐시 존재 : ` vcl_recv() -> vcl_hash() -> vcl_hit() -> vcl_deliver()`
+1. 캐시 존재 : `vcl_recv() -> vcl_hash() -> vcl_hit() -> vcl_deliver()`
 1. 캐시 존재 X : `vcl_recv() -> vcl_hash() -> vcl_miss() -> vcl_pass() -> vcl_backend_fetch() -> vcl_backend_response() -> vcl_deliver()`
 
 위 그림에서 원으로 그려진 부분들이 모두 `VCL` 함수이다. 
@@ -582,6 +582,7 @@ $ curl -v 172.26.85.158/test1.png
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test2.png
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -607,6 +608,7 @@ $ curl -v 172.26.85.158/test2.png
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test3.png
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -671,6 +673,7 @@ $ curl -v 172.26.85.158/test1.png
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test2.png
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -696,6 +699,7 @@ $ curl -v 172.26.85.158/test2.png
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test3.png
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -799,6 +803,7 @@ $ curl -v 172.26.85.158/test
 ```bash
 $ docker stop varnish-be-1
 varnish-be-1
+
 $ curl -v 172.26.85.158/test
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -1021,6 +1026,7 @@ $ curl -v 172.26.85.158/test1
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test2
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -1046,6 +1052,7 @@ $ curl -v 172.26.85.158/test2
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-2)"}
+
 $ curl -v 172.26.85.158/test3
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
@@ -1071,6 +1078,7 @@ $ curl -v 172.26.85.158/test3
 <
 * Connection #0 to host 172.26.85.158 left intact
 {"message": "hello world(varnish-be-1)"}
+
 $ curl -v 172.26.85.158/test4
 *   Trying 172.26.85.158:80...
 * TCP_NODELAY set
