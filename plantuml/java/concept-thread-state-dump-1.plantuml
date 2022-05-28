@@ -1,0 +1,35 @@
+@startuml
+
+rectangle NEW #palegreen
+
+rectangle RUNNABLE
+
+rectangle BLOCKED
+
+rectangle WAITING
+
+rectangle TIMED_WAITING
+
+rectangle TERMINATED #pink
+
+NEW -r-> RUNNABLE
+
+RUNNABLE <-d-> BLOCKED
+RUNNABLE <-d-> WAITING
+RUNNABLE <-d-> TIMED_WAITING
+
+'BLOCKED -u- WAITING
+'WAITING -u- TIMED_WAITING
+
+RUNNABLE -r-> TERMINATED
+'TERMINATED -u- BLOCKED
+'TERMINATED -u- WAITING
+'TERMINATED -u- TIMED_WAITING
+
+
+
+
+
+
+
+@enduml
