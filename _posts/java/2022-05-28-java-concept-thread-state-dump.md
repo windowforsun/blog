@@ -356,8 +356,8 @@ sleepThread.join();
 그리고 `Thread State` 는 `waiting on condition` 이고, 
 `Enum Thread State` 는 `TIMED_WAITING (sleeping)` 인 것을 확인 할 수 있다.  
 
-#### Thread.wait
-`Thread.wait` 메소드를 통해 `Thread` 가 다른 `Thread` 의 종료를 대기하는 경우이다.  
+#### Object.wait
+`Object.wait` 메소드를 통해 `Thread` 가 다른 `Thread` 의 종료를 대기하는 경우이다.  
 
 ```java
 Thread sleepThread = new Thread(() -> {
@@ -461,7 +461,12 @@ blockThread.join();
 
 
 #### park
-`LockSupport.park()` 메소드를 사용해서 `Thread` 가 `Waiting` 상태에 빠진 경우이다.  
+`LockSupport.park()`(`Unsafe.park()`) 메소드를 사용해서 `Thread` 가 `Waiting` 상태에 빠진 경우이다.  
+
+> `Object.wait()`, `LockSupport.park()` 모두 실행 중 스레드를 일시 중단하고 대기 상태로 만든다. 
+> 하지만 차이가 있는데 `Object.wait()` 는 `WAITING` 상태가 되고, `park()` 는 `WAITING(parking)` 상태가 된다. 
+> - `Object.wait()` : `Monitor` 기반 동기화에서 동작하는 메소드이다. 중단된 스레드는 동일한 `Monitor` 객체에서 `Object.notify()` 를 호출해야 다시 실행된다. 이러한 동작의 스레드 상태 관리는 `JVM` 이 메인 메모리 동기화가 필요하기 때문에 추가 오버해드가 발생한다. 
+> - `LockSupport.park()` : `LockSupport.park()` 메소드는 인수로 스레드를 사용한다. 정지된 스레드를 다시 실행 할때는 다른 스레드에서 정지된 스레드를 인자로 `LockSupport.unpark()` 를 호출한다. 이미 스레드가 차단된 경우에만 해당 스레드를 차단 해제한다. 먼저 `unpark()` 이 호출 된 경우 이후 `park()` 메도스 호출 즉시 차단 해제 된다. `park()` 는 메인 메모리 동기화가 필요하지 않으므로 성능적으로 더 유리하다. 
 
 ```java
 
@@ -474,18 +479,230 @@ parkThread.join();
 ![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-11.png)
 
 ```
-myParkThread" #24 prio=5 os_prio=0 cpu=0.00ms elapsed=22.41s tid=0x0000026afd360000 nid=0x1f98 waiting on condition  [0x000000a0bcdfe000]
-   java.lang.Thread.State: WAITING (parking)
+myParkThread" #24 prio=5 os_prio=0 cpu=0.00ms elapsed=22.41s tid=0x0000026afd360000 nid=0x1f98 [Thread State]waiting on condition  [0x000000a0bcdfe000]
+   java.lang.Thread.State: [Enum Thread State]WAITING (parking)
         at jdk.internal.misc.Unsafe.park(java.base@11/Native Method)
         at java.util.concurrent.locks.LockSupport.park(java.base@11/LockSupport.java:323)
         at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$386/0x00000008001e1c40.run(Unknown Source)
         at java.lang.Thread.run(java.base@11/Thread.java:834)
 ```  
 
+`park()` 메소드를 사용해서 스레드를 중지 시킨경우 `Thread State` 는 `waiting on condition` 으로 `wait()` 를 사용했을 때와 차이가 없다. 
+하지만 `Enum Thread State]` 는 `WAITING (parking)` 로 `park()` 메소드를 사용한 경우를 명시해주고 있다.  
+
+#### parkUntil, parkNano
+`LockSupport.parkNano()` 메소드를 사용해서 `Thread` 가 `Timed Waiting` 상태에 빠진 경우이다.  
+
+```java
+
+Thread parkNanoThread = new Thread(() -> {
+    // 10초
+	LockSupport.parkNanos(10000000000L);
+}, "myParkNanoThread");
+
+parkThread.start();
+parkThread.join();
+```  
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-12.png)
+
+```
+"myParkThread" #28 prio=5 os_prio=0 cpu=0.00ms elapsed=8.18s tid=0x000002304b8da800 nid=0x8fa4 [Thread State]waiting on condition  [0x000000b7108ff000]
+   java.lang.Thread.State: [Enum Thread State]TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@11/Native Method)
+        at java.util.concurrent.locks.LockSupport.parkNanos(java.base@11/LockSupport.java:357)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.lambda$lockSupportParkNano_timedWaiting$12(ThreadStateTest.java:238)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$415/0x000000080022b440.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+```  
+
+`parkNano()` 의 인자값을 10초로 전달해서 사용하는 경우 10초동안 `park` 상태로 유지되다가 10초 이후에는 스레드가 종료되는 것을 확인 할 수 있다. 
+그리고 `parkNano()` 가 수행 중인 10초 동안의 `Thread Dump` 결과는 `Thread State` 의 경우 `waiting on condition` 로 동일하고, 
+`Enum Thread State` 는 `TIMED_WAITING (parking)` 로 나타나는 것을 확인 할 수 있다.  
+
+#### BlockingQueue.take()
+`BlockingQueue.take()` 는 큐에 아이템이 없는 경우 해당 스레드는 대기 상태에 빠지게 된다. 
+그때 `Thread Dump` 를 확인해 본다.  
+
+```java
+LinkedBlockingQueue queue1 = new LinkedBlockingQueue();
+LinkedBlockingQueue queue2 = new LinkedBlockingQueue();
+
+Thread waitQueue1ThreadA = new Thread(() -> {
+	Utils.callable(queue1::take);
+}, "myWaitQueue1ThreadA");
+Thread waitQueue1ThreadB = new Thread(() -> {
+	Utils.callable(queue1::take);
+}, "myWaitQueue1ThreadA");
+Thread waitQueue2ThreadC = new Thread(() -> {
+	Utils.callable(queue2::take);
+}, "myWaitQueue2ThreadC");
+
+waitQueue1ThreadA.start();
+waitQueue1ThreadB.start();
+waitQueue2ThreadC.start();
+waitQueue1ThreadA.join();
+waitQueue1ThreadB.join();
+waitQueue2ThreadC.join();
+```  
+
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-13.png)
+
+
+```
+"myWaitQueue1ThreadA" #29 prio=5 os_prio=0 cpu=0.00ms elapsed=11.68s tid=0x0000012efd53c800 nid=0x230c [Thread State]waiting on condition  [0x0000001e5fffe000]
+   java.lang.Thread.State: [Enum Thread State]WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@11/Native Method)
+        - parking to wait for  [Lock Key]<0x00000004426ce568> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(java.base@11/LockSupport.java:194)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@11/AbstractQueuedSynchronizer.java:2081)
+        at java.util.concurrent.LinkedBlockingQueue.take(java.base@11/LinkedBlockingQueue.java:433)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$418/0x0000000800226040.call(Unknown Source)
+        at com.windowforsun.javathread.threaddump.Utils.callable(Utils.java:20)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.lambda$blockingQueueTake_waiting$3(ThreadStateTest.java:111)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$415/0x0000000800224c40.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myWaitQueue1ThreadB" #30 prio=5 os_prio=0 cpu=0.00ms elapsed=11.68s tid=0x0000012efd53b800 nid=0x4a28 [Thread State]waiting on condition  [0x0000001e600fe000]
+   java.lang.Thread.State: [Enum Thread State]WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@11/Native Method)
+        - parking to wait for  [Lock Key]<0x00000004426ce568> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(java.base@11/LockSupport.java:194)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@11/AbstractQueuedSynchronizer.java:2081)
+        at java.util.concurrent.LinkedBlockingQueue.take(java.base@11/LinkedBlockingQueue.java:433)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$420/0x0000000800225c40.call(Unknown Source)
+        at com.windowforsun.javathread.threaddump.Utils.callable(Utils.java:20)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.lambda$blockingQueueTake_waiting$4(ThreadStateTest.java:114)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$416/0x0000000800225040.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myWaitQueue2ThreadC" #31 prio=5 os_prio=0 cpu=0.00ms elapsed=11.68s tid=0x0000012efd53d000 nid=0x84c0 [Thread State]waiting on condition  [0x0000001e601fe000]
+   java.lang.Thread.State: [Enum Thread State]WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@11/Native Method)
+        - parking to wait for  [Lock Key]<0x00000004426ce6d0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(java.base@11/LockSupport.java:194)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@11/AbstractQueuedSynchronizer.java:2081)
+        at java.util.concurrent.LinkedBlockingQueue.take(java.base@11/LinkedBlockingQueue.java:433)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$419/0x0000000800225840.call(Unknown Source)
+        at com.windowforsun.javathread.threaddump.Utils.callable(Utils.java:20)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.lambda$blockingQueueTake_waiting$5(ThreadStateTest.java:117)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$417/0x0000000800225440.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+```  
+
+테스트를 위해서 총 3개의 스레드를 생성했다. 
+
+1. `myWaitQueue1ThreadA` : `queue1` 을 사용하는 `ThreadA`
+1. `myWaitQueue1ThreadB` : `queue1` 를 사용하는 `ThreadB`
+1. `myWaitQueue2ThreadC` : `queue2` 를 사용하는 `ThreadB` 
+
+`ThreadA`, `ThreadB` 는 동일한 `queue1` 에 대해서 `take()` 를 호출해서 대기하고 있고, 
+`ThreadC` 는 `queue2` 에 대해서 `take()` 호출로 대기 상태에 빠져 있는 상태이다. 
+3개 스레드 모두 `Thread State` 는 `waiting on condition` 이고, 
+`Enum Thread State` 가 `WAITING (parking)` 인 것으로 보아 `park()` 메소드를 통해 `take()` 를 호출한 스레드가 차단 된 상태인 걸로 보인다. 
+
+또한 `myWaitQueue1ThreadA`, `myWaitQueue1ThreadB` 가 대기 하고 있는 `Lock Key` 는 `<0x00000004426ce568>` 로 동일하지만, 
+`myWaitQueue2ThreadC` 가 대기하고 있는 `Lock Key` 는 `<0x00000004426ce6d0>` 로 다른 것도 확인 할 수 있다. 
+이는 스레드가 어떤 큐 인스턴스를 사용하는지에 따라 달라진다고 할 수 있다.  
+
+
+#### RestTemplate 응답대기
+`RestTemplate` 를 사용해서 외부 요청을 수행할때 응답 대기하는 상황일 때 `Thread Dump` 결과를 확인해 본다. 
+
+> 테스트를 위해 `/sleep/<millis>` 로 요청하면 `millis` 만큼 응답을 지연시키는 요청 경로가 있다는 가정에서 진행한다. 
+
+```java
+String url = "http://localhost:" + this.port + "/sleep/10000";
+
+Thread restTemplateThread = new Thread(() -> {
+	Utils.sleep(2000);
+	String result = this.restTemplate.getForObject(url, String.class);
+	System.out.println(s);
+}, "myRestTemplateThread");
+
+restTemplateThread.start();
+restTemplateThread.join();
+```  
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-14.png)  
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-15.png)  
+
+```
+"myRestTemplateThread" #35 prio=5 os_prio=0 [CPU Usage]cpu=31.25ms [Total Times]elapsed=9.86s tid=0x00000288dbe14800 nid=0x5590 [Thread State]runnable  [0x000000b63ecfe000]
+   java.lang.Thread.State: [Enum Thread State]RUNNABLE
+        at java.net.SocketInputStream.socketRead0(java.base@11/Native Method)
+        at java.net.SocketInputStream.socketRead(java.base@11/SocketInputStream.java:115)
+        at java.net.SocketInputStream.read(java.base@11/SocketInputStream.java:168)
+        at java.net.SocketInputStream.read(java.base@11/SocketInputStream.java:140)
+        at java.io.BufferedInputStream.fill(java.base@11/BufferedInputStream.java:252)
+        at java.io.BufferedInputStream.read1(java.base@11/BufferedInputStream.java:292)
+        at java.io.BufferedInputStream.read(java.base@11/BufferedInputStream.java:351)
+        - locked <0x00000004406c2650> (a java.io.BufferedInputStream)
+        at sun.net.www.http.HttpClient.parseHTTPHeader(java.base@11/HttpClient.java:746)
+        at sun.net.www.http.HttpClient.parseHTTP(java.base@11/HttpClient.java:689)
+        at sun.net.www.protocol.http.HttpURLConnection.getInputStream0(java.base@11/HttpURLConnection.java:1604)
+        - locked <0x000000044066fce8> (a sun.net.www.protocol.http.HttpURLConnection)
+        at sun.net.www.protocol.http.HttpURLConnection.getInputStream(java.base@11/HttpURLConnection.java:1509)
+        - locked <0x000000044066fce8> (a sun.net.www.protocol.http.HttpURLConnection)
+        at java.net.HttpURLConnection.getResponseCode(java.base@11/HttpURLConnection.java:527)
+        at org.springframework.http.client.SimpleBufferingClientHttpRequest.executeInternal(SimpleBufferingClientHttpRequest.java:82)
+        at org.springframework.http.client.AbstractBufferingClientHttpRequest.executeInternal(AbstractBufferingClientHttpRequest.java:48)
+        at org.springframework.http.client.AbstractClientHttpRequest.execute(AbstractClientHttpRequest.java:66)
+        at org.springframework.web.client.RestTemplate.doExecute(RestTemplate.java:776)
+        at org.springframework.web.client.RestTemplate.execute(RestTemplate.java:711)
+        at org.springframework.web.client.RestTemplate.getForObject(RestTemplate.java:334)
+        at com.windowforsun.javathread.threaddump.WebIoThreadStateTest.lambda$restTemplate$2(WebIoThreadStateTest.java:63)
+        at com.windowforsun.javathread.threaddump.WebIoThreadStateTest$$Lambda$1039/0x0000000800615440.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+```  
+
+`Blocking` 방식을 사용하는 `RestTemplate` 이 요청을 대기하는 경우를 살펴보자. 
+초반 2초 `sleep()` 수행 후 10초 지연이 발생하는 외부 요청을 수행하게 된다. 
+2초 이후 10초 동안은 `RUNNABLE` 인 상태로 `CPU` 를 점유하며 해당 스레드는 응답 대기만 수행하고 있다고 말할 수 있다. 
+`RestTemplate` 요청을 수행하는 스레드는 외부 요청을 처리하는 스레드(`reactor-http-nio-4`) 가 처리를 완료 하고 응답을 받을 떄까지 계속 `RUNNABLE` 상태로 대기하고 있는 것이다. 
+`RUNNABLE` 상태인데도 불구하고 `Total Times` 는 10초에 가깝지만, `CPU Usage` 는 `31ms` 밖에 되지 않는 다는 점을 보면 알 수 있다.  
+
+
+#### WebClient 응답대기
+`WebClient` 를 사용해서 외부 요청을 수행할때 응답 대기하는 상황일 때 `Thread Dump` 결과를 확인해 본다.
+
+
+```
+String url = "http://localhost:" + this.port + "/sleep/10000";
+
+Thread webClientThread = new Thread(() -> {
+	Utils.sleep(2000);
+	this.webClient.get().uri(url).exchangeToMono(clientResponse -> clientResponse.bodyToMono(String.class)).subscribe(s -> {
+		System.out.println(s);
+	})
+	;
+}, "myWebClientThread");
+
+webClientThread.start();
+webClientThread.join();
+```
+
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-16.png)
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-17.png)
+
+`Non-Blocking` 방식을 사용하는 `WebClient` 의 경우 초기 `sleep` 2초 이후에 10초가 소요되는 외부 요청을 하고 나서 바로 해당 스레드는 종료된다. 
+그리고 외부 요청을 수행하는 스레드(`reactor-http-nio-4`) 에서 10초 요청 처리 이후 응답을 하게 된다. 
+즉 `WebClient` 스레드는 외부로 요청까지만 수행을 완료하고, 응답은 요청 스레드에서 대기하고 있는 것이 아니라 `Callback` 을 통해 별도로 처리하게 되는 방식이므로, 
+`RestTemplate` 처럼 불필요한 스레드가 `RUNNABLE` 상태로 잔존하며 `CPU` 를 불필요하게 점유하거나 불필요한 `Context Switch` 가 발생하지 않도록 할 수 있다.  
+
+
+#### 락대기
+여러 스레드가 하나의 자원을 사용하기 위해 락을 대기하는 상황에 대해 살펴 본다.  
 
 
 
-
+#### 데드락
 
 
 
@@ -499,5 +716,6 @@ myParkThread" #24 prio=5 os_prio=0 cpu=0.00ms elapsed=22.41s tid=0x0000026afd360
 [Does synchronized park a concurrent thread like Lock.lock() does?](https://stackoverflow.com/questions/17233599/does-synchronized-park-a-concurrent-thread-like-lock-lock-does)  
 [Enum Thread.State](https://docs.oracle.com/javase/8/docs/api/java/lang/Thread.State.html)  
 [[Java] JVM Thread Dump 분석하기](https://steady-coding.tistory.com/597)  
+[Difference Between Wait And Park Methods In Java Thread](https://www.w3spot.com/2020/07/difference-between-wait-and-park-java-thread.html)  
 
 
