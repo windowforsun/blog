@@ -16,6 +16,7 @@ tags:
   - Thread State
   - Thread Dump
   - VisualVM
+  - park
 toc: true 
 use_math: true
 ---  
@@ -700,9 +701,188 @@ webClientThread.join();
 #### 락대기
 여러 스레드가 하나의 자원을 사용하기 위해 락을 대기하는 상황에 대해 살펴 본다.  
 
+```java
+
+private final Object lockA = new Object();
+private final Object lockB = new Object();
+
+public void runnableMethodA() {
+	synchronized (lockA) {
+		while(true) {}\
+	}
+}
+public void runnableMethodB() {
+	synchronized (lockB) {
+		while(true) {}\
+	}
+}
+
+
+Thread runnableMethodAThread = new Thread(this::runnableMethodA, "myRunnableMethodAThread");
+Thread runnableMethodBThread = new Thread(this::runnableMethodB, "myRunnableMethodBThread");
+Thread blockMethodAThread = new Thread(this::runnableMethodA, "myBlockMethodAThread");
+Thread blockMethodBThread = new Thread(this::runnableMethodB, "myBlockMethodBThread");
+
+runnableMethodAThread.start();
+runnableMethodBThread.start();
+Utils.sleep(100);
+blockMethodAThread.start();
+blockMethodBThread.start();
+runnableMethodAThread.join();
+runnableMethodBThread.join();
+blockMethodAThread.join();
+blockMethodBThread.join();
+```  
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-18.png)  
+
+
+```
+"myRunnableMethodAThread" #28 prio=5 os_prio=0 cpu=11296.88ms elapsed=11.31s tid=0x0000027dff38f800 nid=0xb1bc [Thread State]runnable  [0x000000e9451ff000]
+   java.lang.Thread.State: [Enum Thread State]RUNNABLE
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.runnableMethodA(ThreadStateTest.java:309)
+        - locked [Lock Key]<0x00000004427af4e0> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$416/0x0000000800224440.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myRunnableMethodBThread" #29 prio=5 os_prio=0 cpu=11296.88ms elapsed=11.31s tid=0x0000027dff4db800 nid=0x6cd0 [Thread State]runnable  [0x000000e9452ff000]
+   java.lang.Thread.State: [Enum Thread State]RUNNABLE
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.runnableMethodB(ThreadStateTest.java:315)
+        - locked [Lock Key]<0x00000004427af5f1> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$417/0x0000000800224840.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myBlockMethodAThread" #30 prio=5 os_prio=0 cpu=0.00ms elapsed=11.20s tid=0x0000027dfef22000 nid=0x9890 [Thread State]waiting for monitor entry  [0x000000e9453ff000]
+   java.lang.Thread.State: [Enum Thread State]BLOCKED (on object monitor)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.runnableMethodA(ThreadStateTest.java:309)
+        - waiting to lock [Lock Key]<0x00000004427af4e0> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$418/0x0000000800224c40.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myBlockMethodBThread" #31 prio=5 os_prio=0 cpu=0.00ms elapsed=11.20s tid=0x0000027dfef8d800 nid=0x3364 [Thread State]waiting for monitor entry  [0x000000e9454ff000]
+   java.lang.Thread.State: [Enum Thread State]BLOCKED (on object monitor)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.runnableMethodB(ThreadStateTest.java:315)
+        - waiting to lock [Lock Key]<0x00000004427af5f1> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$419/0x0000000800225040.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+```  
+
+스레드가 사용하는 락을 기준으로 스레드를 분류하면 아래와 같다. 
+
+- `lockA`(`<0x00000004427af4e0>`) : `myRunnableMethodAThread(RUNNABLED)`, `myBlockMethodAThread(BLOCKED)`
+- `lockB`(`<0x00000004427af5f1>`) : `myRunnableMethodBThread(RUNNABLE)`, `myBlockMethodBThread(BLOCKED)`
+
+`myRunnableMethodAThread`, `myRunnableMethodBThread` 는 각 `lockA`, `lockB` 를 사용하는 상황에서 먼저 실행 됐기 때문에 `runnable` 이다. 
+하지만 `myRunnableMethodAThread` 가 보유하고 있는 락은 `<0x00000004427af4e0>` 이고 동일한 동기화 영역을 사용하는 `myBlockMethodAThread` 는 `BLOCKED` 상태로 `<0x00000004427af4e0>` 락을 얻기 위해 대기중에 있다. 
+그리고 `myRunnableMethodBThread` 와 동일한 동기화 영역을 사용하는 `myBlockMethodBThread` 도 `BLOCKED` 상태로 `<0x00000004427af5f1>` 락을 얻기위해 대기중에 있는 것을 확인 할수 있다.  
 
 
 #### 데드락
+3개의 스레드와 3개의 임계영역을 통해 데드락(Deadlock) 상황에 대해서도 살펴본다.  
+
+```java
+private final Object lockA = new Object();
+private final Object lockB = new Object();
+private final Object lockC = new Object();
+
+
+public void deadlockTestMethodA() {
+	synchronized (lockA) {
+		Utils.sleep(100);
+		synchronized (lockB) {
+			System.out.println("...DeaLock!!");
+		}
+	}
+}
+
+public void deadlockTestMethodB() {
+	synchronized (lockB) {
+		Utils.sleep(100);
+		synchronized (lockC) {
+			System.out.println("...DeaLock!!");
+		}
+	}
+}
+
+public void deadlockTestMethodC() {
+	synchronized (lockC) {
+		Utils.sleep(100);
+		synchronized (lockA) {
+			System.out.println("...DeaLock!!");
+		}
+	}
+}
+
+Thread deadLockMethodAThread = new Thread(this::deadlockTestMethodA, "myDeadLockMethodAThread");
+Thread deadLockMethodBThread = new Thread(this::deadlockTestMethodB, "myDeadLockMethodBThread");
+Thread deadLockMethodCThread = new Thread(this::deadlockTestMethodC, "myDeadLockMethodCThread");
+
+deadLockMethodAThread.start();
+deadLockMethodBThread.start();
+deadLockMethodCThread.start();
+deadLockMethodAThread.join();
+deadLockMethodBThread.join();
+deadLockMethodCThread.join();
+```  
+
+![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-19.png)  
+
+```
+"myDeadLockMethodAThread" #28 prio=5 os_prio=0 cpu=0.00ms elapsed=12.79s tid=0x00000192f83a4000 nid=0x5bdc [Thread State]waiting for monitor entry  [0x0000006315aff000]
+   java.lang.Thread.State: [Enum Thread State]BLOCKED (on object monitor)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.deadlockTestMethodA(ThreadStateTest.java:350)
+        - waiting to lock [Waiting Lock Key]<0x0000000440c2a2d8> (a java.lang.Object)
+        - locked [Locked Lock Key]<0x0000000440c2a2e8> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$416/0x0000000800225440.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myDeadLockMethodBThread" #29 prio=5 os_prio=0 cpu=0.00ms elapsed=12.79s tid=0x00000192f8e52800 nid=0x84c0 [Thread State]waiting for monitor entry  [0x0000006315bff000]
+   java.lang.Thread.State: [Enum Thread State]BLOCKED (on object monitor)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.deadlockTestMethodB(ThreadStateTest.java:358)
+        - waiting to lock [Waiting Lock Key]<0x0000000440c2a378> (a java.lang.Object)
+        - locked [Locked Lock Key]<0x0000000440c2a2d8> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$417/0x0000000800225840.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+
+
+"myDeadLockMethodCThread" #30 prio=5 os_prio=0 cpu=0.00ms elapsed=12.79s tid=0x00000192f8b75800 nid=0x8230 [Thread State]waiting for monitor entry  [0x0000006315cff000]
+   java.lang.Thread.State: [Enum Thread State]BLOCKED (on object monitor)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest.deadlockTestMethodC(ThreadStateTest.java:366)
+        - waiting to lock [Waiting Lock Key]<0x0000000440c2a2e8> (a java.lang.Object)
+        - locked [Locked Lock Key]<0x0000000440c2a378> (a java.lang.Object)
+        at com.windowforsun.javathread.threaddump.ThreadStateTest$$Lambda$418/0x0000000800225c40.run(Unknown Source)
+        at java.lang.Thread.run(java.base@11/Thread.java:834)
+```  
+
+스레드가 현재 소유하고 있고, 소유하기 위해 대기 중인 락을 기준으로 스레드를 분류하면 아래와 같다.  
+
+- `lockA`(`<0x0000000440c2a2e8>`)
+  - 소유 : `myDeadLockMethodAThread`
+  - 대기 : `myDeadLockMethodCThread`
+- `lockB`(`<0x0000000440c2a2d8>`)
+  - 소유 : `myDeadLockMethodBThread`
+  - 대기 : `myDeadLockMethodAThread`
+- `lockC`(`<0x0000000440c2a378>`)
+  - 소유 : `myDeadLockMethodCThread`
+  - 대기 : `myDeadLockMethodBThread`
+	
+
+> `myDeadLockMethodAThread`(lockA, `<0x0000000440c2a2e8>`) -> `myDeadLockMethodBThread`(lockB, `<0x0000000440c2a2d8>`) -> `myDeadLockMethodCThread`(lockC, `<0x0000000440c2a378>`) -> `myDeadLockMethodAThread`(lockA, `<0x0000000440c2a2e8>`)
+
+위와 같이 현재 `myDeadLockMethodAThread` 는 `myDeadLockMethodBThread` 의 락을 얻기위해 대기하고 있고, 
+`myDeadLockMethodBThread` 는 `myDeadLockMethodCThread` 의 락을 얻기 위해 대기하고 있고, 
+`myDeadLockMethodCThread` 는 다시 `myDeadLockMethodAThread` 의 락을 얻기 위해 순환대기 하고 있는 상태이다.  
+
+이와 같은 상황은 어느 하나의 스레드 처리가 완료돼서 락이 풀리거나, 강제로 스레드를 종료하는 방법으로 해결 할 수 있다.  
+
+> 참고로 `VisualVM` 의 경우 `DeadLock` 이 발생한 경우 아래 사진처럼 알려준다.  
+>
+> ![그림 1]({{site.baseurl}}/img/java/concept-thread-state-dump-20.png)  
+
 
 
 
