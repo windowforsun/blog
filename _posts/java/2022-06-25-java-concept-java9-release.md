@@ -28,10 +28,13 @@ use_math: true
 ### Process API
 
 ### Try-With-Resources
+example
 
 ### Diamond Operation Extension
+example
 
 ### Interface Private Method
+example
 
 ### JShell Command Line Tool
 
@@ -51,11 +54,11 @@ example
 ### Optional to Stream
 example
 
-### Enhance CompletableFuture API
+### Improvement CompletableFuture API
 example
 
-### Enhance Stream API
-example ing ..
+### Improvement Stream API
+example 
 
 
 
