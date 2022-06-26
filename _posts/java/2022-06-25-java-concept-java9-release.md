@@ -31,7 +31,7 @@ use_math: true
 example
 
 ### Diamond Operation Extension
-example
+example ing ..
 
 ### Interface Private Method
 example
