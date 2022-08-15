@@ -56,7 +56,7 @@ use_math: true
 주로 `properties` 설정과 `StreamBridge` 를 사용해서 `Fundtional Integerface` 를 사용하는 방법으로 구현이 이뤄진다.  
 
 가장 간단하면서 일반적인 `Producer`, `Consumer` 구현은 아래와 같이 `Functional Integerace` 구현체를 빈으로 등록하는 것이다. 
-이렇게 `Producer` 와 `Consumer` 를 빈으로 등록해 사용할 경우 `spring.cloud.stream.function.definition` 에 빈 이름을 미리 설정해줘야 한다. 
+이렇게 `Producer` 와 `Consumer` 를 빈으로 등록해 사용할 경우 `spring.cloud.function.definition` 에 빈 이름을 미리 설정해줘야 한다. 
 
 ```java
 @Bean
@@ -406,7 +406,7 @@ public class ExamConsumerController {
 #### application.yaml
 `Consumer` 웹애플리케이션은 `8082` 포트를 사용한다는 것을 빼곤 모두 `Spring Cloud Stream` 에 대한 설정이다.  
 
-`Consumer` 는 빈으로 등록된 구현체를 사용하기 때문에 `spring.cloud.stream.definition` 에 컨슈머 빈 이름이 설정 된 것을 확인 할 수 있다. 
+`Consumer` 는 빈으로 등록된 구현체를 사용하기 때문에 `spring.cloud.function.definition` 에 컨슈머 빈 이름이 설정 된 것을 확인 할 수 있다. 
 그리고 컨슈머 빈 이름을 바인딩 해줘야 하는데 이때는 아래와 같은 규칙을 따라줘야 한다. 
 
 ```
@@ -524,36 +524,35 @@ myKafka      | [Configuring] 'advertised.host.name' in '/opt/kafka/config/server
 
 ```bash
 .. producer ..
-$ curl 172.28.96.1:8081/str
+$ curl localhost:8081/str
 none
-$ curl 172.28.96.1:8081/num
+$ curl localhost:8081/num
 -1
 
 .. consumer ..
-$ curl 172.28.96.1:8082/str
+$ curl localhost:8082/str
 none
-$ curl 172.28.96.1:8082/num
+$ curl localhost:8082/num
 -1
 ```  
 
 `Producer` 의 `/str/{str}`, `/num/{num}` 을 사용해서 각각 메시지를 방출하고 확인하면 아래와 같다.  
 
 ```bash
-$ curl 172.28.96.1:8081/num/1234
+$ curl localhost:8081/num/1234
 done
-$ curl 172.28.96.1:8081/num
+$ curl localhost:8081/num
 1234
-$ curl 172.28.96.1:8082/num
+$ curl localhost:8082/num
 1234
 
-$ curl 172.28.96.1:8081/str/hello
+$ curl localhost:8081/str/hello
 done
-$ curl 172.28.96.1:8081/str
+$ curl localhost:8081/str
 hello
-$ curl 172.28.96.1:8082/str
+$ curl localhost:8082/str
 hello
 ```  
-
 
 
 ---  
