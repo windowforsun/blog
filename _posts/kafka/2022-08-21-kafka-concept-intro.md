@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka 개념] "
+title: "[Kafka 개념] Kafka 구조와 기본 개념"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: '고성능 메시지 브로커인 Apache Kafka 의 아키텍쳐와 구성 요소 및 기본 개념에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,12 @@ categories :
 tags:
   - Kafka
   - Concept
+  - Kafka
+  - Message Queue
+  - Message Broker
+  - MSA
+  - Producer
+  - Consumer
 toc: true
 use_math: true
 ---  
@@ -43,22 +49,118 @@ use_math: true
 이 두 모듈은 독립적인 구성으로 `Zookeeper` 는 분산 애플리케이션의 데이터 관리용도로 주로 메시지 큐 데이터 관리를 담당하고, 
 `Kafka` 는 메시지를 `TCP` 로 전송하기 위한 브로커를 제공하는 메시지 브로커 역할이다.  
 
-> Kafka Architecture 사진
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-4.drawio.png)  
+
 
 #### Message Broker
+`Kafka` 클러스터는 로드밸런싱과 가용성을 위해 3개의 노드로 `Message Broker` 를 구성한다. 
+그리고 `Kafka Broker` 는 상태 비 저장이기 때문에 `Zookeeper` 를 사용해 클러스터 상태를 유지한다. 
+
 
 #### Topic
-partition
+`Topic` 은 `Kafka` 에서 메시지를 주고 받기위해 사용되는 `Key` 와 같은 역할이다. 
+`Topic` 은 대용량 처리를 위해 여러개의 `Partition` 으로 나뉠 수 있고, 
+이를 통해 메시지를 병렬로 처리해서 성능을 향상시킬 수 있다. 
+`Partition` 에는 메시지가 누적돼 쌓이게 되고, 
+메시지의 정보를 `offset`(현재위치)과 비교해서 메시지 수신 여부를 결정한다. 
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-5.png)  
+
+`Topic` 에서 `Producer` 와 `Partition`, `Consumer` 의 관계는 아래와 같다. 
+- `Partition` 과 `Consumer` 는 `1:1 매핑되기 때문에 동일한 개수로 구성이 필요하다. 
+- `Partition` 이 여러개일 경우 순서 보장이 중요하다. 
+그러므로 `hash key` 와 같은 순서 보장을 위한 API를 사용해서 동일 `Partition` 에 쌓이도록 해서 동일 `Consumer` 가 메시지를 받도록 해야 한다. 
+- `Producer` 는 `Zookeeper` 를 통해 `Message Broker` 의 `ID` 를 전달 받는다. 
+- 위에서 전달 받은 `Message Broker` 에게 메시지를 전송한다. 
+전송과정에서 `Topic`, `Partition`, `Message` 단위로 나눠지고 병렬 처리를 위해 하나 이상의 `Partition` 으로 나눠 진다. 
+- `Consumer` 는 `offset` 정보를 `Zookeeper` 로 부터 전달 받고 누적된 `offset` 만큼 해당 `Topic` 의 `Paritition` 으로부터 메시지를 구독한다. 그리고 메시지 수신 만큼 `offset` 를 갱신한다. 
 
 #### Zookeeper
+`Zookeeper` 는 `Kafka Broker` 를 관리하고 조정하는 역할을 한다. 
+`kafka Broker` 와 `1:1` 로 구성이 필요하기 때문에 3개의 노드로 `Message Broker` 가 구성돼 있다면, 
+`Zookeeper` 또한 3개의 노드로 구성해야 한다. 
+`Zookeeper` 가 하는 일을 나열하면 아래와 같다.
+- `Kafka Message Broker` 신규 생성 알림
+- `Kafka Message Broker` 실패 알림
+
+`Producer` 와 `Consumer` 는 `Zookeeper` 에게 위와 같은 알림 받아 다른 `Message Broker` 와 작업을 조정하게 된다.  
 
 #### Producer
+`Producer` 는 `Message Broker` 에게 메시지를 `Push` 한다. 
+새로운 `Message Broker` 가 시작되면 모든 `Producer` 는 자동으로 새로운 `Message Broker` 에게 메시지를 보낸다. 
+`Kafka` 의 `Producer` 는 별도의 승인 없이 `Message Broker` 가 처리 할 수 있는 한 빨리 메시지를 보낸다. 
 
 #### Consumer
+`Consumer` 는 `Producer` 가 `Message Broker` 에게 `Push` 한 메시지를 `Pull` 한다. 
+이때 `Kafka Broker` 는 상태를 저장하지 않기 때문에 `Consumer` 가 `Partition` 의 `offset` 을 사용해서 자신이 `Pull` 한 메시지의 수를 유지해야 한다. 
+`Consumer` 가 특정 `offset` 값을 유지하고 있다는 것은 `offset` 값 보다 작은(이전) 메시지들은 모두 사용한 상태임을 의미한다. 
+그리고 `Consumer` 는 `offset` 값만 제공하면 `Partition` 에서 원하는 지점으로 되감거나 건너 뛸 수 있다. 
+`Consumer` 의 `offset` 값은 `Zookeeper` 에서 알려준다.  
 
 #### Consumer Group
+`Producer` 에서 `Push` 한 메시지를 여러 `Parition` 에 저장된다. 
+이때 `Consumer` 입장에서도 여러 `Consumer` 가 메시지를 `Pull` 하는 것이 효율적일 것이다. 
+하나의 `Topic` 을 소비하는 여러 `Consumer` 들의 모음을 `Consumer Group` 이라고 한다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-6.png)  
+
+이렇게 효율적으로 메시지를 소비할 수 있는 `Consumer Group` 에는 아래와 같은 룰이 있다. 
+`Topic` 의 `Partition` 의 수는 `Consumer Group` 을 구성하는 `Consumer` 보다 항상 같거나 많아야 한다는 점이다. 
+만약 `Partition 1` 을 `Consumer Group` 에 포함되는 `Consumer 1` 이 구독하고 있다면 `Partition 1` 에는 동일 그룹내 다른 `Consumer` 들은 구독할 수 없다는 것을 의미한다. 
+더 쉬운 이해를 위해 아래 그림을 보자. 
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-7.png)  
+
+`4:3`, `3:3` 인 경우는 `Partition` 의 수가 같거나 더 많기 때문에 `offset` 정보를 통해 순차적으로 데이터를 소비하게 된다. 
+문제가 되는 경우는 `3:4` 인 경우로 `Consumer Group` 내 `Consumer` 수가 더 많은 경우이다. 
+이때 `Consumer 4` 는 아무런 메시지도 받지 못하고 놀고 있기만 하게 된다.  
+
+하지만 `Consumer Group` 을 병렬 수신외 다른 목적으로도 사용할 수 있는데 바로 `Failover` 와 같은 목적으로도 사용할 수 있다. 
+`Consumer Group` 내 특정 `Consumer` 에게 문제가 생겼을 때 다른 `Consumer` 가 이를 대체해서 역할을 수행하도록 할 수 있다. 
+즉 이는 `Rebalancing` 을 통해 장애상황을 극복하는 것을 의미한다.  
+
 
 #### Replication
+`Kafka` 에서는 `Replication` 수를 임의로 정해서 `Topic` 생성이 가능하다. 
+`replication-factor` 를 3으로 지정했다면 `Replication` 수는 3이 된다. 
+
+`Kafka Cluster` 에 아래와 같이 3개의 `Message Broker` 와 3개의 `Topic` 이 있다고 가정해본다. 
+이때 각 `Topic` 에 대한 `Replication` 수가 아래와 같을 때 다음과 같이 배치 될 수 있다.  
+
+Topic 이름|Replication 수
+---|---
+Topic-1|1
+Topic-2|2
+Topic-3|3
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-8.png)  
+
+`Replication` 의 용도는 `RDB` 에서 필요한 상황과 비슷하다. 
+특정 `Message Broker` 에 문제가 발생했을 때, 
+다른 `Message Broker` 가 즉각적으로 대신역할을 수행할 수 있도록 하기 위함이다.  
+
+
+#### Replication - leader, follower
+`Replication` 의 구성요소는 `leader` 와 `follower` 가 있다. 
+`leader` 는 말그대로 대표의 역할로 `Topic` 에 대한 모든 데이터의 `Read/Write` 는 오직 `leader` 에서 이뤄진다. 
+`follower` 는 보조의 역할로 `leader` 와 `sync` 를 유지하면서 `leader` 에게 문제가 생겼을 때 `follower` 중 하나가 `leader` 의 역할을 하게 된다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-9.png)  
+
+위 처럼 구성된 상태에서 `Broker 2` 에 장애가 발생하게 된다면, 
+`Topic-2` 에서 새로운 `leader` 가 필요하기 때문에 `Broker 1` 의 `follower` 가 아래처럼 `leader` 가 된다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/concept-intro-10.png)  
+
+`Broker 1` 에 있던 기존 `Topic-2` 의 `follower` 에는 복제된 데이터가 있기 때문에, 
+메시지의 유실없이 `leader` 역할을 이어서 수행할 수 있다는 장점이 있다. 
+하지만 이는 역설적으로 `sync` 에 대한 추가적인 네트워크 등의 비용이 들어간 다는 점이 있기 때문에, 
+`ack` 옵션을 활용해서 성능과 데이터의 중도에 맞춰 세부 설정이 필요할 수 있다.  
+
+`ack 옵션`
+- `0` : `Producer` 는 `Kafka Server` 로 부터 어떤 `ack` 도 기다리지 않는다. (유실율은 가장 높지만, 처리량도 가장 높다.)
+- `1` : `leader` 는 데이터를 기록, 모든 `follower` 는 확인하지 않는다. (기본 설정 값)
+- `-1`(all) : 모든 `ISR` 확인, 무손실
 
 
 
@@ -114,21 +216,9 @@ partition
 하지만 이 두 애플리케이션은 `Topic` 에서 생산되는 모든 데이터를 함께 수신하게 된다.  
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ---
 ## Reference
 [Kafka Documentation](https://kafka.apache.org/documentation/)  
 [Kafka: Is it a Topic or a Queue?](https://abhishek1987.medium.com/kafka-is-it-a-topic-or-a-queue-30c85386afd6)  
+[Kafka: Kafka Architecture and Its Fundamental Concepts](https://data-flair.training/blogs/kafka-architecture/)  
+[Kafka: Apache Kafka Queue 101: Messaging Made Easy](https://hevodata.com/learn/kafka-queue/)  
