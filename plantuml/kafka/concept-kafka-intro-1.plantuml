@@ -1,0 +1,29 @@
+@startuml
+
+
+
+rectangle Producer {
+
+}
+
+rectangle Broker as "Message Broker(Kafka server)" {
+	rectangle topic as "Topic 1" {
+		card Partition1
+		card Partition2
+
+		Partition1 -[hidden]d- Partition2
+	}
+}
+
+rectangle Consumer as "Consumer Group" {
+		card Consumer1
+		card Consumer2
+		Consumer1 -[hidden]d- Consumer2
+}
+
+Producer -r-> topic
+topic <-r- Consumer
+
+
+
+@enduml
