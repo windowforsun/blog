@@ -109,12 +109,194 @@ use_math: true
 
 
 ### Strimzi 설치와 Kafka 구성하기
+`Kubernetes` 클러스터에서 `Strimzi` 설치와 `Kafka` 구성은 `Strimzi` 의 `Quick Starts` 를 바탕으로 
+간단하게 살펴본다. 
 
+`Strimzi` 설치를 위해서 [minikube](https://kubernetes.io/docs/tasks/tools/#installation) 
+를 사용해서 `Kubernetes` 환경을 구성한다.  
 
+`Docker` 와 `minikube` 버전은 아래와 같다. 
 
+- `Docker` : 20.10.14
+- `minikube` : v1.23.2
 
+메모리 설정이 `4GB` 인 `Kubernetes Cluster` 하나를 `minikube` 명령어로 실행한다.  
 
+```bash
+$ minikube start --memory=4096
+😄  minikube v1.23.2 on Ubuntu 20.04
+🎉  minikube 1.26.1 is available! Download it: https://github.com/kubernetes/minikube/releases/tag/v1.26.1
+💡  To disable this notice, run: 'minikube config set WantUpdateNotification false'
 
+✨  Automatically selected the docker driver. Other choices: none, ssh
+❗  Your cgroup does not allow setting memory.
+    ▪ More information: https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities
+👍  Starting control plane node minikube in cluster minikube
+🚜  Pulling base image ...
+🔥  Creating docker container (CPUs=2, Memory=4096MB) ...
+🐳  Preparing Kubernetes v1.22.2 on Docker 20.10.8 ...
+    ▪ Generating certificates and keys ...
+    ▪ Booting up control plane ...
+    ▪ Configuring RBAC rules ...
+🔎  Verifying Kubernetes components...
+    ▪ Using image gcr.io/k8s-minikube/storage-provisioner:v5
+🌟  Enabled addons: storage-provisioner, default-storageclass
+💡  kubectl not found. If you need it, try: 'minikube kubectl -- get pods -A'
+🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
+```  
+
+`minikube` 로 생성한 `Kubernetes Cluster` 상태를 확인하면 정상적으로 실행 중임을 확인 할 수 있다. 
+
+```bash
+$ minikube status
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+```  
+
+이제 `kubectl` 명령을 사용해서 `Strimzi` 를 사용해서 `Kafka` 를 설치할 `kafka` 네임스페이스를 생성한다.  
+
+```bash
+$ kubectl create namespace kafka
+namespace/kafka created
+$ kubectl get ns | grep kafka
+kafka             Active   11s
+```  
+
+다음은 `ClusterRoles`, `ClusterRoleBidings` 와 `Custom Resource Definitions(CRD)` 를 포함한 `Strimzi` 설치 파일을 `kafka` 네임스페이스에 적용한다.  
+
+```bash
+$ kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
+customresourcedefinition.apiextensions.k8s.io/kafkas.kafka.strimzi.io created
+clusterrole.rbac.authorization.k8s.io/strimzi-cluster-operator-namespaced created
+clusterrole.rbac.authorization.k8s.io/strimzi-kafka-broker created
+customresourcedefinition.apiextensions.k8s.io/kafkatopics.kafka.strimzi.io created
+customresourcedefinition.apiextensions.k8s.io/kafkaconnectors.kafka.strimzi.io created
+clusterrolebinding.rbac.authorization.k8s.io/strimzi-cluster-operator-kafka-client-delegation created
+customresourcedefinition.apiextensions.k8s.io/kafkamirrormaker2s.kafka.strimzi.io created
+customresourcedefinition.apiextensions.k8s.io/kafkabridges.kafka.strimzi.io created
+customresourcedefinition.apiextensions.k8s.io/strimzipodsets.core.strimzi.io created
+clusterrole.rbac.authorization.k8s.io/strimzi-kafka-client created
+clusterrolebinding.rbac.authorization.k8s.io/strimzi-cluster-operator created
+clusterrole.rbac.authorization.k8s.io/strimzi-entity-operator created
+clusterrole.rbac.authorization.k8s.io/strimzi-cluster-operator-global created
+customresourcedefinition.apiextensions.k8s.io/kafkausers.kafka.strimzi.io created
+deployment.apps/strimzi-cluster-operator created
+rolebinding.rbac.authorization.k8s.io/strimzi-cluster-operator-entity-operator-delegation created
+customresourcedefinition.apiextensions.k8s.io/kafkaconnects.kafka.strimzi.io created
+customresourcedefinition.apiextensions.k8s.io/kafkamirrormakers.kafka.strimzi.io created
+clusterrolebinding.rbac.authorization.k8s.io/strimzi-cluster-operator-kafka-broker-delegation created
+configmap/strimzi-cluster-operator created
+customresourcedefinition.apiextensions.k8s.io/kafkarebalances.kafka.strimzi.io created
+rolebinding.rbac.authorization.k8s.io/strimzi-cluster-operator created
+serviceaccount/strimzi-cluster-operator created
+```  
+
+그리고 아래 명령어로 `Pod` 이 정상적으로 `Running` 상태가 되는지 확인한다.  
+
+```bash
+$ kubectl get pod -n kafka -w
+NAME                                        READY   STATUS              RESTARTS   AGE
+strimzi-cluster-operator-597d67c7d6-l59qv   0/1     ContainerCreating   0          3s
+strimzi-cluster-operator-597d67c7d6-l59qv   0/1     Running             0          31s
+strimzi-cluster-operator-597d67c7d6-l59qv   1/1     Running             0          70s
+```  
+
+`kafka` 네임스페이스에 `Strimzi` 의 `Operator` 중 하나인 `Cluster Operator` 가 정상적으로 설치 된 것을 확인 할 수 있다. 
+지금까지 구성된 `Kubernetes` 의 오브젝트는 아래와 같다.  
+
+```bash
+$ kubectl get all -n kafka
+NAME                                            READY   STATUS    RESTARTS   AGE
+pod/strimzi-cluster-operator-597d67c7d6-l59qv   1/1     Running   0          98s
+
+NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/strimzi-cluster-operator   1/1     1            1           99s
+
+NAME                                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/strimzi-cluster-operator-597d67c7d6   1         1         1       98s
+```  
+
+이제 `kafka` 네임스페이스에 `Custom Resource` 생성을 통해 `Apache Zookeeper`, `Apache Kafka` 그리고 `Entity Operator` 를 설치해준다. 
+`Custom Resource` 는 `Strimzi` 에서 기본적으로 제공하는 단일 노드환경의 `Custom Reosurce` 를 사용한다.  
+
+```bash
+$ kubectl apply -f https://strimzi.io/examples/latest/kafka/kafka-persistent-single.yaml -n kafka
+kafka.kafka.strimzi.io/my-cluster created
+```  
+
+그리고 아래 명령어를 사용해서 구성에 필요한 `Kubernetes` 오브젝트인 `Pod`, `Service` 가 모두 시작할 때까지 기다린다.  
+
+```bash
+$ kubectl wait kafka/my-cluster --for=condition=Ready --timeout=300s -n kafka
+
+.. 실행이 완료되면 아래 메시지 출력 ..
+kafka.kafka.strimzi.io/my-cluster condition met
+```  
+
+이제 `Strimzi` 를 사용해서 필요한 `Kafka` 구성은 모두 설치가 왼료 됐다. 
+`kafka` 네임스페이스에 실행된 모든 `Kubernetes` 오브젝트를 확인하면 아래와 같다.  
+
+```bash
+$ kubectl get all -n kafka
+NAME                                             READY   STATUS    RESTARTS   AGE
+pod/my-cluster-entity-operator-5df896f79-bz7tg   3/3     Running   0          26s
+pod/my-cluster-kafka-0                           1/1     Running   0          49s
+pod/my-cluster-zookeeper-0                       1/1     Running   0          102s
+pod/strimzi-cluster-operator-597d67c7d6-l59qv    1/1     Running   0          4m51s
+
+NAME                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                               AGE
+service/my-cluster-kafka-bootstrap    ClusterIP   10.106.114.14   <none>        9091/TCP,9092/TCP,9093/TCP            49s
+service/my-cluster-kafka-brokers      ClusterIP   None            <none>        9090/TCP,9091/TCP,9092/TCP,9093/TCP   49s
+service/my-cluster-zookeeper-client   ClusterIP   10.102.36.223   <none>        2181/TCP                              103s
+service/my-cluster-zookeeper-nodes    ClusterIP   None            <none>        2181/TCP,2888/TCP,3888/TCP            103s
+
+NAME                                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/my-cluster-entity-operator   1/1     1            1           26s
+deployment.apps/strimzi-cluster-operator     1/1     1            1           4m52s
+
+NAME                                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/my-cluster-entity-operator-5df896f79   1         1         1       26s
+replicaset.apps/strimzi-cluster-operator-597d67c7d6    1         1         1       4m51s
+```  
+
+이제 간단한 `Producer` 와 `Consumer` 를 실행해서 `Kafka` 동작을 테스트해본다. 
+테스트를 위해서는 `Producer` 와 `Consumer` 실행이 각각 필요하기 때문에 2개의 터미널이 필요하다.  
+
+먼저 `my-topic` 토픽에 메시지를 `Push` 하는 `Producer` 를 아래 명령을 사용해서 실행한다.  
+
+```bash
+$ kubectl -n kafka run kafka-producer -ti --image=quay.io/strimzi/kafka:0.30.0-kafka-3.2.0 --rm=true --restart=Never -- bin/kafka-console-producer.sh --bootstrap-server my-cluster-kafka-bootstrap:9092 --topic my-topic
+If you don't see a command prompt, try pressing enter.
+>first message
+>second message
+>third message
+```  
+
+그리고 다른 터미널에서 `my-topic` 토픽을 구독해서 메시지를 `Pull` 하는 `Consumer` 를 아래 명령을 사용해서 실행한다.  
+
+```bash
+$ kubectl -n kafka run kafka-consumer -ti --image=quay.io/strimzi/kafka:0.30.0-kafka-3.2.0 --rm=true --restart=Never -- bin/kafka-console-consumer.sh --bootstrap-server my-cluster-kafka-bootstrap:9092 --topic my-topic --from-beginning
+If you don't see a command prompt, try pressing enter.
+first message
+second message
+third message
+```  
+
+`Producer` 에서 입력한 메시지가 `Consumer` 로 정상적으로 전달되는 것을 확인 할 수 있다.  
+
+테스트가 모두 완료된 이후에는 아래 명령으로 `Kafka` 을 구성한 `Kubernetes Cluster` 를 삭제해주면 된다.  
+
+```bash
+$ minikube delete
+🔥  Deleting "minikube" in docker ...
+🔥  Deleting container "minikube" ...
+🔥  Removing /home/windowforsun/.minikube/machines/minikube ...
+💀  Removed all traces of the "minikube" cluster.
+```  
 
 
 ---
