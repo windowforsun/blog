@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[Kafka 개념] Kafka 구조와 기본 개념"
 header:
-overlay_image: /img/kafka-bg.jpg
+  overlay_image: /img/kafka-bg.jpg
 excerpt: '고성능 메시지 브로커인 Apache Kafka 의 아키텍쳐와 구성 요소 및 기본 개념에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
