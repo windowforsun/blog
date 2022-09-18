@@ -288,6 +288,15 @@ __strimzi_store_topic
 ```  
 
 #### Kafkacat 사용하기
+[Kafkacat](https://www.confluent.io/blog/best-kafka-tools-that-boost-developer-productivity/)
+은 카프카를 쉽게 테스트하고 디버깅 할 수 있는 도구이다. 
+사용을 위해서는 별도의 설치가 필요한데 아래 명령어로 설치를 해준다.  
+
+```bash
+$ apt install kafkacat -y
+```  
+
+
 
 #### Kafka Pod 바로 사용하기
 
