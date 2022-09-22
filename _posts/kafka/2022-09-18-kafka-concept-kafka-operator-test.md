@@ -227,6 +227,74 @@ $ echo $NODEPORT
 ### 명령어 실행 방법
 `Kafka` 를 조작할 수 있는 명령어를 사용할 수 있는 방법 중 3가지 방법을 소개한다.  
 
+
+#### Kafka Cluster Pod 바로 사용하기
+`Strimzi` 를 사용해서 구성한 `Kafka` 클러스터의 `Pod` 을 사용해서 명령어를 수행하는 방법이다. 
+사용 가능한 실행 파일은 아래와 같이 확인 할 수 있다.  
+
+```bash
+$ kubectl exec -n kafka my-cluster-kafka-0 -c kafka -- ls bin
+connect-distributed.sh
+connect-mirror-maker.sh
+connect-standalone.sh
+kafka-acls.sh
+kafka-broker-api-versions.sh
+kafka-cluster.sh
+kafka-configs.sh
+kafka-console-consumer.sh
+kafka-console-producer.sh
+kafka-consumer-groups.sh
+kafka-consumer-perf-test.sh
+kafka-delegation-tokens.sh
+kafka-delete-records.sh
+kafka-dump-log.sh
+kafka-features.sh
+kafka-get-offsets.sh
+kafka-leader-election.sh
+kafka-log-dirs.sh
+kafka-metadata-shell.sh
+kafka-mirror-maker.sh
+kafka-producer-perf-test.sh
+kafka-reassign-partitions.sh
+kafka-replica-verification.sh
+kafka-run-class.sh
+kafka-server-start.sh
+kafka-server-stop.sh
+kafka-storage.sh
+kafka-streams-application-reset.sh
+kafka-topics.sh
+kafka-transactions.sh
+kafka-verifiable-consumer.sh
+kafka-verifiable-producer.sh
+trogdor.sh
+windows
+zookeeper-security-migration.sh
+zookeeper-server-start.sh
+zookeeper-server-stop.sh
+zookeeper-shell.sh
+```  
+
+현재 `Kafka` 에 생성된 토픽을 확인 하고 싶다면 아래 명령어로 가능하다.  
+
+```bash
+$ kubectl exec -n kafka my-cluster-kafka-0 -c kafka -- bin/kafka-topics.sh --bootstrap-server :9092 --list
+__consumer_offsets
+__strimzi-topic-operator-kstreams-topic-store-changelog
+__strimzi_store_topic
+```  
+
+자기 자신을 `bootstrap-server` 로 지정하면 되기 때문에 별도로 도메인이나 주소를 알아낼 필요가 없다.  
+
+추후에 사용한다면 아래와 같은 형식이 될 것이다.
+
+```bash
+$ kubectl exec -n kafka my-cluster-kafka-0 -c kafka -- bin/<shell-name>.sh --bootstrap-server :9092 <option and command>
+```  
+
+별도의 구성없이 가장 간편하게 사용할 수 있지만,
+실제로 사용해본 결과 `conumser` 를 실행하고 종료했을 때 간혹 정상종료가 되지 않고 컨슈머 클라이언트가 잔존해 있는 경우가 있다. (터미널 이슈 일 수도 있음)
+
+
 #### Kafka Client Pod 실행하기 
 명령어를 실행해주는 `Pod` 를 동일한 `Kubernetes` 클러스터에 `Pod` 으로 실행해서 사용하는 방법이다. 
 사용을 위해서는 아래 템플릿을 사용한다.  
@@ -287,6 +355,15 @@ __strimzi-topic-operator-kstreams-topic-store-changelog
 __strimzi_store_topic
 ```  
 
+`Kubernetes` 클러스터에서 실행 중인 `Kafka` `Pod` 을 `bootstrap-server` 로 설정해줘야 하기 때문에 도메인을 추가로 지정해 줘야 한다.  
+
+추후에 사용한다면 아래와 같은 형식이 될 것이다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- <shell-name>.sh --bootstrap-server $SVCDNS <option and command>
+```  
+
+
 #### Kafkacat 사용하기
 [Kafkacat](https://www.confluent.io/blog/best-kafka-tools-that-boost-developer-productivity/)
 은 카프카를 쉽게 테스트하고 디버깅 할 수 있는 도구이다. 
@@ -296,9 +373,148 @@ __strimzi_store_topic
 $ apt install kafkacat -y
 ```  
 
+`Kafkacat` 은 `Kubernetes` 클러스터 내부가 아니라 호스트에 설치가 된 상태이다. 
+그러므로 `Kubernetes` 클러스터 내부의 `Pod` 을 외부 프로세스가 접근해야 하기 때문에, 
+앞서 `Kafka` 템플릿에 추가했었던 `NodePort` 를 사용해서 연결을 해줘야 한다. 
+`Kafka` 구성이 모두 정상적으로 됐다면, 아래 명령어를 통해 `NodePort` 값을 추출해올 수 있다. 
+
+```bash
+$ NODEPORT=$(kubectl get svc -n kafka my-cluster-kafka-external-bootstrap -o jsonpath={.spec.ports[0].nodePort})
+$ echo $NODEPORT
+30470
+```  
+
+`Kafkacat` 을 사용해서 생성된 토픽과 `Kafka` 클러스터의 상세 정보를 리스팅하면 아래와 같다.  
+
+```bash
+.. 192.168.49.2 은 minikube node ip ..
+$ kafkacat -L -b 192.168.49.2:$NODEPORT
+Metadata for all topics (from broker -1: 192.168.49.2:30470/bootstrap):
+ 3 brokers:
+  broker 0 at 192.168.49.4:30342
+  broker 2 at 192.168.49.2:31899
+  broker 1 at 192.168.49.3:31916 (controller)
+ 3 topics:
+  topic "__consumer_offsets" with 50 partitions:
+    partition 0, leader 2, replicas: 2,1,0, isrs: 1,0,2
+    partition 1, leader 1, replicas: 1,0,2, isrs: 1,0,2
+
+    .. 생략 ..
+
+    partition 48, leader 2, replicas: 2,1,0, isrs: 1,0,2
+    partition 49, leader 1, replicas: 1,0,2, isrs: 1,0,2
+  topic "__strimzi-topic-operator-kstreams-topic-store-changelog" with 1 partitions:
+    partition 0, leader 1, replicas: 1,0,2, isrs: 1,0,2
+  topic "__strimzi_store_topic" with 1 partitions:
+    partition 0, leader 0, replicas: 0,2,1, isrs: 1,0,2
+```  
+
+추후에 사용한다면 아래와 같은 형식이 될 것이다.
+
+```bash
+$ kafkacat -b <MINIKUBE_NODE_IP>:$NODEPORT <option and command>
+```  
+
+### Topic 조회
+현재 `Kafka` 에 생성된 모든 `Topic` 의 리스트는 아래 명령어로 가능하다.  
+
+```bash
+.. kafka-topics.sh --bootstrap-server $SVCDNS --list ..
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --list
+__consumer_offsets
+__strimzi-topic-operator-kstreams-topic-store-changelog
+__strimzi_store_topic
+```  
+
+모든 `Topic` 에 대한 자세한 정보는 아래 명령어로 한번에 조회 할 수 있다.  
+
+```bash
+.. kafka-topics.sh --bootstrap-server $SVCDNS --describe ..
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --describe
+Topic: __strimzi_store_topic    TopicId: To8DEqdrQ7ynnDfx2iDOCg PartitionCount: 1       ReplicationFactor: 3    Configs: min.insync.replicas=2,message.format.version=3.0-IV1
+        Topic: __strimzi_store_topic    Partition: 0    Leader: 0       Replicas: 0,2,1 Isr: 1,0,2
+Topic: __strimzi-topic-operator-kstreams-topic-store-changelog  TopicId: _MZQk56OQDWBDLcIhIbqIA PartitionCount: 1       ReplicationFactor: 3    Configs: min.insync.replicas=2,cleanup.policy=compact,segment.bytes=67108864,message.format.version=3.0-IV1,min.compaction.lag.ms=0,message.timestamp.type=CreateTime
+        Topic: __strimzi-topic-operator-kstreams-topic-store-changelog  Partition: 0    Leader: 1       Replicas: 1,0,2 Isr: 1,0,2
+Topic: __consumer_offsets       TopicId: CrQY-RtPQyahyDTnbsvYWQ PartitionCount: 50      ReplicationFactor: 3    Configs: compression.type=producer,min.insync.replicas=2,cleanup.policy=compact,segment.bytes=104857600,message.format.version=3.0-IV1
+        Topic: __consumer_offsets       Partition: 0    Leader: 2       Replicas: 2,1,0 Isr: 1,0,2
+        Topic: __consumer_offsets       Partition: 1    Leader: 1       Replicas: 1,0,2 Isr: 1,0,2
+
+        ... 생략 ...
+
+        Topic: __consumer_offsets       Partition: 48   Leader: 2       Replicas: 2,1,0 Isr: 1,0,2
+        Topic: __consumer_offsets       Partition: 49   Leader: 1       Replicas: 1,0,2 Isr: 1,0,2
+```  
+
+특정 `Topic` 에 대한 상세 정보도 조회 할 수 있다.  
+
+```bash
+.. kafka-topics.sh --bootstrap-server $SVCDNS --describe --topic __strimzi_store_topic ..
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --describe --topic __strimzi_store_topic
+Topic: __strimzi_store_topic    TopicId: To8DEqdrQ7ynnDfx2iDOCg PartitionCount: 1       ReplicationFactor: 3    Configs: min.insync.replicas=2,message.format.version=3.0-IV1
+        Topic: __strimzi_store_topic    Partition: 0    Leader: 0       Replicas: 0,2,1 Isr: 1,0,2
+```  
+
+마지막으로 `kubectl` 을 사용해서 `kafka` 리소스를 바탕으로 생성된 `Topic` 을 조회할 수도 있다.  
+
+```bash
+$ kubectl get kafkatopics -n kafka
+NAME                                                                                               CLUSTER      PARTITIONS   REPLICATION FACTOR   READY
+consumer-offsets---84e7a678d08f4bd226872e5cdd4eb527fadc1c6a                                        my-cluster   50           3                    True
+strimzi-store-topic---effb8e3e057afce1ecf67c3f5d8e4e3ff177fc55                                     my-cluster   1            3                    True
+strimzi-topic-operator-kstreams-topic-store-changelog---b75e702040b99be8a9263134de3507fc0cc4017b   my-cluster   1            3                    True
+```  
+
+### Topic 생성
+새로운 `Topic` 을 생성하는 방법은 2가지가 있는데 하나는 `Strimzi` 템플릿을 만들어서 생성하는 것과 다른 하나는 명령어를 사용하는 방법이다. 
+먼저 `Strimzi` 템플릿을 통해 `CRD` 를 사용하는 방법은 아래와 같은 템플릿을 생성해주면 된다.  
+
+```yaml
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: my-strimzi-topic
+  labels:
+    strimzi.io/cluster: "my-cluster"
+  namespace: kafka
+spec:
+  partitions: 2
+  replicas: 2
+  config:
+    retention.ms: 7200000
+    segment.bytes: 1073741824
+    min.insync.replicas: 2%
+```  
+
+그리고 `Kubernetes` 클러스터에 적용하고 `Topic` 을 조회하면 아래와 같다.  ????????????
+
+```bash
+???
+$ kubectl get kafkatopics -n kafka
+NAME                                                                                               CLUSTER      PARTITIONS   REPLICATION FACTOR   READY
+consumer-offsets---84e7a678d08f4bd226872e5cdd4eb527fadc1c6a                                        my-cluster   50           3                    True
+my-strimzi-topic                                                                                   my-cluster   1            3
+strimzi-store-topic---effb8e3e057afce1ecf67c3f5d8e4e3ff177fc55                                     my-cluster   1            3                    True
+strimzi-topic-operator-kstreams-topic-store-changelog---b75e702040b99be8a9263134de3507fc0cc4017b   my-cluster   1            3                    True
+```  
+
+### Topic 수정
+
+### Topic 삭제
+
+### Producer, Consumer 사용
+--from-beginning
 
 
-#### Kafka Pod 바로 사용하기
+### Consumer Group 조회
+list describe 
+
+### Consumer Group 생성
+
+### Consumer Group Offset 초기화
+
+### Consumer Group 삭제 
+
+
 
 
 
