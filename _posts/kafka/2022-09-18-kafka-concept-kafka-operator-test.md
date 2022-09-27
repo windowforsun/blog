@@ -472,7 +472,7 @@ strimzi-topic-operator-kstreams-topic-store-changelog---b75e702040b99be8a9263134
 apiVersion: kafka.strimzi.io/v1beta2
 kind: KafkaTopic
 metadata:
-  name: my-strimzi-topic
+  name: test-topic-first
   labels:
     strimzi.io/cluster: "my-cluster"
   namespace: kafka
@@ -485,37 +485,140 @@ spec:
     min.insync.replicas: 2%
 ```  
 
-그리고 `Kubernetes` 클러스터에 적용하고 `Topic` 을 조회하면 아래와 같다.  ????????????
+그리고 명령어 사용해서 `test-topic-first` 토픽을 생성하는 명령어는 아래와 같다.  
 
 ```bash
-???
-$ kubectl get kafkatopics -n kafka
-NAME                                                                                               CLUSTER      PARTITIONS   REPLICATION FACTOR   READY
-consumer-offsets---84e7a678d08f4bd226872e5cdd4eb527fadc1c6a                                        my-cluster   50           3                    True
-my-strimzi-topic                                                                                   my-cluster   1            3
-strimzi-store-topic---effb8e3e057afce1ecf67c3f5d8e4e3ff177fc55                                     my-cluster   1            3                    True
-strimzi-topic-operator-kstreams-topic-store-changelog---b75e702040b99be8a9263134de3507fc0cc4017b   my-cluster   1            3                    True
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --create --replication-factor 2 --partitions 1 --topic test-topic-first
+Created topic test-topic-first.
 ```  
 
-### Topic 수정
+`Topic` 을 조회하면 아래와 같이 `replication-factor = 2`, `partitions = 1` 로 생성된 것을 확인 할 수 있다.  
 
-### Topic 삭제
+
+```bash
+$ kubectl get kafkatopics -n kafka
+NAME                                                                                               CLUSTER      PARTITIONS   REPLICATION FACTOR   READY
+test-topic-first                                                                                   my-cluster   1            2                    True
+```  
 
 ### Producer, Consumer 사용
---from-beginning
+`Producer`, `Consumer` 를 사용하는 테스트 진행을 위해서는 2개 이상의 터미널이 필요하다. 
+먼저 한 터미널에 아래 명령으로 `test-topic-first` 에 메시지를 생산하는 `Producer` 를 실행해 준다.   
 
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-producer.sh --bootstrap-server $SVCDNS --topic test-topic-first
+> {메시지 입력}
+```  
+
+그리고 다른 터미널에 `test-topic-first` 에서 방출되는 메시지를 소비하는 `Consumer` 를 실행해 준다. 
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first
+```  
+
+이제 `Producer` 터미널에 입력한 메시지가 `Consumer` 터미널에서 출력되는 것을 확인 할 수 있다.  
+
+```bash
+.. Producer ..
+>myMessage-1
+>myMessage-2
+>myMessage-3
+
+.. Consumer ..
+myMessage-1
+myMessage-2
+myMessage-3
+```  
+
+만약 `Consumer` 가 해당 `Topic` 의 처음부터 구독하고 싶다면 `--from-beginning` 옵션을 추가해주면 아래와 같이 처음 메시지 부터 현시점까지 방출된 메시지를 모두 받아 볼 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --from-beginning
+myMessage-1
+myMessage-2
+myMessage-3
+```
 
 ### Consumer Group 조회
-list describe 
+앞서 `kafka-console-consumer.sh` 를 사용해서 토픽을 구독해 메시지를 수신했다. 
+`Kafka` 는 이런 토픽을 구동하는 것을 `Consumer Group` 이라는 단위로 관리한다. 
+우리가 `kafka-console-consumer.sh` 로 토픽의 메시지를 구독할때 해당 터미널에서 사용할 `Consumer Group` 이 새롭게 생성된 것이다. 
+지금까지 생성된 `Consumer Group` 을 조회하는 명령어는 아래와 같다.  
 
-### Consumer Group 생성
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --list
+
+console-consumer-91491
+console-consumer-1854
+__strimzi-topic-operator-kstreams
+```  
+
+`kafka-console-consumer.sh` 을 사용해서 생성된 `Consumer Group` 들은 `console-consumer-<숫자>` 형식으로 생성되는 것을 확인 할 수 있다.  
+
+`Consumer Group` 의 자세한 정보를 보면 토픽의 상태도 가늠해 볼 수 있을 정도로 중요하다. 
+파티션, `offset`, `lag` 에 대한 자세한 정보를 조회하는 명령어는 아래와 같다. 
+관련 정보는 실제로 `Consumer Group` 을 사용하고 있는 애플리케이션이 동작중이여야 조회 할 수 있기 때문에 동작중인 걸로 조회를 수행한다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group console-consumer-60038 --describe
+
+GROUP                  TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                           HOST            CLIENT-ID
+console-consumer-60038 test-topic-first 0          -               3               -               console-consumer-feb14eeb-cc0a-46a1-b7fd-ddd2520346fb /10.244.2.5     console-consumer
+```  
+
+파티션은 1개, `offset` 은 4, `lag` 는 존재하지 않는 상태이다.  
+
+
+### Consumer Group 생성 및 사용
+특정 `Consumer Group` 은 `consumer` 사용시 `Consumer Group` 이름을 명시적으로 지정해주면 생성할 수 있다. 
+아래는 `test-topic-first-group-1` 을 생성하는 명령어이자, 특정 `Consumer Group` 을 지징해서 토픽을 구독하는 명령이다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1
+```  
+
+다시 `Consumer Group` 목록을 조회하면 `test-topic-first-group-1` 이 정상적으로 생성된 것을 확인 할 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --list
+test-topic-first-group-1
+```  
 
 ### Consumer Group Offset 초기화
+`offset` 초기화는 메시지를 다시 전송받아야 하는 경우에 `offset` 을 초기화해서 토픽의 메시지를 다시 수신할 수 있다. 
+`--topic` 으로 특정 토픽을 지정할 수도 있고, `--all-topic` 으로 전체 토픽에 설정할 수 있다. 
+`--execute` 옵션을 제거하고 실행하면 실제 반영되지 않고 어떤 결과가 나오는지 출력만 한다.  
 
-### Consumer Group 삭제 
+
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group test-topic-first-group-1 --describe
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest
+
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group test-topic-first-group-1 --describe
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest --execute
+```  
+
+
+### Consumer Group 삭제
+
+
+### Topic 수정
+앞서 생성한 `test-topic-first` `Topic` 의 설정 정보을 수정해본다. 
+`partitions` 를 1에서 2로 변경하는 명령어는 아래와 같다.  
+
+```bash
+
+```  
 
 
 
+
+
+
+
+
+### Topic 삭제
 
 
 
