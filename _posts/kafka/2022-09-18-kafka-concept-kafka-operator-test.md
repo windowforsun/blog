@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka 명령어 사용하기"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 를 운영하고 제어하는데 필요한 몇가지 명령어를 사용하고 익혀보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,6 +16,7 @@ tags:
   - Kubernetes
   - Strimzi
   - Minikube
+  - Command
 toc: true
 use_math: true
 ---  
@@ -123,6 +124,12 @@ $ minikube start --nodes=3 --memory=4096
 
 ```  
 
+> Apple Silicon 에서는 아래 명령으로 실행이 필요하다. (2022/09/28 기준)(minikube, podman 설치 필요)
+> 
+> ```bash
+> $ minikube start --nodes=3 --memory=4096 --driver=podman --kubernetes-version=v1.23.1
+> ```
+
 이제 명령어로 템플릿을 `Kubernetes` 클러스터에 적용해주면 아래와 같이 실행된 구성을 확인 할 수 있다. 
 
 ```yaml
@@ -215,6 +222,14 @@ $ kubectl get kafka -n kafka my-cluster -o jsonpath={.status} | jq -r ".listener
   }
 ]
 ```  
+
+> Mac 에서는 아래 명령으로 실행이 필요하다.
+>
+> ```bash
+> $ kubectl get kafka -n kafka my-cluster -o jsonpath={.status.listeners}
+> 
+> $ kubectl get kafka -n kafka my-cluster -o json | jq -r ".status.listeners"
+> ```
 
 테스트를 위해 추가로 설정한 `NodePort` 인 `30470` 을 이후 테스트에서 사용하기 위해 환경변수로 지정해 준다.  
 
@@ -556,8 +571,7 @@ __strimzi-topic-operator-kstreams
 `kafka-console-consumer.sh` 을 사용해서 생성된 `Consumer Group` 들은 `console-consumer-<숫자>` 형식으로 생성되는 것을 확인 할 수 있다.  
 
 `Consumer Group` 의 자세한 정보를 보면 토픽의 상태도 가늠해 볼 수 있을 정도로 중요하다. 
-파티션, `offset`, `lag` 에 대한 자세한 정보를 조회하는 명령어는 아래와 같다. 
-관련 정보는 실제로 `Consumer Group` 을 사용하고 있는 애플리케이션이 동작중이여야 조회 할 수 있기 때문에 동작중인 걸로 조회를 수행한다.  
+파티션, `offset`, `lag` 에 대한 자세한 정보를 조회하는 명령어는 아래와 같다.  
 
 ```bash
 $ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group console-consumer-60038 --describe
@@ -574,7 +588,10 @@ console-consumer-60038 test-topic-first 0          -               3            
 아래는 `test-topic-first-group-1` 을 생성하는 명령어이자, 특정 `Consumer Group` 을 지징해서 토픽을 구독하는 명령이다.  
 
 ```bash
-$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --from-beginning
+myMessage-1
+myMessage-2
+myMessage-3
 ```  
 
 다시 `Consumer Group` 목록을 조회하면 `test-topic-first-group-1` 이 정상적으로 생성된 것을 확인 할 수 있다.  
@@ -582,6 +599,8 @@ $ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-se
 ```bash
 $ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --list
 test-topic-first-group-1
+console-consumer-91491
+console-consumer-1854
 ```  
 
 ### Consumer Group Offset 초기화
@@ -590,42 +609,250 @@ test-topic-first-group-1
 `--execute` 옵션을 제거하고 실행하면 실제 반영되지 않고 어떤 결과가 나오는지 출력만 한다.  
 
 
+옵션|설명
+---|---
+`--shift-by <Long: number-of-offsets>`|현재 offset에서 +/- 만큼 offset을 증가/감소 한다.
+`--to-offset <Long: offset>`|지정한 offset 으로 이동한다.
+`--by-duration <String: duration>`|현재 시간에서 특정 시간만큼 이전으로 offset을 이동한다. 형식 `PnDnHmMnSn` (e.g. P7D : 일주일전)
+`--to-datetime <String: datetime>`|특정 날씨로 offset을 이동시킨다. 형식 `YYYY-MM-DDTHH:mm:SS.sss`
+`--to-latest`|가장 마지막 offset 값(offset 최대값)으로 이동한다. 
+`--to-earlist`|가장 처음 offset 값(offset 최소값)으로 이동한다.
+
+
+현재 `test-topic-first-group-1` 의 상세 정보를 확인하면 아래와 같다. 
 
 ```bash
 $ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group test-topic-first-group-1 --describe
-$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest
 
-$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group test-topic-first-group-1 --describe
-$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest --execute
+Consumer group 'test-topic-first-group-1' has no active members.
+
+GROUP                    TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID     HOST            CLIENT-ID
+test-topic-first-group-1 test-topic-first 0          4               4               0               -               -               -
 ```  
 
+`offset` 이 최대값이므로 마지막(최신) 메시지가까지 모두 수신한 상태이다. 
+위 상태에서 `--to-earlist` 로 `--execute` 없이 `offset` 초기화명령어롤 수행해주면 아래와 같다. 
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest
+WARN: No action will be performed as the --execute option is missing.In a future major release, the default behavior of this command will be to prompt the user before executing the reset rather than doing a dry run. You should add the --dry-run option explicitly if you are scripting this command and want to keep the current default behavior without prompting.
+
+GROUP                          TOPIC                          PARTITION  NEW-OFFSET     
+test-topic-first-group-1       test-topic-first               0          0   
+```  
+
+`NEW-OFFSET` 이라는 필드를 통해 해당 명령을 수행하면 가장 처음값 `0` 으로 `offset` 이설정 된다는 것을 출력해준다. 
+다시 `test-topic-first-group-1` 을 사용해서 `test-topic-first` 토픽을 구독하더라도 `offset` 초기화가 실제되 되지 않았고, 이후 생상된 메시지도 없기 때문에 아무런 메시지도 출력되지 않는다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-first-topic-group-1
+
+.. 메시지 출력 없음 ..
+```  
+
+이제 `--execute` 옵션을 추가해서 실제로 수행해본다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1 --reset-offsets --to-earliest --execute
+
+GROUP                          TOPIC                          PARTITION  NEW-OFFSET     
+test-topic-first-group-1       test-topic-first               0          0  
+```  
+
+다시 `test-topic-first-group-1` 의 상세 정보를 확인하면 `offset` 이 `0` 으로 초기화 돼면서 4개의 `lag` 이 생긴것을 확인 할 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --group test-topic-first-group-1 --describe
+
+Consumer group 'test-topic-first-group-2' has no active members.
+
+GROUP                    TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET LAG            CONSUMER-ID     HOST            CLIENT-ID
+test-topic-first-group-1 test-topic-first 0          0               4              4              -               -               -
+```
+
+실제로 `offset` 이 초기화 됐기 때문에 `test-topic-first` 를 구독할때 `--from-beginning` 옵션이 없더라도 처음 메시지부터 다시 수신하게 된다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1
+myMessage-1
+myMessage-2
+myMessage-3
+```  
 
 ### Consumer Group 삭제
-
-
-### Topic 수정
-앞서 생성한 `test-topic-first` `Topic` 의 설정 정보을 수정해본다. 
-`partitions` 를 1에서 2로 변경하는 명령어는 아래와 같다.  
+`Consumer Group` 을 삭제할 때는 `Consumer Group` 을 사용하고 있는 `Consumer`(`Application`) 이 존재해서는 안된다. 
+만약 아직 종료되지 않은 `Consumer` 가 존재한 상태에서 삭제하려고 하면 아래와 같은 메시지가 출력 된다.  
 
 ```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --delete --group test-topic-first-group-1 
 
+Error: Deletion of some consumer groups failed:
+* Group 'test-topic-first-group-1' could not be deleted due to: java.util.concurrent.ExecutionException: org.apache.kafka.common.errors.GroupNotEmptyException: The group is not empty.
 ```  
 
+실행 중인 `Consumer` 를 모두 종료하고 식재할 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-consumer-groups.sh --bootstrap-server $SVCDNS --delete --group test-topic-first-group-1
+Deletion of requested consumer groups ('test-topic-first-group-1') was successful.
+```  
+
+### Topic 수정
+`test-topic-first` 토픽은 `Partitions` 이 1개인 상태로 생성했다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --topic test-topic-first --describe
+Topic: test-topic-first TopicId: L3xWP_IASIqXeAIrp7bBKg PartitionCount: 1       ReplicationFactor: 2    Configs: min.insync.replicas=2,message.format.version=3.0-IV1
+        Topic: test-topic-first Partition: 0    Leader: 2       Replicas: 2,1   Isr: 2,1
+```  
+
+토픽의 처리량을 늘리기위해 `Partition` 을 1개에서 2개로 늘려야 한다면 아래 명령어로 가능하다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --topic test-topic-first -alter --partitions 2
+```  
+
+다시 `test-topic-first` 의 상세 정보를 조회하면 아래와 같이 `Partition` 이 2개로 설정된 것을 확인 할 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --topic test-topic-first --describe
+Topic: test-topic-first TopicId: L3xWP_IASIqXeAIrp7bBKg PartitionCount: 2       ReplicationFactor: 2    Configs: min.insync.replicas=2,message.format.version=3.0-IV1
+        Topic: test-topic-first Partition: 0    Leader: 2       Replicas: 2,1   Isr: 2,1
+        Topic: test-topic-first Partition: 1    Leader: 0       Replicas: 0,1   Isr: 0,1
+```  
+
+이전에 `Partition` 이 1개 일때 동일한 `Consumer Group` 을 1개를 초과하는 `Consumer` 가 사용중이라면 실제 메시지는 특정 1개 `Consumer` 에게만 전달된다. 
+
+> 매핑된 `Consumer` 외 다른 `Consumer` 들은 현재 매핑된 `Consumer` 가 가용 불가 상황이 됐을 떄 바로 메세지를 받아 처리 할 수 있도록 백업 용도로 사용 가능하다.  
+
+지금은 `Partition` 을 2개로 늘린 상태이므로 `Consumer Group` 에 2개의 `Consumer` 까지는 병렬로 메시지 전달이 가능하다. 
+여기서 병령이라는 것은 푸시 된 메시지가 2개의 `Partition` 중 한개에 저장되고, 만약 2개의 `Consumer` 를 사용한다면 각각 서로다른 하나의 `Partition` 과 연결을 맺여 메시지를 수신받게 된다. 
+이를 통해 `Consumer` 의 성능이 부족해 지속적인 `Consumer Lag` 이 발생할 때 `Partition` 과 `Consumer` 를 늘려 동시성을 증가 시킬 수 있다. 
 
 
+```bash
+.. Producer ..
+$ kubectl exec -it test-kafka-client -- kafka-console-producer.sh --bootstrap-server $SVCDNS --topic test-topic-first
+>myMessage2-1
+>myMessage2-2
+>myMessage2-3
+>myMessage2-4
+
+.. First Consumer ..
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1
+myMessage2-1
+myMessage2-3
+
+.. Second Consumer ..
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --group test-topic-first-group-1
+myMessage2-2
+myMEssage2-4
+```  
+
+### Topic 메시지 삭제
+토픽에 저장된 메시지를 삭제가 필요한 경우 `json` 파일을 작성해서 가능하다. 
+
+먼저 테스트용으로 사용할 `test-topic-first` 의 전체 메시지 목록은 아래와 같다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --from-beginning
+myMessage2-1
+myMessage2-2
+myMessage2-3
+myMessage2-4
+```  
+
+아래 `json` 파일은 2개 파티션 중 `Partition 0` 의 `offset` 을 `-1` 로 설정해서 파티션에 해당하는 모든 메시지를 지우는 내용이다.  
 
 
+```json
+{
+  "partitions": [
+    {
+      "topic": "test-topic-first",
+      "partition": 0,
+      "offset": -1
+    }
+  ],
+  "version": 1
+}
+```  
 
+해당 명령어 실행을 위해서는 `test-kafka-client` 에서 직접 실행이 필요하다. 
+먼저 아래 명령으로 위 내용이 작성된 `delete-partition-all-recrods.sh` 파일을 `test-kafka-client` 로 복사해준다.  
+
+```bash
+$ kubectl cp ./delete-partition-all-records.json default/test-kafka-client:/tmp/delete-partition-all-records.json
+```  
+
+그리고 `test-kafka-client` 에 접속한 다음 아래 명령으로 `Partition 0` 에 해당하는 모든 메시지만 삭제한다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- bash
+$ kafka-delete-records.sh --bootstrap-server my-cluster-kafka-bootstrap.kafka.svc:9092 --offset-json-file ./tmp/delete-partition-all-records.json
+Executing records delete operation
+Records delete operation completed:
+partition: test-topic-first-0   low_watermark: 55
+```  
+
+그리고 `--from-beginning` 을 사용해서 `test-topic-first` 에 있는 모든 메시지를 수신하면 `Parition 0` 은 메시지는 모두 삭제 됐기 때문에 절반의 메시지만 수신되는 것을 확인 할 수 있다.  
+
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --from-beginning
+myMessage2-1
+myMessage2-3
+```  
+
+아래 내용은 토픽에 포함된 모든 파티션의 `offset` 을 초기화하는 내용이기 때문에 전체 메시지가 모두 삭제 된다.  
+
+```bash
+{
+  "partitions": [
+    {
+      "topic": "test-topic-first",
+      "partition": 0,
+      "offset": -1
+    },
+    {
+      "topic": "test-topic-first",
+      "partition": 1,
+      "offset": -1
+    }
+  ],
+  "version": 1
+}
+```  
+
+다시 `Container` 로 복사하고 명령을 수행하면 `--from-beginning` 으로 수신하더라도 어떤 메시지도 수신되지 않는 것을 확인 할 수 있다.  
+
+```bash
+$ kubectl cp ./delete-topic-all-records.json default/test-kafka-client:/tmp/delete-topic-all-records.json
+
+$ kafka-delete-records.sh --bootstrap-server my-cluster-kafka-bootstrap.kafka.svc:9092 --offset-json-file ./tmp/delete-topic-all-records.json
+Executing records delete operation
+Records delete operation completed:
+partition: test-topic-first-1   low_watermark: 24
+partition: test-topic-first-0   low_watermark: 55
+
+$ kubectl exec -it test-kafka-client -- kafka-console-consumer.sh --bootstrap-server $SVCDNS --topic test-topic-first --from-beginning
+.. 모든 메시지가 삭제 됐기 때문에 메시지 출력이 되지 않는다 ..
+```  
 
 
 ### Topic 삭제
+사용을 마친 토픽은 삭제할 수 있는데 실행 중인 `Consumer` 가 존재하는 하더라도 토픽은 삭제되기 때문에, 
+실행중인 `Consumer` 애플리케이션에서 에러가 발생할 수 있기 때문에 주의해야 하고 모든 `Consumer` 를 종료하고 삭제를 수행해야 한다.  
 
-
-
+```bash
+$ kubectl exec -it test-kafka-client -- kafka-topics.sh --bootstrap-server $SVCDNS --topic test-topic-first --delete
+```  
 
 
 
 
 ---
 ## Reference
-[Strimzi Quick Starts](https://strimzi.io/quickstarts/)  
+[Kafka CLI Tutorials](https://www.conduktor.io/kafka/kafka-cli-tutorial)  
+[APACHE KAFKA QUICKSTART](https://kafka.apache.org/quickstart)  
+[Important Kafka CLI Commands to Know in 2022](https://hevodata.com/learn/kafka-cli-commands/)  
+[KAFKA TUTORIAL: USING KAFKA FROM THE COMMAND LINE](http://cloudurable.com/blog/kafka-tutorial-kafka-from-command-line/index.html)  
