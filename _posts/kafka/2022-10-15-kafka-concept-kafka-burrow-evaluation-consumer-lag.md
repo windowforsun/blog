@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Burrow Consumer Lag Evaluation Rules"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Burrow 에서 Consumer Lag 를 평가하는 기준과 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -75,7 +75,7 @@ ERROR|STOPPED|`consumer offset` 의 가장 최근시간과 현재시간의 차�
 하지만 이후 6번 `offset commit` 동안 `lag` 값이 5로 유지되거나 증가한다면 `consumer` 는 `WARNING` 상태로 변경될 수 있다.  
 
 
-### Example 2) Consumer ERROR, Partition STALLED
+#### Example 2) Consumer ERROR, Partition STALLED
 
 |	|W1	|W2	|W3	|W4	|W5	|W6	|W7	|W8	|W9	|W10
 |---|---|---|---|---|---|---|---|---|---|---
@@ -88,8 +88,7 @@ ERROR|STOPPED|`consumer offset` 의 가장 최근시간과 현재시간의 차�
 `consumer` 는 실행 중이고 `offset commit` 을 수행하곤 있지만, 정상적으로 `parsition` 의 값을 사용중이지 못하므로 지연도 늘어나고 있는 상태이다.  
 
 
-### Example 3) Consumer WARNING, Partition OK
-
+#### Example 3) Consumer WARNING, Partition OK
 
 |	|W1	|W2	|W3	|W4	|W5	|W6	|W7	|W8	|W9	|W10
 |---|---|---|---|---|---|---|---|---|---|---
@@ -97,8 +96,44 @@ ERROR|STOPPED|`consumer offset` 의 가장 최근시간과 현재시간의 차�
 |Lag|	1|	1|	1|	1|	1|	2|	2|	2|	3|	3
 |Timestamp|	T|	T+60|	T+120|	T+180|	T+240|	T+300|	T+360|	T+420|	T+480|	T+540
 
+위 윈도우는 `offset` 값은 계속해서 증가하고 있기 때문에, `Partition` 은 `OK` 상태라고 할 수 있다. 
+하지만 `Consumer` 의 `lag` 또한 함꼐 증가하고 있기 때문에 `WARNING` 상태이다. 
+이는 `Consumer` 에 장애가 발생했다기 보다는 `Consumer` 가 사용할 수 있는 메시지보다 더 많은 메시지가 생산되고 있을 수도 있고, 
+`Consumer` 처리에 지연이 발생하고 있다고 추측할 수 있다.  
 
-### Example 4) 
+
+#### Example 4) Consumer OK, Partition OK
+
+|	|W1	|W2	|W3	|W4	|W5	|W6	|W7	|W8	|W9	|W10
+|---|---|---|---|---|---|---|---|---|---|---
+|Offset	|10	|20	|30	|40	|50	|60	|70	|80	|90	|100
+|Lag	|5	|3	|5	|2	|1	|1	|2	|1	|4	|6
+|Timestamp	|T	|T+60	|T+120	|T+180	|T+240	|T+300	|T+360	|T+420	|T+480	|T+540
+
+위 윈도우의 `offset` 은 점차 증가하고 있기 때문에 `Partition` 은 `OK` 상태이다. 
+`lag` 를 보면 증가하는 구간도 있지만 감소하는 구간도 존재하는 상태인데 이는 일반적인 `Consumer` 의 `OK` 상태라고 할 수 있다. 
+윈도우의 일부분에 따라잡는 구간이 있기 때문에 `Consumer` 가 바쁘게 메시지를 소비하고 있는 상황으로 추측할 수 있다.  
+
+
+#### Example 5) Consumer ERROR, Partition STOPED
+
+|	|W1	|W2	|W3	|W4	|W5	|W6	|W7	|W8	|W9	|W10
+|---|---|---|---|---|---|---|---|---|---|---
+|Offset	|10	|20	|30	|40	|50	|60	|70	|80	|90	|100
+|Lag	|5	|3	|5	|2	|1	|1	|2	|1	|4	|6
+|Timestamp	|T	|T+60	|T+120	|T+180	|T+240	|T+300	|T+360	|T+420	|T+480	|T+540
+
+위 윈도우는 `Example 4` 와 동일한 상태이다. 
+앞서 언급한 것처럼 `Consumer`, `Partition` 모두 `OK` 이지만, 
+만약 위 상태를 실제 측정한 시간이 `T+1200` 이라면 `Partition` 은 `STOPPED` 이고 `Consumer` 는 `ERROR` 인 상태이다. 
+마지막으로 저장된 윈도우에서 첫 번째와 마지막 오프셋의 차이는 `T+540 - T = 540` 이다. 
+그리고 현재와 윈도우의 마지막 오프셋의 차이는 `T+1200 - T+540 = 660` 이므로 
+이는 `T+540` 이후 부터 `Consumer` 가 `offset` 커밋을 중지혹은 실패한 상황으로 추측해 볼 수 있다.  
+
+### Offset Expiration
+`Burrow` `Storage Subsystem` 의 `expire-group` 설정을 통해 `offset commit` 이 이뤄지지 않는 `Consumer` 를 삭제할 만료시간을 설정할 수 있다. 
+각 파티션에 대해 최신 오프셋이 `expire-group` 에 지정된 시간보다 오래 전에 수신되었다면, 해당 `Consumer` 에 대한 정보들을 삭제한다. 
+
 
 ---
 ## Reference
