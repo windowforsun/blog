@@ -250,7 +250,131 @@ BenchmarkModes.measureAll                                 ss     2   6.261      
 ```  
 
 #### @OutputTimeUint
-벤치마크 테스트를 수행 결과를 출력할 시간 단위를 설정할 수 있다. 
+벤치마크 테스트를 수행 결과를 출력할 시간 단위를 `TimeUnit` 을 통해 설정할 수 있다. 
+그 종류는 아래와 같다.  
+
+- `TimeUnit.NANOSECONDS`
+- `TimeUnit.MICROSECONDS`
+- `TimeUnit.MILLISECONDS`
+- `TimeUnit.SECONDS`
+- `TimeUnit.MINUTES`
+- `TimeUnit.HOURS`
+- `TimeUnit.DAYS`
+
+예제 코드는 아래와 같다. 
+
+```java
+public class OutputTimeUnits {
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.HOURS)
+    public void hours() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.MINUTES)
+    public void minutes() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.SECONDS)
+    public void seconds() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.MILLISECONDS)
+    public void millis() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public void micro() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    @Benchmark
+    @OutputTimeUnit(TimeUnit.NANOSECONDS)
+    public void nanoseconds() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
+    }
+}
+```  
+
+```bash
+Benchmark                     Mode  Cnt      Score   Error    Units
+OutputTimeUnits.hours        thrpt       34599.875           ops/hr
+OutputTimeUnits.micro        thrpt          ≈ 10⁻⁵           ops/us
+OutputTimeUnits.millis       thrpt           0.010           ops/ms
+OutputTimeUnits.minutes      thrpt         578.952          ops/min
+OutputTimeUnits.nanoseconds  thrpt          ≈ 10⁻⁸           ops/ns
+OutputTimeUnits.seconds      thrpt           9.647            ops/s
+```  
+
+#### @State
+`JMH` 를 사용해서 테스트를 할때 수행하는 메소드의 `Arguement` 를 주입할 수 있는데, 이 `Arguement` 의 상태를 지정하는 것이 바로 `@State` 이다. 
+`@State` 를 통해 테스트 횟수마다 초기화가 필요하거나, 테스트 전체에서 계속 값을 유지해야 하는 등의 `Scope` 를 지정할 수 있다. 
+
+Scope|설명
+---|---
+Thread|각 Thread 마다 인스턴스 생성
+Benchmark|Benchmark 테스트 모든 스레드에서 인스턴스 공유
+Group|Thread 그룹마다 인스턴스 생성
+
+여기서 `Thread` 란 테스트시 설정 값으로 넣어준 `Thread` 의 수를 의미한다.  
+
+```java
+@Threads(value = 5)
+public class States {
+    @State(Scope.Benchmark)
+    public static class BenchmarkState {
+        volatile  int x = 0;
+    }
+
+    @State(Scope.Thread)
+    public static class ThreadState {
+        volatile int x = 0;
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public void measureUnShared(ThreadState state) throws InterruptedException {
+        // 모든 벤치마크 스레드가 해당 메소드를 호출한다.
+        // 하지만 각 스레드마다 ThreadState 의 값은 새롭게 초기화 된다.
+        TimeUnit.SECONDS.sleep(1);
+        state.x++;
+        System.out.println("UnShard : " + state.x);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public void measureShared(BenchmarkState state) throws InterruptedException {
+        // 모든 벤치마크 스레드가 해당 메소드를 호출한다.
+        // 모든 벤치마크 스레드가 BenchmarkState 의 값을 공유한다.
+        TimeUnit.SECONDS.sleep(1);
+        state.x++;
+        System.out.println("Shard : " + state.x);
+    }
+}
+```  
+
+출력 값을 살펴보면 `measureUnShared` 는 5개 스레드 마다 다른 인스턴스를 갖기 때문에 출력값이 `measureShared` 보다 낮은 걸 확인 할 수 있다.  
+
+```bash
+Shard : 104
+UnShard : 22
+
+Benchmark               Mode  Cnt  Score   Error  Units
+States.measureShared    avgt       1.005           s/op
+States.measureUnShared  avgt       1.004           s/op
+```  
+
+
+
+#### @Setup, @TearDown
+
 
 
 
@@ -266,5 +390,6 @@ BenchmarkModes.measureAll                                 ss     2   6.261      
 [openjdk/jmh](https://github.com/openjdk/jmh)  
 [openjdk/jmh samples](https://github.com/openjdk/jmh/tree/master/jmh-samples/src/main/java/org/openjdk/jmh/samples)  
 [melix/jmh-gradle-plugin](https://github.com/melix/jmh-gradle-plugin)  
+[JMH - Java Microbenchmark Harness](https://jenkov.com/tutorials/java-performance/jmh.html)  
 
 
