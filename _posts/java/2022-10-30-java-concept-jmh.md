@@ -374,11 +374,95 @@ States.measureUnShared  avgt       1.004           s/op
 
 
 #### @Setup, @TearDown
+`@Setup` 과 `@TearDown` 은 메소드에서 사용가능한 어노테이션이다. 
+`@Setup` 은 벤치마크가 실행되기 전 `Object` 의 설정을 하기 위해 사용하고, 
+`@TearDown` 은 벤치마크가 종료된 후 `Object` 를 정리하기 위해 사용된다. 
+두 가지모두 실제 벤치마크 결과에는 포함되지 않는다. 
+그리고 두 가지에 필드로 설정할 수 있는 값들이 있는데 그 종류와 설명은 아래와 같다.  
 
+Level|설명
+---|---
+Trial|벤치마크를 실행(fork)할 때마다 한번씩 호출된다.
+Iteration|벤치마크 반복(Iteration)이 수행될 때마다 호출 된다. 
+Invocation|벤치마크 테스트 메소드가 실행 될떄 호출 된다. 
 
+```java
+/**
+ * jmh {
+ * operationsPerInvocation = 1
+ * iterations = 1
+ * fork = 1
+ * warmupIterations = 1
+ * }
+ */
+@State(Scope.Benchmark)
+public class SetUpTearDown {
+    private List<String> list = new ArrayList<>();
 
+    @Setup(Level.Trial)
+    public void setupTrial() {
+        this.list.add("Setup:Trial");
+        System.out.println("setup Trial : " + Arrays.toString(this.list.toArray()));
+    }
 
+    @Setup(Level.Iteration)
+    public void setupIteration() {
+        this.list.add("Setup:Iteration");
+        System.out.println("setup Iteration : " + Arrays.toString(this.list.toArray()));
+    }
 
+    @Setup(Level.Invocation)
+    public void setupInvocation() {
+        this.list.add("Setup:Invocation");
+        System.out.println("setup Invocation : " + Arrays.toString(this.list.toArray()));
+    }
+
+    @TearDown(Level.Trial)
+    public void tearDownTrial() {
+        this.list.add("TearDown:Trial");
+        System.out.println("tearDown Trial :" + Arrays.toString(this.list.toArray()));
+    }
+
+    @TearDown(Level.Iteration)
+    public void tearDownIteration() {
+        this.list.add("TearDown:Iteration");
+        System.out.println("tearDown Iteration :" + Arrays.toString(this.list.toArray()));
+    }
+
+    @TearDown(Level.Invocation)
+    public void tearDownInvocation() {
+        this.list.add("TearDown:Invocation");
+        System.out.println("tearDown Invocation :" + Arrays.toString(this.list.toArray()));
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public List<String> test() throws InterruptedException {
+        this.list.add("test");
+        System.out.println("test : " + Arrays.toString(this.list.toArray()));
+        TimeUnit.SECONDS.sleep(1);
+        return this.list;
+    }
+
+}
+```  
+
+예시의 대략적인 실행 흐름은 아래와 같다. 
+
+```
+.. Fork start ..
+Setup:Trial
+.. Iteration start..
+Setup:Iteration
+.. Invocation start
+Setup:Invocation
+test
+TearDown:Invocation
+.. Invocation end ..
+TearDown:Iteration
+.. Iteration end ..
+TearDown:Trial ..
+```  
 
 
 
