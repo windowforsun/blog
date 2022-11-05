@@ -465,9 +465,130 @@ TearDown:Trial ..
 ```  
 
 
+#### Loop Optimization
+벤치마크 메소드를 작성하다보면 좀더 큰 부하를 준다던가 하는 등의 이유로 메소드내 반복문을 추가해서 여러번 반복 수행하도록 구현할 수 있다. 
+하지만 `JVM` 은 `Loop` 문을 최적화 하는 부분이 있기 때문에 기대하는 결과와 다른 결과가 나올 수가 있다. 
+이러한 이유로 벤치마크 메소드내에 `Loop` 문 작성을 피해야 한다.  
 
 
+#### Dead Code 주의하기
+벤치마크 메소드를 작성할떄 주의해야 할 점중 하나는 `Daed Code` 이다. 
+아래 코드예시를 보자. 
 
+```java
+@Benchmark
+public void test() {
+	int a = 1;
+    int b = 2;
+    int sum = a + b;
+}
+```  
+
+위 벤치마크 메소드는 `a + b` 에 대한 벤치마크 결과를 측정하지 위함이지만, 
+`JVM` 은 계산 결과가 한번도 사용되지 않는 `sum = a + b` 에 대한 부분과 `a`, `b` 선언 코드를 최적화 관점에서 아예 삭제해 버릴 수 있다. 
+이렇게 되면 실질적으로 측정하고 싶은 부분을 측정하지 못하는 문제가 발생하게 된다.  
+
+위와 같은 `Dead Code` 이슈를 회피하는 방법으로는 어떤 것들이 있을까 ?
+즉 `sum = a + b` 에 대한 성능 측정을 실질적으로 수행하고 싶다면 아래와 같은 2가지 방법이 있다. 
+
+- 결과 값을 벤치마크 메소드에서 리턴하도록 해라.
+
+```java
+@Benchmark
+public int test() {
+	int a = 1;
+    int b = 2;
+    int sum = a + b;
+    
+    return sum;
+}
+```  
+
+- 결과 값을 `JMH` 가 제공하는 `Blackhole` 을 통해 넘겨 줘라. 
+
+```java
+@Benchmark
+public void test(Blackhole blackhole) {
+	int a = 1;
+    int b = 2;
+    int sum = a + b;
+    
+    blackhole.consume(sum);
+}
+```  
+
+#### Blackhole 이란
+위에서 `Dead Code` 를 회피하는 방법 중 `Blackhole` 방법을 소개했다. 
+`Blackhole` 이란 `consume()` 메소드의 인자로 소비할 값을 넘겨주면 `JVM` 에서는 계산된 값을 사용한 것으로 인식을 할 수 있어, 
+`Dead Code` 와 같이 해당 코드가 최적화 과정에서 삭제되는 일을 방지할 수 있다. 
+한 벤치마크 메소드내 여러 값이 있다면, 이 또한 필요한 횟수만큼 `blackhole.consum()` 을 통해 전달해주면 된다.  
+
+
+#### Constant Folding
+`Constant Folding` 은 `JVM` 의 최적화 중 하나이다. 
+고정된 상수에 의한 계산은 항상 동일한 결과가 도출 될 것이다. 
+이러한 이유로 `JVM` 에 감지되면 결과를 계산하는 것이 아니라 최적화 과정에서 계산된 결과를 결과 변수에 넣는 식으로 변경될 수 있다.  
+
+아래와 같은 코드가 있다고 가정해보자. 
+
+```java
+@Benchmark
+public int test() {
+	int a = 1;
+	int b = 2;
+	int sum = a + b;
+
+	return sum;
+}
+```  
+
+`sum = a + b` 이지만, 항상 `a = 1` 이고 `b = 2` 이기 때문에 결과는 매번 `3` 이 나온다. 
+그래서 `JVM` 은 아래와 같이 최적화를 수행할 수 있다.  
+
+```java
+@Benchmark
+public int test() {
+    int sum = 3;
+    
+    return sum;
+}
+```  
+
+계산을 직접 수행해서 리턴하는 것이 아니라, 항상 `sum = 3` 이기 때문에 계산을 바로 하지 않는 것이다. 
+또는 바로 결과 값을 리턴해 버리는 `return 3` 으로 최적화 될 수도 있고, `test()` 메소드가 리턴하는 값은 매번 `3` 임이 보장 되기 때문에 
+메소드를 호출하지 않고 호출 부분에 `3` 을 바로 넣어 버릴 수도 있다.  
+
+#### Constant Folding 회피
+`Constant Folding` 을 회피하는 방법중 하나는 `JVM` 이 값을 예측하기 어렵도록 복잡한 코드를 작서앟는 것이다. 
+그 방법 중 하나는 계산에 사용하는 `a`, `b` 변수를 로컬변수로 두는 것이 아니라, 오브젝트의 멤버 변수로 만들어 참조하는 방식을 사용해 감지가 어렵도록 만드는 방법이다.  
+
+```java
+@State(Scope.Thread)
+public static class MyState {
+    public int a = 1;
+    public int b = 2;
+}
+
+@Benchmark
+public int test(MyState state) {
+    int sum = state.a + state.b;
+    
+    return sum;
+}
+```  
+
+만약 `MyState` 의 값들을 바탕으로 여러 결과 값을 만들어낸다면 `Blackhole` 을 사용할 수 있다.  
+
+```java
+@Benchmark
+public void test(MyState state, Blackhole blackhole) {
+	int sum1 = state.a + state.b;
+    int sum2 = state.a + state.a + state.b + state.b;
+    
+    blackhole.consume(sum1);
+    blackhole.consume(sum2);
+}
+```  
 
 ---
 ## Reference
