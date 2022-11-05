@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] Java Benchmark Tool JMH"
+title: "[Java 실습] JMH, Java Benchmark Tool"
 header:
   overlay_image: /img/java-bg.jpg 
 excerpt: 'Java 에서 간단한 성능 비교 테스트를 수행할 수 있는 JMH에 대해 알아보자'
@@ -13,6 +13,7 @@ tags:
   - Concept
   - Java
   - JMH
+  - Benchmark
 toc: true 
 use_math: true
 ---  
