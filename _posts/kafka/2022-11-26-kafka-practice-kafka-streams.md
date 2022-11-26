@@ -126,6 +126,8 @@ public static void main(String[] args) {
 
 ## Kafka Streams 애플리케이션 모델
 
+### Topology
+
 
 
 
