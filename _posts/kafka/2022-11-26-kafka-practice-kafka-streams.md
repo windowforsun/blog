@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] Kafka Streams"
+title: "[Kafka] Kafka Streams 기본 개념"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에 대한 설명과 특징에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -94,28 +94,30 @@ dependencies {
 ```  
 
 ```java
-public static void main(String[] args) {
-	StreamsBuilder builder = new StreamsBuilder();
-	builder
-			.stream("input-topic", Consumed.with(Serdes.String(), Serdes.String()))
-			.peek((key, value) -> System.out.println("input peek : " + value))
-			.mapValues(value -> value.toUpperCase())
-			.peek((key, value) -> System.out.println("trans peek : " + value))
-			.to("trans-topic", Produced.with(Serdes.String(), Serdes.String()));
-
-	Topology topology = builder.build();
-	// or
-	// topology.addProcessor(..);
-
-	Properties props = new Properties();
-	props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-app");
-	props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-	props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-	props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
-
-	KafkaStreams kafkaStreams = new KafkaStreams(topology, props);
-	// non blocking
-	kafkaStreams.start();
+public class Main {
+	public static void main(String[] args) {
+		StreamsBuilder builder = new StreamsBuilder();
+		builder
+				.stream("input-topic", Consumed.with(Serdes.String(), Serdes.String()))
+				.peek((key, value) -> System.out.println("input peek : " + value))
+				.mapValues(value -> value.toUpperCase())
+				.peek((key, value) -> System.out.println("trans peek : " + value))
+				.to("trans-topic", Produced.with(Serdes.String(), Serdes.String()));
+	
+		Topology topology = builder.build();
+		// or
+		// topology.addProcessor(..);
+	
+		Properties props = new Properties();
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-app");
+		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+	
+		KafkaStreams kafkaStreams = new KafkaStreams(topology, props);
+		// non blocking
+		kafkaStreams.start();
+	}
 }
 ```  
 
@@ -124,20 +126,92 @@ public static void main(String[] args) {
 `Processor API` 의 인터페이스 규칙에 맞게 `Java` 클래스를 구현하는 것만으로 `Kafka` 에 접속하고 필요한 `Consumer`, `Producer` 를 만들어 
 필요한 처리를 수행하도록 할 수 있다.  
 
+### Kafka Streams 구현
+`Kafka Streams` 구현은 `Streams API` 를 사용해서 파이프라인 로직(토폴로지)를 구현하는 것을 의미한다. 
+실제 구현 방식은 아래 2가지로 추상화 돼 있다. 
+
+- `Streams DSL`
+- `Processor API`
+
+#### Streams DSL
+[Streams DSL](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#streams-dsl)
+은 토폴로지를 쉽게 구축하기 위해 제공하는 `DSL` 이다. 
+`Streams DSL` 을 사용하면 `Lambda` 를 메서드 체인으로 연결하는 인터페이스 방식으로 스트림 애플리케이션 구현이 가능하다.  
+
+
+#### Processor API
+[Processor API](https://docs.confluent.io/platform/current/streams/developer-guide/processor-api.html#kstreams-processor-api)
+은 `Kafka Streams` 의 `low level API` 로 위 `Streams DSL` 또한 `Processor API` 로 구현 됐다.  
+
+`Processor API` 는 클래스 정의로 사용할 수 있으며, 
+`init` 메서드 `ProcessorContext` 객체를 이용해서 `Kafka Streams` 정보를 얻어 `StateStore` 참조 혹은 후속 처리에 데이터를 전달 할 수 있다.  
+
 ## Kafka Streams 애플리케이션 모델
+`Kafka Streams` 는 `Source Node`, `Processor Nodes`, `Sink Node` 를 조합해서 
+`Topology` 라는 단위를 만들어 애플리케이션을 구축한다.  
 
 ### Topology
+`Topology` 는 수학에서 위상 기하학을 나타내는 용어로, 
+물건의 형상이 가지는 설징에 초점을 맞춘 것을 의미힌다. 
+그리고 네트워크 그래프가 어떤 구성을 하고 있는지 형상 패턴을 나타내는 네트워크 토폴리지도 있다. 
+`Kafka Streams` 의 `Topology` 는 앞서 설명한 네트워크 토폴리지와 동일하다고 생각하면 된다.  
 
+`Kafka Streams` 는 역할을 갖는 노드들을 연결해서 그래프 구조로 `Topology` 를 구성하고 동작한다. 
+`Topology` 는 2개 이상의 하위 토폴로지에 의해 형성돌 수 있다.  
 
+![그림 1]({{site.baseurl}}/img/kafka/concept-kafka-stream-1.jpeg)
+
+위와 같은 그래프 구조를 보관하고 관리하는 객체가 바로 `Kafka Streams` 의 `Topology` 이다.  
+
+여기서 `Sub Topology` 란 `Source Node` 에서 부터 추척을 시작해 `Sink Node` 혹은 종단까지 
+하나의 그래프로 관계가 연결되는 것을 하나의 `Sub Topology` 라고 한다. 
+위 예에서는 `Source Node` 는 2개 이지만 
+최종적으로 하나의 `Sink Node` 로 연결되기 때문에 하나의 서브 토폴로지라고 할 수 있다. 
+만약 `Source Node` 가 하나로 중간에 이어지지 않고 독립적으로 구성이 되는 구조라면 2개의 서브 토폴로지가 생기게 된다.  
+
+`Source Node` 가 특정 토픽으로 부터 데이터를 수신하면 
+`Processor Node` 에서 각 역할에 맞는 처리 및 가공을 수행하거나 다른 데이터 스토어에 저장할 것이다. 
+그리고 그 데이터들을 다른 토픽으로 전달이 필요하다면 `Sink Node` 를 통해 다시 처리를 이어 갈 수 있다. 
+각 노드에 대한 자세한 설명은 아래와 같다.  
+
+#### Source Node
+`Kafka Topic` 에서 데이터를 받아오는 역할을 수행하는 노드를 `Source Node` 라고 한다. 
+`Kafka Streams` 에는 3가지 방식의 데이터 수신 패턴이 있는데(`KStream`, `KTable`, `GlobalKTable`), 
+더 자세한 내용은 `DSL` 을 다루는 내용에서 확인 할 수 있다.  
+
+#### Processor Node
+`Source Node` 에서 받은 데이터를 처리하는 노드를 의미한다. 
+실질적인 비지니스 로직이 포함되는 노드가 바로 해당 노드이다. 
+`Processor Node` 는 처리 과정을 분할하는 것처럼 여러개를 만들어 연결해서 구현 할 수도 있다. 
+위 `샘플 코드` 에서 `peek()` 과 `mapValues()` 가 `Processor Node` 에 해당한다.  
+
+#### Sink Node
+데이터를 다른 `Kafka Topic` 에 전송 역할을 수행하는 노드를 의미한다. 
+위 `샘플 코드` 에서 `to()` 가 해당 노드에 해당한다.  
+
+### Task
+`Kafka Streams` 는 여러 머신에서 분산 처리를 할 수 있도록 제공한다. 
+`Kafka Streams` 은 서브 토폴로지가 `polling` 을 수행하는 소스 토픽의 파티션 수에 맞춰 작업(`Task`)의 
+단위로 클라이언트에 처리를 할당한다.  
+
+예를 들어 아래와 같은 `A` 토폴로지가 있다고 가정해보자. 
+
+- `A` 토폴로지는 아래 2개의 서브 토폴로지로 구성된다.
+  - `A-1` : 토픽 `B-1`(파티션 수 8) 참조(1_0 ~ 1_7 태스크 생성)
+  - `A-2` : 토픽 `B-2`(파티션 수 10) 참조(2_0 ~ 2_9 태스트 생성)
+
+위와 같이 `A` 토폴로지 구성을 위해서 총 18개의 태스크가 생성된다. 
+18개 작업 처리는 `Consumer Group` 에 속한 클라이언트에게 할당 된다. 
+할당 전략에는 몇가지 패턴이 있는데 해당 패턴에 대한 설명은 추후에 더 자세히 설명하도록 한다.
 
 
 ---  
 ## Reference
 [Kafka Streams vs. Kafka Consumer](https://www.baeldung.com/java-kafka-streams-vs-kafka-consumer)  
-[Kafka Streams With Spring Boot](https://www.baeldung.com/spring-boot-kafka-streams)  
 [Introducing Kafka Streams: Stream Processing Made Simple](https://www.confluent.io/blog/introducing-kafka-streams-stream-processing-made-simple/)  
 [Streams Concepts](https://docs.confluent.io/platform/current/streams/concepts.html#stream)  
 [Introduction Kafka Streams API](https://docs.confluent.io/platform/current/streams/introduction.html#introduction-kstreams-api)  
 [Streams Architecture](https://docs.confluent.io/platform/current/streams/architecture.html#streams-architecture)  
 [Streams DSL](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#creating-source-streams-from-ak)  
+[Kafka Streams Processor API](https://docs.confluent.io/platform/current/streams/developer-guide/processor-api.html#kstreams-processor-api)  
 
