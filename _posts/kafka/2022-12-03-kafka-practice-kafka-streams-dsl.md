@@ -117,6 +117,160 @@ use_math: true
 - `state,dir` : `rocksDB` 저장소가 위치할 디렉토리를 지정한다. 기본값은 `/tmp/kafka-streams` 이다. 리얼 환경에서는 `/tmp` 디렉토리가 아닌 별도로 관리되는 디렉토리를 지정해야 안전한 데이터 관리가 가능하다.  
 
 
+### Streams DSL 예제
+`StreamsDSL` 을 사용해서 간단한 구현예제를 살펴본다. 
+`StreamsDSL` 에서 제공하는 메소드를 사용해서 몇가지 프로세싱 직접 구현해보며 사용방법에 대해 알아보도록 한다. 
+`Kafka` 는 `docker-compose` 를 사용해서 구성하는데 그 내용은 아래와 같다. 
+
+```yaml
+# docker-compose.yaml 
+
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    container_name: myKafka
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+```  
+
+실행은 아래 명령을 통해 수행할 수 있다.  
+
+```bash
+$ docker-compose up --build
+[+] Running 2/0
+ ⠿ Container myKafka      Created 0.0s
+ ⠿ Container myZookeeper  Created 0.0s
+Attaching to myKafka, myZookeeper
+
+.. 생략 ..
+```  
+
+공통으로 사용할 수 있는 `build.gradle` 내용은 아래와 같다.  
+
+```groovy
+
+dependencies {
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
+    implementation 'org.apache.kafka:kafka-streams:3.2.0'
+    implementation 'org.apache.kafka:kafka-clients:3.2.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+```  
+
+#### stream(), to()
+`StreamDSL` 을 사용해서 가장 간단하게 구현할 수 있는 프로세싱 동작은 
+특정 토픽의 데이터를 다른 토픽으로 전달하는 것이다. 
+구현 예제에서는 `my-log` 토픽 데이터를 다른 토픽인 `my-log-copy` 토픽으로 전달하는 동작을 수행한다. 
+`stream()` 메서드를 통해 특정 토픽의 데이터를 가져오고, `to()` 메서드로 다른 토픽으로 데이터를 전달 한다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-dsl-5.drawio.png)  
+
+
+```java
+public class SimpleKafkaStreams {
+    private static String APPLICATION_NAME = "streams-application";
+    private static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static String MY_LOG = "my-log";
+    private static String MY_LOG_COPY = "my-log-copy";
+
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> streamLog = builder.stream(MY_LOG);
+
+        streamLog.to(MY_LOG_COPY);
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+```  
+
+먼저 `my-log` 토픽을 아래 명령으로 생성해준다. 
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic my-log
+```  
+
+그리고 `SimpleKafkaStreams` 애플리케이션을 먼저 실행해 준다.  
+
+프로듀서로 `my-log` 토픽에 데이터를 넣은 다음
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic my-log 
+>log-1
+>log-2
+>log-3
+```  
+
+`my-log-copy` 토픽에 있는 데이터를 컨슈머로 확인하면 아래와 같이 `my-log` 토픽 데이터가 `my-log-copy` 로 전달 된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic my-log-copy --from-beginning
+log-1
+log-2
+log-3
+```  
+
+#### filter()
+앞선 예제에서 `stream()` 과 `to()` 를 사용해서 
+데이터를 토픽에서 다른 토픽으로 복사하는 방법에 대해 알아보았다. 
+하지만 이는 데이터를 처리하는 동작인 스크림 프로세서가 없었다.  
+
+이번에는 토픽으로 들어오는 데이터 중 문자열 포맷이 정해진 포맷과 맞는 경우만 필터링 하는 스트림 프로세서를 추가로 구현해 본다. 
+이러한 동작을 위해서는 `filter()` 메소드를 사용하면 되는데 전체적인 흐름은 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-dsl-6.drawio.png)  
+
+스트림 프로세서에서는 중간에 `-` 문자열이 포함된 경우만 `my-log-filter` 토픽으로 데이터를 전달 한다.  
+
+```java
+public class KafkaStreamsFilter {
+    private static String APPLICATION_NAME = "streams-filter-application";
+    private static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static String MY_LOG = "my-log";
+    private static String MY_LOG_FILTER = "my-log-filter";
+
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> streamLog = builder.stream(MY_LOG);
+//        KStream<String, String> filteredStream = streamLog
+//                .filter((key, value) -> value.split("-").length >= 2);
+//        filteredStream.to(STREAM_LOG_FILTER);
+//        or
+        streamLog.filter((key, value) -> value.split("-").length >= 2).to(MY_LOG_FILTER);
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+```  
+
+
+
 
 
 
