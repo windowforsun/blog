@@ -1,1 +1,31 @@
-<mxfile host="app.diagrams.net" modified="2022-12-29T14:30:51.730Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.87 Whale/3.16.138.22 Safari/537.36" version="20.7.4" etag="I0_WBw6GtbAqXyVshDpD" type="github"><diagram id="nsU5eQ7AVEP4-uOlF8Q6">UzV2zq1wL0osyPDNT0nNUTV2VTV2LsrPL4GwciucU3NyVI0MMlNUjV1UjYwMgFjVyA2HrCFY1qAgsSg1rwSLBiADYTaQg2Y1AA==</diagram></mxfile>
+<mxfile host="app.diagrams.net" modified="2022-12-29T14:35:30.517Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.87 Whale/3.16.138.22 Safari/537.36" version="20.7.4" etag="2cPYXPu0msn9b59bZbnc" type="github">
+  <diagram id="yBroxvktmbOIuQ4lVF_v" name="페이지-1">
+    <mxGraphModel dx="538" dy="1011" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="njsngqaN4NBIr93hJb6f-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=18;strokeWidth=3;" edge="1" parent="1" source="njsngqaN4NBIr93hJb6f-1" target="njsngqaN4NBIr93hJb6f-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-1" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;my-log 토픽&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="200" y="200" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=3;fontSize=18;" edge="1" parent="1" source="njsngqaN4NBIr93hJb6f-2" target="njsngqaN4NBIr93hJb6f-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-2" value="[소스 프로세서]&lt;br&gt;stream()" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="205" y="280" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=3;fontSize=18;" edge="1" parent="1" source="njsngqaN4NBIr93hJb6f-3" target="njsngqaN4NBIr93hJb6f-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-3" value="[싱크 프로세서]&lt;br&gt;to()" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="205" y="380" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="njsngqaN4NBIr93hJb6f-4" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;my-log-copy 토픽&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="185" y="480" width="160" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
