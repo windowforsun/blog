@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Streams DSL"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 기반 스트림 애플리케이션을 간편하게 구현할 수 있도록 도와주는 Streams DSL 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,11 @@ tags:
     - Kafka
     - Kafka Streams
     - Kafka Streams DSL
+    - Streams DSL
+    - KStream
+    - KTable
+    - GlobalKTable
+    - join
 toc: true
 use_math: true
 ---  
@@ -295,7 +300,7 @@ log-7
 ```  
 
 
-### KTable, KStream join()
+#### KTable, KStream join()
 `KTable` 과 `KStream` 는 키를 기준으로 조인할 수 있다. 
 기존 데이터베이스의 조인과 다른 점은 데이터베이스는 저장된 데이터를 조인하지만, 
 `Kafka` 에서는 실시간으로 들어오는 데이터를 조인해서 사용할 수 있다. 
@@ -396,7 +401,7 @@ $ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost
 peter:monitor, go to the jeju
 ```  
 
-### GlobalKTable, KStream join()
+#### GlobalKTable, KStream join()
 `KTable`, `KStream` 의 조인은 코파티셔닝이 돼 있다는 전재를 두고 진행했다. 
 하지만 조인하고자 하는 모든 토픽이 코파티셔닝이 돼 있다는 보장은 없기 때문에 이런 경우에는 `리파티셔닝` 혹은 `GlobalKTable` 을 사용 할 수 있다. 
 이번에는 `GlobalKTable` 을 통해 코피타셔닝 돼있지 않은 토픽을 조인하는 예제에 대해 살펴본다.  
@@ -409,8 +414,6 @@ $ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:
 Created topic address-2.
 
 ```  
-
-
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-dsl-8.drawio.png)  
 
@@ -447,18 +450,22 @@ public class KStreamGlobalKTableJoin {
 }
 ```  
 
-애플리케이션 실행
+애플리케이션을 실행해주고, 
+`GlobalKTable` 사용목적으로 생성한 `address-2` 토픽에 이름을 키로 하고 주소를 값으로 하는 데이터를 넣어준다. 
+그리고 이어서 `order` 토픽에는 이름을 키로 하고 주문 물품을 값으로 하는 데이터를 아래 명령어로 넣는다.  
 
 ```bash
 $ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic address-2 --property "parse.key=true" --property "key.separator=:"
 >haha:london
 >hoho:la
 
-
 $ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order --property "parse.key=true" --property "key.separator=:"
 >haha:pc
 >hoho:laptop
 ```  
+
+이제 `order-address` 토픽에서 결과를 확인하면, 
+코파티셔닝 되지 않은 `address-2` 와 `order` 토픽을 기반으로 조인된 결과가 잘 출력되는 것을 확인 할 수 있다.  
 
 ```bash
 $ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-address --property print.key=true --property key.separator=":" --from-beginning
@@ -466,27 +473,142 @@ haha:pc send to london
 hoho:laptop send to la
 ```  
 
+결과만 본다면 `KTable` 과 다른 점이 없는 것 같지만, 
+`GlobalKTable` 토픽은 토픽에 존재하는 모든 데이터를 태스크마다 저장하고 조인 처리를 수행할 수 있다는 점이 다르다. 
+그리고 조인 수행에 있어서도 `KStream` 메시지 키 뿐만아니라 메시지 값을 기준으로도 매칭해서 조인 동작을 수행 할 수 있다.  
 
 
 
+#### KTable count()
+`KTable` 의 특징 중 하나는 메시지 키를 기준으로 묶어서 사용한다는 점이 있다. 
+이러한 특징을 살려 구현할 수 있는 것이 바로 `count()` 동작이다. 
+이는 스트림으로 들어오는 데이터를 키를 기준으로 한다거나 하는 방법으로 `groupBy` 하고 이를 카운트 할 수 있다.  
+
+아래 애플리케이션은 `order` 토픽에서 키가 되는 이름을 기준으로 카운트를 수행하는 스트림 애플리케이션이다.  
+
+```java
+public class KStreamCount {
+    private final static Logger log = LoggerFactory.getLogger(KStreamCount.class);
+    private static String APPLICATION_NAME = "stream-count-application";
+    private static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static String ORDER_STREAM = "order";
+
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 60000);
+
+        StreamsBuilder builder = new StreamsBuilder();
+        KStream<String, String> testStream = builder.stream(ORDER_STREAM);
+        KTable<Windowed<String>, Long> countTable = testStream
+                .groupByKey()
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(60)))
+                .count();
+
+        countTable.toStream().foreach((key, value) -> {
+            log.info(key.key() + " is [" + key.window().startTime() + " ~ " + key.window().endTime() + "] count : " + value);
+        });
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+```  
+
+애플리케이션을 실행하고, `order` 토픽에 프로듀서를 사용해서 `key:value` 
+로 데이터를 생성하면 애프릴케이션에서 아래와 같은 로그가 출력되는 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order --property "parse.key=true" --property "key.separator=:"
+>jack:pc
+>lisa:laptop
+>jack:monitor
+>lisa:pc
+>lisa:monitor
+```  
+
+```
+[stream-count-application-StreamThread-1] INFO com.windowforsun.kafkastreamsdsl.exam.KStreamCount - jack is [2023-01-01T07:58:00Z ~ 2023-01-01T07:59:00Z] count : 2
+[stream-count-application-StreamThread-1] INFO com.windowforsun.kafkastreamsdsl.exam.KStreamCount - lisa is [2023-01-01T07:58:00Z ~ 2023-01-01T07:59:00Z] count : 3
+```  
 
 
+#### KTable store()
+`KTable` 혹은 `GlobalKTable` 은 토픽에 있는 데이터를 `store()` 메소드를 통해 다른 곳에 저장해 둘 수 있다. 
+아래 애플리케이션은 `address` 토픽의 데이터를 `store()` 로 `Kafka` 외부인 스트림 애플리케이션에 저장하고 주기적으로 출력하는 예제이다.  
 
+```java
+public class KTableQueryableStore {
+    private final static Logger log = LoggerFactory.getLogger(KTableQueryableStore.class);
+    private static String APPLICATION_NAME = "ktable-query-store-application";
+    private static String BOOTSTRAP_SERVER = "localhost:9092";
+    private static String ADDRESS_TABLE = "address";
+    private static boolean initialize = false;
+    private static ReadOnlyKeyValueStore<String, String> keyValueStore;
 
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVER);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
+        StreamsBuilder builder = new StreamsBuilder();
+        KTable<String, String> addressTable = builder.table(ADDRESS_TABLE, Materialized.as(ADDRESS_TABLE));
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
 
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                if(!initialize) {
+                    keyValueStore = streams.store(
+                            StoreQueryParameters.fromNameAndType(ADDRESS_TABLE,
+                            QueryableStoreTypes.keyValueStore())
+                    );
+                    initialize = true;
+                }
 
+                printKeyValueStoreData();
+            }
+        };
 
+        Timer timer = new Timer("Timer");
+        long delay = 10000L;
+        long interval = 1000L;
+        timer.schedule(task, delay, interval);
+    }
 
+    static void printKeyValueStoreData() {
+        log.info("=================");
+        KeyValueIterator<String, String> address = keyValueStore.all();
+        address.forEachRemaining(keyValueStore -> log.info(keyValueStore.toString()));
+    }
+}
+```  
 
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic address --property "parse.key=true" --property "key.separator=:"
+>peter:jeju
+>jack:seoul
+>lisa:newyork
+```  
 
+```
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - =================
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(peter, jeju)
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(jack, seoul)
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(lisa, newyork)
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - =================
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(peter, jeju)
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(jack, seoul)
+[Timer] INFO com.windowforsun.kafkastreamsdsl.exam.KTableQueryableStore - KeyValue(lisa, newyork)
 
-
-
-
-
-
-
+.......
+```  
 
 
 ---  
