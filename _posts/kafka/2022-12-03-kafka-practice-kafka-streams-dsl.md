@@ -169,7 +169,7 @@ dependencies {
 }
 ```  
 
-#### stream(), to()
+#### KStream stream(), to()
 `StreamDSL` 을 사용해서 가장 간단하게 구현할 수 있는 프로세싱 동작은 
 특정 토픽의 데이터를 다른 토픽으로 전달하는 것이다. 
 구현 예제에서는 `my-log` 토픽 데이터를 다른 토픽인 `my-log-copy` 토픽으로 전달하는 동작을 수행한다. 
@@ -206,7 +206,7 @@ public class SimpleKafkaStreams {
 먼저 `my-log` 토픽을 아래 명령으로 생성해준다. 
 
 ```bash
-$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic my-log
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic my-logç
 ```  
 
 그리고 `SimpleKafkaStreams` 애플리케이션을 먼저 실행해 준다.  
@@ -229,7 +229,7 @@ log-2
 log-3
 ```  
 
-#### filter()
+#### KStream filter()
 앞선 예제에서 `stream()` 과 `to()` 를 사용해서 
 데이터를 토픽에서 다른 토픽으로 복사하는 방법에 대해 알아보았다. 
 하지만 이는 데이터를 처리하는 동작인 스크림 프로세서가 없었다.  
@@ -268,6 +268,207 @@ public class KafkaStreamsFilter {
     }
 }
 ```  
+
+애플리케이션을 실행한 다음 아래 명령으로 `my-log` 토픽에 데이터를 생성해준다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic my-log                      
+>log1
+>log-2
+>log3
+>log-4
+>log5
+>log-6
+>log-7
+
+```  
+
+그리고 `my-log-filter` 토픽에 있는 데이터를 아래 컨슈머 명령으로 확인하면 `-` 포함된 데이터들만 필터링돼 전달된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic my-log-filter --from-beginning
+log-2
+log-4
+log-6
+log-7
+
+```  
+
+
+### KTable, KStream join()
+`KTable` 과 `KStream` 는 키를 기준으로 조인할 수 있다. 
+기존 데이터베이스의 조인과 다른 점은 데이터베이스는 저장된 데이터를 조인하지만, 
+`Kafka` 에서는 실시간으로 들어오는 데이터를 조인해서 사용할 수 있다. 
+이러한 특징으로 조인을 위해 데이터를 한번 저장할 필요 없이 이벤트 기반 스트리밍 데이터 파이프라인상에서 바로 조인을 수행 할 수 있다.  
+
+아래는 `order` 토픽으로 들어오는 주문 내역을 `address` 주소 토픽에 있는 데이터와 조인하는 예제이다. 
+`order` 에 `jack:pc` 라는 데이터가 들어오면 `address` 에 있는 `jack:seoul` 라는 데이터와 조인해서 
+최종적으로 `pc, go to the seoul` 이라는 데이터를 `order-address` 토픽에 추가한다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-dsl-7.drawio.png)  
+
+```java
+public class KStreamKTableJoin {
+    private static String APPLICATION_NAME = "order-application";
+    private static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static String ADDRESS_TABLE = "address";
+    private static String ORDER_STREAM = "order";
+    private static String ORDER_ADDRESS_JOIN_STREAM = "order-address";
+
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        StreamsBuilder builder = new StreamsBuilder();
+        KTable<String, String> addressTable = builder.table(ADDRESS_TABLE);
+        KStream<String, String> orderStream = builder.stream(ORDER_STREAM);
+
+        orderStream.join(
+                addressTable,
+                (orderStreamValue, addressTableValue) -> orderStreamValue + ", go to the " + addressTableValue)
+                .to(ORDER_ADDRESS_JOIN_STREAM);
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+}
+```  
+
+`KTable` 과 `KStream` 을 조인할떄 가장 중요한 것은 코파티셔닝이 돼 있는지 확인하는 것이다. 
+앞서 설명한 것과 같이 코파티셔닝이 돼 있지 않다면 `TopologyException` 이 발생 하기 때문에 주의해야 한다. 
+코파티셔닝을 위해서는 `KTable`, `KStream` 에서 사용할 토픽을 생성할 때 파티셔닝 전략과 파티션 수를 동일하게 맞추는 것이다. 
+예제에서는 파티셔닝 전략은 기본을 사용하고, 파티셔닝 수는 3으로 아래 명령을 통해 생성한다.  
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic address
+Created topic address.
+
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic order
+Created topic order.
+
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 3 --topic order-address
+Created topic order-address.
+```  
+
+이후 애플리케이션을 실행해주고 `KTable`, `KStream` 의 토픽에 `key:value` 구조로 데이터를 추가해 준다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic address --property "parse.key=true" --property "key.separator=:"
+>jack:seoul
+>peter:busan
+>lisa:newyork
+
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order --property "parse.key=true" --property "key.separator=:"
+>jack:pc
+>peter:phone
+>lisa:laptop
+```  
+
+이후 `order-address` 토픽의 데이터를 컨슈머로 조회하면 아래와 같이, `KTable`(address)과 `KSTream`(order)의 조인 결과가 들어가 있는 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-address --property print.key=true --property key.separator=":" --from-beginning
+jack:pc, go to the seoul
+peter:phone, go to the busan
+lisa:laptop, go to the newyork
+```  
+
+조인의 기준은 `KTable` 과 `KStream` 에서 키로 입력한 값을 기준으로 수행된 것을 확인 할 수 있다.  
+
+`Kafka` 조인의 장점은 이후 `address` 토픽에 있는 주소가 변경된다면, 
+변경된 최신 주소로 매핑해서 `order-address` 토픽에 데이터를 생성하게 된다. 
+아래 명령은 `address` 에서 `peter` 의 주소를 `jeju` 로 변경하고, 
+`order` 에서 `peter` 가 `monitor` 를 주문했다는 데이터를 추가하게 되면 
+`order-address` 에 최신 데이터를 기준으로 조인된 결과가 바로 생성된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic address --property "parse.key=true" --property "key.separator=:"
+>peter:jeju
+
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order --property "parse.key=true" --property "key.separator=:"
+>peter:monitor
+
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-address --property print.key=true --property key.separator=":" --from-beginning
+peter:monitor, go to the jeju
+```  
+
+### GlobalKTable, KStream join()
+`KTable`, `KStream` 의 조인은 코파티셔닝이 돼 있다는 전재를 두고 진행했다. 
+하지만 조인하고자 하는 모든 토픽이 코파티셔닝이 돼 있다는 보장은 없기 때문에 이런 경우에는 `리파티셔닝` 혹은 `GlobalKTable` 을 사용 할 수 있다. 
+이번에는 `GlobalKTable` 을 통해 코피타셔닝 돼있지 않은 토픽을 조인하는 예제에 대해 살펴본다.  
+
+예제 진행을 위해서 파티션 수 3으로 앞서 생성한 `order` 토픽은 그대로 사용하고, 
+`address-2` 라는 새로운 토픽을 생성하는데 파티션 수를 2로 생성한다.  
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --create --bootstrap-server localhost:9092 --partitions 2 --topic address-2
+Created topic address-2.
+
+```  
+
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-dsl-8.drawio.png)  
+
+```java
+public class KStreamGlobalKTableJoin {
+    private static String APPLICATION_NAME = "global-table-join-application";
+    private static String BOOTSTRAP_SERVERS = "localhost:9092";
+    private static String ADDRESS_GLOBAL_TABLE = "address-2";
+    private static String ORDER_STREAM = "order";
+    private static String ORDER_ADDRESS_JOIN_STREAM = "order-address";
+
+    public static void main(String[] args) {
+        Properties props = new Properties();
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, APPLICATION_NAME);
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP_SERVERS);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        StreamsBuilder builder = new StreamsBuilder();
+        GlobalKTable<String, String> addressGlobalTable = builder.globalTable(ADDRESS_GLOBAL_TABLE);
+        KStream<String, String> orderStream = builder.stream(ORDER_STREAM);
+
+        orderStream.join(
+                        addressGlobalTable,
+                        (orderKey, orderValue) -> orderKey,
+                        (orderStreamKey, addressGlobalTableValue) -> orderStreamKey + ", go to the " + addressGlobalTableValue
+                )
+                .to(ORDER_ADDRESS_JOIN_STREAM);
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), props);
+        streams.start();
+    }
+
+}
+```  
+
+애플리케이션 실행
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic address-2 --property "parse.key=true" --property "key.separator=:"
+>haha:london
+>hoho:la
+
+
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order --property "parse.key=true" --property "key.separator=:"
+>haha:pc
+>hoho:laptop
+```  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic order-address --property print.key=true --property key.separator=":" --from-beginning
+haha:pc send to london
+hoho:laptop send to la
+```  
+
+
+
+
 
 
 
