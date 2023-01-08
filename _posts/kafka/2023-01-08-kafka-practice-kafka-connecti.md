@@ -25,6 +25,7 @@ use_math: true
 `Connector` 는 프로듀서 역할을 하는 `Source Connector(소스 커넥터)` 와 컨슈머 역할을 하는 `Sink Connector(싱크 커넥터)` 로 나뉜다. 
 이러한 `Connector` 를 통해 파일, `MySQL`, `S3`, `MongoDB` 등에 데이터를 가져오거나 데이터를 저장 할 수 있다.  
 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-1.drawio.png)
 
 
 
