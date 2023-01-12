@@ -20,6 +20,7 @@ use_math: true
 `Kafka Connect` 는 크게 소스로 부터 데이터를 읽어와 카프카에 넣는 `Source Connector` 와 
 카프카에서 데이터를 읽어 타겟으로 전달하는 `Sink Connector` 로 구성된다. 
 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-1.drawio.png)
 
 
 ###  Source Connector
