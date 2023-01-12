@@ -275,9 +275,10 @@ $ docker exec -it myKafka /opt/kafka/bin/connect-distributed.sh \
 ```  
 
 예제에서는 테스트를 위해 커넥트 프로세스를 1개만 설정 했지만, 
-실제 환경에서는 2대 이상의 서버에 분산 모드로 실행하는 것을 권장 한다. 
+실제 환경에서는 2대 이상의 서버에 분산 모드로 실행하는 것을 권장 한다.
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-5.drawio.png)  
+
 
 분산 모드가 실행 된 이후 커넥트에 등록된 플러그인을 조회하면 아래와 같다.  
 
@@ -377,3 +378,4 @@ $ docker exec -it myKafka curl -X GET http://localhost:8083/connectors
 [Introduction to Kafka Connectors](https://www.baeldung.com/kafka-connectors-guide)  
 [Connect REST Interface](https://docs.confluent.io/platform/current/connect/references/restapi.html#status-and-errors)  
 [Kafka Connect](https://docs.confluent.io/platform/current/connect/index.html#how-kafka-connect-works)  
+[아파치 카프카](https://search.shopping.naver.com/book/catalog/32441032476?cat_id=50010586&frm=PBOKPRO&query=%EC%95%84%ED%8C%8C%EC%B9%98+%EC%B9%B4%ED%94%84%EC%B9%B4&NaPm=ct%3Dlct7i9tk%7Cci%3D2f9c1d6438c3f4f9da08d96a90feeae208606125%7Ctr%3Dboknx%7Csn%3D95694%7Chk%3D60526a01880cb183c9e8b418202585d906f26cb4)  
