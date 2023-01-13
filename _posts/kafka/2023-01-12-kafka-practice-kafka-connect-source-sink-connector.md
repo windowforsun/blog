@@ -20,7 +20,7 @@ use_math: true
 `Kafka Connect` 는 크게 소스로 부터 데이터를 읽어와 카프카에 넣는 `Source Connector` 와 
 카프카에서 데이터를 읽어 타겟으로 전달하는 `Sink Connector` 로 구성된다. 
 
-![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-1.drawio.png)
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-1.drawio.png)  
 
 이번 포스트에서는 직접 `Source Connector` 와 `Sink Connector` 를 구현해서 `Kafka Connect` 를 통해 실행하는 방법에 대해 알아본다.  
 
@@ -30,12 +30,14 @@ use_math: true
 `SourceConnector` 와 `SourceTask` 를 사용해서 직접 구현 가능하다. 
 직접 구현한 소스 커넥터는 빌드해서 `jar` 파일로 만든 후 카프카 커넥트 실행 시 플러그인으로 추가해서 사용해야 한다. 
 
-.. 시진 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-2.drawio.png)  
 
 ### Sink Connector
 
 
-.. 사진 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-3.drawio.png)  
+
+
 
 ---  
 ## Reference
