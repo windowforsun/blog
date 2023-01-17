@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka]"
+title: "[Kafka] Kafka Connect Source, Sink Connector"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafak Connect 의 Source, Sink Connector 에 대해 알아보고 직접 구현해 Kafka 와 연동해 본다.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,11 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Connect
+    - Source Connector
+    - Sink Connector
+    - Source Task
+    - Sink Task
 toc: true
 use_math: true
 ---  
@@ -81,7 +86,7 @@ public class ExamSourceConnector extends SourceConnector {
 ```  
 
 `SourceTask` 는 실제로 데이터를 다루는 역할을 하는 클래스로, 
-소스(애프리케이션, 파일, ..)에서 데이터를 읽어와 토픽으로 데이터를 보내는 역할을 한다. 
+소스(애플리케이션, 파일, ..)에서 데이터를 읽어와 토픽으로 데이터를 보내는 역할을 한다. 
 `SourceTask` 는 데이터를 넣는 토픽의 오프셋을 사용하지 않고 자체적인 오프셋을 사용해서 상태관리를 한다. 
 해당 오프셋은 소스 데이터를 어느 부분까지 읽었는지에 대한 상태 값으로 중복 발송 등을 방지 할 수 있다.  
 
@@ -469,10 +474,426 @@ $ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost
 
 
 ### Sink Connector
+싱크 커넥터는 소스 토픽에서 데이터를 읽어와 타겟 애플리케이션 혹은 타겟 파일에 전달하는 역할을 한다.
+이미 구현돼 있는 오픈소스를 사용해도 되지만 라이센스 혹은 추가 기능등이 필요 한 경우는 카프카 커넥트 라이브러리에서 제공하는
+`SinkConnector` 와 `SinkTask` 를 사용해서 직접 구현 가능하다.
+직접 구현한 소스 커넥터는 빌드해서 `jar` 파일로 만든 후 카프카 커넥트 실행 시 플러그인으로 추가해서 사용해야 한다.
 
 
-![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-3.drawio.png)  
+![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-source-sink-connector-3.drawio.png)
 
+
+`SinkConnector` 는 `SinkTask` 실행 전 입력받은 설정값을 초기화하고 어떤 `SinkTask` 를 사용할지 정의하는데 사용된다.
+`SinkConnector` 구현은 상속받을 사용자 클래스를 생성해서 구현한 필요한 메서드를 구현해 주면 된다.
+
+```java
+// 해당 클래스의 이름이 커텍트에서 호출 할때 사용된다. 
+// 그러므로 커넥터 동작을 좀더 명확히 표현할 수 있는 이름으로 만들어주는 것이 좋다. 
+// MySqlSinkConnector, MongoDbSinkConnector, ..
+public class ExamSinkConnector extends SinkConnector {
+    @Override
+    public void start(Map<String, String> props) {
+        // 사용자가 커넥터 실행을 위해 JSON, config 파일 등으로 입력한 설정값을 초기화 한다. 
+        // 잘못된 값이 들어온 경우 ConnectException() 을 호출해서 커넥터를 종료시킬 수 있다. 
+    }
+
+    @Override
+    public Class<? extends Task> taskClass() {
+        // 커넥터가 사용할 SinkTask 클래스를 반환한다. 
+        return null;
+    }
+
+    @Override
+    public List<Map<String, String>> taskConfigs(int maxTasks) {
+        // 실행하는 태스크의 수가 2개 이상인 경우 태스크마다 각 다른 옵션 설정이 필요한 경우 사용할 수 있다.
+        return null;
+    }
+
+    @Override
+    public void stop() {
+        // 커넥터 종료에 필요한 동작을 작성한다.
+    }
+
+    @Override
+    public ConfigDef config() {
+        // 커넥터가 사용할 설정값에 정보를 반환한다. 
+        // ConfigDef 클래스를 사용해서 커넥터의 설정 정보를 작성 할 수 있다. 
+        return null;
+    }
+
+    @Override
+    public String version() {
+        // 해당 커넥터의 버전을 반환한다. 
+        // 커넥트에서 플러그인을 조회할 떄 노출 되는 버전정보 이다.
+        return null;
+    }
+}
+```  
+
+
+`SinkTask` 는 실제로 데이터를 다루는 역할을 하는 클래스로, 
+카프카 토픽에서 데이터를 읽어오는 컨슈머 역할을 하고 읽어온 데이터를 타겟에 저장한다.  
+
+```java
+public class ExamSinkTask extends SinkTask {
+    @Override
+    public void start(Map<String, String> props) {
+        // 태스크 시점 시점에 필요한 동작을 작성한다.
+        // 주로 태스크에서 사용할 리소스를 초기화 하는 용도로 쓰인다.
+        // JDBC 커넥션, File 객체 초기화 등 ..
+    }
+
+    @Override
+    public void put(Collection<SinkRecord> records) {
+        // 설정된 토픽으로 부터 데이터를 파라미터로 받아 타겟에 저장하는 메서드이다. 
+        // 토픽의 데이터들은 records 라는 변수에 SinkRecord 의 리스트 타입으로 넘어오게 된다. 
+        // SinkRecord 는 토픽의 한 레코드를 의미하고 토픽, 파티션, 타임스탬프 등 정보를 담고 있다. 
+    }
+
+    @Override
+    public void stop() {
+        // 태스크 종료에 필요한 동작을 작성한다.
+        // 일반적으로 start() 에서 초기화한 리소스를 반환하는 용도로 사용된다.
+    }
+
+    @Override
+    public void flush(Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
+        // put() 메서드에서 가져온 데이터를 일정 주기로 싱크(애플리케이션, 파일, ..)에 저장하는 로직을 작성한다. 
+        // MySQL 에 데이터를 저장한다면 put() 메서드에서는 insert 를 수행하고 flush() 메서드에서 commit 을 수행해 트랜잭션을 완료한다. 
+        // 필요시 put() 메서드에 commit 까지 수행하고 flush() 별도로 구현하지 않아도 된다. 
+    }
+
+    @Override
+    public String version() {
+        // 태스트의 버전를 반환한다.
+        // 일반적으로 SourceConnector 와 동일한 버전을 작성한다.
+        return null;
+    }
+}
+```  
+
+
+#### Sink Connector 구현하기
+앞서 `SinkConnector` 에 대한 개념과 구현에 필요한 내용에 대해 알아보았으니,
+이제 실제로 구현해보고 이를 `Kafka Cluster` 와 연동해서 동작 결과를 살펴본다.
+구현할 `SinkConnector` 는 `MyFileSinkConnector` 로 특정 토픽에 있는 데이터를 읽어 특정 파일에 내용을 추가하는 `SinkConnector` 이다.
+
+- `build.gradle`
+
+```groovy
+plugins {
+    id 'java'
+}
+
+group 'com.windowforsun.kafkaconnect'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.apache.kafka:connect-api:3.2.0'
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
+}
+
+test {
+    useJUnitPlatform()
+}
+```  
+
+- `MyFileSinkConnectorConfig`
+
+```java
+public class MyFileSinkConnectorConfig extends AbstractConfig {
+    public static final String DIR_FILE_NAME = "file";
+    private static final String DIR_FILE_NAME_DEFAULT_VALUE = "/tmp/kafka.txt";
+    private static final String DIR_FILE_NAME_DOC = "저장할 디렉토리와 파일 이름";
+
+    public static ConfigDef CONFIG = new ConfigDef()
+            .define(DIR_FILE_NAME,
+                    ConfigDef.Type.STRING,
+                    DIR_FILE_NAME_DEFAULT_VALUE,
+                    ConfigDef.Importance.HIGH,
+                    DIR_FILE_NAME_DOC);
+
+    public MyFileSinkConnectorConfig(Map<?, ?> originals) {
+        super(CONFIG, originals);
+    }
+}
+```  
+
+- `MyFileSinkConnector`
+
+```java
+public class MyFileSinkConnector extends SinkConnector {
+    private Map<String, String> configProperties;
+
+    @Override
+    public void start(Map<String, String> props) {
+        this.configProperties = props;
+        try {
+            new MyFileSinkConnectorConfig(props);
+        } catch(ConfigException e) {
+            throw new ConnectException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Class<? extends Task> taskClass() {
+        return MyFileSinkTask.class;
+    }
+
+    @Override
+    public List<Map<String, String>> taskConfigs(int maxTasks) {
+        List<Map<String, String>> taskConfigs = new ArrayList<>();
+        Map<String, String> taskProps = new HashMap<>();
+        taskProps.putAll(configProperties);
+
+        for(int i = 0; i < maxTasks; i++) {
+            taskConfigs.add(taskProps);
+        }
+
+        return taskConfigs;
+    }
+
+    @Override
+    public void stop() {
+
+    }
+
+    @Override
+    public ConfigDef config() {
+        return MyFileSinkConnectorConfig.CONFIG;
+    }
+
+    @Override
+    public String version() {
+        return "1.0";
+    }
+}
+```  
+
+- `MyFileSinkTask`
+
+```java
+public class MyFileSinkTask extends SinkTask {
+    private Logger logger = LoggerFactory.getLogger(MyFileSinkTask.class);
+    private MyFileSinkConnectorConfig config;
+    private File file;
+    private FileWriter fileWriter;
+
+    @Override
+    public void start(Map<String, String> props) {
+        try {
+            this.config = new MyFileSinkConnectorConfig(props);
+            this.file = new File(this.config.getString(MyFileSinkConnectorConfig.DIR_FILE_NAME));
+            this.fileWriter = new FileWriter(this.file, true);
+        } catch(Exception e) {
+            throw new ConnectException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void put(Collection<SinkRecord> records) {
+        try {
+            for(SinkRecord record : records) {
+                logger.info("data [{}]", record);
+                this.fileWriter.write(record.value().toString() + "\n");
+            }
+        } catch(IOException e) {
+            throw new ConnectException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void flush(Map<TopicPartition, OffsetAndMetadata> currentOffsets) {
+        try {
+            this.fileWriter.flush();
+        } catch(IOException e) {
+            throw new ConnectException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void stop() {
+        try {
+            this.fileWriter.close();
+        } catch(IOException e) {
+            throw new ConnectException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public String version() {
+        return "1.0";
+    }
+}
+```  
+
+- `Dockerfile`
+  - `docker build -t my-sink-connector .` 로 도커 이미지를 빌드한다. 
+
+```dockerfile
+FROM gradle:7-jdk11 as builder
+WORKDIR /build
+COPY build.gradle /build/
+RUN gradle build -x test --parallel --continue > /dev/null 2>&1 || true
+COPY . /build
+RUN gradle build -x test --parallel
+
+FROM confluentinc/cp-kafka-connect-base:6.1.1
+ENV CONNECT_PLUGIN_PATH="/usr/share/java,/usr/share/confluent-hub-components,/tmp"
+COPY ./build/libs/* /tmp/kafka-connect-sink-connector-1.0-SNAPSHOT.jar
+```  
+
+- `docker-compose.yaml`
+  - `docker-compose up --build` 로 전체 구성을 실행한다. 
+
+```yaml
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    container_name: myKafka
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+  mySinkConnector:
+    container_name: mySinkConnector
+    image: localhost/my-sink-connector
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_GROUP_ID: 'my-sink-connector'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components,/tmp'
+      CONNECT_CONFIG_STORAGE_TOPIC: 'my-sink-connect-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'my-sink-connect-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'my-sink-connect-status'
+      CONNECT_KEY_CONVERTER: 'org.apache.kafka.connect.storage.StringConverter'
+      CONNECT_VALUE_CONVERTER: 'org.apache.kafka.connect.storage.StringConverter'
+      CONNECT_REST_ADVERTISED_HOST_NAME: mySinkConnector
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+```  
+
+`docker-compose` 구성이 모두 정상적으로 실행 된 후 `REST API` 를 통해 현재 커넥트에 설정된 플러그인 목록을 조회하면 아래이
+우리가 직접 구현한 `MyFileSinkConnector` 가 위치한 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:8083/connector-plugins | jq
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   615  100   615    0     0    520      0  0:00:01  0:00:01 --:--:--   523
+[
+  {
+    "class": "com.windowforsun.kafkaconnect.sinkconnector.exam.MyFileSinkConnector",
+    "type": "sink",
+    "version": "1.0"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "type": "sink",
+    "version": "6.1.1-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "type": "source",
+    "version": "6.1.1-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorCheckpointConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "type": "source",
+    "version": "1"
+  }
+]
+```  
+
+해당 플러그인을 사용해서 커넥터를 실행하기 위해 아래 `REST API` 요청을 수행해 준다.
+
+```bash
+$ curl -X POST -H "Content-Type: application/json" \
+--data '{
+"name" : "my-sink-connector",
+"config" : {
+"connector.class" : "com.windowforsun.kafkaconnect.sinkconnector.exam.MyFileSinkConnector",
+"file" : "/tmp/my-sink-file.txt",
+"topics" : "my-sink-topic"
+}
+}' \
+http://localhost:8083/connectors
+```  
+
+실행한 커넥터가 정상적으로 실행 중인지 확인하면 아래와 같다.
+
+```bash
+$ curl -X GET http://localhost:8083/connectors/my-sink-connector/status | jq
+
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   181  100   181    0     0   2151      0 --:--:-- --:--:-- --:--:--  2291
+{
+  "name": "my-sink-connector",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "mySinkConnector:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "mySinkConnector:8083"
+    }
+  ],
+  "type": "sink"
+}
+```  
+
+이제 테스트를 위해 프로듀서로 `my-sink-topic` 토픽에 데이터를 추가한다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-producer.sh --bootstrap-server localhost:9092 --topic my-sink-topic 
+>foo!
+>bar!
+>hoo!
+>har!
+```  
+
+그리고 커넥트 서버 로컬에 `my-sink-file.txt` 내용을 확인하면 아래와 같이 토픽의 문자열 데이터들이 그대로 
+추가 된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it mySinkConnector cat /tmp/my-sink-file.txt
+foo!
+bar!
+hoo!
+har!
+
+```  
 
 
 ---  
@@ -480,7 +901,6 @@ $ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost
 [Introduction to Kafka Connectors](https://www.baeldung.com/kafka-connectors-guide)  
 [Connect REST Interface](https://docs.confluent.io/platform/current/connect/references/restapi.html#status-and-errors)  
 [Kafka Connect](https://docs.confluent.io/platform/current/connect/index.html#how-kafka-connect-works)  
-[아파치 카프카](https://search.shopping.naver.com/book/catalog/32441032476?cat_id=50010586&frm=PBOKPRO&query=%EC%95%84%ED%8C%8C%EC%B9%98+%EC%B9%B4%ED%94%84%EC%B9%B4&NaPm=ct%3Dlct7i9tk%7Cci%3D2f9c1d6438c3f4f9da08d96a90feeae208606125%7Ctr%3Dboknx%7Csn%3D95694%7Chk%3D60526a01880cb183c9e8b418202585d906f26cb4)  
-
+[아파치 카프카](https://search.shopping.naver.com/book/catalog/32441032476?cat_id=50010586&frm=PBOKPRO&query=%EC%95%84%ED%8C%8C%EC%B9%98+%EC%B9%B4%ED%94%84%EC%B9%B4&NaPm=ct%3Dlct7i9tk%7Cci%3D2f9c1d6438c3f4f9da08d96a90feeae208606125%7Ctr%3Dboknx%7Csn%3D95694%7Chk%3D60526a01880cb183c9e8b418202585d906f26cb4)
 [robcowart/cp-kafka-connect-custom](https://github.com/robcowart/cp-kafka-connect-custom)  
 [conduktor/kafka-stack-docker-compose](https://github.com/conduktor/kafka-stack-docker-compose)  
