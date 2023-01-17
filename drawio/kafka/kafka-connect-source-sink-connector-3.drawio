@@ -1,1 +1,91 @@
-<mxfile host="app.diagrams.net" modified="2023-01-13T12:10:45.135Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="46ArwxMigc4l9ug29-KJ" version="20.8.3" type="github"><diagram id="spNvuQ8d3lz3dOJeR6B4" name="페이지-1">7Vtdl6I4EP01POoBAgiPos7snJ3Zs7P2np15jBAwIxIWY6v96zeBoHxE7d7GFru1HzqphJC6N0VVUqCA0XL7OYXJ/BvxUaToqr9VwFjRdc0ABvvHJTshsS0zl4Qp9oXsIJjiJySEqpCusY9WlY6UkIjipCr0SBwjj1ZkME3JptotIFH1rgkMUUMw9WDUlP6DfToXUs1yDg2/IRzOxa1tfZA3LGHRWWiymkOfbEoiMFHAKCWE5qXldoQijl6BS37dpyOt+4mlKKbPuWDiaPGvP5/AF6/nf/9rvZvFf3/piVEeYbQWCovJ0l2BQErWsY/4IKoC3M0cUzRNoMdbN4x0JpvTZcRqGis2J1XcAaUUbUsiMcnPiCwRTXesi2gFjlghYsnsl8LmgL9pCNm8BD0ohFBwHu7HPsDCCgIZOUrT8Emn4erngrr0wTOtP5aa2jpKAY6iEYlIml0LApP/cTmJaUme/5h8RVOyQKUWK/u1hLdagRvodgNuDUjg3gtbh1tvwD0l65RhqVsRu7k7S1kppJn6ucTHjxU6rH/X3KxcBgHtwQiHsQKGrEeEAnGZ6FAfaJXAWDrSDHqLMCO55+U88PFwjCmGkXTIHmv/tpt+/1qMzbDIh6/ekomz6d+IRiQOydh9VzpNwbtS5xOO0LtSaJgkEfYgxSR+V3r1+/0X6lNzOlyBqmc57imO+Ryh/9hjHgSxRpd7DoZ2NBQNS+z7/IZSp1Z1e9x/iRBOs0/4s2t6rYF2Ia9ltB0k1MGsEuhDZAeelHLPRrOgHZg1p4qzXoTvZZwdCc77jq3jbDZw/h0GC8hEI7EHeKmZxCRGNYCF6JLG0QI7+71Fwc5Awo7MCi4WulkvMQLt1UYQBIHuSY3At2aW2VKErKu1h40mgXkge9g4lzKCwdEQubACBsTHsQOt7g0kBJlvaQf2cX4e4GrRrmdoBcHqphvIniS6BMGL7bmdW0NQryFoXxvBwihuB0JQg9C5OoStn/ycCepMZPuGzJ/Z+gy0deJjaEYVZ+OZOGvaxYBunvmIqO6j+DDDqJFiNkmx3tKFaaBByQNJsHfCANoI6JB1JKAbODNVbQlrUMNa8qCx3/I5ozeX/yufM106YR449fDM6T9zo3LBQ+bm8p7ieHE/Y+6ARvcz5q6rcz9jvhG97mfM1/FbFztm1q0zkQFJ6ZyEJIbRV0ISwdkvROlOwAbXlFQZRVtMf5TKP/lQfVPUxlsxclbZFZWYafOjXCldxauHy7La7gh/+Woq3q04ydwq372ewCbvR2EaInoqtBWMIb/y8kdzIaQoYo+ER1SZRuuUFtFoiVI+s6moiv3LTbHcZPXZW6azLBfsnacZdIvmZubilUF+FzJEpt25DBFoZiE+bIrI0rqWIgLN3MUJM7iVHJFZjxWunyMCkiREtsP9iCkiq57Du3qKCNxahsNSu5YjMm4tw2HV02xXTxIZoAHSPfY8AVfxDvq52FPvVuxZzLvpC7ppJ/Vk6tUzgUYzSLnbyfmt11k7KRbm29uJ9HsISR5mMlJsS7FHWWGoDNlmXeVl1+XliavYhjI0lcmYF1w1a3UVV1ccg3dzRlyuW3DJzSaerZL/c8p2w3FX7WuOwmrLliz9muPllsyqh89psrbSV0lg8h8=</diagram></mxfile>
+<mxfile host="app.diagrams.net" modified="2023-01-17T13:13:26.367Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="BdyM-NP0CjZ79u3W5Hv_" version="20.8.5" type="github">
+  <diagram id="spNvuQ8d3lz3dOJeR6B4" name="페이지-1">
+    <mxGraphModel dx="538" dy="1011" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="E91njPz3Ic-dQRuybnUI-1" value="" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="395" y="210" width="540" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="30" y="328" width="130" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-2" value="Source&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- MySQL&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- MongoDB&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- S3&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- File&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Application&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- ...&lt;/span&gt;&lt;/div&gt;" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="30" y="328" width="130" height="171" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-4" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="190" y="265" width="190" height="265" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-5" value="Kafka Connect" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="220" y="275" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-6" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="200" y="315" width="170" height="195" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-7" value="Source Connector" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="210" y="325" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-8" value="Source Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="215" y="375" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-9" value="Source Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="225" y="385" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-10" value="Source Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="235" y="395" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-11" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+          <mxGeometry x="414" y="345" width="120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-12" value="Kafka" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="444" y="355" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-13" value="Topic" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+          <mxGeometry x="434" y="395" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-22" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="790" y="329.5" width="130" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-23" value="Sink&lt;br&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- MySQL&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- MongoDB&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- S3&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- File&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- Application&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;- ...&lt;/span&gt;&lt;/div&gt;" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;fontColor=#333333;" parent="1" vertex="1">
+          <mxGeometry x="790" y="329.5" width="130" height="171" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-26" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=18;strokeWidth=3;" parent="1" source="Sgz2tgsYktBtTc56Nm10-2" target="Sgz2tgsYktBtTc56Nm10-10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-34" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;fontSize=18;" parent="1" source="Sgz2tgsYktBtTc56Nm10-10" target="Sgz2tgsYktBtTc56Nm10-13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-35" value="" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+          <mxGeometry x="580" y="265" width="190" height="265" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-36" value="Kafka Connect" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="610" y="275" width="130" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-37" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=18;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="590" y="315" width="170" height="195" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-38" value="Sink Connector" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="600" y="325" width="150" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-39" value="Source Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="605" y="375" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-40" value="Source Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="615" y="385" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-43" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;fontSize=18;" parent="1" source="Sgz2tgsYktBtTc56Nm10-41" target="Sgz2tgsYktBtTc56Nm10-23" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-41" value="Sink Task" style="rounded=0;whiteSpace=wrap;html=1;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="625" y="395" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Sgz2tgsYktBtTc56Nm10-42" style="edgeStyle=none;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=3;fontSize=18;" parent="1" source="Sgz2tgsYktBtTc56Nm10-13" target="Sgz2tgsYktBtTc56Nm10-41" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="E91njPz3Ic-dQRuybnUI-2" value="싱크 커넥터 범위&amp;nbsp;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=18;" parent="1" vertex="1">
+          <mxGeometry x="605" y="220" width="140" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
