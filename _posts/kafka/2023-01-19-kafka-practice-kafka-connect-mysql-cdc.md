@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Connect Debezium MySQL CDC Source Connector"
 header:
   overlay_image: /img/kafka-bg.jpg
 excerpt: ''
@@ -13,13 +13,24 @@ tags:
     - Practice
     - Kafka
     - Kafka Connect
-    - Source Connector
-    - Sink Connector
-    - Source Task
-    - Sink Task
+    - CDC
+    - Debezium
+    - MySQL
 toc: true
 use_math: true
 ---  
+
+## CDC
+`Application` 를 개별 역할을 수행하는 컴포넌트 별로 나누어 구성하는 `MSA(Micro Service Architecture)` 에서 
+`EDA(Event Driven Architecture`) 로 발전하기 위해서는 신뢰성있는 `Event Bus` 를 구축하는 것이 필수이다. 
+`Kafka` 를 통해 `Event Bus` 로 사용해서 데이터 인입에 따라 전체 컴포넌트들이 유기적으로 동작 할 수 있는 `CDC` 에 대해 간단하게 알아본다. 
+
+`CDC` 는 `Change Data Capture` 의 약자로 소스가 되는 데이터의 변경을 식별해서 필요한 후속처리를 자동화 하는 기술 또는 설계 기법이자 구조를 의미한다.  
+
+`CDC` 라는 별도의 구조 없이 `Application Layer` 에서 별도 구현을 통해 `Event Bus` 를 구성하는 방법도 있다. 
+하지만 `Application Layer` 에서 신뢰할 수 있는 이벤트 발행은 복잡한 
+
+
 
 
 
