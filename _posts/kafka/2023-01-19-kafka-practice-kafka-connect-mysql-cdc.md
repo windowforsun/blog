@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Connect Debezium MySQL CDC Source Connector"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafa Connect 중 MySQL 등 데이터베이스 변경사항에 대해서 CDC 구현이 가능한 Debezium Source Connector 에 대해 알아보고 구성해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -367,7 +367,7 @@ http://localhost:8083/connectors | jq
   "type": "source"
 }
 
-```  
+```
 
 `Debezium MySQL Source Connector` 실행에 사용한 설정 필드에 대한 설명은 [여기](https://debezium.io/documentation/reference/2.1/connectors/mysql.html#mysql-connector-properties) 
 에서 확인 가능하다.  
@@ -403,7 +403,6 @@ $ curl -X GET http://localhost:8083/connectors\?expand\=status | jq
 ```bash
 $ docker exec -it myKafka kafka-topics.sh --bootstrap-server localhost:9092 --list
 __consumer_offsets
-_schemas
 my-source-connector-config
 my-source-connector-history
 my-source-connector-offset
@@ -415,83 +414,524 @@ originDB.user.user_role
 
 생성된 토픽에 대한 설정은 아래와 같다. 
 
-- `_schemas` : `SchemaRegistry` 에서 커넥터 스키마 정보를 관리하는 토픽
+
 - `my-source-connector-config` : 커넥터 설정 관리 데이터
 - `my-source-connector-history` : `MySQL binlog` 의 데이터베이스 스키마 상태(커넥터 재시작시 사용)
 - `my-source-connector-offset` : 커넥터 오프셋 관리 데이터
-- `my-source-connector-status` : 커넥터 상태 관리 데이터
+- `my-source-connector-status` : 커넥터 상태 관리 데이터(여기 까지는 분산 모드 카프카 실행으로 생성되는 토픽)
 - `originDB` : 스키마 DDL 변경 데이터
 - `originDB.user.user_account` : `user` 데이터베이스 `user_account` 테이블 변경 데이터
 - `originDB.user.user_role` : `user` 데이터베이스 `user_role` 테이블 변경 데이터
+
+커넥터 설정에서 `key` 와 `value` 의 `Converter` 값을 `JsonConverter` 로 설정 했기 때문에, 
+토픽을 조회하면 `Json` 형식의 데이터가 조회 된다. 
+그리고 데이터의 스카마 정보가 모든 데이터마다 포함되기 때문에 데이터의 전체적인 크기가 크다는 점이 있다. 
+반복적으로 모든 데이터에 포함되는 스카마 같은 공통 정보를 별도로 관리하는 방법은 `Schema Registry` 를 사용하는 방법인데, 
+이는 추후에 별도의 포스트이으로 다루도록 한다.  
 
 스키마 `DDL` 변경 데이터 토픽인 `originDB` 를 컨슈머로 조회하면 아래와 같이 생성한 2개 테이블 정보를 확인할 수 있다.  
 
 ```bash
 $ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic originDB --from-beginning
 
-1.5.0.Final
-mysqloriginDB����true mysql-bin.000003��SET character_set_server=utf8mb4, collation_server=utf8mb4_0900_ai_ci
-1.5.0.Final
-mysqloriginDB����truuseruser_account mysql-bin.000003userBDROP TABLE IF EXISTS user_account
-1.5.0.Final
-mysqloriginDB����truuseruser_role mysql-bin.000003user<DROP TABLE IF EXISTS user_role
-1.5.0.Final
-mysqloriginDB����truuser mysql-bin.000003user<DROP DATABASE IF EXISTS `user`
-1.5.0.Final
-mysqloriginDB����truuser mysql-bin.000003user�CREATE DATABASE `user` CHARSET utf8mb4 COLLATE utf8mb4_0900_ai_ci
-1.5.0.Final
-mysqloriginDB����truuser mysql-bin.000003userUSE `user`
-1.5.0.Final
-mysqloriginDB����truuseruser_account mysql-bin.000003user�CREATE TABLE `user_account` (
-  `uid` int DEFAULT NULL,
-  `name` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-                                                                  CREATE*"user"."user_account"utf8mb4uiINTINnameVARCHARVARCHARutf8mb4�
-1.5.0.Final
-mysqloriginDB����truuseruser_role mysql-bin.000003user�CREATE TABLE `user_role` (
-  `account_id` int DEFAULT NULL,
-  `role` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-                                                                  CREATE$"user"."user_role"utf8mb4account_iINTINroleVARCHARVARCHARutf8mb4�
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "io.debezium.connector.mysql.SchemaChangeValue"
+  },
+  "payload": {
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674986778807,
+      "snapshot": "false",
+      "db": "user",
+      "sequence": null,
+      "table": "user_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 419,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "databaseName": "user",
+    "schemaName": null,
+    "ddl": "create table user_account (\n   uid int,\n   name varchar(255)\n)",
+    "tableChanges": [
+      {
+        "type": "CREATE",
+        "id": "\"user\".\"user_account\"",
+        "table": {
+          "defaultCharsetName": "utf8mb4",
+          "primaryKeyColumnNames": [],
+          "columns": [
+            {
+              "name": "uid",
+              "jdbcType": 4,
+              "nativeType": null,
+              "typeName": "INT",
+              "typeExpression": "INT",
+              "charsetName": null,
+              "length": null,
+              "scale": null,
+              "position": 1,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            },
+            {
+              "name": "name",
+              "jdbcType": 12,
+              "nativeType": null,
+              "typeName": "VARCHAR",
+              "typeExpression": "VARCHAR",
+              "charsetName": "utf8mb4",
+              "length": 255,
+              "scale": null,
+              "position": 2,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "io.debezium.connector.mysql.SchemaChangeValue"
+  },
+  "payload": {
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674986779074,
+      "snapshot": "false",
+      "db": "user",
+      "sequence": null,
+      "table": "user_role",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 646,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "databaseName": "user",
+    "schemaName": null,
+    "ddl": "create table user_role (\naccount_id int,\nrole varchar(255)\n)",
+    "tableChanges": [
+      {
+        "type": "CREATE",
+        "id": "\"user\".\"user_role\"",
+        "table": {
+          "defaultCharsetName": "utf8mb4",
+          "primaryKeyColumnNames": [],
+          "columns": [
+            {
+              "name": "account_id",
+              "jdbcType": 4,
+              "nativeType": null,
+              "typeName": "INT",
+              "typeExpression": "INT",
+              "charsetName": null,
+              "length": null,
+              "scale": null,
+              "position": 1,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            },
+            {
+              "name": "role",
+              "jdbcType": 12,
+              "nativeType": null,
+              "typeName": "VARCHAR",
+              "typeExpression": "VARCHAR",
+              "charsetName": "utf8mb4",
+              "length": 255,
+              "scale": null,
+              "position": 2,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
 ```  
 
 그리고 `user` 데이터베이스의 `user_account`, `user_role` 테이블 토픽을 컨슈머로 조회하면 추가한 데이터가 토픽에 들어 있는 것을 확인 할 수 있다.  
 
 ```bash
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic originDB.user.user_account --from-beginning
 
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "originDB.user.user_account.Envelope"
+  },
+  "payload": {
+    "before": null,
+    "after": {
+      "uid": 1,
+      "name": "jack"
+    },
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674986778000,
+      "snapshot": "false",
+      "db": "user",
+      "sequence": null,
+      "table": "user_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 1014,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "c",
+    "ts_ms": 1674986779127,
+    "transaction": null
+  }
+}
+
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic originDB.user.user_role --from-beginning
+
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "originDB.user.user_role.Envelope"
+  },
+  "payload": {
+    "before": null,
+    "after": {
+      "account_id": 1,
+      "role": "normal"
+    },
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674986779000,
+      "snapshot": "false",
+      "db": "user",
+      "sequence": null,
+      "table": "user_role",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 1308,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "c",
+    "ts_ms": 1674986779452,
+    "transaction": null
+  }
+}
+```  
+
+그리고 테스트를 위해 `admin` 데이터베이스와 `admin_account`, `admin_role` 테이블을 생성하고 초기 데이터도 추가해 준다. 
+
+```bash
+$ docker exec -it originDB mysql -uroot -proot
+mysql> create database admin;
+Query OK, 1 row affected (0.01 sec)
+
+mysql> use admin;
+Database changed
+
+mysql> create table admin_account (
+    ->    uid int,
+    ->    name varchar(255)
+    -> );
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> create table admin_roll (
+    ->    account_id int,
+    ->    roll varchar(255)
+    -> );
+Query OK, 0 rows affected (0.02 sec)
+
+mysql> insert into admin_account(uid, name) values(1, 'susan');
+Query OK, 1 row affected (0.00 sec)
+
+mysql> insert into admin_roll(account_id, roll) values(1, 'developer');
+Query OK, 1 row affected (0.00 sec)
+```
+
+그리고 `Kafka Cluster` 에 생성된 토픽을 조회하면 아래와 같이, `admin` 데이터베이스의 스키마를 관리하는 토픽과 
+`admin` 데이터베이스의 테이블 데이터들의 변경사항을 관리할 토픽이 추가된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+__consumer_offsets
+my-source-connector-config
+my-source-connector-history
+my-source-connector-offset
+my-source-connector-status
+originDB
+originDB.admin.admin_account
+originDB.admin.admin_roll
+originDB.user.user_account
+originDB.user.user_role
+```  
+
+`INSERT` 를 수행할 경우 아래와 같이 `op` 필드가 `c` 이고 `before` 는 `null`, `after` 에는 추가한 값의 데이터가 토픽에 추가 된다.  
+
+```bash
+insert into admin_account(uid, name) values(2, 'oliver');
+
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략.. ],
+    "optional": false,
+    "name": "originDB.admin.admin_account.Envelope"
+  },
+  "payload": {
+    "before": null,
+    "after": {
+      "uid": 2,
+      "name": "oliver"
+    },
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674987174000,
+      "snapshot": "false",
+      "db": "admin",
+      "sequence": null,
+      "table": "admin_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 2865,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "c",
+    "ts_ms": 1674987174997,
+    "transaction": null
+  }
+}
+```  
+
+`UPDATE` 를 수행하는 경우 아래와 같이 `op` 필드는 `u` 이고, 
+`before` 와 `after` 로 데이터가 어떻게 변경 됐는지 알려준다.   
+
+```bash
+update admin_account set name = 'james' where uid = '2';
+
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "originDB.admin.admin_account.Envelope"
+  },
+  "payload": {
+    "before": {
+      "uid": 2,
+      "name": "oliver"
+    },
+    "after": {
+      "uid": 2,
+      "name": "james"
+    },
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674987254000,
+      "snapshot": "false",
+      "db": "admin",
+      "sequence": null,
+      "table": "admin_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 3176,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "u",
+    "ts_ms": 1674987254465,
+    "transaction": null
+  }
+}
 ```  
 
 
-> cdc 토픽 데이터 스키마 어떻하지 ? schema registry 를 안쓰면 토픽 내부 데이터가 너무 크고, schemaregistry 를 쓰면 토픽에 데이터가 잘 안들어가는 듯한 느낌 .. ? ㅠㅠ
+`INSERT` 를 수행할 경우 아래와 같이 `op` 필드가 `d` 이고 `before` 는 삭제전 데이터, `after` 는 `null` 로 표시된 데이터가 토픽에 추가 된다.
 
 
+```bash
+delete from admin_account where uid = '2';
+
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ .. 생략 .. ],
+    "optional": false,
+    "name": "originDB.admin.admin_account.Envelope"
+  },
+  "payload": {
+    "before": {
+      "uid": 2,
+      "name": "james"
+    },
+    "after": null,
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674987385000,
+      "snapshot": "false",
+      "db": "admin",
+      "sequence": null,
+      "table": "admin_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 3491,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "op": "d",
+    "ts_ms": 1674987385365,
+    "transaction": null
+  }
+}
+```  
 
 
+컬럼 추가, 삭제, 타입 수정, 이름 변경 등에 대한 내용은 `originDB` 이름의 토픽에 아래와 같이 변경사항들이 추가 된다.  
 
+```bash
+alter table admin_account add column test varchar(255) default '';
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+{
+  "schema": {
+    "type": "struct",
+    "fields": [ ..생략.. ],
+    "optional": false,
+    "name": "io.debezium.connector.mysql.SchemaChangeValue"
+  },
+  "payload": {
+    "source": {
+      "version": "1.5.0.Final",
+      "connector": "mysql",
+      "name": "originDB",
+      "ts_ms": 1674988021776,
+      "snapshot": "false",
+      "db": "admin",
+      "sequence": null,
+      "table": "admin_account",
+      "server_id": 1,
+      "gtid": null,
+      "file": "mysql-bin.000003",
+      "pos": 3646,
+      "row": 0,
+      "thread": null,
+      "query": null
+    },
+    "databaseName": "admin",
+    "schemaName": null,
+    "ddl": "alter table admin_account add column test varchar(255) default ''",
+    "tableChanges": [
+      {
+        "type": "ALTER",
+        "id": "\"admin\".\"admin_account\"",
+        "table": {
+          "defaultCharsetName": "utf8mb4",
+          "primaryKeyColumnNames": [],
+          "columns": [
+            {
+              "name": "uid",
+              "jdbcType": 4,
+              "nativeType": null,
+              "typeName": "INT",
+              "typeExpression": "INT",
+              "charsetName": null,
+              "length": null,
+              "scale": null,
+              "position": 1,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            },
+            {
+              "name": "name",
+              "jdbcType": 12,
+              "nativeType": null,
+              "typeName": "VARCHAR",
+              "typeExpression": "VARCHAR",
+              "charsetName": "utf8mb4",
+              "length": 255,
+              "scale": null,
+              "position": 2,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            },
+            {
+              "name": "test",
+              "jdbcType": 12,
+              "nativeType": null,
+              "typeName": "VARCHAR",
+              "typeExpression": "VARCHAR",
+              "charsetName": "utf8mb4",
+              "length": 255,
+              "scale": null,
+              "position": 3,
+              "optional": true,
+              "autoIncremented": false,
+              "generated": false
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+```  
 
 
 ---  
 ## Reference
-[Introduction to Kafka Connectors](https://www.baeldung.com/kafka-connectors-guide)  
-[Connect REST Interface](https://docs.confluent.io/platform/current/connect/references/restapi.html#status-and-errors)  
-[Kafka Connect](https://docs.confluent.io/platform/current/connect/index.html#how-kafka-connect-works)  
-[아파치 카프카](https://search.shopping.naver.com/book/catalog/32441032476?cat_id=50010586&frm=PBOKPRO&query=%EC%95%84%ED%8C%8C%EC%B9%98+%EC%B9%B4%ED%94%84%EC%B9%B4&NaPm=ct%3Dlct7i9tk%7Cci%3D2f9c1d6438c3f4f9da08d96a90feeae208606125%7Ctr%3Dboknx%7Csn%3D95694%7Chk%3D60526a01880cb183c9e8b418202585d906f26cb4)  
-[robcowart/cp-kafka-connect-custom](https://github.com/robcowart/cp-kafka-connect-custom)  
-[conduktor/kafka-stack-docker-compose](https://github.com/conduktor/kafka-stack-docker-compose)  
+[Debezium connector for MySQL](https://debezium.io/documentation/reference/2.1/connectors/mysql.html)  
+[MySQL Change Data Capture (CDC): The Complete Guide](https://datacater.io/blog/2021-08-25/mysql-cdc-complete-guide.html#cdc-binlog)  
+[Using Kafka Connect with Schema Registry](https://docs.confluent.io/platform/current/schema-registry/connect.html#json-schema)  
+[Confluent Kafka using Debezium for doing CDC , mysql as source and sink](https://medium.com/@koen.vantomme/confluent-kafka-using-debezium-for-doing-cdc-mysql-as-source-and-sink-666378fbdc95)  
+[Debezium & MySQL v8 : Public Key Retrieval Is Not Allowed](https://rmoff.net/2019/10/23/debezium-mysql-v8-public-key-retrieval-is-not-allowed/)  
