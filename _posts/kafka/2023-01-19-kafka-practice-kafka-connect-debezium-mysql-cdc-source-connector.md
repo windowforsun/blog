@@ -40,7 +40,7 @@ use_math: true
 예제 진행은 `Standalone Mode` 가 아닌, `Distribueted Mode` 로 진행되는 점 기억해야 한다. 
 
 
-### Debezium MySQL Source Connector
+## Debezium MySQL Source Connector
 `Debezium MySQL Source Connector` 는 `MySQL` 의 `binlog` 를 추적해서 `CDC` 동작을 수행한다.  
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-connect-mysql-cdc-2.png)  
@@ -55,6 +55,7 @@ use_math: true
 └── mysql.cnf
 ```  
 
+### Dockerfile
 `Debezium MySQL Source Connector` 사용을 위해서는 별도 도커 이미지 빌드가 필요하다. 
 이미지 생성을 위해 아래와 같은 `Dockerfile` 을 작성해 준다.  
 
@@ -84,6 +85,8 @@ RUN mkdir $CUSTOM_CONNECTOR_MYSQL_PATH && cd $CUSTOM_CONNECTOR_MYSQL_PATH && \
 ```bash
 $ docker build -t debezium-mysql-source-connector . 
 ```  
+
+### docker-compose
 
 그리고 `MySQL` 을 `Source` 로 `Source Connector` 와 연결을 위해서는 설정이 필요한데, 
 해당 설정이 있는 `MySQL` 설정 파일인 `mysql.cnf` 파일 내용은 아래와 같다.  
@@ -174,6 +177,8 @@ Attaching to myKafka, mySourceConnector, myZookeeper, originDB
 
 .. 생략 ..
 ```  
+
+### 설정 및 테스트
 
 `MySQL` 컨테이너인 `originDB` 에 접속해서 `mysql.cnf` 파일을 통해 설정한 값들이 정상적으로 설정 됐는지 확인하면 아래와 같다.  
 
