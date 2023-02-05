@@ -255,7 +255,7 @@ SecureRandom random = SecureRandom.getInstance("NativePRNG");
 
 ```java
 @Threads(value = 100)
-public class RandomThreadLocalRandom {
+public class RandomTest {
     private static final int LOOP_COUNT = 500;
 
     private static SecureRandom getSecureRandom() {
@@ -414,15 +414,15 @@ public class RandomThreadLocalRandom {
 
 ```bash
 Benchmark                                             Mode  Cnt      Score   Error  Units
-RandomThreadLocalRandom.shareRandom                   avgt       14302.677          us/op
-RandomThreadLocalRandom.shareSecureRandom             avgt       11577.258          us/op
-RandomThreadLocalRandom.shareSplittableRandom         avgt         148.094          us/op
-RandomThreadLocalRandom.shareThreadLocalRandom        avgt          13.005          us/op
-RandomThreadLocalRandom.unShareRandom                 avgt          48.697          us/op
-RandomThreadLocalRandom.unShareSecureRandom           avgt       12273.854          us/op
-RandomThreadLocalRandom.unShareSplittableRandom       avgt          13.556          us/op
-RandomThreadLocalRandom.unShareSplitSplittableRandom  avgt           8.244          us/op
-RandomThreadLocalRandom.unShareThreadLocalRandom      avgt          13.252          us/op
+RandomTest.shareRandom                   avgt       14302.677          us/op
+RandomTest.shareSecureRandom             avgt       11577.258          us/op
+RandomTest.shareSplittableRandom         avgt         148.094          us/op
+RandomTest.shareThreadLocalRandom        avgt          13.005          us/op
+RandomTest.unShareRandom                 avgt          48.697          us/op
+RandomTest.unShareSecureRandom           avgt       12273.854          us/op
+RandomTest.unShareSplittableRandom       avgt          13.556          us/op
+RandomTest.unShareSplitSplittableRandom  avgt           8.244          us/op
+RandomTest.unShareThreadLocalRandom      avgt          13.252          us/op
 ```  
 
 정상적이지 않은 사용방법도 포함된 성능 테스트이다. 
