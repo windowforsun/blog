@@ -16,6 +16,7 @@ tags:
     - CDC
     - Debezium
     - MySQL
+    - Elasticsearch
 toc: true
 use_math: true
 ---  
