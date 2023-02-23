@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Connect CDC MySQL to Elasticsearch"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Connect 의 Elasticsearch Sink Connector 를 사용해서 CDC MySQL to Elasticsearch 를 구현해보자'
 author: "window_for_sun"
 header-style: text
 categories :
