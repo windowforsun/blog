@@ -708,6 +708,8 @@ originDB.user.user_account
 originDB.user.user_role
 ```  
 
+#### Insert
+
 `INSERT` 를 수행할 경우 아래와 같이 `op` 필드가 `c` 이고 `before` 는 `null`, `after` 에는 추가한 값의 데이터가 토픽에 추가 된다.  
 
 ```bash
@@ -749,6 +751,8 @@ insert into admin_account(uid, name) values(2, 'oliver');
   }
 }
 ```  
+
+#### Update
 
 `UPDATE` 를 수행하는 경우 아래와 같이 `op` 필드는 `u` 이고, 
 `before` 와 `after` 로 데이터가 어떻게 변경 됐는지 알려준다.   
@@ -796,8 +800,9 @@ update admin_account set name = 'james' where uid = '2';
 }
 ```  
 
+#### Delete
 
-`INSERT` 를 수행할 경우 아래와 같이 `op` 필드가 `d` 이고 `before` 는 삭제전 데이터, `after` 는 `null` 로 표시된 데이터가 토픽에 추가 된다.
+`DELETE` 를 수행할 경우 아래와 같이 `op` 필드가 `d` 이고 `before` 는 삭제전 데이터, `after` 는 `null` 로 표시된 데이터가 토픽에 추가 된다.
 
 
 ```bash
@@ -840,6 +845,7 @@ delete from admin_account where uid = '2';
 }
 ```  
 
+#### DDL
 
 컬럼 추가, 삭제, 타입 수정, 이름 변경 등에 대한 내용은 `originDB` 이름의 토픽에 아래와 같이 변경사항들이 추가 된다.  
 
