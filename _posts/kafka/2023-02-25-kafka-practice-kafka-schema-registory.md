@@ -12,11 +12,7 @@ categories :
 tags:
     - Practice
     - Kafka
-    - Kafka Connect
-    - CDC
-    - Debezium
-    - MySQL
-    - Elasticsearch
+    - Schema Registry
 toc: true
 use_math: true
 ---  
@@ -28,6 +24,11 @@ use_math: true
 
 ---  
 ## Reference
+[Kafka, Avro Serialization, and the Schema Registry](https://dzone.com/articles/kafka-avro-serialization-and-the-schema-registry)  
+
+
+
+
 [Streaming data changes in MySQL into ElasticSearch using Debezium, Kafka, and Confluent JDBC Sink Connector](https://medium.com/dana-engineering/streaming-data-changes-in-mysql-into-elasticsearch-using-debezium-kafka-and-confluent-jdbc-sink-8890ad221ccf)  
 [Kafka Connect Elasticsearch Connector in Action](https://www.confluent.io/blog/kafka-elasticsearch-connector-tutorial/)  
 [Streaming Data Changes from Your Database to Elasticsearch](https://debezium.io/blog/2018/01/17/streaming-to-elasticsearch/)  
