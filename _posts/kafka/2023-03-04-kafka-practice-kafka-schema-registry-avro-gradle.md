@@ -23,7 +23,7 @@ use_math: true
 
 
 ## Avro Serialize/Deserialize
-[Kafka 와 Confluent Schema Registry]()
+[Kafka 와 Confluent Schema Registry]({{site.baseurl}}{% link _posts/kafka/2023-02-25-kafka-practice-kafka-schema-registry.md %})
 에서는 `Confluent Schema Registry` 에 대한 개념과 기본적인 사용 방법에 대해서 알아보 았다.  
 
 전 포스트에서 `Avro` 포맷으로 `Serialize/Deserialize` 하는 방법은 아래와 같은 `avro` 포맷 형식을 
@@ -46,18 +46,37 @@ use_math: true
 매번 사용이 필요한 스키마에 대해서 해당 작업을 해주기는 번거러운 작업이다.  
 
 
-SPECIFIC_AVRO_READER_CONFIG,
-specific.avro.reader 
-문제 및 언급
-
-
-
 그래서 이번 포스트에서는 `Gradle` 기반으로 `Avro` 스키마만 정의해 주면 `Schema Registry` 에 
 등록도 해주고 매핑되는 클래스 또한 생성해주는 플러그인과 사용 방법에 대해 알아 본다.  
 
 
-### Gradle Avro Serialize/Deserialize Plugin
+[specific.avro.reader](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-schema-registry/#producer-consumer-%EC%97%B0%EB%8F%99)
+이전 포스팅에서 해당 옵션에 `true` 값을 주면 역직렬화 관련 에러가 발생했다. 
+이번 포스팅에서 알아보는 `Gradle` 기반 방식을 사용하면 `Producer`, `Consumer` 에서 
+특정 `Avro` 스키마 버전을 명시해서 보다 안정적으로 애플리케이션 구현이 가능하다.  
 
+이전 포스팅에서는 `Producer` 가 생산한 스키마와 상관없이 `Consumer` 는 `GenericRecord` 를 사용해서 
+
+### Gradle Avro Serialize/Deserialize Plugin
+`Gradle` 기반으로 `Avro` 스키마에 해당하는 클래스를 자동 생성하기 위해서는 [davidmc24/gradle-avro-plugin](https://github.com/davidmc24/gradle-avro-plugin)
+이라는 `Gradle Plugin` 을 사용한다. 
+
+플러그인 사용을 위해서 `setting.gradle` 파일에 아래 저장소 설정을 추가해 준다.  
+
+```groovy
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+```  
+
+다음으로 `build.gradle` 내용은 아래와 같다.  
+
+```groovy
+
+```
 
 
 
