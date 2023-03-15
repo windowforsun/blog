@@ -31,11 +31,11 @@ use_math: true
 이런 모델 구현을 위해 아래 3가지 핵심 개념으로 구성된다. 
 
 
-- `Message` : 메타데이터와 함께 결합되어 있는 자바 오브젝트를 위한 포괄적인 래퍼(`generic wrapper`) 이다. 이는 `header`, `payload` 로 구성되고 `payload` 는 자바 객치를 의미하고, 메타 데이터는 메시지 `header` 의 컬렉션이다.    
+- `Message` : 메타데이터와 함께 결합되어 있는 자바 오브젝트를 위한 포괄적인 래퍼(`generic wrapper`) 이다. 이는 `header`, `payload` 로 구성되고 `payload` 는 자바 객체(`POJO`)를 의미하고, 메타 데이터는 메시지 `header` 의 컬렉션이다.    
 
   practice-spring-integration-1
 
-
+- `Message Channel` : 
 
 
 
