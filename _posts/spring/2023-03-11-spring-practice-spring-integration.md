@@ -96,6 +96,34 @@ use_math: true
 
     ![그림 1]({{site.baseurl}}/img/spring/practice-spring-integration-6.jpeg)
 
+### Spring Integration Endpoint
+`Spring Integration` 은 외부 시스템과 메시징 기반 통신을 위해 다양한 채널 어댑터 및 메시징 게이트웨이를 제공한다. 
+`AMQP`, `Kafka`, `Webflux` 등 다양한 지원이 가능한데 각 시스템을 위한 고유한 요구사항 또한 존재한다.  
+
+외부 시스템와 연동을 위해 사용되는 여러 엔드포인트는 종속성 관리를 위해 `Maven BOM` 형태로 제공된다. 
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.integration</groupId>
+            <artifactId>spring-integration-bom</artifactId>
+            <version>6.0.3</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```  
+
+- `Inbound Adapter` : 데이터를 메시징 애플리케이션으로 가져오는 단방향 통신으로 사용된다.
+- `Outbound Adapter` : 메시징 애플리케이션에서 데이터를 전송하기 위한 단방향 통신으로 사용된다. 
+- `Inbound Gateway` : 외부 시스템이 메시징 애플리케이션을 호출하고 응답 수신이 가능한 양뱡향 통신으로 사용된다. 
+- `Output Gateway` : 메시지 애플리케이션이 외부 시스템을 호출하고 결과를 예상하는 양방향 통신으로 사용된다. 
+
+`Spring Integration` 과 연결 가능한 외부 시스템의 종류와 사용가능한 `Adapter`, `Gateway` 에 대한 나열은 아래 링크에서 확인 할 수 있다. 
+[Endpoint Quick Reference](https://docs.spring.io/spring-integration/reference/html/endpoint-summary.html#endpoint-summary)
+
 
 
 
@@ -104,3 +132,4 @@ use_math: true
 [Overview of Spring Integration Framework](https://docs.spring.io/spring-integration/docs/current/reference/html/overview.html)  
 [Introduction to Spring Integration](https://www.baeldung.com/spring-integration)  
 [Spring Integration](https://spring.io/projects/spring-integration)  
+[Integration Endpoints](https://docs.spring.io/spring-integration/reference/html/endpoint-summary.html)  
