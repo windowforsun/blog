@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Integration "
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Integration 과 구성요소에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,8 @@ tags:
     - Practice
     - Spring
     - Spring Boot
+    - Spring Integration
+    - pipe-and-filters
 toc: true
 use_math: true
 ---  
