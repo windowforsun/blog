@@ -15,6 +15,13 @@ tags:
     - Spring Boot
     - Spring Integration
     - pipe-and-filters
+    - Message Endpoint
+    - Filter
+    - Message Gateway
+    - Transformer
+    - Splitter
+    - Service Activator
+    - Router
 toc: true
 use_math: true
 ---  
