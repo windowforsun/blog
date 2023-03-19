@@ -174,7 +174,7 @@ public String someRouter(String payload) {
 
 ### 예제 애플리케이션
 
-![그림 1]({{site.baseurl}}/img/spring/spring-integration-basic-application-1.png)  
+![그림 1]({{site.baseurl}}/img/spring/spring-integration-basic-application-1.drawio.png)  
 
 위 그림은 예제 애플리케이션에서 `Spring Integration` 을 사용해 구현할 메시지 흐름을 도식화 한 것이다. 
 메시지의 `payload` 는 `String` 타입의 문자열로만 구성되고, 
