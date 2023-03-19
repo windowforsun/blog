@@ -171,9 +171,258 @@ public String someRouter(String payload) {
 
 위 그림은 예제 애플리케이션에서 `Spring Integration` 을 사용해 구현할 메시지 흐름을 도식화 한 것이다. 
 메시지의 `payload` 는 `String` 타입의 문자열로만 구성되고, 
-사용자 정의 헤더도 설정해서 사용한다. 
+사용자 정의 헤더도 설정해서 사용한다.
 
+구현에 필요한 의존성 정보를 담고 있는 `build.gradle` 내용은 아래와 같다.  
 
+```groovy
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.6.4'
+}
+
+apply plugin: 'java'
+apply plugin: 'io.spring.dependency-management'
+
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-integration';
+    implementation 'org.springframework.boot:spring-boot-starter-test';
+    testImplementation 'org.springframework.integration:spring-integration-test';
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+}
+
+test {
+    useJUnitPlatform()
+}
+```  
+
+구현하는 애플리케이션의 시작점인 `ExamApplication` 의 내용은 아래와 같다. 
+애플리케이션이 실행되면 `CommandLineRunner` 를 통해 
+문자와 숫자로 구성된 문자열 리스트를 `Messaging Gateway` 인 `ExamGateway` 로 전달 한다.  
+
+```java
+@EnableIntegration
+@SpringBootApplication
+public class ExamApplication {
+    public static void main(String... args) {
+        SpringApplication.run(ExamApplication.class, args);
+    }
+
+    @Autowired
+    private ExamGateway examGateway;
+
+    @Bean
+    public CommandLineRunner runner() {
+        return (args) ->
+            this.examGateway.process(MessageBuilder
+                    .withPayload(List.of("a", "b", "1", "2", "c", "d", "3", "4", "e", "f", "5", "6", "g", "h", "7", "8"))
+                    .build());
+    }
+}
+```  
+
+애플리케이션에서 사용하는 모든 채널 설정을 담고 있는 `ChannelConfig` 의 구현 내용은 아래와 같다. 
+사용하는 모든 채널은 `DirectChannel` 을 사용하고 채널 이름을 빈이름(메서드 이름)으로 작성해 빈으로 등록한다.  
+
+```java
+@Configuration
+public class ChannelConfig {
+    @Bean
+    public MessageChannel entrypointChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel headerFilterChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel routerChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel stringFilterChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel numberFilterChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel stringTransformerChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel numberTransformerChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel discardChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel aggregatorChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
+    public MessageChannel resultChannel() {
+        return new DirectChannel();
+    }
+}
+```  
+
+메시징 시스템의 시작점인 `ExamGateway`(`Messaging Gateway`) 의 구현 내용은 아래와 같다. 
+`Message<List<String>>` 타입을 `process` 라는 메서드로 받아 요청 채널인 `entrypointChannel` 로 전달 한다.  
+
+```java
+@Component
+@MessagingGateway(name = "examGateway", defaultRequestChannel = "entrypointChannel", errorChannel = "nullChannel")
+public interface ExamGateway {
+    @Gateway(requestChannel = "entrypointChannel")
+    void process(Message<List<String>> message);
+}
+```  
+
+애플리케이션에서 공통 `Message Endpoint` 구현 내용이 있는 `CommonEndpoint` 의 내용은 아래와 같다. 
+
+```java
+@Slf4j
+@MessageEndpoint
+public class CommonEndpoint {
+    private static final AtomicInteger MESSAGE_INDEX = new AtomicInteger();
+    
+    // entrypointChannel 로 부터 전달된 List<String> 형태의 payload 를
+    // 각 원소 String 으로 분리해 headerFilterChannel 로 전달한다. 
+    @Splitter(inputChannel = "entrypointChannel", outputChannel = "headerFilterChannel")
+    public List<Message<String>> splitList(Message<List<String>> message) {
+        List<Message<String>> messages = new ArrayList<>();
+        log.info("entrypointChannel splitList {}", message.getPayload());
+
+        for (String str : message.getPayload()) {
+            messages.add(MessageBuilder
+                    .withPayload(str)
+                    .setHeader("messageIndex", MESSAGE_INDEX.getAndIncrement())
+                    .build());
+        }
+
+        return messages;
+    }
+
+    // headerFilterChannel 로 전달 된 메시지의 헤더 값중 messageIndex 값이 짝수 인 것만
+    // routerChannel 로 전달하고 홀수 인 메시지는 discardChannel 로 전달해 이후 처리 플로우에서 제외한다. 
+    @Filter(inputChannel = "headerFilterChannel", outputChannel = "routerChannel", discardChannel = "discardChannel")
+    public boolean headerFilter(Message<String> message) {
+        String messageIndex = message.getHeaders().getOrDefault("messageIndex", "").toString();
+        log.info("headerFilterChannel headerFilter payload : {}, messageIndex : {}", message.getPayload(), messageIndex);
+
+        return !Objects.equals(messageIndex, "") && Integer.parseInt(messageIndex) % 2 == 0;
+    }
+
+    // routerChannel 로 전달된 메시지의 타입을 보고 
+    // 문자 타입이라면 stringFilterChannel 로 전달하고
+    // 숫자 타입이라면 numberFilterChannel 로 전달한다. 
+    @Router(inputChannel = "routerChannel")
+    public String route(String payload) {
+        log.info("routerChannel route : {}", payload);
+
+        try {
+            Integer.parseInt(payload);
+            return "numberFilterChannel";
+        } catch (NumberFormatException ignore) {
+            return "stringFilterChannel";
+        }
+    }
+
+    // discardChannel 로 전달된 애플리케이션에서 filter 를 통해 처리에서 제외된 메시지 로깅을 수행한다. 
+    @ServiceActivator(inputChannel = "discardChannel")
+    public void loggingDiscardMessage(Message<String> message) {
+        log.info("discardChannel loggingDiscardMessage payload : {}, messageIndex : {}", message.getPayload(), message.getHeaders().get("messageIndex"));
+    }
+
+    // resultChannel 로 전달된 메시지 흐름의 최종 endpoint 로 결과 로딩을 수행한다. 
+    @ServiceActivator(inputChannel = "resultChannel")
+    public void loggingResult(Message<String> message) {
+        log.info("resultChannel loggingResult payload : {}, messageIndex : {}", message.getPayload(), message.getHeaders().get("messageIndex"));
+    }
+}
+```  
+
+`router` 를 통해 라우팅되는 채널 중 문자열 메시지에 대한 `Message Endpoint` 내용이 있는 `StringMessageEndpoint` 는 아래와 같다.  
+
+```java
+@Slf4j
+@MessageEndpoint
+public class StringMessageEndpoint {
+    
+    // stringFilterChannel 로 전달되는 문자열 메시지 중 
+    // c 보다 큰 문자열만 stringTransformerChannel 로 전달하고
+    // 그외 메시지는 discardChannel 로 전달해 메시지 처리 흐름에서 제외한다. 
+    @Filter(inputChannel = "stringFilterChannel", outputChannel = "stringTransformerChannel", discardChannel = "discardChannel")
+    public boolean stringFilter(String payload) {
+        log.info("stringFilterChannel stringFilter : {}", payload);
+
+        return payload.compareTo("c") > 0;
+    }
+
+    // stringTransformerChannel 로 전달된 문자열 메시지를 
+    // 대문자로 변경해 resultChannel 로 전달 한다. 
+    @Transformer(inputChannel = "stringTransformerChannel", outputChannel = "resultChannel")
+    public String uppercase(String payload) {
+        log.info("stringTransformerChannel uppercase : {}", payload);
+
+        return payload.toUpperCase();
+    }
+
+}
+```  
+
+`router` 를 통해 라우팅되는 채널 중 숫자 타입 메시지에 대한 `Message Endpint` 내용이 있는 `NumberMessageEndpoint` 의 내용은 아래와 같다.  
+
+```java
+@Slf4j
+@MessageEndpoint
+public class NumberMessageEndpoint {
+    
+    // numberFilterChannel 로 전달되는 숫자 타입 메시지 중
+    // 3보다 큰 메시지만 numberTransformerChannel 로 전달하고 
+    // 3보다 작은 메시지는 discardChannel 로 보내 메시지 처리 흐름에서 제외한다. 
+    @Filter(inputChannel = "numberFilterChannel", outputChannel = "numberTransformerChannel", discardChannel = "discardChannel")
+    public boolean numberFilter(String payload) {
+        log.info("numberFilterChannel numberFilter : {}", payload);
+        int number = Integer.parseInt(payload);
+
+        return number > 3;
+    }
+
+    // numberTransformerChannel 로 전달되는 숫자 타입 메시지의
+    // 제곱연산을 수행한 결과를 resultChannel 로 전달 한다. 
+    @Transformer(inputChannel = "numberTransformerChannel", outputChannel = "resultChannel")
+    public String square(String payload) {
+        log.info("numberTransformerChannel square : {}", payload);
+        int number = Integer.parseInt(payload);
+
+        return String.valueOf(number * number);
+    }
+
+}
+```  
+
+구현된 애플리케이션을 실행하면 아래와 같은 로그를 확인 할 수 있다.  
 
 ```
 entrypointChannel splitList [a, b, 1, 2, c, d, 3, 4, e, f, 5, 6, g, h, 7, 8]
