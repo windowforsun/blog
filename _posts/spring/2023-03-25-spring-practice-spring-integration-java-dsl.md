@@ -99,8 +99,11 @@ INFO 32880 --- [   scheduling-1] firstFlow                                : Gene
 ```  
 
 ### DSL Method
-`Java DSL` 은 `Spring Integration` 에서 제공하는 모든 엔드포인트를 메서드 단위로 제공한다. 
-제공하는 종류와 `Spring Integration` 의 엔드포인트 이름과 매칭하면 아래와 같다.  
+`Java DSL` 은 `Spring Integration` 에서 제공하는 것들을
+`Fluent API` 방식으로 메시지 기반 애플리케이션에 필요한 `EIP`(Enterprise Integration Patterns) 를 제공한다. 
+
+
+제공하는 종류와 `Spring Integration` 엔드포인트 이름과 `EIP` 를 매칭하면 아래와 같다.  
 
 DSL Method|Endpoint
 ---|---
@@ -629,6 +632,98 @@ INFO 30809 --- [   scheduling-1] else                                     : Gene
 ```  
 
 ### Splitters
+`split()` 메서드를 사용하면 페이로드가 집합 구조일때 개별 메시지로 분리가 가능하다. 
+
+- `Interable`
+- `Iterator`
+- `Array`
+- `Stream`
+- `Publisher`
+
+혹은 `SpEL` 이나 람다를 사용해서 커스텀한 동작도 구현할 수 있다. 
+아래는 `Stream` 과 `,` 로 합쳐진 `String` 형태를 `split()` 을 사용해 개별 메시로 분리하는 예제이다.  
+
+```java
+@Configuration
+public class SplitterConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow array() {
+        return IntegrationFlows.fromSupplier(
+                        () -> IntStream
+                                .range(integerSource().get(), integerSource().addAndGet(3))
+                                .boxed(),
+                        poller -> poller.poller(Pollers.fixedRate(1000))
+                )
+                .channel("inputArray")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow string() {
+        return IntegrationFlows.fromSupplier(
+                        () -> IntStream
+                                .range(integerSource().get(), integerSource().addAndGet(3))
+                                .boxed()
+                                .map(Object::toString)
+                                .map("Hello "::concat)
+                                .collect(Collectors.joining(",")),
+                        poller -> poller.poller(Pollers.fixedRate(1000))
+                )
+                .channel("inputString")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow splitArrayFlow() {
+        return IntegrationFlows.from("inputArray")
+                .split()
+                .channel("result")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow splitStringFlow() {
+        return IntegrationFlows.from("inputString")
+                .split(s -> s.applySequence(false).delimiters(","))
+                .channel("result")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow resultFlow() {
+        return IntegrationFlows.from("result")
+                .log("result")
+                .get();
+    }
+}
+```  
+
+`Stream` 타입은 은 기본 `split()` 을 통해 메시지를 분리하고, `String` 은 `delimiters()` 에 구분자를 정의해서 분리한다. 
+그 결과 로그는 아래와 같다.  
+
+```
+beforeSplitArray                         : GenericMessage [payload=java.util.stream.IntPipeline$1@167cb340, headers={id=5f4953c7-9cf8-7525-38d5-371202d20d4b, timestamp=1679905569642}]
+result                                   : GenericMessage [payload=0, headers={sequenceNumber=1, correlationId=5f4953c7-9cf8-7525-38d5-371202d20d4b, id=35440b02-4540-5158-1991-67a152f443f6, sequenceSize=0, timestamp=1679905569644}]
+result                                   : GenericMessage [payload=1, headers={sequenceNumber=2, correlationId=5f4953c7-9cf8-7525-38d5-371202d20d4b, id=1a3a6fc3-f602-ef59-1c7c-d6a88995cb7d, sequenceSize=0, timestamp=1679905569645}]
+result                                   : GenericMessage [payload=2, headers={sequenceNumber=3, correlationId=5f4953c7-9cf8-7525-38d5-371202d20d4b, id=df30196a-d94d-58a6-bb98-bceaca3c12de, sequenceSize=0, timestamp=1679905569645}]
+beforeSplitString                        : GenericMessage [payload=Hello 3,Hello 4,Hello 5, headers={id=d16c08c4-7f6a-e0b7-e564-e19910400c86, timestamp=1679905569646}]
+result                                   : GenericMessage [payload=Hello 3, headers={id=3b7440d6-13f6-b198-2573-779185507bd0, timestamp=1679905569646}]
+result                                   : GenericMessage [payload=Hello 4, headers={id=2e475617-d2b7-b911-02f2-b59613f8206a, timestamp=1679905569646}]
+result                                   : GenericMessage [payload=Hello 5, headers={id=83cf326c-baea-c3b5-a9c5-786e3bdc2239, timestamp=1679905569646}]
+beforeSplitArray  ㄷ                       : GenericMessage [payload=java.util.stream.IntPipeline$1@72c699f0, headers={id=20cd3d35-81ee-b7d3-c917-965a26daeff7, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=6, headers={sequenceNumber=1, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=7bc29453-c893-2989-be81-22e4f94f52a3, sequenceSize=0, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=7, headers={sequenceNumber=2, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=5ca525e6-9077-362e-f134-cb8f6d274d39, sequenceSize=0, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=8, headers={sequenceNumber=3, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=e657bd3d-ec21-1948-7dc5-ffb99d75260a, sequenceSize=0, timestamp=1679905570645}]
+beforeSplitString                        : GenericMessage [payload=Hello 9,Hello 10,Hello 11, headers={id=d72d9619-f8db-4230-167b-1bc822c4db0f, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=Hello 9, headers={id=0e02f313-0971-68f5-264c-58a45c5769bf, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=Hello 10, headers={id=4da01774-254f-fd69-38e7-530a12060f84, timestamp=1679905570645}]
+result                                   : GenericMessage [payload=Hello 11, headers={id=4087b798-b5ba-5b4b-996e-91133d765254, timestamp=1679905570645}]
+```
 
 ### Aggregators
 
