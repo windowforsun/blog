@@ -715,7 +715,7 @@ beforeSplitString                        : GenericMessage [payload=Hello 3,Hello
 result                                   : GenericMessage [payload=Hello 3, headers={id=3b7440d6-13f6-b198-2573-779185507bd0, timestamp=1679905569646}]
 result                                   : GenericMessage [payload=Hello 4, headers={id=2e475617-d2b7-b911-02f2-b59613f8206a, timestamp=1679905569646}]
 result                                   : GenericMessage [payload=Hello 5, headers={id=83cf326c-baea-c3b5-a9c5-786e3bdc2239, timestamp=1679905569646}]
-beforeSplitArray  ㄷ                       : GenericMessage [payload=java.util.stream.IntPipeline$1@72c699f0, headers={id=20cd3d35-81ee-b7d3-c917-965a26daeff7, timestamp=1679905570645}]
+beforeSplitArray                         : GenericMessage [payload=java.util.stream.IntPipeline$1@72c699f0, headers={id=20cd3d35-81ee-b7d3-c917-965a26daeff7, timestamp=1679905570645}]
 result                                   : GenericMessage [payload=6, headers={sequenceNumber=1, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=7bc29453-c893-2989-be81-22e4f94f52a3, sequenceSize=0, timestamp=1679905570645}]
 result                                   : GenericMessage [payload=7, headers={sequenceNumber=2, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=5ca525e6-9077-362e-f134-cb8f6d274d39, sequenceSize=0, timestamp=1679905570645}]
 result                                   : GenericMessage [payload=8, headers={sequenceNumber=3, correlationId=20cd3d35-81ee-b7d3-c917-965a26daeff7, id=e657bd3d-ec21-1948-7dc5-ffb99d75260a, sequenceSize=0, timestamp=1679905570645}]
@@ -724,6 +724,8 @@ result                                   : GenericMessage [payload=Hello 9, head
 result                                   : GenericMessage [payload=Hello 10, headers={id=4da01774-254f-fd69-38e7-530a12060f84, timestamp=1679905570645}]
 result                                   : GenericMessage [payload=Hello 11, headers={id=4087b798-b5ba-5b4b-996e-91133d765254, timestamp=1679905570645}]
 ```
+
+
 
 ### Aggregators
 
