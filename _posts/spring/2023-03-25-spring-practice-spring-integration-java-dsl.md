@@ -730,10 +730,211 @@ result                                   : GenericMessage [payload=Hello 11, hea
 ### Aggregators
 
 ### Service Activators
+`ServiceActivator` 에 해당하는 `Java DSL` 메서드는 `handle()` 이다. 
+`handle()` 에서는 기존 `ServiceActivator` 에서 수행했던 것과 동일하게, 
+`POJO` 메소드를 호출해서 변환을 수행한다거나 관련 동작을 이어 수행하는 등이 가능하다.  
+
+`handle()` 는 `payload` 와 `header` 를 파라미터로 제공하는 람다를 사용할 수 있다. 
+그리고 `payload` 의 타입 캐스팅의 경우 `<TypeClass>handle()` 과 같이 사용하거나, 
+`handle(TypeClass.class, (payload, header) -> {})` 와 같이 사용할 수 있다.  
+
+```java
+@Configuration
+public class ServiceActivatorConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow intput() {
+        return IntegrationFlows.fromSupplier(
+                        integerSource()::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(1000))
+                )
+                .channel("input")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow handleFlow() {
+        return IntegrationFlows.from("input")
+                .<Integer>handle((payload, headers) -> payload * 10)
+                .log("handleFlow")
+                .channel("handleChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow handleTypeCastFlow() {
+        return IntegrationFlows.from("handleChannel")
+                .handle(Integer.class, (payload, headers) -> payload * payload)
+                .log("handleTypeCastFlow")
+                .get();
+    }
+}
+```  
+
+`handleFlow()` 는 `input` 채널의 숫자를 받아 `<Integer>` 로 제네릭 타입을 명시하는 방식으로 `handle()` 을 사용한다. 
+그리고 `handleTypeCastFlow()` 는 따로 제네릭 타입을 명시하지 않고 `handle(Integer.class, () -> {})` 을 사용해서, 
+타입 캐스팅을 제공하는 `handle()` 메소드를 사용했다. 
 
 ### Gateway
+`Gateway` 역할을 하는 `Java DSL` 메소드는 `gateway()` 로 입력 채널을 통해 다른 엔드포인트나 통합 플로우를 호출하고 응답을 기다린다. 
+이런 게이트웨이를 활용하면 분배된 작은 플로우를 합쳐 큰 하나의 플로우 동작을 정의할 수 있다. 
+3가지 형태로 오버로딩 돼 있는데 그 형태는 아래와 같다.  
+
+- `gateway(String)` : `requestChannel` 문자열을 받아 입력 채널에 메시지를 해당하는 채널의 엔드포인트로 전달한다. 
+- `gateway(MessageChannel)` : `MessageChannel` 타입의 `requestChannel` 을 직접 주입 받아 입력 채널에 메시지를 해당하는 채널의 엔드포인트로 전달한다. 
+- `gateway(IntergrationFlow)` : `IntegrationFlow` 인 플로우 자체를 주입 받아 입력 채널의 메시지를 해당 플로우로 전달 한다. 
+
+`gateway` 를 통해 메시지를 전달하는 플로우는 입력 메시지를 해당 플로우에 요청 후 응답을 다시 다운 스트림으로 전달하는 형태이다. 
+그러므로 다운 스트림의 엔드포인트가 메시지를 시 반환하는 형태이여야 이후 다운 스트림이 계속 진행 가능하다. 
+예를 들어 특정 플로우가 `log()` 와 같은 엔드포인트라면 응답 반환이 없으므로 이후 플로우 진행이 되지 않을 수 있으므로 주의해야 한다. 
+위와 같은 경우 `replyTimeout` 혹은 `requestTimeout` 등으로 타입아웃을 설정해서 무한정 다운 스트림의 응답을 기다리지 않도록 해야 한다.  
+
+```java
+@Configuration
+public class GatewayConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow intput() {
+        return IntegrationFlows.fromSupplier(
+                        integerSource()::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("input")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow mainFlow() {
+        return IntegrationFlows.from("input")
+                .log("startMainFlow")
+                .gateway(this.subFlow())
+                .gateway("subChannel")
+//                .gateway(this.subNoReplyFlow(), gatewayEndpointSpec -> gatewayEndpointSpec.replyTimeout(0L))
+                .log("endMainFlow")
+                .handle(Integer.class, (payload, headers) -> payload * 10)
+                .log("result")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subFlow() {
+        return flow -> flow
+                .log("subFlow")
+                .handle(Integer.class, (payload, headers) -> payload * 10);
+    }
+
+    @Bean
+    public IntegrationFlow subChannelFlow() {
+        return IntegrationFlows.from("subChannel")
+                .log("subChannelFlow")
+                .handle(Integer.class, (payload, headers) -> payload * 10)
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subNoReplyFlow() {
+        return flow -> flow
+                .log("subNoReplyFlow");
+    }
+}
+```  
+
+`input` 채널로 부터 전달되는 메시지는 `mainFlow` 에서 아래와 같이 다운 스트림 플로우로 전달 된다. 
+그리고 각 플로우에서는 메시지의 값에 10을 곱한 값을 반환한다. 
+
+```
+mainFlow -> subFlow -> subChannelFlow -> mainFlow
+```  
+
+위 플로우의 실행 로그는 아래와 같다.  
+
+```
+startMainFlow                            : GenericMessage [payload=0, headers={id=d835afc5-03db-ca48-377d-981e70c79f2f, timestamp=1680341381199}]
+subFlow                                  : GenericMessage [payload=0, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@11f82636, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@11f82636, id=1c84628a-a13e-489b-993a-ca1151279dc6, timestamp=1680341381211}]
+subChannelFlow                           : GenericMessage [payload=0, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@ef24df0, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@ef24df0, id=c8f9e1f0-1092-7cd2-2347-f37107228efd, timestamp=1680341117427}]
+endMainFlow                              : GenericMessage [payload=0, headers={id=28e361f2-6636-6fa4-825c-c37c8d97bba8, timestamp=1680341117427}]
+result                                   : GenericMessage [payload=0, headers={id=26432ab3-dfbb-6e62-bd8c-5dd786ede780, timestamp=1680341117427}]
+startMainFlow                            : GenericMessage [payload=1, headers={id=24b044b9-a990-fa7d-b0c6-3b24f24e6a82, timestamp=1680341117917}]
+subFlow                                  : GenericMessage [payload=1, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@50695682, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@50695682, id=25bbcd42-10b7-077d-e829-b376412185bc, timestamp=1680341117917}]
+subChannelFlow                           : GenericMessage [payload=10, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@6eadd4a6, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@6eadd4a6, id=4761d7cd-cc3e-f1a7-fa69-419185565f5e, timestamp=1680341117917}]
+endMainFlow                              : GenericMessage [payload=100, headers={id=3b583a1a-8ffb-36e0-c45d-f52ad196ebd3, timestamp=1680341117917}]
+result                                   : GenericMessage [payload=1000, headers={id=6df858a3-8d86-34c8-a0a2-295c1f213c92, timestamp=1680341117917}]
+startMainFlow                            : GenericMessage [payload=2, headers={id=66dd5158-08e1-8f1f-bda8-6a5b3902de0e, timestamp=1680341118418}]
+subFlow                                  : GenericMessage [payload=2, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5c077803, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5c077803, id=16085425-eeef-5b32-a19a-bcd901e8efaa, timestamp=1680341118419}]
+subChannelFlow                           : GenericMessage [payload=20, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@451572fd, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@451572fd, id=f76b0498-2f02-1450-f663-4fadc76bf0f9, timestamp=1680341118419}]
+endMainFlow                              : GenericMessage [payload=200, headers={id=ca37d8cb-e22d-4fdc-85d7-96592b0692e1, timestamp=1680341118419}]
+result                                   : GenericMessage [payload=2000, headers={id=0b13f34f-7e1c-1588-a6b7-251a0e57145f, timestamp=1680341118419}]
+startMainFlow                            : GenericMessage [payload=3, headers={id=ad1be481-5383-e735-e2b5-e559278d2e24, timestamp=1680341118916}]
+subFlow                                  : GenericMessage [payload=3, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5fd2f19b, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5fd2f19b, id=88ff84b5-f122-9700-b90c-5d59c9bf320d, timestamp=1680341118917}]
+subChannelFlow                           : GenericMessage [payload=30, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5fda0623, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5fda0623, id=7f124bbc-c4ab-6217-ffc1-82a193d0f68c, timestamp=1680341118917}]
+endMainFlow                              : GenericMessage [payload=300, headers={id=7ae714b2-e805-7d0f-ae0b-cbd86165c80f, timestamp=1680341118918}]
+result                                   : GenericMessage [payload=3000, headers={id=29ab014f-bab6-83a4-3944-fe249b43ed6b, timestamp=1680341118918}]
+```  
+
+로그로 실행된 흐름을 보면 첫 로그인 `startMainFlow` 부터 시작해 `result` 까지 모두 정상적으로 메시지가 전달되면 실행된 것을 확인 할 수 있다.  
+
+위 코드를 보면 `subNoReplyFlow` 는 사용되지 않고 있다. 
+아래 코드를 주석 해제 했을 때 메시지가 전달되는 플로우는 아래와 같다.  
+
+```java
+IntegrationFlows.from("input")
+        .log("startMainFlow")
+        .gateway(this.subFlow())
+        .gateway("subChannel")
+        // 주석 해제
+        .gateway(this.subNoReplyFlow(), gatewayEndpointSpec -> gatewayEndpointSpec.replyTimeout(500L))
+        .log("endMainFlow")
+        .handle(Integer.class, (payload, headers) -> payload * 10)
+        .log("result")
+        .get();
+```  
+
+```
+mainFlow -> subFlow -> subChannelFlow -> subNoReplyFlow(500ms 후) -> mainFlow
+```  
+
+하지만 주석처리가 있을 때와 다른 점은 `subNoReplyFlow` 는 메시지를 응답하지 않기 때문에 이후 플로우는 진행되지 않고, 
+다시 처음부터 플로우가 수행된다. 
+실제 동작을 로그로 살펴보면 아래와 같다.  
+
+```
+startMainFlow                            : GenericMessage [payload=0, headers={id=d835afc5-03db-ca48-377d-981e70c79f2f, timestamp=1680341381199}]
+subFlow                                  : GenericMessage [payload=0, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@11f82636, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@11f82636, id=1c84628a-a13e-489b-993a-ca1151279dc6, timestamp=1680341381211}]
+subChannelFlow                           : GenericMessage [payload=0, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@6961a9ea, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@6961a9ea, id=e6861a6f-dca2-acc7-0267-96e39e6d60e6, timestamp=1680341381212}]
+subNoReplyFlow                           : GenericMessage [payload=0, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@18daad1, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@18daad1, id=527e19b0-4a73-0b16-3e54-c9a469469408, timestamp=1680341381213}]
+startMainFlow                            : GenericMessage [payload=1, headers={id=33c10c4a-8bde-b685-b4f5-1bc82d6e6635, timestamp=1680341386220}]
+subFlow                                  : GenericMessage [payload=1, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@2e985c4a, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@2e985c4a, id=d47dba12-ce3a-953e-886b-456995f7e1cd, timestamp=1680341386220}]
+subChannelFlow                           : GenericMessage [payload=10, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@60907421, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@60907421, id=60034c04-9d3e-355a-5803-fe7ff3b482b8, timestamp=1680341386221}]
+subNoReplyFlow                           : GenericMessage [payload=100, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@100bb0b9, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@100bb0b9, id=9e26b3f0-a98d-fc9b-425f-27926bea2d39, timestamp=1680341386221}]
+startMainFlow                            : GenericMessage [payload=2, headers={id=4e56578a-deb0-a466-35fe-0f8a04cd1c5e, timestamp=1680341391227}]
+subFlow                                  : GenericMessage [payload=2, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@556a5db1, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@556a5db1, id=d8b1a3e3-1bc6-b377-ab6e-ce79d0b4af27, timestamp=1680341391227}]
+subChannelFlow                           : GenericMessage [payload=20, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@397c215a, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@397c215a, id=1fbd754c-5c30-7dc6-d678-f119b6301963, timestamp=1680341391228}]
+subNoReplyFlow                           : GenericMessage [payload=200, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5aae6b28, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@5aae6b28, id=3a8e5083-b63e-8d76-f107-feaba3205db8, timestamp=1680341391228}]
+startMainFlow                            : GenericMessage [payload=3, headers={id=3345a925-6495-0f05-02ba-5f509e99f354, timestamp=1680341396231}]
+subFlow                                  : GenericMessage [payload=3, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@17ed86bc, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@17ed86bc, id=ae68f0ca-6ff2-b6a3-cc53-7ab82bc78b96, timestamp=1680341396233}]
+subChannelFlow                           : GenericMessage [payload=30, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@106dd625, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@106dd625, id=2c168625-8265-7706-c44c-0b6b91500d0f, timestamp=1680341396233}]
+subNoReplyFlow                           : GenericMessage [payload=300, headers={replyChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@48c35383, errorChannel=org.springframework.messaging.core.GenericMessagingTemplate$TemporaryReplyChannel@48c35383, id=b0f8f8c3-5877-e18c-1251-ebec38c84832, timestamp=1680341396233}]
+```  
+
+`subNoReplyFlow` 가 추가 됐을 때 로그로 실행된 흐름을 보면 첫 로그인 `startMainFlow` 부터 시작해 `subNoReplyFlow` 까지만
+로그가 찍히고 다시 `startMainFlow` 로 이어지는 것을 확인 할 수 있다. 
+앞서 언급한 것처럼 `subNoReplyFlow` 에서 반환되는 값이 없기 때문에 `500ms` 전도 응답을 기다린 후, 
+해당 메시지의 플로우는 종료하고 다음 메시지로 플로우가 전환되는 것이다.  
 
 ### Intercept
+`5.3` 이후 버전 부터 사용할 수 있는 `intercept()` 는 현재 플로우에서 추가적인 `MessageChannel` 을 만들지 않고, 
+플로우에 하나 이상의 `ChannelInterceptor` 를 등록해 필터링 등의 동작을 수행 할 수 있다.  
+
+
+
 
 ### Log, wireTap
 
