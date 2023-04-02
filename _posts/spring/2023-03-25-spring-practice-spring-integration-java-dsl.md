@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Integration Java DSL"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Fluent API 를 사용해서 Spring Integration 을 좀 더 효율적이고 간결하게 작성할 수 있는 Java DSL 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -28,8 +28,8 @@ use_math: true
 ---  
 
 ## Spring Integration Java DSL
-[이전 포스트 1](),
-[이전 포스트 2]()
+[이전 포스트 1]({{site.baseurl}}{% link _posts/spring/2023-03-11-spring-practice-spring-integration.md %}),
+[이전 포스트 2]({{site.baseurl}}{% link _posts/spring/2023-03-18-spring-practice-spring-integration-basic-application.md %})
 에서는 `Spring Integration` 에 대한 기본적인 개념과 `Java Config` 과 `Annotation` 을 통해 
 `Spring Integration` 의 기본적인 사용 방법에 대해 알아보았다.  
 
@@ -933,11 +933,199 @@ subNoReplyFlow                           : GenericMessage [payload=300, headers=
 `5.3` 이후 버전 부터 사용할 수 있는 `intercept()` 는 현재 플로우에서 추가적인 `MessageChannel` 을 만들지 않고, 
 플로우에 하나 이상의 `ChannelInterceptor` 를 등록해 필터링 등의 동작을 수행 할 수 있다.  
 
+아래는 플로우를 통해 전달되는 정수형 메시지 중 `intercept()` 를 사용해서 짝수만 허용하고 홀수인 메시지는 거부하는 예시이다.  
 
+```java
+@Configuration
+public class InterceptConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow intput() {
+        return IntegrationFlows.fromSupplier(
+                        integerSource()::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("input")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow interceptFlow() {
+        return IntegrationFlows.from("input")
+                .log("beforeIntercept")
+                .intercept(new MessageSelectingInterceptor(message -> {
+                    try {
+                        return (Integer)message.getPayload() % 2 == 0;
+                    } catch (Exception e) {
+                        return false;
+                    }
+
+                }))
+                .handle(Integer.class, (payload, headers) -> payload * 10)
+                .log("afterIntercept")
+                .get();
+    }
+}
+```  
+
+위 구성을 실행하면 아래와 같이 최종적으로 `afterIntercept` 로그에는 짝수인 정수에만 `10` 을 곱한 결과가 출력되는 것을 확인 할 수 있다.  
+
+```
+beforeIntercept                          : GenericMessage [payload=0, headers={id=dfbc77a3-04e7-89da-475a-f963bbd5ad95, timestamp=1680342544373}]
+afterIntercept                           : GenericMessage [payload=0, headers={id=65faeb91-1eda-5150-fcb2-c7156d9aedca, timestamp=1680342544374}]
+beforeIntercept                          : GenericMessage [payload=1, headers={id=1ef2112f-8fea-3ab5-d5fe-0d38107a1469, timestamp=1680342544876}]
+beforeIntercept                          : GenericMessage [payload=2, headers={id=78cb31ca-840c-5aa1-0367-ecb932978eee, timestamp=1680342545372}]
+afterIntercept                           : GenericMessage [payload=20, headers={id=2496f989-4f67-fcc3-9484-be9a70aaf752, timestamp=1680342545372}]
+beforeIntercept                          : GenericMessage [payload=3, headers={id=613a768f-a709-63cd-481a-e08706487816, timestamp=1680342545875}]
+beforeIntercept                          : GenericMessage [payload=4, headers={id=907fd60b-b176-5279-00cb-052387c2f592, timestamp=1680342546371}]
+afterIntercept                           : GenericMessage [payload=40, headers={id=cf01b787-c48a-2a9e-524e-fa36da83e4ab, timestamp=1680342546371}]
+```  
+
+거부된 메시지는 아래와 같이 에러와 함께 출력된다.  
+
+```
+ERROR 83110 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : org.springframework.messaging.MessageDeliveryException: selector 'com.windowforsun.spring.integration.javadsl.InterceptConfig$$Lambda$443/0x0000000800345040@6dc5eea7' did not accept message, failedMessage=GenericMessage [payload=3, headers={id=613a768f-a709-63cd-481a-e08706487816, timestamp=1680342545875}]
+```  
 
 
 ### Log, wireTap
+`Java DLS` 의 `log()` 를 사용하면 메시지 플로우 중간 흐름을 기록할 수 있다. 
+내부적으로는 `LoggingHandler` 를 구독하는 `WireTab` 과 `ChannelInterceptor` 로 구현된다. 
+전달되는 메시지를 다음 엔드포인트 혹은 현재 채널에 기록하는 동작을 수행한다. 
+아래는 다양한 `log()` 의 사용 예시이다.  
 
+```java
+@Configuration
+public class LogConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow intput() {
+        return IntegrationFlows.fromSupplier(
+                        integerSource()::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .log(LoggingHandler.Level.ERROR)
+                .transform(Integer.class, source -> source * 10)
+                .log("log2")
+                .transform(Integer.class, source -> source * 10)
+                .log(LoggingHandler.Level.INFO, "log3")
+                .transform(Integer.class, source -> source * 10)
+                .log(LoggingHandler.Level.WARN, "log3", message -> message.getPayload())
+                .get();
+    }
+}
+```  
+
+`log()` 메소드는 출력할 로그 레벨을 설정하거나, 출력에 사용할 카테고리 설정 및 출력 메시지 포맷등 다양한 활용이 가능하다. 
+위 구성을 실행하면 아래와 같은 로그가 출력된다. 
+
+```
+ERROR 84577 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : GenericMessage [payload=0, headers={id=ecb78132-4bc2-93f8-bb7d-8b29cc6bc6ca, timestamp=1680430979704}]
+ INFO 84577 --- [   scheduling-1] log2                                     : GenericMessage [payload=0, headers={id=47d5132d-22f4-e92c-40a0-aac60ba45218, timestamp=1680430979705}]
+ INFO 84577 --- [   scheduling-1] log3                                     : GenericMessage [payload=0, headers={id=5c6b6190-141f-9751-50be-e28e96f6e65b, timestamp=1680430979705}]
+ WARN 84577 --- [   scheduling-1] log3                                     : 0
+ERROR 84577 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : GenericMessage [payload=1, headers={id=2a61ad14-388b-0642-58d0-d36b6bbb241a, timestamp=1680430980206}]
+ INFO 84577 --- [   scheduling-1] log2                                     : GenericMessage [payload=10, headers={id=8d8512d4-29ef-64a9-0c04-c1d193e9a634, timestamp=1680430980206}]
+ INFO 84577 --- [   scheduling-1] log3                                     : GenericMessage [payload=100, headers={id=23ddcdb0-bd6f-ba95-2d6c-44bb0e0b29c6, timestamp=1680430980206}]
+ WARN 84577 --- [   scheduling-1] log3                                     : 1000
+ERROR 84577 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : GenericMessage [payload=2, headers={id=c495f7ea-4ec4-95f8-ff5d-f00f841f043c, timestamp=1680430980706}]
+ INFO 84577 --- [   scheduling-1] log2                                     : GenericMessage [payload=20, headers={id=f15673f9-fb89-cfcb-77b0-750aa123cfa3, timestamp=1680430980706}]
+ INFO 84577 --- [   scheduling-1] log3                                     : GenericMessage [payload=200, headers={id=c0d6fbd2-b7bf-2300-52ac-200f9a80bfbd, timestamp=1680430980706}]
+ WARN 84577 --- [   scheduling-1] log3                                     : 2000
+ERROR 84577 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : GenericMessage [payload=3, headers={id=7d730a53-6c18-0b5c-7e0e-b1135f782883, timestamp=1680430981207}]
+ INFO 84577 --- [   scheduling-1] log2                                     : GenericMessage [payload=30, headers={id=8a5e6ae7-899c-a39c-201d-d8940d4e9410, timestamp=1680430981209}]
+ INFO 84577 --- [   scheduling-1] log3                                     : GenericMessage [payload=300, headers={id=9789cf9a-03d5-787c-2eb3-dd36a597c457, timestamp=1680430981209}]
+ WARN 84577 --- [   scheduling-1] log3                                     : 3000
+```  
+
+`wireTab()` 은 `log()` 보다는 조금 더 저수준의 메소드로 메시지 플로우 중간에 메시지를 다른 채널로도 전달 할 수 있다. 
+메시지 하나에 별도의 추가 흐름을 만들거나 로그, 통계 등의 작업을 할 수 있다.  
+
+```java
+@Configuration
+public class WireTabConfig {
+    @Bean
+    public AtomicInteger integerSource() {
+        return new AtomicInteger();
+    }
+
+    @Bean
+    public IntegrationFlow intput() {
+        return IntegrationFlows.fromSupplier(
+                        integerSource()::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .wireTap("firstWireTab.input")
+                .transform(Integer.class, source -> source * 10)
+                .wireTap(this.secondWireTab())
+                .log("end")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow firstWireTab() {
+        return flow -> flow
+                .log("firstWireTab");
+    }
+
+    @Bean
+    public IntegrationFlow secondWireTab() {
+        return flow -> flow
+                .log("secondWireTab")
+                .transform(Integer.class, source -> source * 10)
+                .channel("subChannel");
+    }
+
+    @Bean
+    public IntegrationFlow subFlow() {
+        return IntegrationFlows.from("subChannel")
+                .log("subFlow")
+                .get();
+    }
+}
+```  
+
+위 구성은 `input()` 에서 시작한 메시지가 `firstWireTab()`  에서는 로깅만 수행하고, 
+`secondWireTab()` 에서는 로깅과 함께 `transfer()` 동작으 수행 후 별도 플로우인 `subChannel` 로 메시지를 전송한다. 
+그러면 `secondWireTab()` 채널에서 전달된 메시지는 `subFlow()` 전달되고 로깅이 수행된다. 
+그리고 메인 플로우격인 `input()` 에서는 `secondWireTab()` 과는 별개로 메시지 전달이 수행되고, 
+최종 `end` 로그에는 `subFlow()` 의 로그와는 다른 메시지가 출력되는 것을 확인 할 수 있다.  
+
+```
+firstWireTab                             : GenericMessage [payload=0, headers={id=6804c5be-7dca-d8f9-cd11-44376e97ceb9, timestamp=1680431527149}]
+secondWireTab                            : GenericMessage [payload=0, headers={id=4c23fb8f-391f-56b0-43c8-b1fe14f13a1e, timestamp=1680431527150}]
+subFlow                                  : GenericMessage [payload=0, headers={id=5150ee47-9d11-4378-f823-0805003af8be, timestamp=1680431527150}]
+end                                      : GenericMessage [payload=0, headers={id=4c23fb8f-391f-56b0-43c8-b1fe14f13a1e, timestamp=1680431527150}]
+c.w.s.i.javadsl.JavaDslApplication       : Started JavaDslApplication in 0.699 seconds (JVM running for 1.056)
+firstWireTab                             : GenericMessage [payload=1, headers={id=dc1b4057-1c5b-96f6-56e5-a0e11892ca02, timestamp=1680431527650}]
+secondWireTab                            : GenericMessage [payload=10, headers={id=4207d28d-458b-3f0a-2cd8-10324bd19a71, timestamp=1680431527650}]
+subFlow                                  : GenericMessage [payload=100, headers={id=463f87c3-ed09-e61d-d27b-6624e5766415, timestamp=1680431527650}]
+end                                      : GenericMessage [payload=10, headers={id=4207d28d-458b-3f0a-2cd8-10324bd19a71, timestamp=1680431527650}]
+firstWireTab                             : GenericMessage [payload=2, headers={id=e0fa085c-ab88-5904-9189-e88723ba4264, timestamp=1680431528148}]
+secondWireTab                            : GenericMessage [payload=20, headers={id=4082ab4b-8897-13c2-41fd-cb320a90e549, timestamp=1680431528149}]
+subFlow                                  : GenericMessage [payload=200, headers={id=1122ee78-f750-f13f-3284-af0874baf0c1, timestamp=1680431528149}]
+end                                      : GenericMessage [payload=20, headers={id=4082ab4b-8897-13c2-41fd-cb320a90e549, timestamp=1680431528149}]
+firstWireTab                             : GenericMessage [payload=3, headers={id=028ff01c-0251-470a-4f76-24426b345442, timestamp=1680431528651}]
+secondWireTab                            : GenericMessage [payload=30, headers={id=817ddc31-c66b-e112-80bd-6b8fb98fce45, timestamp=1680431528652}]
+subFlow                                  : GenericMessage [payload=300, headers={id=c971ea28-21d7-a2bf-504f-0fc2bf17bfc0, timestamp=1680431528652}]
+end                                      : GenericMessage [payload=30, headers={id=817ddc31-c66b-e112-80bd-6b8fb98fce45, timestamp=1680431528652}]
+firstWireTab                             : GenericMessage [payload=4, headers={id=1f0c9566-a9bb-9229-d01c-672885cd7666, timestamp=1680431529148}]
+secondWireTab                            : GenericMessage [payload=40, headers={id=5755fe42-df60-6c4c-ba9c-a22d129194f0, timestamp=1680431529149}]
+subFlow                                  : GenericMessage [payload=400, headers={id=9dcfbe2a-a468-8974-d853-defefe0bea35, timestamp=1680431529150}]
+end                                      : GenericMessage [payload=40, headers={id=5755fe42-df60-6c4c-ba9c-a22d129194f0, timestamp=1680431529149}]
+firstWireTab                             : GenericMessage [payload=5, headers={id=714f8ea1-ebcd-6f9b-a6ff-5e6c45312cc0, timestamp=1680431529647}]
+secondWireTab                            : GenericMessage [payload=50, headers={id=f3e0b240-af9a-b4b1-3647-82635d668bc0, timestamp=1680431529649}]
+subFlow                                  : GenericMessage [payload=500, headers={id=603d22c7-2789-7f5a-5316-8fbc89a97c20, timestamp=1680431529649}]
+end                                      : GenericMessage [payload=50, headers={id=f3e0b240-af9a-b4b1-3647-82635d668bc0, timestamp=1680431529649}]
+```  
 
 
 
@@ -947,3 +1135,4 @@ subNoReplyFlow                           : GenericMessage [payload=300, headers=
 [Spring Integration Java DSL sample](https://dzone.com/articles/spring-integration-java-dsl)  
 [Spring Integration - Poller (Polling Consumer)](https://springsource.tistory.com/49)  
 [Using Subflows in Spring Integration](https://www.baeldung.com/spring-integration-subflows)  
+[Wire Tab](https://www.enterpriseintegrationpatterns.com/patterns/messaging/WireTap.html)  
