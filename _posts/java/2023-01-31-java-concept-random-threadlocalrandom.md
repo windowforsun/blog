@@ -170,7 +170,7 @@ static final void localInit() {
 `Random` 은 `seed` 를 `AtomicLong` 을 사용하기 때문에, 멀티 스레드 요청에 대해서도 순서대로 처리해서 동기화 처리 처럼 수행되는 부분으로 성능저하를 언급했었다. 
 `ThreadLocalRandom` 은 `AutomicLong` 을 사용하지 않고 스레드마다 `seed` 관리로 멀티 스레드 환경에서 더 적합하다.  
 
-추가적으로 `ThreadLocalRandom` 에 `seed` 를 별도로 설정은 불가능한 것으로 확인된다. [관련 내용](https://stackoverflow.com/questions/15765399/should-i-prefer-threadlocalrandom-over-threadlocalrandom  
+추가적으로 `ThreadLocalRandom` 에 `seed` 를 별도로 설정은 불가능한 것으로 확인된다. [관련 내용](https://stackoverflow.com/questions/15765399/should-i-prefer-threadlocalrandom-over-threadlocalrandom)
 
 
 
