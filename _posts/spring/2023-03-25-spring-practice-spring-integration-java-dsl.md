@@ -992,8 +992,8 @@ ERROR 83110 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : org
 ```  
 
 
-### Log, wireTap
-`Java DLS` 의 `log()` 를 사용하면 메시지 플로우 중간 흐름을 기록할 수 있다. 
+### Log
+`Java DSL` 의 `log()` 를 사용하면 메시지 플로우 중간 흐름을 기록할 수 있다. 
 내부적으로는 `LoggingHandler` 를 구독하는 `WireTab` 과 `ChannelInterceptor` 로 구현된다. 
 전달되는 메시지를 다음 엔드포인트 혹은 현재 채널에 기록하는 동작을 수행한다. 
 아래는 다양한 `log()` 의 사용 예시이다.  
@@ -1045,6 +1045,8 @@ ERROR 84577 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : Gen
  INFO 84577 --- [   scheduling-1] log3                                     : GenericMessage [payload=300, headers={id=9789cf9a-03d5-787c-2eb3-dd36a597c457, timestamp=1680430981209}]
  WARN 84577 --- [   scheduling-1] log3                                     : 3000
 ```  
+
+### wireTap
 
 `wireTab()` 은 `log()` 보다는 조금 더 저수준의 메소드로 메시지 플로우 중간에 메시지를 다른 채널로도 전달 할 수 있다. 
 메시지 하나에 별도의 추가 흐름을 만들거나 로그, 통계 등의 작업을 할 수 있다.  
