@@ -327,6 +327,102 @@ public BasicMessageGroupStore mongoDbChannelMessageStore(MongoDbFactory mongoDbF
 ```  
 
 ### PriorityChannel
+`PriorityChannel` 은 `QueueChannel` 의 방식인 `FIFO` 와는 달리 채널 내에 우선순위에 따른 정렬이 가능하다. 
+우선순위에 대한 별다른 설정을 하지 않으면 기본으로 헤더의 `priority` 값을 기준으로 정해진다. 
+별도로 우선순위를 정하고 싶다면 `PriorityChannel` 생성때 `Comparator<Message<?>>` 를 함께 전달해 주면 된다. 
+
+아래는 예시는 2개의 `PriorityQueue` 가 있는데 설명은 아래와 같다.
+
+- `somePriorityQueueChannel` : 기본인 헤더값의 `priority` 값을 우선순위 기준값으로 정한다. 
+- `reversePriorityChannel` : 메시지 `payload` 의 값을 작은 수가 우선순위를 갖는 오름차순으로 정렬한다. 
+
+```java
+@Configuration
+public class PriorityChannelConfig {
+    @Bean
+    public MessageChannel somePriorityChannel() {
+        return new PriorityChannel(100);
+    }
+
+    @Bean
+    public MessageChannel reversePriorityChannel() {
+        return new PriorityChannel(100, (o1, o2) -> {
+            Integer p1 = (Integer) o1.getPayload();
+            Integer p2 = (Integer) o2.getPayload();
+
+            return p1.compareTo(p2);
+        });
+    }
+
+    @Bean
+    public IntegrationFlow mainFlow() {
+        AtomicInteger counter = new AtomicInteger();
+        return IntegrationFlows.fromSupplier(
+                        () -> {
+                            int result = counter.getAndIncrement();
+                            return MessageBuilder
+                                    .withPayload(result)
+                                    .setHeader("priority", result % 2)
+                                    .build();
+                        },
+                        poller -> poller.poller(Pollers.fixedRate(50))
+                )
+                .channel("somePriorityChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow someSubFlow() {
+        return IntegrationFlows.from("somePriorityChannel")
+                .log("someSubFlow")
+                .channel("reversePriorityChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow reverseSubFlow() {
+        return IntegrationFlows.from("reversePriorityChannel")
+                .log("reverseSubFlow")
+                .get();
+    }
+}
+```  
+
+`mainFlow` 에서는 `0, 1, 2, 3, ..` 과 같이 전달되는 메시지에서 짝수이면 `priority` 를 `0` 으로
+홀수면 `priority` 를 `1` 로 헤더에 설정한다. 
+그리고 해당 메시지는 `somePriorityChannel` 을 타고 `someSubFlow` 로 전달되는데 이떄 로그는 홀수가 더 높은 우선순위를 가지므로 먼저 출력된다.  
+이후에는 `reversePriorityChannel` 을 타고 `reverseSubFlow` 로 전달되면서 로그는 오름차순으로 낮은 수가 먼저 로그에 찍히는 것을 확인 할 수 있다.  
+
+
+```
+.. priority 우선순위로 홀수가 먼저 출력 ..
+someSubFlow                              : GenericMessage [payload=3, headers={priority=1, id=4d68b33b-fb11-7762-e3e5-ddb8209546d7, timestamp=1680940649074}]
+someSubFlow                              : GenericMessage [payload=2, headers={priority=0, id=2a8b557e-5166-b8f9-bfd5-2ea0fbff3488, timestamp=1680940648067}]
+.. 낮은 값이 우선순위를 갖으므로 낮은 수가 먼저 출력 ..
+reverseSubFlow                           : GenericMessage [payload=2, headers={priority=0, id=2a8b557e-5166-b8f9-bfd5-2ea0fbff3488, timestamp=1680940648067}]
+reverseSubFlow                           : GenericMessage [payload=3, headers={priority=1, id=4d68b33b-fb11-7762-e3e5-ddb8209546d7, timestamp=1680940649074}]
+someSubFlow                              : GenericMessage [payload=5, headers={priority=1, id=8f11be6b-6f38-d9aa-26d7-4462ee51e466, timestamp=1680940651085}]
+someSubFlow                              : GenericMessage [payload=4, headers={priority=0, id=a1262185-1844-6b4c-4e04-b6ad7ebe5d73, timestamp=1680940650079}]
+reverseSubFlow                           : GenericMessage [payload=4, headers={priority=0, id=a1262185-1844-6b4c-4e04-b6ad7ebe5d73, timestamp=1680940650079}]
+reverseSubFlow                           : GenericMessage [payload=5, headers={priority=1, id=8f11be6b-6f38-d9aa-26d7-4462ee51e466, timestamp=1680940651085}]
+someSubFlow                              : GenericMessage [payload=7, headers={priority=1, id=15d0623b-223c-9a62-5e88-fe5f25306716, timestamp=1680940653090}]
+someSubFlow                              : GenericMessage [payload=6, headers={priority=0, id=df642219-b596-279b-1a20-ee1318ae91a6, timestamp=1680940652085}]
+reverseSubFlow                           : GenericMessage [payload=6, headers={priority=0, id=df642219-b596-279b-1a20-ee1318ae91a6, timestamp=1680940652085}]
+reverseSubFlow                           : GenericMessage [payload=7, headers={priority=1, id=15d0623b-223c-9a62-5e88-fe5f25306716, timestamp=1680940653090}]
+someSubFlow                              : GenericMessage [payload=9, headers={priority=1, id=1327a119-074f-3324-2bd3-030e1e1c949c, timestamp=1680940655104}]
+someSubFlow                              : GenericMessage [payload=8, headers={priority=0, id=174c3e90-418a-f709-f3a8-5091b8d01175, timestamp=1680940654098}]
+reverseSubFlow                           : GenericMessage [payload=8, headers={priority=0, id=174c3e90-418a-f709-f3a8-5091b8d01175, timestamp=1680940654098}]
+reverseSubFlow                           : GenericMessage [payload=9, headers={priority=1, id=1327a119-074f-3324-2bd3-030e1e1c949c, timestamp=1680940655104}]
+someSubFlow                              : GenericMessage [payload=11, headers={priority=1, id=21004f5e-a413-9569-3478-bd5de7f6124a, timestamp=1680940657111}]
+someSubFlow                              : GenericMessage [payload=10, headers={priority=0, id=9f6af242-279a-579b-6c5d-b847c3f99ab5, timestamp=1680940656109}]
+reverseSubFlow                           : GenericMessage [payload=10, headers={priority=0, id=9f6af242-279a-579b-6c5d-b847c3f99ab5, timestamp=1680940656109}]
+reverseSubFlow                           : GenericMessage [payload=11, headers={priority=1, id=21004f5e-a413-9569-3478-bd5de7f6124a, timestamp=1680940657111}]
+```  
+
+### RendezvousChannel
+
+
+
 
 
 
