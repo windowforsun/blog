@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2023-04-09T09:27:00.205Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="goUvwfCLF3G6JdQ9gTf2" version="21.0.8" type="github">
+<mxfile host="app.diagrams.net" modified="2023-04-09T09:32:39.026Z" agent="5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="k3UKNZwZodW-cr7BcFxz" version="21.0.8" type="github">
   <diagram name="페이지-1" id="fFnITydCL_fi_dLwCGUx">
     <mxGraphModel dx="538" dy="1011" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -7,19 +7,19 @@
         <mxCell id="R06nfFgZYhoXooKSzaPT-15" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R06nfFgZYhoXooKSzaPT-1" target="R06nfFgZYhoXooKSzaPT-12">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="R06nfFgZYhoXooKSzaPT-1" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 1&lt;br&gt;(+Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="R06nfFgZYhoXooKSzaPT-1" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 1&lt;br&gt;(Nginx + Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="280" y="240" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="R06nfFgZYhoXooKSzaPT-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R06nfFgZYhoXooKSzaPT-2" target="R06nfFgZYhoXooKSzaPT-12">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="R06nfFgZYhoXooKSzaPT-2" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 2&lt;br&gt;(+Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="R06nfFgZYhoXooKSzaPT-2" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 2&lt;br&gt;(Nginx + Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="280" y="320" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="R06nfFgZYhoXooKSzaPT-16" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R06nfFgZYhoXooKSzaPT-3" target="R06nfFgZYhoXooKSzaPT-12">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="R06nfFgZYhoXooKSzaPT-3" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 3&lt;br&gt;(+Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="R06nfFgZYhoXooKSzaPT-3" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;App 3&lt;br&gt;(Nginx + Filebeaat)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
           <mxGeometry x="280" y="403.5" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="R06nfFgZYhoXooKSzaPT-7" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="R06nfFgZYhoXooKSzaPT-5" target="R06nfFgZYhoXooKSzaPT-1">
