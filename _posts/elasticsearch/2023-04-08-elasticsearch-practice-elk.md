@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Elasticsearch 실습] "
+title: "[Elasticsearch 실습] ELK with Filebeat 로그 수집"
 header:
   overlay_image: /img/elasticsearch-bg.png
-excerpt: ''
+excerpt: 'ELK 스택과 Filebeat 을 사용해서 로그를 수집하는 방법과 구성에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,11 @@ categories :
 tags:
     - Practice
     - Elasticsearch
+    - Filebeat
+    - ELK
+    - Logstash
+    - Kibana
+    - Nginx
 toc: true
 use_math: true
 ---  
@@ -302,11 +307,156 @@ nginx -g 'daemon off;'
 
 
 #### Nginx Loadbalancer
+`app-filebeat` 컨테이너들의 `LoadBalancer` 역할을 수행하는 컨테이너로 `Nginx` 로 구성된다. 
+필요한 `nginx.conf` 내용은 아래와 같다.  
 
-...
+```
+user  nginx;
+worker_processes  8;
 
+events {
+    worker_connections  1024;
+}
 
+http {
+    log_format main '$remote_addr [$time_local] "$request" $status $body_bytes_sent $request_time $connection';
 
+    keepalive_timeout  0;
+
+    upstream app {
+        server app-filebeat:80;
+    }
+
+    server {
+      listen 80;
+
+      access_log /dev/stdout main;
+      error_log /dev/stderr warn;
+
+      location / {
+          proxy_pass http://app;
+
+      }
+
+      location = /server-status {
+          stub_status on;
+          access_log off;
+      }
+    }
+}
+```  
+
+### 테스트
+`docker-compose up --build` 명령으로 전체 구성을 실행시킨다. 
+실행시키면 `app-filebeat` 이미지 빌드와 함꼐 실행 된다.  
+
+```bash
+$ docker-compose up --build
+[+] Building 261.0s (25/25) FINISHED                                                                                    
+ => [internal] booting buildkit                                                                                    4.3s
+ => => pulling image moby/buildkit:buildx-stable-1                                                                 3.3s
+ => => creating container buildx_buildkit_default                                                                  1.0s
+ => [internal] load build definition from Dockerfile                                                               0.0s
+ => => transferring dockerfile: 1.47kB                                                                             0.0s
+ => [internal] load .dockerignore                                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [internal] load metadata for docker.io/library/nginx:1.21.3                                                    2.4s
+ => [ 1/18] FROM docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f3016  0.0s
+ => => resolve docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670  0.0s
+ => [internal] load build context                                                                                  0.0s
+ => => transferring context: 64B                                                                                   0.0s
+ => CACHED [ 2/18] WORKDIR /root                                                                                   0.0s
+ => CACHED [ 3/18] RUN mkdir -p /usr/share/nginx/html/js                                                           0.0s
+ => CACHED [ 4/18] RUN cp /etc/apt/sources.list sources.list_backup                                                0.0s
+ => CACHED [ 5/18] RUN sed -i -e 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                   0.0s
+ => CACHED [ 6/18] RUN sed -i -e 's/security.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                  0.0s
+ => CACHED [ 7/18] RUN apt-get update && apt-get upgrade -y                                                        0.0s
+ => [ 8/18] RUN apt-get -y update                                                                                 14.9s
+ => [ 9/18] RUN apt-get install wget gnupg -y                                                                    216.5s
+ => [10/18] RUN rm -f /var/log/nginx/access.log                                                                    0.1s
+ => [11/18] RUN rm -f /var/log/nginx/error.log                                                                     0.1s
+ => [12/18] RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -                      0.6s
+ => [13/18] RUN apt-get install apt-transport-https -y                                                             6.4s
+ => [14/18] RUN echo "deb https://artifacts.elastic.co/packages/oss-7.x/apt stable main" | tee -a /etc/apt/source  0.1s
+ => [15/18] RUN apt-get update && apt-get install filebeat -y                                                     10.1s
+ => [16/18] COPY ./filebeat.yaml /etc/filebeat/filebeat.yml                                                        0.0s
+ => [17/18] RUN update-rc.d filebeat defaults 90 10                                                                0.1s
+ => [18/18] COPY ./script.sh /root/                                                                                0.0s
+ => exporting to docker image format                                                                               5.2s
+ => => exporting layers                                                                                            1.8s
+ => => exporting manifest sha256:45cff930475c94e70f2c8e10d394bd894309679f992719928232d766bd73d3ac                  0.0s
+ => => exporting config sha256:93b17b50a5301d919d27cc61c8e0fc0b702a1cda20697bcdc3627d396665ff9b                    0.0s
+ => => sending tarball                                                                                             3.5s
+ => importing to docker                                                                                            0.0s
+[+] Running 7/7
+ ⠿ Container es-single             Created                                                                         0.0s
+ ⠿ Container exam1-nginx-lb-1      Created                                                                         0.0s
+ ⠿ Container kibana                Created                                                                         0.0s
+ ⠿ Container logstash              Created                                                                         0.0s
+ ⠿ Container exam1-app-filebeat-3  Created                                                                         0.0s
+ ⠿ Container exam1-app-filebeat-1  Created                                                                         0.0s
+ ⠿ Container exam1-app-filebeat-2  Created                                                                         0.0s
+Attaching to es-single, exam1-app-filebeat-1, exam1-app-filebeat-2, exam1-app-filebeat-3, exam1-nginx-lb-1, kibana, logstash
+
+```  
+
+그리고 `nginx-lb` 포트인 `8111` 에 아래와 같은 몇개 요청을 수행한다. 
+
+```bash
+
+.. 6번 반복 ..
+$ curl localhost:8111
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+.. 6번 반복 ..
+$ curl localhost:8111/nopath
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.21.3</center>
+</body>
+</html>
+```  
+
+요청을 수행한 후 `docker-compose` 혹은 `logstash` 의 도커 컨테이너 로그를 보면 `Nginx` 로그에 대한 출력을 확인 할 수 있다.  
+
+그리고 브라우저에서 `Kibana` 주소인 `localhost:5601` 로 접속하고 아래와 같이 기본 설정을 마치면 `app-fiebeat` 컨테이너의 
+`Nginx` 에서 생성된 로그가 `Filebest`, `Logstash`, `Elasticsearch` 를 거쳐 `Kibana` 에서 확인 할 수 있다.  
+
+elasticsearch-elk-2.png
+
+elasticsearch-elk-3.png
+
+elasticsearch-elk-4.png
+
+elasticsearch-elk-5.png
+
+elasticsearch-elk-6.png
+
+elasticsearch-elk-7.png
 
 ---  
 ## Reference
