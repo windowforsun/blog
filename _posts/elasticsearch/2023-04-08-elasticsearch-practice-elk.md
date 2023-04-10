@@ -446,17 +446,17 @@ $ curl localhost:8111/nopath
 그리고 브라우저에서 `Kibana` 주소인 `localhost:5601` 로 접속하고 아래와 같이 기본 설정을 마치면 `app-fiebeat` 컨테이너의 
 `Nginx` 에서 생성된 로그가 `Filebest`, `Logstash`, `Elasticsearch` 를 거쳐 `Kibana` 에서 확인 할 수 있다.  
 
-elasticsearch-elk-2.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-2.png)
 
-elasticsearch-elk-3.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-3.png)
 
-elasticsearch-elk-4.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-4.png)
 
-elasticsearch-elk-5.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-5.png)
 
-elasticsearch-elk-6.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-6.png)
 
-elasticsearch-elk-7.png
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-7.png)
 
 ---  
 ## Reference
