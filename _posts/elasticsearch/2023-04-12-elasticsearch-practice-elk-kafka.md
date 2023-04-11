@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Elasticsearch 실습] ELK with Filebeat 로그 수집"
+title: "[Elasticsearch 실습] ELK with Filebeat + Kafka 로그 수집"
 header:
   overlay_image: /img/elasticsearch-bg.png
-excerpt: 'ELK 스택과 Filebeat 을 사용해서 로그를 수집하는 방법과 구성에 대해 알아보자'
+excerpt: 'ELK 스택과 Filebeat 와 Kafka 를 사용해서 로그를 수집하는 방법과 구성에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -17,37 +17,26 @@ tags:
     - Logstash
     - Kibana
     - Nginx
+    - Kafka
 toc: true
 use_math: true
 ---  
 
-## ELK Stack
-`ELK Stack` 이란 `Elasticsearch`, `Logstash`, `Kibana` 의 조합을 통칭하는 기술 스택을 의미한다. 
-`Elasticsearch` 는 `JSON` 기반 분산 오픈소스 검색 및 분석 엔진이다. 
-`Logstash` 는 여러 소스에서 동시에 데이터를 수집하여 변환 수행 후, 
-`Elasticsearch` 같은 `stash` 로 전송하는 서버사이드 데이터 파이프라인이다. 
-그리고 `Kibana` 는 `Elasticsearch` 에서 차트와 그래프를 이용해 데이터를 시각화 할 수 있게 해주는 툴이다. 
-마지막으로 `ELK` 에서 보편적으로 추가되는 것이 바로 `Filebeat` 이다. 
-여기서 `Filebeat` 은 서버에서 에이전트로 설치 되어 다양한 유형의 데이터를 `Elasticsearch` 혹은 `Logstash` 로 전송하는 오픈 소스 데이터 발송자를 의미힌다.  
+## ELK Stack with Kafka
+[ELK with Filebeat]({{site.baseurl}}{% link _posts/elasticsearch/2023-04-08-elasticsearch-practice-elk.md %})
+에서는 `ELK` 스택에 `Filebeat` 을 사용해서 로그를 수집하는 방법에 대해 알아보았다. 
+여기서 `Kafka` 까지 중간에 추가해주면 좀더 대용량의 로깅을 처리할 수 있는 구성으로 만들 수 있다. 
+대용량 메시지 처리 플랫폼인 `Kafka` 가 `Filebeat` 과 `Logstash` 중간에 있기 때문에 
+`Filebeat` 은 자신이 가능한 만큼 `Kafka` 에 로그를 밀어 넣고, 
+`Logstash` 도 자신이 가능한 만큼 `Kafka` 에서 로그를 가져와 `Elastidsearch` 에 넣을 수 있기 때문이다. 
+즉 `Kafka` 가 중간에서 갑작스럽게 많은 로그가 발생하더라도 적절하게 중재를 해주는 역할을 해준다는 의미이다.  
 
-`Logstash` 와 `Filebeat` 모두 데이터를 `Elasticsearch` 로 전송한다는 목적에서는 동일한 역할을 하지만 아래와 같은 차이가 있다.  
-
-- `Logstash` : 비교적 많은 자원을 사용해서 다를 수 있는 `input`, `output` 유형(종류)가 많고, `filter` 를 사용해서 로그(데이터)를 분석하기 쉽게끔 구조화 된 형식으로 변환 가능하다. 
-- `Filebeat` : 가벼운 대신 가능한 `input`, `output` 종류가 한정적이다. 설정에 지정된 로그 데이터를 바라보는 하나 이상의 `input` 을 가진다. 지정도니 로그 파일에서 이벤트(데이터 변경)가 바생 할때 마다 데이터 수확을 시작한다. 
-
-구성을 하나더 추가한다면 `Kafka` 가 중간에 들어갈 수 있지만, 
-이번 포스트에서는 `Kafka` 는 제외한 `ELK Stack` 에 대해서 간단한 구성 방법을 알아본다. 
-여기서 `Kafka` 역할에 대해서만 간단하게 알아보면, 중간 버퍼 역할을 한다고 할 수 있다. 
-순간적으로 급증하는 데이터양에 대한 버퍼도 될 수 있고, 특정 시스템이 다운 됐을 때 로그의 버퍼 역할도 할 수 있다.  
-
-`Filebeat` 과 `Logstash` 조합에서도 갑작스럽게 많은 로그가 발생하면 `Back-Pressure` 가 있기 때문에, 
-`Filebeat` 이 `Logstash` 가 처리할 수 있는 양만큼만 로그를 전송한다. 
-그러므로 전체적인 시스템 안전성은 어느정도 확보 된다고 할 순 있지만, 갑작스러운 재시작과 같은 경우에는 대응되지 못한다.  
+그 구성을 그려보면 아래와 같다.  
 
 
 
 
-### ELK Example
+### Example
 구성할 `ELK` 의 간단한 예시는 아래와 같다.  
 
 ![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-1.drawio.png)
@@ -466,4 +455,5 @@ $ curl localhost:8111/nopath
 
 ---  
 ## Reference
-[docker container 환경에서 ELK(Elasticsearch, Logstash, Kibana)로 로깅해보기](https://a3magic3pocket.github.io/posts/elk-container-example/#%EC%8B%A4%ED%97%98-%EC%86%8C%EA%B0%90)  
+[Deploy Kafka + Filebeat + ELK - Docker Edition - Part 1](https://dev.to/dhingrachief/deploy-kafka-filebeat-elk-docker-edition-part-1-3m77)  
+[Deploy Kafka + Filebeat + ELK - Docker Edition - Part 2](https://dev.to/dhingrachief/deploy-kafka-filebeat-elk-docker-edition-part-2-hpj)  
