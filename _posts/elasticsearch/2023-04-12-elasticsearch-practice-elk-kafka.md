@@ -31,18 +31,15 @@ use_math: true
 `Logstash` 도 자신이 가능한 만큼 `Kafka` 에서 로그를 가져와 `Elastidsearch` 에 넣을 수 있기 때문이다. 
 즉 `Kafka` 가 중간에서 갑작스럽게 많은 로그가 발생하더라도 적절하게 중재를 해주는 역할을 해준다는 의미이다.  
 
-그 구성을 그려보면 아래와 같다.  
-
-
-
 
 ### Example
-구성할 `ELK` 의 간단한 예시는 아래와 같다.  
+구성할 `ELK + Kafka` 의 간단한 예시는 아래와 같다.  
 
-![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-1.drawio.png)
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-kafka-1.drawio.png)
 
-`Filebeat` 이 호스트에 설치된 간단한 애플리케이션(`Nginx`)이 생산하는 `Access`, `Error` 로그를 `Logstash` 에 전송하고, 
-`Logstash` 는 이를 파싱해서 다시 `Elasticsearch` 에 전송하면 최종적으로 `Kibana` 를 통해 로그를 확인 하는 예제이다.  
+전체 예저 구성은 [ELK with Filebeat]({{site.baseurl}}{% link _posts/elasticsearch/2023-04-08-elasticsearch-practice-elk.md %})
+에서 사용한 것과 대부분 동일하고, `Kafka` 구성 추가 및 관련 설정들만 변경 되었다. 
+동일한 부분은 빠르게 넘어가고 변경사항이 있는 부분에 대해서만 조금 더 자세히 설명할 예정이다.  
 
 예제는 `Docker` 와 `docker-compose` 를 기반으로 구성한다.  
 
@@ -59,14 +56,14 @@ use_math: true
 ├── logstash
 │   ├── my-logstash.conf
 │   └── patterns
+│       ├── gin
 │       └── nginx
 └── nginx-lb
     └── nginx.conf
-
 ```
 
 #### docker-compose
-구성하고자 하는 `ELK Stack` 의 전체 구성을 담고 있는 `docker-compose.yaml` 파일 내용은 아래와 같다.  
+구성하고자 하는 `ELK + Kafka` 의 전체 구성을 담고 있는 `docker-compose.yaml` 파일 내용은 아래와 같다.  
 
 ```yaml
 # docker-compose.yaml
@@ -103,7 +100,8 @@ services:
     image: docker.elastic.co/logstash/logstash:8.6.0
     container_name: logstash
     environment:
-      - "ELASTIC_IP=es-single"
+      ES_IP: es-single
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
     volumes:
       - ./logstash/:/usr/share/logstash/pipeline/
     ports:
@@ -115,8 +113,31 @@ services:
     networks:
       - es-net
 
+  # Kafka 구성 추가
+  zookeeper:
+    container_name: myZookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - es-net
+
+  # Kafka 구성 추가
+  kafka:
+    container_name: myKafka
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    networks:
+      - es-net
+
   nginx-lb:
-    image: nginx:1.21.1
+    image: nginx:1.12
     ports:
       - "8111:80"
     volumes:
@@ -141,7 +162,6 @@ networks:
   es-net:
 ```  
 
-`Logstash` 를 사용할 때 호스트 이름이나 컨테이너 이름에 `_` 나 `.` 가 들어가면 에러가 발생할 수 있으므로 주의해야 한다.  
 
 #### Logstash
 `Logstash` 설정은 `/usr/share/logstash/pipeline/` 하위에 `logstash` 로 시작하는 파일을 두면 된다. 
@@ -152,18 +172,25 @@ networks:
 
 ```
 # nginx
-# nginx
 NGINXACCESS %{IPORHOST:[nginx][access][remote_ip]} - %{DATA:[nginx][access][user_name]} \[%{HTTPDATE:[nginx][access][time]}\] \"%{WORD:[nginx][access][method]} %{DATA:[nginx][access][url]} HTTP/%{NUMBER:[nginx][access][http_version]}\" %{NUMBER:[nginx][access][response_code]} %{NUMBER:[nginx][access][body_sent][bytes]} \"%{DATA:[nginx][access][referrer]}\" \"%{DATA:[nginx][access][agent]}\"
 NGINXERROR %{DATA:[nginx][error][time]} \[%{DATA:[nginx][error][level]}\] %{NUMBER:[nginx][error][pid]}#%{NUMBER:[nginx][error][tid]}: (\*%{NUMBER:[nginx][error][connection_id]} )?%{GREEDYDATA:[nginx][error][message]}
 ```  
 
-`Logstash` 의 설정을 담고 있는 `logstash.conf` 파일 내용은 아래와 같다.  
+`Logstash` 의 설정을 담고 있는 `logstash.conf` 파일 내용은 아래와 같다. 
+설정에도 나와있지만, `Logstash` 는 `Kafka Topic` 으로 부터 로그를 전달 받아 파이프라인을 진행한다. 
+이전 `ELK Filebeat` 과는 달리 `Access`, `Error` 를 별도의 인덱스로 구성해 보았다. 
 
 ```
-# filebeat -> logstash 통신을 5044 로 수행한다. 
 input {
-    beats {
-        port => 5044
+    # Filebeat 에서 사용한 Kafka 토픽을 통해 로그 수신
+    kafka {
+        client_id => "logstash-app-filebeat-nginx"
+        group_id => "logstash-app-filebeat-nginx"
+        # ,(콤마)로 구분한다.
+        bootstrap_servers => "kafka:9092"
+        #topics => ["app-filebeat-nginx"]
+        topics => ["app-filebeat-nginx-access", "app-filebeat-nginx-error"]
+        codec => json { }
     }
 }
 
@@ -209,13 +236,26 @@ output {
   stdout {
     codec => rubydebug
   }
-  elasticsearch {
-    action => "index"
-    # 환경변수 ELASTIC_IP 를 사용해서 로그를 전송한다. 
-    hosts => ["${ELASTIC_IP:=localhost}:9200"]
-    manage_template => false
-    # 일자 단위로 인덱스를 생성한다. 
-    index => "app-filebeat-%{+YYYY.MM.dd}"
+
+  # Nginx access 로그 
+  if "nginx-access" in [tags] {
+      elasticsearch {
+        action => "index"
+        hosts => ["${ES_IP:=localhost}:9200"]
+        manage_template => false
+        #index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+        index => "app-filebeat-nginx-access-%{+YYYY.MM.dd}"
+      }
+  }
+  # Nginx error 로그 
+  else if  "nginx-error" in [tags] {
+      elasticsearch {
+        action => "index"
+        hosts => ["${ES_IP:=localhost}:9200"]
+        manage_template => false
+        #index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+        index => "app-filebeat-nginx-error-%{+YYYY.MM.dd}"
+      }
   }
 }
 ```  
@@ -229,7 +269,10 @@ output {
 사용할 `Filebeat` 의 설정 파일인 `filebeat.yaml` 내용은 아래와 같다. 
 구현하고자 하는 동작은 호스트의 로그파일을 읽어 `Logstash` 로 전송하는 것이기 때문에 
 `type` 은 `filestream` 으로 지정한다. 
-각 로그 파일을 `Logstash` 에서도 구분할 수 있도록 태그를 별도로 달아 준다. 
+각 로그 파일을 `Logstash` 에서도 구분할 수 있도록 태그를 별도로 달아 준다.  
+
+`Filebeat` 의 로그 전송은 `Kafka` 의 특정 토픽에 수행한다. 
+그리고 토픽은 로그 파일마다 구분해서 `fields.doc` 에 명시해 사용한다.  
 
 ```yaml
 filebeat.inputs:
@@ -237,20 +280,31 @@ filebeat.inputs:
     enabled: true
     paths:
       - /var/log/nginx/access.log
+    fields:
+      doc: "app-filebeat-nginx-access"
     tags: ["nginx-access"]
 
   - type: filestream
     enabled: true
     paths:
       - /var/log/nginx/error.log
+    fields:
+      doc: "app-filebeat-nginx-error"
     tags: ["nginx-error"]
 
-output.logstash:
-  hosts: ["${LOGSTASH_IP:=localhost}:5044"]
+output.kafka:
+  hosts: ["kafka:9092"]
+  topic: '%{[fields.doc]}'
+  partition.round_robin:
+    reachable_only: false
+  required_acks: 1
+  compression: lz4
+  max_message_bytes: 1000000
 
 logging.level: debug
 logging.to_stderr: true
 logging.to_syslog: true
+
 ```  
 
 실행할 컨테너의 이미지를 빌드하는 `Dockerfile` 내용은 아래와 같다.  
@@ -347,51 +401,47 @@ http {
 
 ```bash
 $ docker-compose up --build
-[+] Building 261.0s (25/25) FINISHED                                                                                    
- => [internal] booting buildkit                                                                                    4.3s
- => => pulling image moby/buildkit:buildx-stable-1                                                                 3.3s
- => => creating container buildx_buildkit_default                                                                  1.0s
- => [internal] load build definition from Dockerfile                                                               0.0s
- => => transferring dockerfile: 1.47kB                                                                             0.0s
- => [internal] load .dockerignore                                                                                  0.0s
- => => transferring context: 2B                                                                                    0.0s
- => [internal] load metadata for docker.io/library/nginx:1.21.3                                                    2.4s
- => [ 1/18] FROM docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f3016  0.0s
- => => resolve docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670  0.0s
- => [internal] load build context                                                                                  0.0s
- => => transferring context: 64B                                                                                   0.0s
- => CACHED [ 2/18] WORKDIR /root                                                                                   0.0s
- => CACHED [ 3/18] RUN mkdir -p /usr/share/nginx/html/js                                                           0.0s
- => CACHED [ 4/18] RUN cp /etc/apt/sources.list sources.list_backup                                                0.0s
- => CACHED [ 5/18] RUN sed -i -e 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                   0.0s
- => CACHED [ 6/18] RUN sed -i -e 's/security.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                  0.0s
- => CACHED [ 7/18] RUN apt-get update && apt-get upgrade -y                                                        0.0s
- => [ 8/18] RUN apt-get -y update                                                                                 14.9s
- => [ 9/18] RUN apt-get install wget gnupg -y                                                                    216.5s
- => [10/18] RUN rm -f /var/log/nginx/access.log                                                                    0.1s
- => [11/18] RUN rm -f /var/log/nginx/error.log                                                                     0.1s
- => [12/18] RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -                      0.6s
- => [13/18] RUN apt-get install apt-transport-https -y                                                             6.4s
- => [14/18] RUN echo "deb https://artifacts.elastic.co/packages/oss-7.x/apt stable main" | tee -a /etc/apt/source  0.1s
- => [15/18] RUN apt-get update && apt-get install filebeat -y                                                     10.1s
- => [16/18] COPY ./filebeat.yaml /etc/filebeat/filebeat.yml                                                        0.0s
- => [17/18] RUN update-rc.d filebeat defaults 90 10                                                                0.1s
- => [18/18] COPY ./script.sh /root/                                                                                0.0s
- => exporting to docker image format                                                                               5.2s
- => => exporting layers                                                                                            1.8s
- => => exporting manifest sha256:45cff930475c94e70f2c8e10d394bd894309679f992719928232d766bd73d3ac                  0.0s
- => => exporting config sha256:93b17b50a5301d919d27cc61c8e0fc0b702a1cda20697bcdc3627d396665ff9b                    0.0s
- => => sending tarball                                                                                             3.5s
- => importing to docker                                                                                            0.0s
-[+] Running 7/7
- ⠿ Container es-single             Created                                                                         0.0s
- ⠿ Container exam1-nginx-lb-1      Created                                                                         0.0s
- ⠿ Container kibana                Created                                                                         0.0s
- ⠿ Container logstash              Created                                                                         0.0s
- ⠿ Container exam1-app-filebeat-3  Created                                                                         0.0s
- ⠿ Container exam1-app-filebeat-1  Created                                                                         0.0s
- ⠿ Container exam1-app-filebeat-2  Created                                                                         0.0s
-Attaching to es-single, exam1-app-filebeat-1, exam1-app-filebeat-2, exam1-app-filebeat-3, exam1-nginx-lb-1, kibana, logstash
+[+] Building 2.7s (24/24) FINISHED                                                                                                                                                                                                      
+ => [internal] load build definition from Dockerfile                                                                                                                                                                               0.0s
+ => => transferring dockerfile: 1.47kB                                                                                                                                                                                             0.0s
+ => [internal] load .dockerignore                                                                                                                                                                                                  0.0s
+ => => transferring context: 2B                                                                                                                                                                                                    0.0s
+ => [internal] load metadata for docker.io/library/nginx:1.21.3                                                                                                                                                                    0.3s
+ => [ 1/18] FROM docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36                                                                                                            0.0s
+ => => resolve docker.io/library/nginx:1.21.3@sha256:644a70516a26004c97d0d85c7fe1d0c3a67ea8ab7ddf4aff193d9f301670cf36                                                                                                              0.0s
+ => [internal] load build context                                                                                                                                                                                                  0.0s
+ => => transferring context: 64B                                                                                                                                                                                                   0.0s
+ => CACHED [ 2/18] WORKDIR /root                                                                                                                                                                                                   0.0s
+ => CACHED [ 3/18] RUN mkdir -p /usr/share/nginx/html/js                                                                                                                                                                           0.0s
+ => CACHED [ 4/18] RUN cp /etc/apt/sources.list sources.list_backup                                                                                                                                                                0.0s
+ => CACHED [ 5/18] RUN sed -i -e 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                                                                                                                                   0.0s
+ => CACHED [ 6/18] RUN sed -i -e 's/security.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list                                                                                                                                  0.0s
+ => CACHED [ 7/18] RUN apt-get update && apt-get upgrade -y                                                                                                                                                                        0.0s
+ => CACHED [ 8/18] RUN apt-get -y update                                                                                                                                                                                           0.0s
+ => CACHED [ 9/18] RUN apt-get install wget gnupg -y                                                                                                                                                                               0.0s
+ => CACHED [10/18] RUN rm -f /var/log/nginx/access.log                                                                                                                                                                             0.0s
+ => CACHED [11/18] RUN rm -f /var/log/nginx/error.log                                                                                                                                                                              0.0s
+ => CACHED [12/18] RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | apt-key add -                                                                                                                               0.0s
+ => CACHED [13/18] RUN apt-get install apt-transport-https -y                                                                                                                                                                      0.0s
+ => CACHED [14/18] RUN echo "deb https://artifacts.elastic.co/packages/oss-7.x/apt stable main" | tee -a /etc/apt/sources.list.d/elastic-7.x.list                                                                                  0.0s
+ => CACHED [15/18] RUN apt-get update && apt-get install filebeat -y                                                                                                                                                               0.0s
+ => CACHED [16/18] COPY ./filebeat.yaml /etc/filebeat/filebeat.yml                                                                                                                                                                 0.0s
+ => CACHED [17/18] RUN update-rc.d filebeat defaults 90 10                                                                                                                                                                         0.0s
+ => CACHED [18/18] COPY ./script.sh /root/                                                                                                                                                                                         0.0s
+ => exporting to docker image format                                                                                                                                                                                               2.6s
+ => => exporting layers                                                                                                                                                                                                            0.0s
+ => => exporting manifest sha256:2e440491df0209120f820c0d332cdeede16910219d0fc3b7b97a15504c5cca08                                                                                                                                  0.0s
+ => => exporting config sha256:ed1de48db11fb1cd29396c7d08c392fe2870714e6f3cfe7a93ac9dabce1b2395                                                                                                                                    0.0s
+ => => sending tarball                                                                                                                                                                                                             2.6s
+ => importing to docker                                                                                                                                                                                                            0.0s
+[+] Running 6/6
+ ⠿ Container es-single             Created                                                                                                                                                                                         0.0s
+ ⠿ Container kibana                Created                                                                                                                                                                                         0.0s
+ ⠿ Container logstash              Created                                                                                                                                                                                         0.0s
+ ⠿ Container kafka-app-filebeat-3  Created                                                                                                                                                                                         0.0s
+ ⠿ Container kafka-app-filebeat-1  Created                                                                                                                                                                                         0.0s
+ ⠿ Container kafka-app-filebeat-2  Created                                                                                                                                                                                         0.0s
+Attaching to es-single, kafka-app-filebeat-1, kafka-app-filebeat-2, kafka-app-filebeat-3, kafka-nginx-lb-1, kibana, logstash, myKafka, myZookeeper
 
 ```  
 
@@ -438,8 +488,48 @@ $ curl localhost:8111/nopath
 
 요청을 수행한 후 `docker-compose` 혹은 `logstash` 의 도커 컨테이너 로그를 보면 `Nginx` 로그에 대한 출력을 확인 할 수 있다.  
 
+추가적으로 `Kafka` 토픽과 토픽의 내용을 조회하면 아래와 같이 `Filebeat` 과 `Logstash` 에서 사용하는 토픽이 생성된것과 해당 토픽에 로그가 저장돼 있는 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+__consumer_offsets
+app-filebeat-nginx-access
+app-filebeat-nginx-error
+
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic app-filebeat-nginx-access --from-beginning
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"log":{"offset":0,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:41 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"ecs":{"version":"1.12.0"},"host":{"name":"053dd9dc5419"},"agent":{"name":"053dd9dc5419","type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c","id":"3db14b2e-4831-43c4-926d-97136d781be1"}}
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"fields":{"doc":"app-filebeat-nginx-access"},"ecs":{"version":"1.12.0"},"host":{"name":"714d9ae40b4a"},"agent":{"version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a","type":"filebeat"},"log":{"offset":0,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:43 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"}}
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"agent":{"id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59","name":"9f10de4f0a06","type":"filebeat","version":"7.17.9","hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e"},"log":{"offset":0,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:45 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"fields":{"doc":"app-filebeat-nginx-access"},"input":{"type":"filestream"},"ecs":{"version":"1.12.0"},"host":{"name":"9f10de4f0a06"}}
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"agent":{"id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419","type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c"},"log":{"file":{"path":"/var/log/nginx/access.log"},"offset":90},"message":"10.89.2.6 - - [11/Apr/2023:22:11:46 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"ecs":{"version":"1.12.0"},"host":{"name":"053dd9dc5419"}}
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"ecs":{"version":"1.12.0"},"host":{"name":"714d9ae40b4a"},"agent":{"version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a","type":"filebeat"},"message":"10.89.2.6 - - [11/Apr/2023:22:11:48 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","log":{"offset":90,"file":{"path":"/var/log/nginx/access.log"}},"tags":["nginx-access"],"fields":{"doc":"app-filebeat-nginx-access"},"input":{"type":"filestream"}}
+{"@timestamp":"2023-04-11T22:11:50.656Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"agent":{"ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59","name":"9f10de4f0a06","type":"filebeat","version":"7.17.9","hostname":"9f10de4f0a06"},"log":{"offset":90,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:50 +0000] \"GET / HTTP/1.0\" 200 615 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"ecs":{"version":"1.12.0"},"host":{"name":"9f10de4f0a06"}}
+{"@timestamp":"2023-04-11T22:11:56.663Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"host":{"name":"053dd9dc5419"},"agent":{"type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c","id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419"},"ecs":{"version":"1.12.0"},"log":{"offset":180,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:55 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\""}
+{"@timestamp":"2023-04-11T22:12:02.666Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"log":{"offset":276,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:12:00 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"agent":{"type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c","id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419"},"ecs":{"version":"1.12.0"},"host":{"name":"053dd9dc5419"}}
+{"@timestamp":"2023-04-11T22:12:04.664Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"message":"10.89.2.6 - - [11/Apr/2023:22:11:57 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"host":{"name":"714d9ae40b4a"},"agent":{"version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a","type":"filebeat"},"ecs":{"version":"1.12.0"},"log":{"offset":180,"file":{"path":"/var/log/nginx/access.log"}}}
+{"@timestamp":"2023-04-11T22:12:04.664Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-access"},"ecs":{"version":"1.12.0"},"host":{"name":"714d9ae40b4a"},"agent":{"hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a","type":"filebeat","version":"7.17.9"},"log":{"offset":276,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:12:02 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"]}
+{"@timestamp":"2023-04-11T22:12:04.664Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"input":{"type":"filestream"},"host":{"name":"9f10de4f0a06"},"agent":{"version":"7.17.9","hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59","name":"9f10de4f0a06","type":"filebeat"},"ecs":{"version":"1.12.0"},"log":{"offset":180,"file":{"path":"/var/log/nginx/access.log"}},"message":"10.89.2.6 - - [11/Apr/2023:22:11:59 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"fields":{"doc":"app-filebeat-nginx-access"}}
+{"@timestamp":"2023-04-11T22:12:04.664Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"agent":{"version":"7.17.9","hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59","name":"9f10de4f0a06","type":"filebeat"},"ecs":{"version":"1.12.0"},"host":{"name":"9f10de4f0a06"},"log":{"file":{"path":"/var/log/nginx/access.log"},"offset":276},"message":"10.89.2.6 - - [11/Apr/2023:22:12:04 +0000] \"GET /nopath HTTP/1.0\" 404 153 \"-\" \"curl/7.79.1\" \"-\"","tags":["nginx-access"],"fields":{"doc":"app-filebeat-nginx-access"},"input":{"type":"filestream"}}
+.. 생략 ..
+
+$ docker exec -it myKafka kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic app-filebeat-nginx-error --from-beginning
+{"@timestamp":"2023-04-11T22:10:46.645Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"log":{"offset":381,"file":{"path":"/var/log/nginx/error.log"}},"message":"2023/04/11 22:10:46 [notice] 4#4: start worker process 5","tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"ecs":{"version":"1.12.0"},"host":{"name":"714d9ae40b4a"},"agent":{"name":"714d9ae40b4a","type":"filebeat","version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed"}}
+{"@timestamp":"2023-04-11T22:10:46.646Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"message":"2023/04/11 22:10:46 [notice] 4#4: start worker process 6","tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"ecs":{"version":"1.12.0"},"host":{"name":"714d9ae40b4a"},"agent":{"type":"filebeat","version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a"},"log":{"offset":438,"file":{"path":"/var/log/nginx/error.log"}}}
+{"@timestamp":"2023-04-11T22:10:46.643Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"ecs":{"version":"1.12.0"},"host":{"name":"9f10de4f0a06"},"agent":{"name":"9f10de4f0a06","type":"filebeat","version":"7.17.9","hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59"},"message":"2023/04/11 22:10:46 [notice] 4#4: start worker process 5","log":{"offset":381,"file":{"path":"/var/log/nginx/error.log"}}}
+{"@timestamp":"2023-04-11T22:10:46.644Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"message":"2023/04/11 22:10:46 [notice] 4#4: start worker process 5","tags":["nginx-error"],"fields":{"doc":"app-filebeat-nginx-error"},"input":{"type":"filestream"},"ecs":{"version":"1.12.0"},"host":{"name":"053dd9dc5419"},"agent":{"hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c","id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419","type":"filebeat","version":"7.17.9"},"log":{"offset":381,"file":{"path":"/var/log/nginx/error.log"}}}
+
+.. 생략 ..
+
+{"@timestamp":"2023-04-11T22:12:00.657Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"host":{"name":"9f10de4f0a06"},"agent":{"hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59","name":"9f10de4f0a06","type":"filebeat","version":"7.17.9"},"ecs":{"version":"1.12.0"},"log":{"file":{"path":"/var/log/nginx/error.log"},"offset":724},"message":"2023/04/11 22:11:59 [error] 5#5: *3 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\""}
+{"@timestamp":"2023-04-11T22:12:00.659Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"fields":{"doc":"app-filebeat-nginx-error"},"host":{"name":"714d9ae40b4a"},"agent":{"hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a","type":"filebeat","version":"7.17.9"},"ecs":{"version":"1.12.0"},"log":{"offset":724,"file":{"path":"/var/log/nginx/error.log"}},"message":"2023/04/11 22:11:57 [error] 5#5: *3 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\"","tags":["nginx-error"],"input":{"type":"filestream"}}
+{"@timestamp":"2023-04-11T22:12:00.658Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"host":{"name":"053dd9dc5419"},"agent":{"ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c","id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419","type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419"},"ecs":{"version":"1.12.0"},"log":{"file":{"path":"/var/log/nginx/error.log"},"offset":724},"message":"2023/04/11 22:11:55 [error] 5#5: *3 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\""}
+{"@timestamp":"2023-04-11T22:12:02.660Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"host":{"name":"714d9ae40b4a"},"agent":{"type":"filebeat","version":"7.17.9","hostname":"714d9ae40b4a","ephemeral_id":"aa56aeec-b0ee-4a6b-939a-836101b7bbff","id":"b1a69528-67da-4872-95cc-bc9001ca93ed","name":"714d9ae40b4a"},"log":{"offset":920,"file":{"path":"/var/log/nginx/error.log"}},"message":"2023/04/11 22:12:02 [error] 5#5: *4 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\"","tags":["nginx-error"],"fields":{"doc":"app-filebeat-nginx-error"},"input":{"type":"filestream"},"ecs":{"version":"1.12.0"}}
+{"@timestamp":"2023-04-11T22:12:02.659Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"message":"2023/04/11 22:12:00 [error] 5#5: *4 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\"","tags":["nginx-error"],"input":{"type":"filestream"},"fields":{"doc":"app-filebeat-nginx-error"},"ecs":{"version":"1.12.0"},"host":{"name":"053dd9dc5419"},"agent":{"id":"3db14b2e-4831-43c4-926d-97136d781be1","name":"053dd9dc5419","type":"filebeat","version":"7.17.9","hostname":"053dd9dc5419","ephemeral_id":"5eada860-4c61-4dfc-b515-cb9698da664c"},"log":{"offset":920,"file":{"path":"/var/log/nginx/error.log"}}}
+{"@timestamp":"2023-04-11T22:12:06.660Z","@metadata":{"beat":"filebeat","type":"_doc","version":"7.17.9"},"fields":{"doc":"app-filebeat-nginx-error"},"ecs":{"version":"1.12.0"},"host":{"name":"9f10de4f0a06"},"agent":{"name":"9f10de4f0a06","type":"filebeat","version":"7.17.9","hostname":"9f10de4f0a06","ephemeral_id":"372ac361-e43b-41a2-aed3-7c598967fa4e","id":"e3d6e0a4-0f03-4304-a0a3-226133d5ae59"},"log":{"offset":920,"file":{"path":"/var/log/nginx/error.log"}},"message":"2023/04/11 22:12:04 [error] 5#5: *4 open() \"/usr/share/nginx/html/nopath\" failed (2: No such file or directory), client: 10.89.2.6, server: localhost, request: \"GET /nopath HTTP/1.0\", host: \"app\"","tags":["nginx-error"],"input":{"type":"filestream"}}
+
+```  
+
 그리고 브라우저에서 `Kibana` 주소인 `localhost:5601` 로 접속하고 아래와 같이 기본 설정을 마치면 `app-fiebeat` 컨테이너의 
-`Nginx` 에서 생성된 로그가 `Filebest`, `Logstash`, `Elasticsearch` 를 거쳐 `Kibana` 에서 확인 할 수 있다.  
+`Nginx` 에서 생성된 로그가 `Filebest`, `Kafka`, `Logstash`, `Elasticsearch` 를 거쳐 `Kibana` 에서 확인 할 수 있다.  
 
 ![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-2.png)
 
@@ -447,11 +537,15 @@ $ curl localhost:8111/nopath
 
 ![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-4.png)
 
-![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-5.png)
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-kafka-5.png)
+
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-kafka-6.png)
 
 ![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-6.png)
 
-![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-7.png)
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-kafka-7.png)
+
+![그림 1]({{site.baseurl}}/img/elasticsearch/elasticsearch-elk-kafka-8.png)
 
 ---  
 ## Reference
