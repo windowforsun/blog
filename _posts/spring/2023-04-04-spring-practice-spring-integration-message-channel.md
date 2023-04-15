@@ -420,7 +420,354 @@ reverseSubFlow                           : GenericMessage [payload=11, headers={
 ```  
 
 ### RendezvousChannel
+`RendezvousChannel`(랑데뷰 채널)은 해당 채널의 `receive()` 메소드를 호출할 때까지
+`sender` 스레드를 블리킹하는 `direct-handoff` 방식의 채널이다. 
+해당 채널은 `SynchronousQueue` 를 사용한다는 점만 빼면 기존 `QueueChannel` 과 유시하다. 
+`sender` 와 `receiver` 가 서로 다른 스레드에서 동작하면서 큐에 전달된 메시지가 비동기로 삭제되는 
+처리가 적절하지 않는, 즉 `QueueChannel` 에 저장된 메시지가 어느 하나의 `receiver` 에는 꼭 전달되는 것이
+보장되는 상황에서 사용할 수 있다.  
 
+`RendezvousChannel` 은 `QueueChannel` 의 동기화 버전으로, 
+`request-reply` 동작 방식을 구현할 때 유용하다.  
+
+예제는 `sender` 와 `receiver` 를 서로 다른 스레드에서 동작 시키고, 
+`sedner` 는 코드상으론 대기없이 메시지를 전송하려 하자만, `receiver` 는 `1000ms` 마다 메시지를 수신하기 때문에 
+실제로 메시지는 `RendezvousChannel` 의 `receive()` 를 호출하는 `receiver` 의 주기인 `1000ms` 마다 
+전달되는 것을 확인 할 수 있다.  
+
+```java
+@Slf4j
+@Configuration
+public class RendezvousChannelConfig {
+    @Bean
+    public RendezvousChannel someRendezvousChannel() {
+        return new RendezvousChannel();
+    }
+
+    @Bean
+    public Thread sender() {
+        Thread thread = new Thread(() -> {
+            for(int i = 0; i < 100; i++) {
+                log.info("wait send message {}", i);
+                this.someRendezvousChannel().send(MessageBuilder.withPayload(i).build());
+                log.info("done send message {}", i);
+            }
+        });
+
+        thread.start();
+
+        return thread;
+    }
+
+    @Bean
+    public Thread receiver() {
+        Thread thread = new Thread(() -> {
+            while(true) {
+                try {
+                    Message<?> msg = this.someRendezvousChannel().receive();
+                    log.info("receive message : {}", msg);
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+
+                }
+            }
+        });
+
+        thread.start();
+
+        return thread;
+    }
+}
+```  
+
+```
+17:03:23.160  INFO 92836 --- [Thread-1] test: wait send message 0
+17:03:23.163  INFO 92836 --- [Thread-1] test: done send message 0
+17:03:23.163  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=0, headers={id=ac1f36cb-a493-a7e9-51a4-5c3092cc4cf7, timestamp=1681545803163}]
+17:03:23.163  INFO 92836 --- [Thread-1] test: wait send message 1
+17:03:24.167  INFO 92836 --- [Thread-1] test: done send message 1
+17:03:24.167  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=1, headers={id=e5aa3344-dbd4-5738-0bb7-12877d118a3b, timestamp=1681545803163}]
+17:03:24.168  INFO 92836 --- [Thread-1] test: wait send message 2
+17:03:25.168  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=2, headers={id=98fe9953-a419-0c27-4961-e2fd0543e398, timestamp=1681545804168}]
+17:03:25.168  INFO 92836 --- [Thread-1] test: done send message 2
+17:03:25.168  INFO 92836 --- [Thread-1] test: wait send message 3
+17:03:26.173  INFO 92836 --- [Thread-1] test: done send message 3
+17:03:26.173  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=3, headers={id=dbf0f244-f800-903d-39ce-c235cbc185fd, timestamp=1681545805168}]
+17:03:26.174  INFO 92836 --- [Thread-1] test: wait send message 4
+17:03:27.179  INFO 92836 --- [Thread-1] test: done send message 4
+17:03:27.179  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=4, headers={id=a0947cf6-16f5-a5c3-e3b9-90b52717810b, timestamp=1681545806174}]
+17:03:27.179  INFO 92836 --- [Thread-1] test: wait send message 5
+17:03:28.184  INFO 92836 --- [Thread-1] test: done send message 5
+17:03:28.184  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=5, headers={id=3bc39d7e-b850-e224-4600-bab5833f9d20, timestamp=1681545807179}]
+17:03:28.185  INFO 92836 --- [Thread-1] test: wait send message 6
+17:03:29.191  INFO 92836 --- [Thread-1] test: done send message 6
+17:03:29.191  INFO 92836 --- [Thread-1] test: wait send message 7
+17:03:29.190  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=6, headers={id=213a5b66-8623-f775-c07a-f0a6e6c59a33, timestamp=1681545808185}]
+17:03:30.196  INFO 92836 --- [Thread-1] test: done send message 7
+17:03:30.196  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=7, headers={id=f250da3a-cf49-931c-b2cf-620dcf8420d9, timestamp=1681545809191}]
+17:03:30.196  INFO 92836 --- [Thread-1] test: wait send message 8
+17:03:31.201  INFO 92836 --- [Thread-2] test: receive message : GenericMessage [payload=8, headers={id=b88b4add-76cb-ee7d-6318-c01044208482, timestamp=1681545810196}]
+17:03:31.201  INFO 92836 --- [Thread-1] test: done send message 8
+```  
+
+
+#### DirectChannel
+`DirectChannel` 은 `Spring Integration` 의 기본 `MessgaeChannel` 이면서 `point-to-point` 방식과 `publish-subscirbe` 채널의 특징을 복합적으로 가지고 있다. 
+`DirectChannel` 은 `PollableChannel` 이 아닌 `SubscribableChannel` 인터페이스를 구현하고 있기 때문에 `SubscribableChannel` 에 더 유사하다고 할 수 있다. 
+그러므로 자신의 채널을 구독하는 구독자에게 메시지를 직접 발송하지만, `point-to-point` 특징도 가지고 있기 때문에 
+단일 구독자인 `MessageHandler` 에게만 `message` 를 전송한다는 점에서는 일반적인 `PublishSubscirbeChannel` 과는 차이점이 있다.  
+
+`DirectChannel` 의 특징중 하나는 입력/출력이 단일 스레드에서 채널의 약쪽 작업을 모두 수행할 수 있다는 것이다. 
+특정 구독자가 `DirectChannel` 을 구독하고 있는 상황에서 `sender` 가 메시지를 전송하면 `send()` 메소드가 
+값을 반환하기 전 `handleMessage(Message)` 를 직접 호출해 메시지가 구독자에게 전달되기 때문에 
+이는 `sender` 의 스레드에서 메시지의 송/수신이 수행된다.  
+
+이러한 특징의 주된 요인은 채널을 사용할 때의 장점인 `loose coupling` 은 그대로 가지면서, 
+채널 전체에 커버할 수 있는 트랜잭션을 지원하기 위함이다. 
+예를 들어 `send()` 메소드를 통해 전달되는 메시지는 `handleMessage()` 메소드를 거쳐 
+구독자에게 전달되고 수신 처리의 완료에 대한 트랜잭션의 최정 결과가 결정될 수 있다.  
+
+앞서 언급한 것처럼 `DirectChannel` 은 `SubscribableChannel` 의 구현체 이기 때문에, 
+여러 구독자가 하나의 채널을 구독 할 순 있지만, 실제 메시지는 단일 구독자에게만 전달 된다. 
+이때 해당 채널이 어느 구독자에게 메시지를 전달할지는 `MessageDispatcher` 에게 위임한다. 
+디스패처는 `load-balancer` 혹은 `load-balancer-ref`(두 필드는 함꼐 사용 될 수 없다.) 에 설정된 속성을 바탕으로 로드 밸런싱 전략이 결정된다. 
+이런 로드 밸런싱은 `LoadBalancingStrategy` 의 구현체로 기본 제공되는 것으로는 `round-robin`(기본) 과 `none` 이 있다. 
+
+또한 로드 밸런싱에 대한 동작은 `failover` 전략에 따라서 달라질 수 있다. 
+만약 `true`(기본값) 인 경우 먼저 선택된 메시지 핸들러가(구독자) 예외를 던지게 되면, 그 다음 메시지 핸들러에게 다시 메시지를 전송한다. 
+만약 로드 밸런싱이 `none` 인 상태라도 `failover` 가 `true` 이면 예외 발생시 메시지는 다른 구독자에게 전달 될 수 있다. 
+이러한 메시지 핸들러의 선택은 `order` 속성을 통해 우선순위를 결정 할 수 있다.  
+
+아래 예제는 2개의 채널이 있다.
+
+- `roundrobinDirectChannel` : 기본 로드 밸런싱 동작인 `round-robin` 으로 설정된 채널로 여러 구독자가 있는 경우 번갈아가며 구독자에게 메시지를 전달한다. 
+- `noneDirectChannel` : 로드 밸런싱 동작을 비활성화한 채널로 `failover` 가 동작 할 떄만 다른 채널로 메시지를 전달한다.  
+
+```java
+@Configuration
+public class DirectChannelConfig {
+    @Bean
+    public MessageChannel roundrobinDirectChannel() {
+        DirectChannel directChannel = new DirectCHannel();
+        // failover 비활성화
+        // directChannel.setFailover(false);
+        return directChannel;
+    }
+
+    @Bean
+    public MessageChannel noneDirectChannel() {
+        return new DirectChannel(null);
+    }
+
+    @Bean
+    public IntegrationFlow mainFlow() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        counter::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("roundrobinDirectChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subFlow1() {
+        return IntegrationFlows.from("roundrobinDirectChannel")
+                .log("subFlow1")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subFlow2() {
+        return IntegrationFlows.from("roundrobinDirectChannel")
+                .log("subFlow2")
+                .channel("noneDirectChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow noneFlow1() {
+        return IntegrationFlows.from("noneDirectChannel")
+                .handle(Integer.class, (payload, headers) -> {
+                    if(payload % 3 == 0) {
+                        throw new RuntimeException("noneFlow1 Exception");
+                    }
+
+                    return payload;
+                })
+                .log("noneFlow1")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow noneFlow2() {
+        return IntegrationFlows.from("noneDirectChannel")
+                .log("noneFlow2")
+                .handle(message -> {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (Exception ignore) {
+
+                    }
+                })
+                .get();
+    }
+}
+```  
+
+각 플로우에 대한 설명과 수신할 메시지는 아래와 같다. 
+
+- `subFlow1` : `roundrobinDirectChannel` 에서 0부터 짝수의 값을 수신한다. 
+- `subFlow2` : `roundrobinDirectChannel` 에서 1부터 홀수의 값을 수신하고 이를 다시 `noneDirectChannel` 로 전달 한다. 
+- `noneFlow1` : `noneDirectChannel` 로 부터 `subFlow2` 가 수신한 메시지를 전달 받는 플로우이다. 수신 값이 3의 배수인 경우에는 예외를 발생시킨다. 
+- `noneFlow2` : `noneDirectChannel` 로 부터 `subFlow2` 가 수신한 메지시 중 `noneFlow1` 으로 전달 됐지만, `failover` 동작으로 홀수 중 3의 배수의 값만 수신된다.  
+
+```
+.. 500ms 마다 메시지 전송 ..
+17:53:44.566  subFlow1                                 : GenericMessage [payload=0, headers={id=51f447a4-a0c3-df89-dd7b-168ba156629a, timestamp=1681547775961}]
+17:53:45.068  subFlow2                                 : GenericMessage [payload=1, headers={id=22382474-1d2c-e23e-0f03-d5145673c482, timestamp=1681547776464}]
+17:53:45.068  noneFlow1                                : GenericMessage [payload=1, headers={id=d8dafd7d-3aa3-2f9b-a4a0-011719b532e4, timestamp=1681547776464}]
+17:53:45.571  subFlow1                                 : GenericMessage [payload=2, headers={id=f0783a03-9c70-e313-97ea-01c16c55df62, timestamp=1681547776960}]
+17:53:46.065  subFlow2                                 : GenericMessage [payload=3, headers={id=ccf427c3-25c9-c727-9b01-73f78074d8fe, timestamp=1681547777462}]
+17:53:46.066  o.s.i.dispatcher.UnicastingDispatcher    : An exception was thrown by 'ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@70e889e9] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)' while handling 'GenericMessage [payload=3, headers={id=ccf427c3-25c9-c727-9b01-73f78074d8fe, timestamp=1681547777462}]': error occurred in message handler [ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@70e889e9] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)]; nested exception is java.lang.RuntimeException: noneFlow1 Exception. Failing over to the next subscriber.
+17:53:46.066  noneFlow2                                : GenericMessage [payload=3, headers={id=ccf427c3-25c9-c727-9b01-73f78074d8fe, timestamp=1681547777462}]
+.. noneFlow2 의 동작으로 3초 후 메시지 전송 ..
+.. 다시 500ms 마다 메시지 전송 ..
+17:53:49.072  subFlow1                                 : GenericMessage [payload=4, headers={id=a3293f71-e238-7337-2a7f-021cb46fbbe3, timestamp=1681547777964}]
+17:53:49.073  subFlow2                                 : GenericMessage [payload=5, headers={id=b959ea7d-2847-b8f8-ddb0-9f0a5b9c68fb, timestamp=1681547778464}]
+17:53:49.073  noneFlow1                                : GenericMessage [payload=5, headers={id=cfcb872b-f9b8-2881-feb4-346dc26af193, timestamp=1681547778464}]
+17:53:49.073  subFlow1                                 : GenericMessage [payload=6, headers={id=db4bf4e7-ab15-a093-5b4c-fcb1703517a4, timestamp=1681547778962}]
+17:53:49.073  subFlow2                                 : GenericMessage [payload=7, headers={id=fc82706f-cb51-df35-5c75-82dcaf4051a2, timestamp=1681547779463}]
+17:53:49.074  noneFlow1                                : GenericMessage [payload=7, headers={id=a75a6fc3-3ec4-7dbf-5824-ab934baeb44c, timestamp=1681547779463}]
+17:53:49.074  subFlow1                                 : GenericMessage [payload=8, headers={id=26df0a5e-a9c9-1121-23ad-fb4899698104, timestamp=1681547779963}]
+17:53:49.074  subFlow2                                 : GenericMessage [payload=9, headers={id=4355c0d4-12ba-b543-ebb1-1804ba4fc39a, timestamp=1681547780464}]
+17:53:49.074  o.s.i.dispatcher.UnicastingDispatcher    : An exception was thrown by 'ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@70e889e9] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)' while handling 'GenericMessage [payload=9, headers={id=4355c0d4-12ba-b543-ebb1-1804ba4fc39a, timestamp=1681547780464}]': error occurred in message handler [ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@70e889e9] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)]; nested exception is java.lang.RuntimeException: noneFlow1 Exception. Failing over to the next subscriber.
+17:53:49.074  noneFlow2                                : GenericMessage [payload=9, headers={id=4355c0d4-12ba-b543-ebb1-1804ba4fc39a, timestamp=1681547780464}]
+.. noneFlow2 의 동작으로 3초 후 메시지 전송 ..
+17:53:52.075  subFlow1                                 : GenericMessage [payload=10, headers={id=6e7eb1a0-d2e1-4b95-211c-dfa695d55cd9, timestamp=1681548832075}]
+```  
+
+`noneFlow2` 의 `sleep(3000)` 의 동작과 메시지 플로우가 실행되며 남긴 로그를 잘 살펴보자. 
+`noneFlow2` 가 실행되지 않는 경우에 메시지는 생산 주기인 `500ms` 마다 정상적으로 전달되는 것을 확인 할 수 있다. 
+하지만 `noneFlow2` 가 실행되는 홀수 이면서 3의 배수인 경우에는 `3000ms` 후 다음 메시지가 전달된다. 
+이는 `DirectChannel` 이 메시지 `send-receive` 전체에 대해서 트랜잭선을 제공하는 방식을 간접적으로 보여주는 동작이다. 
+전체 플로우는 `noneFlow2` 의 `sleep(3000)` 가 완료 될때까지 기다리고 있다. 
+
+
+#### ExecutorChannel
+`ExecutorChannel` 은 `DirectChannel` 과 아주 유사한 채널로 동일한 디스패처 설정(로드 밸런싱, failover)을 지원하는 `point-to-point` 채널이다. 
+`DirectChannel` 과 차이점은 `TaskExecutor` 에게 디스패처 수행을 위임한다는 점에 있다. 
+이런 `TaskExecutor` 의 사용으로 `DirectChannel` 은 `send()` 메소드가 구독자에게 데이터를 전달하는 `handleMessage()` 메소드 호출 과정에서 블로킹 될 수 있지만, 
+`ExecutorChannel` 은 `send()` 메소드가 블로킹 되지 않는다. 
+이는 다시 말하면, `sender` 와 `receiver` 가 각기 다른 스레드에서 수행되고 이러한 특징으로 `DirectChannel` 처럼 트랜잭션 기능은 지원되지 않는다.  
+
+예제는 앞서 진행한 `DirectChannel` 과 동일한다. 
+`DirectChannel` 의 예제코드에서 채널만 `ExecutorChannel` 로 변경했다. 
+로그밸런싱, `failover` 모두 `DirectChannel` 과 동일하게 동작한다.  
+
+```java
+@Configuration
+public class ExecutorChannelConfig {
+    @Bean
+    public MessageChannel roundrobinExecutorChannel() {
+        ExecutorChannel executorChannel = new ExecutorChannel(Executors.newWorkStealingPool());
+        // failover 비활성화
+        // executorChannel.setFailover(false);
+        return executorChannel;
+    }
+
+    @Bean
+    public MessageChannel noneExecutorChannel() {
+        return new ExecutorChannel(Executors.newWorkStealingPool());
+    }
+
+
+    @Bean
+    public IntegrationFlow mainFlow() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        counter::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("roundrobinExecutorChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subFlow1() {
+        return IntegrationFlows.from("roundrobinExecutorChannel")
+                .log("subFlow1")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow subFlow2() {
+        return IntegrationFlows.from("roundrobinExecutorChannel")
+                .log("subFlow2")
+                .channel("noneExecutorChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow noneFlow1() {
+        return IntegrationFlows.from("noneExecutorChannel")
+                .handle(Integer.class, (payload, headers) -> {
+                    if(payload % 3 == 0) {
+                        throw new RuntimeException("noneFlow1 Exception");
+                    }
+
+                    return payload;
+                })
+                .log("noneFlow1")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow noneFlow2() {
+        return IntegrationFlows.from("noneExecutorChannel")
+                .log("noneFlow2")
+                .handle(message -> {
+                    try {
+                        Thread.sleep(3000);
+                    } catch (Exception ignore) {
+
+                    }
+                })
+                .get();
+    }
+}
+```  
+
+가장 큰 차이점은 `DirectChannel` 은 `noneFlow2` 로 인해 특정 주기마다 `sleep(3000)` 동작으로 다음 메시지가 늦게 전달되는 현상이 있었다. 
+하지만 `ExecutorChannel` 은 `sender` 와 `receiver` 가 서로 다른 스레드에서 동작하므로 `noneFlow2` 가 실행되는 메시지더라도, 
+정상적으로 모두 `sleep(3000)` 으로 인한 대기 없이 메시지가 `500ms` 마다 전달된다.  
+
+
+```
+.. sender와 receiver 가 서로 다른 스레드에서 동작하므로 500ms 메시지 전달 
+18:10:09.490  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=0, headers={id=932d0fa8-ab3b-c1ef-0be4-896b27afb57d, timestamp=1681549809488}]
+18:10:09.992  [ool-1-worker-19] subFlow2                                 : GenericMessage [payload=1, headers={id=850ea570-b148-0798-c534-6a480312901a, timestamp=1681549809992}]
+18:10:09.992  [ool-2-worker-19] noneFlow1                                : GenericMessage [payload=1, headers={id=02e631a0-99b1-cdb8-bdbf-cc23374eb6e3, timestamp=1681549809992}]
+18:10:10.491  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=2, headers={id=688e0745-11d0-e8b6-7158-6f1899795f12, timestamp=1681549810491}]
+18:10:10.991  [ool-1-worker-19] subFlow2                                 : GenericMessage [payload=3, headers={id=692b54af-0568-647a-60fc-fe1505acfb77, timestamp=1681549810991}]
+18:10:10.991  [ool-2-worker-19] noneFlow2                                : GenericMessage [payload=3, headers={id=692b54af-0568-647a-60fc-fe1505acfb77, timestamp=1681549810991}]
+18:10:11.489  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=4, headers={id=b5277a7e-4465-da24-dee9-977da62fb018, timestamp=1681549811489}]
+18:10:11.994  [ool-1-worker-19] subFlow2                                 : GenericMessage [payload=5, headers={id=f8d9fd71-634f-c531-28d0-2f8774f12f6b, timestamp=1681549811994}]
+18:10:11.995  [Pool-2-worker-5] noneFlow1                                : GenericMessage [payload=5, headers={id=0705743f-e197-2b1c-b76c-eaf4fcf58b9a, timestamp=1681549811995}]
+18:10:12.490  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=6, headers={id=55a7db7d-8c26-2f1b-d829-8a7867d60f6e, timestamp=1681549812490}]
+18:10:12.991  [ool-1-worker-19] subFlow2                                 : GenericMessage [payload=7, headers={id=abcd802e-22c8-de89-7c92-3348b489fad9, timestamp=1681549812991}]
+18:10:12.992  [Pool-2-worker-5] noneFlow2                                : GenericMessage [payload=7, headers={id=abcd802e-22c8-de89-7c92-3348b489fad9, timestamp=1681549812991}]
+18:10:13.492  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=8, headers={id=185d2de3-3a63-5dc4-4caf-d3fb47fe2362, timestamp=1681549813492}]
+18:10:13.991  [ool-1-worker-19] subFlow2                                 : GenericMessage [payload=9, headers={id=25084884-6417-4d77-00a1-e688a847a4d9, timestamp=1681549813990}]
+18:10:13.994  [ool-2-worker-23] o.s.i.dispatcher.UnicastingDispatcher    : An exception was thrown by 'ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@7b4acdc2] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)' while handling 'GenericMessage [payload=9, headers={id=25084884-6417-4d77-00a1-e688a847a4d9, timestamp=1681549813990}]': error occurred in message handler [ServiceActivator for [org.springframework.integration.handler.LambdaMessageProcessor@7b4acdc2] (noneFlow1.org.springframework.integration.config.ConsumerEndpointFactoryBean#0)]; nested exception is java.lang.RuntimeException: noneFlow1 Exception. Failing over to the next subscriber.
+18:10:13.995  [ool-2-worker-23] noneFlow2                                : GenericMessage [payload=9, headers={id=25084884-6417-4d77-00a1-e688a847a4d9, timestamp=1681549813990}]
+18:10:14.492  [ool-1-worker-19] subFlow1                                 : GenericMessage [payload=10, headers={id=4de3d046-8faa-aabc-f10b-5d4083649920, timestamp=1681549814491}]
+```  
+
+
+#### FluxMessageChannel
 
 
 
