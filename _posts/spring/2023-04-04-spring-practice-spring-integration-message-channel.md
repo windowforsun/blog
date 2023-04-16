@@ -768,6 +768,509 @@ public class ExecutorChannelConfig {
 
 
 #### FluxMessageChannel
+`FluxMessageChannel` 은 다운스트에 있는 `Reactive Stream` 구독자가 `on-demand` 로 메시지를 컨숨해 
+가져 살 수 있는 메시지 채널이다. 
+`MessageChannel` 과` Publisher<Message<?>>` 를 모두 구현하고 있어 
+또한 `FluxMessageChannel` 은 업스트림의 `Publisher` 를 `òn-demand` 로 컨슘해 갈 수 있도록
+`ReactiveStreamSubscribableChannel` 인터페이스도 구현하고 있다.
+그러므로 `FluxMessageChannel` 을 사용하면 `Spring Integration` 과 `Reactive Stream` 를 서로 동일한 흐름으로 연결하는 것이 가능하다.  
+
+앞서 언급한 것처럼 `FluxMessageChannel` 은 `SubscribableChannel`, `PollableChannel` 의 구현체가 아니라 
+`ReactiveStreamSubscribableChannel` 의 구현체이므로 `org.reactivestreams.Subscriber` 인터페이스만 
+`Reactive Stream` 의 `back-preesure` 를 지키며 메시지 컨슘이 가능하다. 
+`Spring Integration` 의 `MessageHandler` 의 구현체들은 `Reactive Stream` 의  `CoreSubscriber` 를
+구현 하고 있기 때문에 큰 어려움 없이 `Spring Integration` 과 `Reactive Stream` 를 하나의 플로우로 통합 할 수 있다.  
+
+`Spring Integration` 에서 `Reactive Stream` 을 활용하는 방법에 대한 더 자세한 내용은 
+추후에 별도 포스트에서 다루도록 한다.  
+
+아래 예제는 하나의 `FluxMessageChannel` 을 두고 `Reactive Stream` 과 `Spring Integration Flow` 를 통합하는 예제이다. 
+
+- `fluxToIntegration` : `FluxMessageChannelsubscribeTo()` 를 사용해서 `Flux` 시퀀스를 `Spring Integration` 과 통합한다. 
+- `integrationToFluxFlow1` : `FluxMessageChannel.subscirbeTo()` 과 `IntegrationFlowBuilder.toReactivePublisher()` 를 사용해서 `Spring Integration` 플로우를 `Reactive Stream` 과 통합한다. 
+- `integrationToFluxFlow2` : `Spring Integration` 플로우에서 메시지를 `FluxMessageChannel` 로 전달하는 방식으로 `Reactive Stream` 과 통합한다. 
+- `integrationSubFlow1` : `FluxMessageChannel` 메시지를 전달 받아 `Spring Integration` 에서 처리한다. 
+- `integrationSubFlow2` : `FluxMessageChannel` 메시지를 전달 받아 `Spring Integration` 에서 처리한다. 여러 구독자에게 모든 메시지 전달이 가능하다. 
+- `fluxFlow` : `Reactive Stream` 의 시퀀스로 `FluxMessageChannel` 의 내용을 `Reactive Stream` 으로 가져와 처리한다. 
+
+```java
+@Configuration
+public class FluxMessageChannelConfig {
+    @Bean
+    public FluxMessageChannel someFluxMessageChannel() {
+        FluxMessageChannel fluxMessageChannel = new FluxMessageChannel();
+        fluxMessageChannel.subscribeTo(this.integrationToFluxFlow1());
+        fluxMessageChannel.subscribeTo(this.fluxToIntegration());
+
+        return fluxMessageChannel;
+    }
+
+    @Bean
+    public Publisher<Message<String>> fluxToIntegration() {
+        AtomicInteger counter = new AtomicInteger();
+        return Flux.fromStream(Stream.generate(() -> counter.getAndIncrement() + ":flux"))
+                .delayElements(Duration.ofMillis(1000))
+                .publishOn(Schedulers.parallel())
+                .map(s -> MessageBuilder.withPayload(s).build())
+                ;
+    }
+
+    @Bean
+    public Publisher<Message<Integer>> integrationToFluxFlow1() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        () -> counter.getAndIncrement() + ":integration1",
+                        poller -> poller.poller(Pollers.fixedRate(1000))
+                )
+                .toReactivePublisher()
+                ;
+    }
+
+    @Bean
+    public IntegrationFlow integrationToFluxFlow2() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        () -> counter.getAndIncrement() + ":integration2",
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("someFluxMessageChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow integrationSubFlow1() {
+        return IntegrationFlows.from("someFluxMessageChannel")
+                .log("integrationSubFlow1")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow integrationSubFlow2() {
+        return IntegrationFlows.from("someFluxMessageChannel")
+                .log("integrationSubFlow2")
+                .get();
+    }
+
+    @Bean
+    public Disposable fluxFlow() {
+        return Flux.from(this.someFluxMessageChannel()).subscribeOn(Schedulers.boundedElastic())
+                .log("fluxFlow")
+                .subscribe();
+    }
+
+    // FluxMessageChannel 은 ReactiveStream 에 대한 채널로 
+    // ReactiveStream 시퀀스가 수행되는 스레드와 동이랗게 daemon thread 에 해당하므로
+    // 메인 스레드인 non-daemon thread 가 죽지 않도록 반복 작업을 수행해 준다. 
+    @Bean
+    public Thread waiter() {
+        Thread thread = new Thread(() -> {
+            IntStream.range(1, 100).forEach(value -> {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        });
+
+        thread.start();
+
+        return thread;
+    }
+}
+```  
+
+`FluxMessageChannel` 로 전달되는 모든 메시지는 기본적으로 `Reactvie Stream` 의 `Schedulers.boundedElastic()` 의 스레드에서 수행된다. 
+아래 실행결과를 보면 `Reactive Stream` 시퀀스에서 전달되는 메시지를 `Spring Integration` 플로우에서 처리할 수도 있고, 
+반대로 `Spring Integration` 플로우에서 전달되는 메시지를 `Reactive Stream` 시퀀스에서 처리하는 등의 통합이 가능하다.  
+
+```
+[           main] fluxFlow           : onSubscribe(FluxSubscribeOn.SubscribeOnSubscriber)
+[           main] fluxFlow           : request(unbounded)
+        
+.. integrationToFlux2 메시지 ..
+[oundedElastic-5] fluxFlow           : onNext(GenericMessage [payload=0:integration2, headers={id=c63d2f65-4de5-4dad-beaf-dba8a4cfb147, timestamp=1681631095696}])
+[oundedElastic-5] integrationSubFlow1: GenericMessage [payload=0:integration2, headers={id=c63d2f65-4de5-4dad-beaf-dba8a4cfb147, timestamp=1681631095696}]
+[oundedElastic-5] integrationSubFlow2: GenericMessage [payload=0:integration2, headers={id=c63d2f65-4de5-4dad-beaf-dba8a4cfb147, timestamp=1681631095696}]
+
+.. integrationToFlux2 메시지 ..
+[oundedElastic-1] fluxFlow           : onNext(GenericMessage [payload=0:integration1, headers={id=04d32768-9d04-c79e-b998-6940e640a312, timestamp=1681631095696}])
+[oundedElastic-1] integrationSubFlow1: GenericMessage [payload=0:integration1, headers={id=04d32768-9d04-c79e-b998-6940e640a312, timestamp=1681631095696}]
+[oundedElastic-1] integrationSubFlow2: GenericMessage [payload=0:integration1, headers={id=04d32768-9d04-c79e-b998-6940e640a312, timestamp=1681631095696}]
+
+.. fluxToIntegration 메시지 ..
+[oundedElastic-2] fluxFlow           : onNext(GenericMessage [payload=0:flux, headers={id=8c57a0e2-4f92-6ddb-096d-c49f3893cac7, timestamp=1681631096631}])
+[oundedElastic-2] integrationSubFlow1: GenericMessage [payload=0:flux, headers={id=8c57a0e2-4f92-6ddb-096d-c49f3893cac7, timestamp=1681631096631}]
+[oundedElastic-2] integrationSubFlow2: GenericMessage [payload=0:flux, headers={id=8c57a0e2-4f92-6ddb-096d-c49f3893cac7, timestamp=1681631096631}]
+
+.. 반복 ..
+[oundedElastic-1] fluxFlow           : onNext(GenericMessage [payload=1:integration1, headers={id=1751d137-6e70-0f1b-24f0-4318a542fc3a, timestamp=1681631096694}])
+[oundedElastic-1] integrationSubFlow1: GenericMessage [payload=1:integration1, headers={id=1751d137-6e70-0f1b-24f0-4318a542fc3a, timestamp=1681631096694}]
+[oundedElastic-1] integrationSubFlow2: GenericMessage [payload=1:integration1, headers={id=1751d137-6e70-0f1b-24f0-4318a542fc3a, timestamp=1681631096694}]
+[oundedElastic-5] fluxFlow           : onNext(GenericMessage [payload=1:integration2, headers={id=86886c7b-ae72-76cb-a661-2c1c56cf65b3, timestamp=1681631096696}])
+[oundedElastic-5] integrationSubFlow1: GenericMessage [payload=1:integration2, headers={id=86886c7b-ae72-76cb-a661-2c1c56cf65b3, timestamp=1681631096696}]
+[oundedElastic-5] integrationSubFlow2: GenericMessage [payload=1:integration2, headers={id=86886c7b-ae72-76cb-a661-2c1c56cf65b3, timestamp=1681631096696}]
+[oundedElastic-2] fluxFlow           : onNext(GenericMessage [payload=1:flux, headers={id=a1df09ef-f951-293d-ee97-ace65a9df53c, timestamp=1681631097637}])
+[oundedElastic-2] integrationSubFlow1: GenericMessage [payload=1:flux, headers={id=a1df09ef-f951-293d-ee97-ace65a9df53c, timestamp=1681631097637}]
+[oundedElastic-2] integrationSubFlow2: GenericMessage [payload=1:flux, headers={id=a1df09ef-f951-293d-ee97-ace65a9df53c, timestamp=1681631097637}]
+[oundedElastic-5] fluxFlow           : onNext(GenericMessage [payload=2:integration2, headers={id=c1147da7-e103-1fe5-a2ce-538697f6b951, timestamp=1681631097700}])
+[oundedElastic-5] integrationSubFlow1: GenericMessage [payload=2:integration2, headers={id=c1147da7-e103-1fe5-a2ce-538697f6b951, timestamp=1681631097700}]
+[oundedElastic-5] integrationSubFlow2: GenericMessage [payload=2:integration2, headers={id=c1147da7-e103-1fe5-a2ce-538697f6b951, timestamp=1681631097700}]
+[oundedElastic-1] fluxFlow           : onNext(GenericMessage [payload=2:integration1, headers={id=09806cd0-7b41-3780-327d-1aa17e0013bb, timestamp=1681631097699}])
+[oundedElastic-1] integrationSubFlow1: GenericMessage [payload=2:integration1, headers={id=09806cd0-7b41-3780-327d-1aa17e0013bb, timestamp=1681631097699}]
+[oundedElastic-1] integrationSubFlow2: GenericMessage [payload=2:integration1, headers={id=09806cd0-7b41-3780-327d-1aa17e0013bb, timestamp=1681631097699}]
+[oundedElastic-2] fluxFlow           : onNext(GenericMessage [payload=2:flux, headers={id=f097ef8d-c29f-f51d-cc29-49b91fb3e7bc, timestamp=1681631098639}])
+[oundedElastic-2] integrationSubFlow1: GenericMessage [payload=2:flux, headers={id=f097ef8d-c29f-f51d-cc29-49b91fb3e7bc, timestamp=1681631098639}]
+[oundedElastic-2] integrationSubFlow2: GenericMessage [payload=2:flux, headers={id=f097ef8d-c29f-f51d-cc29-49b91fb3e7bc, timestamp=1681631098639}]
+```  
+
+#### DataType Channel
+메시지 플로우 처리에 있어서 페이로드의 타입이 중요한 경우가 있다. 
+이런 경우 매번 타입검사를 수행해 줘야 하는데, 필터를 사용하거나 라우터 기반으로 타입이 맞지 않는다면 
+타입 변환을 해주는 곳으로 라우팅하는 등의 방법이 있다. 
+`Spring Integration` 에서는 [DataType Channel](https://www.enterpriseintegrationpatterns.com/patterns/messaging/DatatypeChannel.html)
+을 적용하면 별도의 추가적인 구현 없이 페이로드의 타입의 안정성을 보장 할 수 있다. 
+추가적으로 특정경우 타입변환이 필요하다면 별도의 `IntegrationConveter` 를 빈으로 등록해 
+사요할 수 있으니 타입 변환에 대한 처리도 추가적으로 수행 할 수 있다.  
+
+만약 설정한 페이로드의 데이터 타입과 맞지 않은 데이터가 채널로 들어온다면 아래와 같은 예외가 발생한다. 
+아래 예외는 `Integer` 만 혀옹하는 채널에서 `String` 타입의 데이터가 들어 왔을 떄 발생한 예외이다.  
+
+```
+ERROR 72434 --- [   scheduling-1] o.s.integration.handler.LoggingHandler   : org.springframework.messaging.MessageDeliveryException: failed to send Message to channel 'someChannel'; nested exception is org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [java.lang.Integer] for value '0:str'; nested exception is java.lang.NumberFormatException: For input string: "0:str", failedMessage=GenericMessage [payload=0:str, headers={id=7be79160-fd39-d9f7-f2f5-540ac9d7128a, timestamp=1681638449766}]
+	at org.springframework.integration.support.utils.IntegrationUtils.wrapInDeliveryExceptionIfNecessary(IntegrationUtils.java:166)
+	at org.springframework.integration.channel.AbstractMessageChannel.send(AbstractMessageChannel.java:339)
+	at org.springframework.integration.channel.AbstractMessageChannel.send(AbstractMessageChannel.java:272)
+	at org.springframework.messaging.core.GenericMessagingTemplate.doSend(GenericMessagingTemplate.java:187)
+	at org.springframework.messaging.core.GenericMessagingTemplate.doSend(GenericMessagingTemplate.java:166)
+	at org.springframework.messaging.core.GenericMessagingTemplate.doSend(GenericMessagingTemplate.java:47)
+	at org.springframework.messaging.core.AbstractMessageSendingTemplate.send(AbstractMessageSendingTemplate.java:109)
+	at org.springframework.integration.endpoint.SourcePollingChannelAdapter.handleMessage(SourcePollingChannelAdapter.java:196)
+	at org.springframework.integration.endpoint.AbstractPollingEndpoint.messageReceived(AbstractPollingEndpoint.java:475)
+	at org.springframework.integration.endpoint.AbstractPollingEndpoint.doPoll(AbstractPollingEndpoint.java:461)
+	at org.springframework.integration.endpoint.AbstractPollingEndpoint.pollForMessage(AbstractPollingEndpoint.java:413)
+	at org.springframework.integration.endpoint.AbstractPollingEndpoint.lambda$createPoller$4(AbstractPollingEndpoint.java:348)
+	at org.springframework.integration.util.ErrorHandlingTaskExecutor.lambda$execute$0(ErrorHandlingTaskExecutor.java:57)
+	at org.springframework.core.task.SyncTaskExecutor.execute(SyncTaskExecutor.java:50)
+	at org.springframework.integration.util.ErrorHandlingTaskExecutor.execute(ErrorHandlingTaskExecutor.java:55)
+	at org.springframework.integration.endpoint.AbstractPollingEndpoint.lambda$createPoller$5(AbstractPollingEndpoint.java:341)
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54)
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:95)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+Caused by: org.springframework.core.convert.ConversionFailedException: Failed to convert from type [java.lang.String] to type [java.lang.Integer] for value '0:str'; nested exception is java.lang.NumberFormatException: For input string: "0:str"
+	at org.springframework.core.convert.support.ConversionUtils.invokeConverter(ConversionUtils.java:47)
+	at org.springframework.core.convert.support.GenericConversionService.convert(GenericConversionService.java:192)
+	at org.springframework.core.convert.support.GenericConversionService.convert(GenericConversionService.java:175)
+	at org.springframework.integration.support.converter.DefaultDatatypeChannelMessageConverter.fromMessage(DefaultDatatypeChannelMessageConverter.java:76)
+	at org.springframework.integration.channel.AbstractMessageChannel.convertPayloadIfNecessary(AbstractMessageChannel.java:382)
+	at org.springframework.integration.channel.AbstractMessageChannel.send(AbstractMessageChannel.java:302)
+	... 22 more
+Caused by: java.lang.NumberFormatException: For input string: "0:str"
+	at java.base/java.lang.NumberFormatException.forInputString(NumberFormatException.java:65)
+	at java.base/java.lang.Integer.parseInt(Integer.java:652)
+	at java.base/java.lang.Integer.valueOf(Integer.java:983)
+	at org.springframework.util.NumberUtils.parseNumber(NumberUtils.java:211)
+	at org.springframework.core.convert.support.StringToNumberConverterFactory$StringToNumber.convert(StringToNumberConverterFactory.java:64)
+	at org.springframework.core.convert.support.StringToNumberConverterFactory$StringToNumber.convert(StringToNumberConverterFactory.java:50)
+	at org.springframework.core.convert.support.GenericConversionService$ConverterFactoryAdapter.convert(GenericConversionService.java:437)
+	at org.springframework.core.convert.support.ConversionUtils.invokeConverter(ConversionUtils.java:41)
+	... 27 more
+```  
+
+예제는 `DirectChannel` 을 만들어 `Integer` 와 `Boolean` 타입만 허용하도록 한다. 
+그리고 `String` 타입의 경우에는 `Converter` 를 만들어 채널에서 사용할 수 있도록 등록한다.  
+
+```java
+@Configuration
+public class DataTypeChannelConfig {
+    @Bean
+    public MessageChannel someChannel() {
+        DirectChannel messageChannel = new DirectChannel();
+        // Integer 와 Boolean 만 채널에서 허용하는 타입이다.
+        messageChannel.setDatatypes(Integer.class, Boolean.class);
+
+        return messageChannel;
+    }
+
+    // 문자열 타입으 경우 stringToIntgerConveter 를 통해 채널에서 허용가능한 타입으로 변환해 준다.
+    @Bean
+    @IntegrationConverter
+    public Converter<String, Integer> stringToIntegerConverter() {
+        return new Converter<String, Integer>() {
+            @Override
+            public Integer convert(String source) {
+                return Integer.parseInt(source.split(":")[0]) * 100;
+            }
+        };
+    }
+
+    // string 데이터를 채널에 추가한다.
+    // 만약 등록된 converter 가 없다면 예외가 발생한다.
+    @Bean
+    public IntegrationFlow stringFlow() {
+        AtomicInteger counter = new AtomicInteger();
+        return IntegrationFlows.fromSupplier(
+                () -> counter.getAndIncrement() + ":str",
+                poller -> poller.poller(Pollers.fixedRate(500))
+        )
+                .channel(this.someChannel())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow integerFlow() {
+        AtomicInteger counter = new AtomicInteger();
+        return IntegrationFlows.fromSupplier(
+                        counter::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel(this.someChannel())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow booleanFlow() {
+        AtomicInteger counter = new AtomicInteger();
+        return IntegrationFlows.fromSupplier(
+                        () -> counter.getAndIncrement() % 2 == 0,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel(this.someChannel())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow someChannelLogger() {
+        return IntegrationFlows.from("someChannel")
+                .log("someChannelLogger")
+                .get();
+    }
+}
+```  
+
+```
+someChannelLogger                        : GenericMessage [payload=0, headers={id=317eadb0-68c4-0687-30f9-6a60c9bc4954, timestamp=1681639006756}]
+someChannelLogger                        : GenericMessage [payload=0, headers={id=ebfd884d-cd37-5eb1-1c97-b5b0f3ec37a9, timestamp=1681639006757}]
+someChannelLogger                        : GenericMessage [payload=true, headers={id=c0f6ea4d-55da-83d6-7f4f-55932f564e09, timestamp=1681639006757}]
+someChannelLogger                        : GenericMessage [payload=100, headers={id=1e78e8da-ede4-4577-7bc3-b25090cb9d8e, timestamp=1681639007258}]
+someChannelLogger                        : GenericMessage [payload=false, headers={id=2c559423-6248-6c42-8c51-93782eff27b3, timestamp=1681639007258}]
+someChannelLogger                        : GenericMessage [payload=1, headers={id=e59ec898-b3bd-b725-ca80-5f59fa8c26df, timestamp=1681639007258}]
+someChannelLogger                        : GenericMessage [payload=200, headers={id=90b6208a-438d-69f7-9556-9626af41bbb2, timestamp=1681639007755}]
+someChannelLogger                        : GenericMessage [payload=true, headers={id=18a2e6c5-93ab-aaad-fbfb-8997cc815ba2, timestamp=1681639007755}]
+someChannelLogger                        : GenericMessage [payload=2, headers={id=ff31e2be-c919-bc85-0824-685ba6fa661f, timestamp=1681639007755}]
+someChannelLogger                        : GenericMessage [payload=300, headers={id=f7b3ca09-8865-37ac-d754-04c00a35257d, timestamp=1681639008255}]
+someChannelLogger                        : GenericMessage [payload=false, headers={id=30f51703-4b4e-989d-5265-fd9e02e402d7, timestamp=1681639008256}]
+```  
+
+#### ChannelInterceptor
+`ChannelInterceptor` 를 사용하면 메시지 채널에서 공통적으로 필요한 동작들을 처리할 수 있다. 
+특정 메시지를 제외처리 한다던가, 채널을 모니터링, `send`, `receive` 동작을 가로체는 등의 동작을 추가로 수행할 수 있다.  
+
+```java
+public interface ChannelInterceptor {
+
+    // send() 메소드 호출 전
+    @Nullable
+	default Message<?> preSend(Message<?> message, MessageChannel channel) {
+		return message;
+	}
+
+    // send() 메소드 호출 후
+	default void postSend(Message<?> message, MessageChannel channel, boolean sent) {
+	}
+
+    // send() 메소드 수행 완료 후
+    default void afterSendCompletion(
+			Message<?> message, MessageChannel channel, boolean sent, @Nullable Exception ex) {
+	}
+
+    // receive() 메소드 호출 전 (Queue 계열 채널에서만 사용된다.)
+	default boolean preReceive(MessageChannel channel) {
+		return true;
+	}
+
+    // receive() 메소드 호출 후 (Queue 계열 채널에서만 사용된다.)
+	@Nullable
+	default Message<?> postReceive(Message<?> message, MessageChannel channel) {
+		return message;
+	}
+
+    // receive() 메소드 수행 완료 후 (Queue 계열 채널에서만 사용된다.)
+	default void afterReceiveCompletion(@Nullable Message<?> message, MessageChannel channel,
+			@Nullable Exception ex) {
+	}
+}
+```  
+
+```java
+@Slf4j
+@Configuration
+public class ChannelInterceptorConfig {
+    @Bean
+    public MessageChannel someChannel() {
+        DirectChannel queueChannel = new DirectChannel();
+        queueChannel.addInterceptor(this.myChannelInterceptor());
+
+        return queueChannel;
+    }
+
+    @Bean
+    public ChannelInterceptor myChannelInterceptor() {
+        return new ChannelInterceptor() {
+            // send() 메소드 호출 전
+            @Override
+            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                log.info("preSend {}, {}", message);
+                if(Integer.parseInt(message.getPayload().toString()) % 2 == 0) {
+                    return message;
+                } else {
+                    return null;
+                }
+            }
+
+            // send() 메소드 호출 후
+            @Override
+            public void postSend(Message<?> message, MessageChannel channel, boolean sent) {
+                log.info("postSend {}, {}, {}", message.getPayload(), channel, sent);
+                ChannelInterceptor.super.postSend(message, channel, sent);
+            }
+
+            // send() 메소드 수행 완료 후
+            @Override
+            public void afterSendCompletion(Message<?> message, MessageChannel channel, boolean sent, Exception ex) {
+                log.info("afterSendCompletion {}", message.getPayload());
+                ChannelInterceptor.super.afterSendCompletion(message, channel, sent, ex);
+            }
+
+            // receive() 메소드 호출 전 (Queue 계열 채널에서만 사용된다.)
+            @Override
+            public boolean preReceive(MessageChannel channel) {
+                log.info("preReceive {}", channel);
+                return ChannelInterceptor.super.preReceive(channel);
+            }
+
+            // receive() 메소드 호출 후 (Queue 계열 채널에서만 사용된다.)
+            @Override
+            public Message<?> postReceive(Message<?> message, MessageChannel channel) {
+                log.info("postReceive {}", message.getPayload());
+                if(Integer.parseInt(message.getPayload().toString()) % 3 == 0) {
+                    return ChannelInterceptor.super.postReceive(message, channel);
+                } else {
+                    return null;
+                }
+            }
+
+            // receive() 메소드 완료 후 (Queue 계열 채널에서만 사용된다.)
+            @Override
+            public void afterReceiveCompletion(Message<?> message, MessageChannel channel, Exception ex) {
+                log.info("afterReceiveCompletion {}", message.getPayload());
+                ChannelInterceptor.super.afterReceiveCompletion(message, channel, ex);
+            }
+        };
+    }
+
+
+    @Bean
+    public IntegrationFlow produceFlow() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        counter::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .log("produceFlow")
+                .channel(this.someChannel())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow logFlow() {
+        return IntegrationFlows.from("someChannel")
+                .log("logFlow")
+                .get();
+    }
+}
+```  
+
+채널은 모든 `ChannelInterceptor` 동작이 수행되는 `QueueChannel` 을 사용했다. 
+`preSend` 와 `postReceive` 에서 `null` 리턴을 통해 제외되는 메시지는 `QueueChannel` 내에서 예외가 발생한다. 
+그리고 최종 결과인 `logFlow` 에 찍히는 페이로드는 2와 3의 공배수인 6의 배수를 가진 값들이다.  
+
+```
+.. 0 ..
+produceFlow                              : GenericMessage [payload=0, headers={id=c63790ed-9cf0-38e6-3c58-e612f28b306c, timestamp=1681643706827}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=0, headers={id=c63790ed-9cf0-38e6-3c58-e612f28b306c, timestamp=1681643706827}], {}
+c.w.s.i.m.ChannelInterceptorConfig       : postSend 0, bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()', true
+c.w.s.i.m.ChannelInterceptorConfig       : afterSendCompletion 0
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+c.w.s.i.m.ChannelInterceptorConfig       : postReceive 0
+c.w.s.i.m.ChannelInterceptorConfig       : afterReceiveCompletion 0
+logFlow                                  : GenericMessage [payload=0, headers={id=c63790ed-9cf0-38e6-3c58-e612f28b306c, timestamp=1681643706827}]
+
+.. 1 ..
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+o.s.integration.channel.QueueChannel     : Exception from afterReceiveCompletion in com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig$1@4724bc16
+produceFlow                              : GenericMessage [payload=1, headers={id=d3d958ad-3a23-209a-840f-007716fc4e58, timestamp=1681643707842}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=1, headers={id=d3d958ad-3a23-209a-840f-007716fc4e58, timestamp=1681643707842}], {}
+o.s.integration.handler.LoggingHandler   : org.springframework.messaging.MessageDeliveryException: Failed to send message to channel 'bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelIn
+
+.. 2 ..
+produceFlow                              : GenericMessage [payload=2, headers={id=8a642af3-4857-ce81-6980-d74a91bf72ba, timestamp=1681643707845}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=2, headers={id=8a642af3-4857-ce81-6980-d74a91bf72ba, timestamp=1681643707845}], {}
+c.w.s.i.m.ChannelInterceptorConfig       : postSend 2, bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()', true
+c.w.s.i.m.ChannelInterceptorConfig       : afterSendCompletion 2
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+c.w.s.i.m.ChannelInterceptorConfig       : postReceive 2
+o.s.integration.channel.QueueChannel     : Exception from afterReceiveCompletion in com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig$1@4724bc16
+
+.. 3 ..
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+o.s.integration.channel.QueueChannel     : Exception from afterReceiveCompletion in com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig$1@4724bc16
+produceFlow                              : GenericMessage [payload=3, headers={id=5ce0e15f-27bb-1992-7524-0668bebb67e8, timestamp=1681643708869}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=3, headers={id=5ce0e15f-27bb-1992-7524-0668bebb67e8, timestamp=1681643708869}], {}
+o.s.integration.handler.LoggingHandler   : org.springframework.messaging.MessageDeliveryException: Failed to send message to channel 'bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelIn
+
+.. 4 ..
+produceFlow                              : GenericMessage [payload=4, headers={id=e284d212-4cc0-73fe-b392-4477da389844, timestamp=1681643708871}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=4, headers={id=e284d212-4cc0-73fe-b392-4477da389844, timestamp=1681643708871}], {}
+c.w.s.i.m.ChannelInterceptorConfig       : postSend 4, bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()', true
+c.w.s.i.m.ChannelInterceptorConfig       : afterSendCompletion 4
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+c.w.s.i.m.ChannelInterceptorConfig       : postReceive 4
+o.s.integration.channel.QueueChannel     : Exception from afterReceiveCompletion in com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig$1@4724bc16
+
+.. 5 ..
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+o.s.integration.channel.QueueChannel     : Exception from afterReceiveCompletion in com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig$1@4724bc16
+produceFlow                              : GenericMessage [payload=5, headers={id=ba0481a3-162b-968b-7a7c-431b7281ab39, timestamp=1681643709906}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=5, headers={id=ba0481a3-162b-968b-7a7c-431b7281ab39, timestamp=1681643709906}], {}
+o.s.integration.handler.LoggingHandler   : org.springframework.messaging.MessageDeliveryException: Failed to send message to channel 'bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelIn
+
+.. 6 ..
+produceFlow                              : GenericMessage [payload=6, headers={id=bdaa7195-a071-383c-44c1-d3f34ecf28e4, timestamp=1681643709911}]
+c.w.s.i.m.ChannelInterceptorConfig       : preSend GenericMessage [payload=6, headers={id=bdaa7195-a071-383c-44c1-d3f34ecf28e4, timestamp=1681643709911}], {}
+c.w.s.i.m.ChannelInterceptorConfig       : postSend 6, bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()', true
+c.w.s.i.m.ChannelInterceptorConfig       : afterSendCompletion 6
+c.w.s.i.m.ChannelInterceptorConfig       : preReceive bean 'someChannel'; defined in: 'class path resource [com/windowforsun/spring/intergration/messagechannel/ChannelInterceptorConfig.class]'; from source: 'com.windowforsun.spring.intergration.messagechannel.ChannelInterceptorConfig.someChannel()'
+c.w.s.i.m.ChannelInterceptorConfig       : postReceive 6
+c.w.s.i.m.ChannelInterceptorConfig       : afterReceiveCompletion 6
+logFlow                                  : GenericMessage [payload=6, headers={id=bdaa7195-a071-383c-44c1-d3f34ecf28e4, timestamp=1681643709911}]
+
+```  
+
+주의해야 할점은 `ChannelInterceptor` 메소드들이 호출되는 순서는 채널 유형에 따라 달라질 수 았다는 점이다. 
+`receive()` 관련 메소드들은 `QueueChannel` 관련 채널들만 수행에 포함되는 것도 있고, 
+`send()`, `receive()` 메소드의 호출 순서나 실제 인터셉터 되는 시점도 `sender` 와 `receiver` 스레드 타이밍에 따라 달라질 수 있다. 
+
+
+#### WireTab
 
 
 
