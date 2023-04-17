@@ -513,7 +513,7 @@ public class RendezvousChannelConfig {
 ```  
 
 
-#### DirectChannel
+### DirectChannel
 `DirectChannel` 은 `Spring Integration` 의 기본 `MessgaeChannel` 이면서 `point-to-point` 방식과 `publish-subscirbe` 채널의 특징을 복합적으로 가지고 있다. 
 `DirectChannel` 은 `PollableChannel` 이 아닌 `SubscribableChannel` 인터페이스를 구현하고 있기 때문에 `SubscribableChannel` 에 더 유사하다고 할 수 있다. 
 그러므로 자신의 채널을 구독하는 구독자에게 메시지를 직접 발송하지만, `point-to-point` 특징도 가지고 있기 때문에 
@@ -657,7 +657,7 @@ public class DirectChannelConfig {
 전체 플로우는 `noneFlow2` 의 `sleep(3000)` 가 완료 될때까지 기다리고 있다. 
 
 
-#### ExecutorChannel
+### ExecutorChannel
 `ExecutorChannel` 은 `DirectChannel` 과 아주 유사한 채널로 동일한 디스패처 설정(로드 밸런싱, failover)을 지원하는 `point-to-point` 채널이다. 
 `DirectChannel` 과 차이점은 `TaskExecutor` 에게 디스패처 수행을 위임한다는 점에 있다. 
 이런 `TaskExecutor` 의 사용으로 `DirectChannel` 은 `send()` 메소드가 구독자에게 데이터를 전달하는 `handleMessage()` 메소드 호출 과정에서 블로킹 될 수 있지만, 
@@ -769,7 +769,7 @@ public class ExecutorChannelConfig {
 ```  
 
 
-#### FluxMessageChannel
+### FluxMessageChannel
 `FluxMessageChannel` 은 다운스트에 있는 `Reactive Stream` 구독자가 `on-demand` 로 메시지를 컨숨해 
 가져 살 수 있는 메시지 채널이다. 
 `MessageChannel` 과` Publisher<Message<?>>` 를 모두 구현하고 있어 
@@ -928,7 +928,7 @@ public class FluxMessageChannelConfig {
 [oundedElastic-2] integrationSubFlow2: GenericMessage [payload=2:flux, headers={id=f097ef8d-c29f-f51d-cc29-49b91fb3e7bc, timestamp=1681631098639}]
 ```  
 
-#### DataType Channel
+### DataType Channel
 메시지 플로우 처리에 있어서 페이로드의 타입이 중요한 경우가 있다. 
 이런 경우 매번 타입검사를 수행해 줘야 하는데, 필터를 사용하거나 라우터 기반으로 타입이 맞지 않는다면 
 타입 변환을 해주는 곳으로 라우팅하는 등의 방법이 있다. 
@@ -1071,7 +1071,7 @@ someChannelLogger                        : GenericMessage [payload=300, headers=
 someChannelLogger                        : GenericMessage [payload=false, headers={id=30f51703-4b4e-989d-5265-fd9e02e402d7, timestamp=1681639008256}]
 ```  
 
-#### ChannelInterceptor
+### ChannelInterceptor
 `ChannelInterceptor` 를 사용하면 메시지 채널에서 공통적으로 필요한 동작들을 처리할 수 있다. 
 특정 메시지를 제외처리 한다던가, 채널을 모니터링, `send`, `receive` 동작을 가로체는 등의 동작을 추가로 수행할 수 있다.  
 
@@ -1272,7 +1272,7 @@ logFlow                                  : GenericMessage [payload=6, headers={i
 `send()`, `receive()` 메소드의 호출 순서나 실제 인터셉터 되는 시점도 `sender` 와 `receiver` 스레드 타이밍에 따라 달라질 수 있다. 
 
 
-#### WireTap
+### WireTap
 `Spring Integration` 에서는 `wire tap` 이라는 간편한 인터셉터를 제공한다. 
 [WireTap](https://www.enterpriseintegrationpatterns.com/patterns/messaging/WireTap.html) 
 은 인터셉텨를 설정하는 것과 같이 채널과 플로우상에 설정할 수 있어 로깅등의 용도로 간편하게 사용 할 수 있다. 
