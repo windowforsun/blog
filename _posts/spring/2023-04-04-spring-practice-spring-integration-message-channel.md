@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Integration MessageChannel"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Integration 에서 사용할 수 있는 MessageChannel 의 종류와 특징 그리고 구성 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,15 +14,17 @@ tags:
     - Spring
     - Spring Boot
     - Spring Integration
-    - pipe-and-filters
-    - Message Endpoint
-    - Filter
-    - Message Gateway
-    - Transformer
-    - Splitter
-    - Service Activator
-    - Router
     - Java DSL
+    - MessageChannel
+    - PollableChannel
+    - SubscribableChannel
+    - PublishSubscribeChannel
+    - QueueChannel
+    - PriorityChannel
+    - RendezvousChannel
+    - DirectChannel
+    - ExecutorChannel
+    - FluxMessageChannel
 toc: true
 use_math: true
 ---  
@@ -1270,17 +1272,113 @@ logFlow                                  : GenericMessage [payload=6, headers={i
 `send()`, `receive()` 메소드의 호출 순서나 실제 인터셉터 되는 시점도 `sender` 와 `receiver` 스레드 타이밍에 따라 달라질 수 있다. 
 
 
-#### WireTab
+#### WireTap
+`Spring Integration` 에서는 `wire tap` 이라는 간편한 인터셉터를 제공한다. 
+[WireTap](https://www.enterpriseintegrationpatterns.com/patterns/messaging/WireTap.html) 
+은 인터셉텨를 설정하는 것과 같이 채널과 플로우상에 설정할 수 있어 로깅등의 용도로 간편하게 사용 할 수 있다. 
+주의 할점은 `WireTap` 동작은 비동기로 동작하지 않는 다는 점으로, 
+메시지 플로우를 구성한 스레드내에서 다른 `EIP` 메소드들과 동일하게 수행된다. 
+`WireTap` 을 통해 아래와 같은 동작을 구현할 수 있다. 
+
+- 채널에서 메시지 플로우 가로체기
+- 모든 메시지 가져오기 
+- 메시지를 다른 채널로 전송하기 
+
+`WireTap` 의 동작은 기존 메시지 플로우에서 추가적인 갈래를 `fork` 시키는 것과 동일하다. 
+그리고 `fork` 된 흐름은 그 흐름을 구성하는 채널의 종류에 따라 결정 될 수 있다. 
+만약 채널이 `Pollable` 이거나 `Executor` 채널이라면 비동기로 동작 할 수 있짐, 
+다른 채널이라면 아닐 수도 있다는 점이다. 
+이러한 특징의 장점은 `WireTap` 의 동기/비동기의 요구조건이 변경 됐을 떄 구현로직에 변경이 필요하지 않고, 
+적절한 채널로 다시 연결해주면 된다는 것이다.  
+
+또한 `WireTap` 은 `selector`, `selectpr-expression` 속성을 통해 조건부로 동작 할 수 있도록 구성할 수 있다. 
+`selector-expression` 은 `boolean SpEL` 표현식을 사용한다. 
+
+아래는 `WireTap` 을 사용한 간단한 예시이다.  
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class WireTapConfig {
+    @Bean
+    public MessageChannel someChannel() {
+        return MessageChannels
+                .direct("someDirectChannel")
+                .get();
+    }
+
+    @Bean
+    public MessageChannel someExecutorChannel() {
+        return MessageChannels
+                .executor("evenNumberLogChannel", Executors.newSingleThreadExecutor())
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow produceFlow() {
+        AtomicInteger counter = new AtomicInteger();
+
+        return IntegrationFlows.fromSupplier(
+                        counter::getAndIncrement,
+                        poller -> poller.poller(Pollers.fixedRate(500))
+                )
+                .channel("someDirectChannel")
+                .channel("someExecutorChannel")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow directConsumeFlow() {
+        return IntegrationFlows.from("someDirectChannel")
+                .log("directConsumeFlow")
+                // logFlow WirTap 적용
+                .wireTap("logFlow.input")
+                .get();
+    }
+
+    @Bean
+    public IntegrationFlow executorConsumeFlow() {
+        return IntegrationFlows.from("someExecutorChannel")
+                .log("executorConsumeFlow")
+                // evenNumberLogFlow WireTap 적용
+                .wireTap("evenNumberLogFlow.input", wireTapSpec -> wireTapSpec.selector("payload % 2 == 0"))
+                .get();
+    }
+
+    // 전체 메시지 로깅 WireTap
+    @Bean
+    public IntegrationFlow logFlow() {
+        return flow -> flow.log("logFlow");
+    }
+
+    // 짝수 메시지만 로깅 WireTap
+    @Bean
+    public IntegrationFlow evenNumberLogFlow() {
+        return flow -> flow.log("evenNumberLogFlow");
+    }
+}
+```  
+
+`logFlow` 는 전체 메시지에 대해서 수행되고, `evenNumberLogFlow` 는 짝수인 메시지에 대해서만 수행되는 것을 확인 할 수 있다. 
+그리고 `logFlow` 는 `DirectChannel` 과 연결됐기 때문에 `scheduling` 스레드에서 동작하고, `eventNumberLogFlow` 는 `ExecutorChannel` 과 연결 됐기 때문에 
+별도의 스레드풀에서 동작하는 것을 확인 할 수 있다.  
 
 
-
-
-
-
-
-
-
-
+```
+[pool-1-thread-1] executorConsumeFlow : GenericMessage [payload=0, headers={id=223adc4d-1d51-9afe-8787-ac127df960ae, timestamp=1681743763513}]
+[pool-1-thread-1] evenNumberLogFlow   : GenericMessage [payload=0, headers={id=223adc4d-1d51-9afe-8787-ac127df960ae, timestamp=1681743763513}]
+[   scheduling-1] directConsumeFlow   : GenericMessage [payload=1, headers={id=22f10825-8f82-c2aa-1e2e-df4fe2596dac, timestamp=1681743764014}]
+[   scheduling-1] logFlow             : GenericMessage [payload=1, headers={id=22f10825-8f82-c2aa-1e2e-df4fe2596dac, timestamp=1681743764014}]
+[pool-1-thread-1] executorConsumeFlow : GenericMessage [payload=2, headers={id=687ca247-6ab0-72a3-5a72-d31cc3585f9f, timestamp=1681743764512}]
+[pool-1-thread-1] evenNumberLogFlow   : GenericMessage [payload=2, headers={id=687ca247-6ab0-72a3-5a72-d31cc3585f9f, timestamp=1681743764512}]
+[   scheduling-1] directConsumeFlow   : GenericMessage [payload=3, headers={id=cdbc2185-ba70-a968-eb9a-4b05736fb686, timestamp=1681743765011}]
+[   scheduling-1] logFlow             : GenericMessage [payload=3, headers={id=cdbc2185-ba70-a968-eb9a-4b05736fb686, timestamp=1681743765011}]
+[pool-1-thread-1] executorConsumeFlow : GenericMessage [payload=4, headers={id=790b9a31-a746-3040-752b-f051c67c68eb, timestamp=1681743765512}]
+[pool-1-thread-1] evenNumberLogFlow   : GenericMessage [payload=4, headers={id=790b9a31-a746-3040-752b-f051c67c68eb, timestamp=1681743765512}]
+[   scheduling-1] directConsumeFlow   : GenericMessage [payload=5, headers={id=3c4c87b2-0a4f-0ffa-9357-0d0bbf5591bf, timestamp=1681743766012}]
+[   scheduling-1] logFlow             : GenericMessage [payload=5, headers={id=3c4c87b2-0a4f-0ffa-9357-0d0bbf5591bf, timestamp=1681743766012}]
+[pool-1-thread-1] executorConsumeFlow : GenericMessage [payload=6, headers={id=3f4280f6-43a2-b65e-1e22-86158e2dbeea, timestamp=1681743766514}]
+```  
 
 
 ---  
