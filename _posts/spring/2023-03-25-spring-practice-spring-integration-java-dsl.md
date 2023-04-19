@@ -389,7 +389,7 @@ INFO 41781 --- [   scheduling-1] loggingError                             : Erro
 INFO 41781 --- [   scheduling-1] loggingOutput                            : GenericMessage [payload=6, headers={id=58fc0764-f75c-f3ab-21d8-d7639c95c41f, timestamp=1679827771234}]
 INFO 41781 --- [   scheduling-1] loggingError                             : ErrorMessage [payload=org.springframework.messaging.MessagingException: nested exception is java.lang.RuntimeException: test exception, headers={id=158c2c44-8bb9-b5c4-1885-90d71a97c8d6, timestamp=1679827772237}]
 ```  
-ㄷ
+
 ### reactive()
 `Spring Integration 5.5` 버전 부터는 `reactor-core` 의존성을 가지고 있기 때문에 `ConsumerEndpointSpec` 에서 `reactive()` 라는 메서드를 제공한다. 
 이는 채널 종류와 상관없이 타겟 엔드포인트를 `ReactiveStreamConsumer` 인스턴스로 설정해서, 
