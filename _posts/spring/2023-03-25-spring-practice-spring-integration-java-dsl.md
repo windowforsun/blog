@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Integration Java DSL"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Fluent API 를 사용해서 Spring Integration 을 좀 더 효율적이고 간결하게 작성할 수 있는 Java DSL 에 대해 알아보자'
+excerpt: 'Fluent API 를 사용해서 Spring Integration을 좀 더 효율적이고 간결하게 작성할 수 있는 Java DSL 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
