@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2023-04-29T10:56:58.726Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="3L6CxRnT8UQUufocfc8g" version="21.1.6" type="github">
+<mxfile host="app.diagrams.net" modified="2023-04-29T10:59:50.455Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Whale/3.18.154.8 Safari/537.36" etag="5JJI7snQP_37B5nNguIQ" version="21.1.6" type="github">
   <diagram name="페이지-1" id="fyvclGtvah1sjLLH0Wwi">
     <mxGraphModel dx="538" dy="1011" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
@@ -37,7 +37,7 @@
         <mxCell id="aYL274KM1TMEV44q2HuJ-9" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;DataProcessor&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
           <mxGeometry x="380" y="373" width="110" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="aYL274KM1TMEV44q2HuJ-10" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;DataSink&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+        <mxCell id="aYL274KM1TMEV44q2HuJ-10" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;DataSinkLog&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
           <mxGeometry x="500" y="373" width="110" height="40" as="geometry" />
         </mxCell>
         <mxCell id="aYL274KM1TMEV44q2HuJ-11" value="&lt;font style=&quot;font-size: 16px;&quot;&gt;Spring Cloud Stream&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
