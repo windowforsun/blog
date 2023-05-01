@@ -13,18 +13,9 @@ tags:
     - Practice
     - Spring
     - Spring Boot
-    - Spring Integration
-    - Java DSL
-    - MessageChannel
-    - PollableChannel
-    - SubscribableChannel
-    - PublishSubscribeChannel
-    - QueueChannel
-    - PriorityChannel
-    - RendezvousChannel
-    - DirectChannel
-    - ExecutorChannel
-    - FluxMessageChannel
+    - Spring Cloud Stream
+    - Spring Cloud Data Flow
+    - SCDF
 toc: true
 use_math: true
 ---  
