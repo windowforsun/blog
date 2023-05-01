@@ -16,6 +16,7 @@ tags:
     - Spring Cloud Stream
     - Spring Cloud Data Flow
     - SCDF
+    - Stream Application
 toc: true
 use_math: true
 ---  
