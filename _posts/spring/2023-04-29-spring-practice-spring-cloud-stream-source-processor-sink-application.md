@@ -634,4 +634,4 @@ INFO 71457 --- [container-0-C-1] c.w.dataflow.datasinklog.DataLog         : sink
 
 ---  
 ## Reference
-[]()  
+[Stream Application Development](https://dataflow.spring.io/docs/stream-developer-guides/streams/standalone-stream-sample/)  
