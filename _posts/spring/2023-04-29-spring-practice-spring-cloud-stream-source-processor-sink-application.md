@@ -106,7 +106,6 @@ data-sink-log
         │               └── datasinklog
         │                   └── DataSinkLogApplicationTest.java
         └── resources
-
 ```
 
 ### 공통 부분
@@ -238,8 +237,8 @@ public class DataPriorityModel {
 }
 ```  
 
-### DataSource
-`Spring Cloud Stream` 에서 `Souce Application` 은 `Supplier` 를 반환하는 빈 객체를 구현해 주면된다. 
+### Source Application
+`DataSource` 는 `Spring Cloud Stream` 에서 `Souce Application` 로 `Supplier` 를 반환하는 빈 객체를 구현해 주면된다. 
 
 - `DataSourceApplication`
 
@@ -325,8 +324,8 @@ public class DataSourceApplicationTest {
 }
 ```  
 
-### DataProcessor
-`Spring Cloud Stream` 에서 `Processor Application` 은 `Function` 을 반환하는 빈 객체를 구현하면 된다.  
+### Processor Application
+`DataProcessor` 는 `Spring Cloud Stream` 에서 `Processor Application` 로 `Function` 을 반환하는 빈 객체를 구현하면 된다.  
 
 - `DataProcessorApplication`
 
@@ -428,8 +427,8 @@ public class DataProcessorApplicationTest {
 }
 ```  
 
-### DataSinkLog
-`Spring Cloud Stream` 의 `Sink Application` 은 `Consumer` 를 반환하는 빈을 구현해주면 된다.  
+### Sink Application
+`DataSinkLog` 는 `Spring Cloud Stream` 의 `Sink Application` 로 `Consumer` 를 반환하는 빈을 구현해주면 된다.  
 
 - `DataSinkLogApplication`
 
