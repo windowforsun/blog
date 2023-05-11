@@ -38,6 +38,11 @@ use_math: true
 
 해당 포스트에서 알아볼 내용은 `SIGTERM` 시그널이 애플리케이션으로 들어왔을 때 웹 애플리케이션이 정상 종료가 될 수 있도록 절차를 밟는 방법에 대해 알아본다.  
 
+이후 테스트는 `Docker` 환경에서 진행한다. 
+`Docker` 에서 `docker stop <container-name>` 으로 컨테이너를 종료하면 `SIGKILL` 이므로 바로 종료된다. 
+그러므로 테스트를 위해서는 `docker run` 옵션 중 `-d` 명령이 없는 상태로 실행 후 `ctrl + c` 를 통해 종료하는 것과 
+`docker kill --signal SIGTERM <container-name>` 은 `SIGTERM` 으로 종료되기 때문에 이 두가지 방법을 사용할 예정이다.  
+
 
 ## Graceful Shutdown 적용
 `Spring Boot` 에서 `Graceful Shutdown` 을 적용하는 방법은 
@@ -183,8 +188,109 @@ spring:
 ```bash
 ./gradlew jibDockerBuild -Pshutdown_type=graceful -Pshutdown_timeout=20
 ./gradlew jibDockerBuild -Pshutdown_type=graceful -Pshutdown_timeout=20000
-./gradlew jibDockerBuild -Pshutdown_type=immediate
+./gradlew jibDockerBuild -Pshutdown_type=immediate -Pshutdown_timeout=30
 ```  
+
+모든 빌드가 완료되고 `docker image` 를 조회하면 아래와 같다. 
+
+```bash
+$ docker image ls
+REPOSITORY                         TAG              IMAGE ID       CREATED        SIZE
+localhost/spring23-graceful-test   immediate-30     84ec73c28d2f   53 years ago   237MB
+localhost/spring23-graceful-test   graceful-20000   4c4879f3d0a5   53 years ago   237MB
+localhost/spring23-graceful-test   graceful-20      68ded8f4b736   53 years ago   237MB
+```  
+
+#### immediate
+먼저 `server.shutdown` 이 `immediate` 일떄 종료처리를 테스트한다. 
+`immedate` 는 종료 시그널을 받으면 즉시 애플리케이션을 종료하기 때문에 요청 처리 과정에서 종료 시그널을 받게되면 해당 응답은 정상적으로 처리되지 못한다.  
+
+아래 명령으로 `localhost/spring23-graceful-test:immediate-30` 이미지를 사용해서 컨테이너를 실행한다. 
+그리고 `/1000` 요청을 보내면 1초후 `OK` 응답을 내려주는 것을 확인 할 수 있다.  
+
+```
+$ docker run -d --rm --name immediate-30 -p 8080:8080 localhost/spring23-graceful-test:immediate-30
+
+$ curl -i localhost:8080/1000
+HTTP/1.1 200 
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 2
+Date: Thu, 11 May 2023 15:35:09 GMT
+
+OK
+```  
+
+테스트를 위해 10초 동안 요청처리를 하는 `/10000` 을 전송하고, 
+`docker kill --signal SIGTERM immediate-30` 명령으로 컨테이너를 종료하면 아래와 같이 예상 했던것과 같이 요청은 정상 처리되지 못한 것을 확인 할 수 있다.  
+
+```bash
+.. 터미널 1 ..
+$ curl -i localhost:8080/10000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM immediate-30
+immediate-30
+
+.. 터미널 1 비정상 응답 .. 
+$ curl -i localhost:8080/10000
+curl: (52) Empty reply from server
+```  
+
+즉 만약 `Spring Boot Web` 애플리케이션의 `server.shutdown` 이 `immediate` 라면 종료시점에 처리중인 요청들은 비정상 종료될 수 있다.  
+
+#### graceful long timeout
+이번에는 `server.shutdown` 은 `graceful` 이지만 `spring.lifecycle.timeout-per-shutdown-phase` 에 설정이 돼있지 않다는 상황을 가정을 위해 아주 큰 값을 넣은 상태를 테스트로 사용한다. (기본값은 30s 이지만 테스트를 위해)
+
+
+아래 명령으로 `localhost/spring23-graceful-test:graceful-20000` 이미지를 사용해서 컨테이너를 실행한다. 
+그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.  
+
+```bash
+$ docker run -d --rm --name graceful-20000 -p 8080:8080 localhost/spring23-graceful-test:graceful-20000
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/10000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM graceful-20000
+graceful-20000
+
+.. 터미널 1 정상 응답 후 컨테이너 종료 .. 
+$ curl -i localhost:8080/10000
+HTTP/1.1 200
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 2
+Date: Thu, 11 May 2023 17:14:00 GMT
+
+OK
+```  
+
+설정된 타임아웃 시간을 봐서 예측이 가능한 것과 같이, 
+만약 종료 시그널을 받고 요청처리에 아주 긴시간이 소요되는 작업이 있다면 해당 애플리케이션이 종료되기 까지 오래 걸릴 수 있다.  
+
+```bash
+$ docker run -d --rm --name graceful-20000 -p 8080:8080 localhost/spring23-graceful-test:graceful-20000
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/9999999
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM graceful-20000
+graceful-20000
+
+.. 터미널 1 정상 응답 후 컨테이너 종료 .. 
+$ curl -i localhost:8080/9999999
+.. 거의 무한정 응답 대기 ..
+```  
+
+위와 같은 상황을 방지하기 위해서는 적절한 타임아웃 시간을 설정해주는 것이 좋다.  
+
+
+#### graceful 20s
+
 
 
 
