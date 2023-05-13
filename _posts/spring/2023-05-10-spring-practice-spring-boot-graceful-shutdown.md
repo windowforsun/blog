@@ -70,6 +70,12 @@ spring:
 간단한 애플리케이션 구현으로 동작을 테스트해본다. 
 구현할 애플리케이션의 디렉토리 구조는 아래와 같다.  
 
+알맞은 값으로 설정한다면 아래와 같은 상황에 대응할 수 있다. 
+
+- 종료 시그널을 받은 후 새로운 요청은 거절
+- 종료 시그널 받기전 처리 중인 요청은 타임아웃 이내 정상 응답 가능
+- 종료 시그널을 받게 되면 타임아웃 이내 애플리케이션 종료 보장
+
 ```
 .
 ├── build.gradle
@@ -257,6 +263,10 @@ $ curl -i localhost:8080/10000
 $ docker kill --signal SIGTERM graceful-20000
 graceful-20000
 
+.. 티미널 3 SIGTERM 시그널을 받은 후 요청은 거절 된다. ..
+$ curl -i localhost:8080/1000
+curl: (7) Failed to connect to localhost port 8080 after 5 ms: Connection refused
+
 .. 터미널 1 정상 응답 후 컨테이너 종료 .. 
 $ curl -i localhost:8080/10000
 HTTP/1.1 200
@@ -265,6 +275,13 @@ Content-Length: 2
 Date: Thu, 11 May 2023 17:14:00 GMT
 
 OK
+
+.. 터미널 4 애플리케이션 로그 ..
+$ docker logs -f graceful-20000
+INFO 1 --- [nio-8080-exec-1] c.w.s.g.Spring23GracefulApplication      : start request timeout : 10000
+INFO 1 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+INFO 1 --- [nio-8080-exec-1] c.w.s.g.Spring23GracefulApplication      : end request timeout : 10000
+INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
 ```  
 
 설정된 타임아웃 시간을 봐서 예측이 가능한 것과 같이, 
@@ -284,12 +301,86 @@ graceful-20000
 .. 터미널 1 정상 응답 후 컨테이너 종료 .. 
 $ curl -i localhost:8080/9999999
 .. 거의 무한정 응답 대기 ..
+
+
+.. 터미널 3 애플리케이션 로그 ..
+$ docker logs -f graceful-20000
+INFO 1 --- [nio-8080-exec-1] c.w.s.g.Spring23GracefulApplication      : start request timeout : 9999999
+INFO 1 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+.. 종료되지 않음 ..
 ```  
 
 위와 같은 상황을 방지하기 위해서는 적절한 타임아웃 시간을 설정해주는 것이 좋다.  
 
 
 #### graceful 20s
+마지막으로 `server.shutdown` 이 `graceful` 이면서 `spring.lifecycle.timeout-per-shutdown-phase` 에 적절한 타임아웃이 설정된 경우를 살펴보자. 
+
+
+아래 명령으로 `localhost/spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
+그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
+
+```bash
+$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful-20
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/10000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM graceful-20
+graceful-20
+
+.. 티미널 3 SIGTERM 시그널을 받은 후 요청은 거절 된다. ..
+$ curl -i localhost:8080/1000
+curl: (7) Failed to connect to localhost port 8080 after 5 ms: Connection refused
+
+.. 터미널 1 정상 응답 후 컨테이너 종료 .. 
+$ curl -i localhost:8080/10000
+HTTP/1.1 200
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 2
+Date: Thu, 11 May 2023 17:20:00 GMT
+
+OK
+
+
+.. 터미널 4 애플리케이션 로그 ..
+$ docker logs -f graceful-20
+INFO 1 --- [nio-8080-exec-1] c.w.s.g.Spring23GracefulApplication      : start request timeout : 10000
+INFO 1 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+INFO 1 --- [nio-8080-exec-1] c.w.s.g.Spring23GracefulApplication      : end request timeout : 10000
+INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown complete
+```  
+
+현재 타임아웃은 20초로 설정돼 있는 상태에서 요청 처리가 20초가 넘게 걸리는 상태에서 `SIGNTERM` 을 받는 상황을 가정해 본다.  
+
+```bash
+$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful-20
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/30000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM graceful-20
+graceful-20
+
+.. 터미널 1 30초가 걸리는 요청은 처리중 애프릴케이션이 종료된다 .. 
+$ curl -i localhost:8080/10000
+curl: (52) Empty reply from server
+
+
+.. 터미널 3 애플리케이션 로그 ..
+$ docker logs -f graceful-20
+INFO 1 --- [nio-8080-exec-2] c.w.s.g.Spring23GracefulApplication      : start request timeout : 30000
+INFO 1 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commencing graceful shutdown. Waiting for active requests to complete
+INFO 1 --- [ionShutdownHook] o.s.c.support.DefaultLifecycleProcessor  : Failed to shut down 1 bean with phase value 2147483647 within timeout of 20000ms: [webServerGracefulShutdown]
+INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful shutdown aborted with one or more requests still active
+```  
+
+### Spring Boot 2.2
+이번에는 `Spring Boot 2.2` 이하인 경우에 `graceful` 하게 애플리케이션을 종료하는 방법에 대해 알아본다. 
 
 
 
