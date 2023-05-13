@@ -67,14 +67,16 @@ spring:
     timeout-per-shutdown-phase: 20s
 ```  
 
-간단한 애플리케이션 구현으로 동작을 테스트해본다. 
-구현할 애플리케이션의 디렉토리 구조는 아래와 같다.  
-
-알맞은 값으로 설정한다면 아래와 같은 상황에 대응할 수 있다. 
+알맞은 값으로 설정한다면 아래와 같은 상황에 대응할 수 있다.
 
 - 종료 시그널을 받은 후 새로운 요청은 거절
 - 종료 시그널 받기전 처리 중인 요청은 타임아웃 이내 정상 응답 가능
 - 종료 시그널을 받게 되면 타임아웃 이내 애플리케이션 종료 보장
+
+
+간단한 애플리케이션 구현으로 동작을 테스트해본다. 
+구현할 애플리케이션의 디렉토리 구조는 아래와 같다.  
+
 
 ```
 .
@@ -107,10 +109,6 @@ apply plugin: 'io.spring.dependency-management'
 
 repositories {
     mavenCentral()
-}
-
-ext {
-    BUILD_VERSION = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
 }
 
 dependencies {
@@ -381,6 +379,218 @@ INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful
 
 ### Spring Boot 2.2
 이번에는 `Spring Boot 2.2` 이하인 경우에 `graceful` 하게 애플리케이션을 종료하는 방법에 대해 알아본다. 
+앞서 언급한 것처럼 `Spring Boot 2.2` 이하인 경우에는 아래와 같은 별도 구현이 필요하다.  
+
+- `ApplicationListener<ContextClosedEvent>` 을 구현체에 애플리케이션이 종료 시그널을 받았을 때, `TomcatConnectorCustomizer` 빈을 사용해 이후 요청 차단과 최대 대기시간 설정
+- `TomcatConnectorCustomizer` 구현 빈 등록
+- `ConfigurableServletWebServerFactory` 객체를 생성하고, `TomcatConnectorCustomizer` 을 `ConnectorCustomizer` 로 추가하고 빈으로 등록
+
+위와 같은 구현을 모두 마치면 `Spring Boot 2.3` 에서 살펴 본것과 같은 `Graceful` 한 웹 애플리케이션 종료 처리가 가능하다.  
+
+예제로 구현할 애플리케이션의 디렉토리 구조는 아래와 같다.  
+
+```
+.
+├── build.gradle
+└── src
+    └── main
+        ├── java
+        │   └── com
+        │       └── windowforsun
+        │           └── spring22
+        │               └── graceful
+        │                   ├── GracefulShutdownEventListener.java
+        │                   ├── GracefulShutdownTomcatConnector.java
+        │                   ├── Spring22GracefulApplication.java
+        │                   └── TomcatConfig.java
+        └── resources
+            └── application.yaml
+```  
+
+- `build.gradle`
+  - 테스트는 `Docker` 환경에서 수행하기 위해 `jib` 플러그인을 사용해서 애플리케이션 이미지를 빌드한다.
+  - 비교 테스트를 위해 여러 버전 빌드를 위해 `gradle` 빌드 시점에 명령으로 `shutdown_type` 파라미터를 전달하고 애플리케이션 프로필을 설정해 각 상황에 맞는 애플리케이션을 빌드한다. 
+
+```groovy
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.2.4.RELEASE'
+    id 'com.google.cloud.tools.jib' version '3.2.0'
+}
+
+apply plugin: 'java'
+apply plugin: 'io.spring.dependency-management'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor "org.projectlombok:lombok"
+}
+
+test {
+    useJUnitPlatform()
+}
+
+jib {
+    from {
+        image = "openjdk:11-jre-slim"
+        // for mac m1
+        platforms {
+            platform {
+                architecture = "arm64"
+                os = "linux"
+            }
+        }
+    }
+    to {
+        image = "spring22-graceful-test"
+        tags = [project.findProperty("shutdown_type")]
+    }
+    container {
+        mainClass = "com.windowforsun.spring22.graceful.Spring22GracefulApplication"
+        ports = ["8080"]
+        environment = [
+            'SPRING_PROFILES_ACTIVE' : project.findProperty("shutdown_type")
+        ]
+    }
+
+}
+```  
+
+- `Spring22GracefulApplication`
+  - `/{timeout}` 요청을 받으면 타임 아웃 시간 만큼 대기한 후 `OK` 를 응답한다.
+
+```java
+@Slf4j
+@SpringBootApplication
+@RestController
+public class Spring22GracefulApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(Spring22GracefulApplication.class, args);
+    }
+
+    @GetMapping("/{timeout}")
+    public String timeout(@PathVariable long timeout) throws InterruptedException {
+        log.info("start request timeout : {}", timeout);
+        Thread.sleep(timeout);
+        log.info("end request timeout : {}", timeout);
+        return "OK";
+    }
+}
+```  
+
+- `GracefulShutdownTomcatConnector`
+  - `TomcatConnectorCustomizer` 의 구현체로 `Graceful` 한 종료처리를 위해 사용할 커넥션 객체를 빈으로 등록한다. 
+  - 해당 빈은 `graceful` 프로필에서만 등록된다. 
+
+```java
+@Profile("graceful")
+@Component
+@Getter
+public class GracefulShutdownTomcatConnector implements TomcatConnectorCustomizer {
+    private volatile Connector connector;
+
+    @Override
+    public void customize(Connector connector) {
+        this.connector = connector;
+    }
+}
+```  
+
+- `GracefulShutdownEventListener`
+  - `ApplicationListener<ContextClosedEvent>` 의 구현체로 종료 시그널을 받았을 때 수행할 처리를 등록한다. 
+  - `GracefulShutdownTomcatConnector` 을 사용해서 새로 들어오는 요청을 차단하고, 최대 대기시간인 20초 동안 대기후 애플리케이션을 종료한다.
+  - 해당 빈은 `graceful` 프로필에서만 등록된다.  
+
+```java
+@Profile("graceful")
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class GracefulShutdownEventListener implements ApplicationListener<ContextClosedEvent> {
+    private final GracefulShutdownTomcatConnector gracefulShutdownTomcatConnector;
+
+    @Override
+    public void onApplicationEvent(ContextClosedEvent event) {
+        // pause 를 하면 이후 들어오는 요청은 응답되지 않고 종료 시그널 이전 요청들이 모두 처리 될떄까지 대기한다. 
+        this.gracefulShutdownTomcatConnector.getConnector().pause();
+        // or closeServerSocketGraceful 를 하면 이후 요청에는 응답을 수행하지 않는다. 
+        // this.gracefulShutdownTomcatConnector.getConnector().getProtocolHandler().closeServerSocketGraceful();
+
+        ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) this.gracefulShutdownTomcatConnector.getConnector()
+                .getProtocolHandler()
+                .getExecutor();
+
+        threadPoolExecutor.shutdown();
+
+        try {
+            log.info("Wait Graceful Shutdown ..");
+            threadPoolExecutor.awaitTermination(20, TimeUnit.SECONDS);
+            log.info("Done Graceful Shutdown ..");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            exception.printStackTrace();
+            log.error("Fail Graceful Shutdown ..");
+        }
+    }
+}
+```
+
+- `TomcatConfig`
+  - `ConfigurableServletWebServerFactory` 빈 객체를 등록하는데, 미리 생성해둔 `GracefulShutdownTomcatConnector` 커넥션 객체를 추가해 해당 커넥션을 사용하도록 한다.
+  - 해당 빈은 `graceful` 프로필에서만 등록된다.
+
+```java
+@Profile("graceful")
+@Configuration
+@RequiredArgsConstructor
+public class TomcatConfig {
+    private final GracefulShutdownTomcatConnector gracefulShutdownTomcatConnector;
+
+    @Bean
+    public ConfigurableServletWebServerFactory webServerFactory() {
+        TomcatServletWebServerFactory factory = new TomcatServletWebServerFactory();
+        factory.addConnectorCustomizers(this.gracefulShutdownTomcatConnector);
+
+        return factory;
+    }
+}
+```  
+
+- `application.yaml`
+
+```yaml
+server:
+  tomcat:
+    min-spare-threads: 100
+    max-threads: 200
+```  
+
+아래 `gradle` 명령을 사용해서 2가지 버전의 애플리케이션 이미지를 빌드한다. 
+
+```bash
+./gradlew jibDockerBuild -Pshutdown_type=graceful 
+./gradlew jibDockerBuild -Pshutdown_type=immediate
+```  
+
+모든 빌드가 완료되고 `docker image` 를 조회하면 아래와 같다.  
+
+```bash
+$ docker image ls
+REPOSITORY                         TAG              IMAGE ID       CREATED        SIZE
+localhost/spring22-graceful-test   graceful         f9a0fe278401   53 years ago   237MB
+localhost/spring22-graceful-test   immediate        75aade957e66   53 years ago   237MB
+```  
+
+#### immediate
+
+
+#### graceful
 
 
 
@@ -394,4 +604,5 @@ INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful
 
 ---  
 ## Reference
-[Stream Application Development](https://dataflow.spring.io/docs/stream-developer-guides/streams/standalone-stream-sample/)  
+[Web Server Graceful Shutdown in Spring Boot](https://www.baeldung.com/spring-boot-web-server-shutdown)  
+[Spring Boot graceful shutdown](https://stackoverflow.com/a/56078391)  
