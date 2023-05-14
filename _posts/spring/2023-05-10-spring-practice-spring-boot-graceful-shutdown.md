@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Boot Web Graceful Shutdown"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Boot Web Application 을 Graceful 하게 종료하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -202,20 +202,20 @@ spring:
 ```bash
 $ docker image ls
 REPOSITORY                         TAG              IMAGE ID       CREATED        SIZE
-localhost/spring23-graceful-test   immediate-30     84ec73c28d2f   53 years ago   237MB
-localhost/spring23-graceful-test   graceful-20000   4c4879f3d0a5   53 years ago   237MB
-localhost/spring23-graceful-test   graceful-20      68ded8f4b736   53 years ago   237MB
+spring23-graceful-test   immediate-30     84ec73c28d2f   53 years ago   237MB
+spring23-graceful-test   graceful-20000   4c4879f3d0a5   53 years ago   237MB
+spring23-graceful-test   graceful-20      68ded8f4b736   53 years ago   237MB
 ```  
 
 #### immediate
 먼저 `server.shutdown` 이 `immediate` 일떄 종료처리를 테스트한다. 
 `immedate` 는 종료 시그널을 받으면 즉시 애플리케이션을 종료하기 때문에 요청 처리 과정에서 종료 시그널을 받게되면 해당 응답은 정상적으로 처리되지 못한다.  
 
-아래 명령으로 `localhost/spring23-graceful-test:immediate-30` 이미지를 사용해서 컨테이너를 실행한다. 
+아래 명령으로 `spring23-graceful-test:immediate-30` 이미지를 사용해서 컨테이너를 실행한다. 
 그리고 `/1000` 요청을 보내면 1초후 `OK` 응답을 내려주는 것을 확인 할 수 있다.  
 
 ```
-$ docker run -d --rm --name immediate-30 -p 8080:8080 localhost/spring23-graceful-test:immediate-30
+$ docker run -d --rm --name immediate-30 -p 8080:8080 spring23-graceful-test:immediate-30
 
 $ curl -i localhost:8080/1000
 HTTP/1.1 200 
@@ -249,11 +249,11 @@ curl: (52) Empty reply from server
 이번에는 `server.shutdown` 은 `graceful` 이지만 `spring.lifecycle.timeout-per-shutdown-phase` 에 설정이 돼있지 않다는 상황을 가정을 위해 아주 큰 값을 넣은 상태를 테스트로 사용한다. (기본값은 30s 이지만 테스트를 위해)
 
 
-아래 명령으로 `localhost/spring23-graceful-test:graceful-20000` 이미지를 사용해서 컨테이너를 실행한다. 
+아래 명령으로 `spring23-graceful-test:graceful-20000` 이미지를 사용해서 컨테이너를 실행한다. 
 그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.  
 
 ```bash
-$ docker run -d --rm --name graceful-20000 -p 8080:8080 localhost/spring23-graceful-test:graceful-20000
+$ docker run -d --rm --name graceful-20000 -p 8080:8080 spring23-graceful-test:graceful-20000
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/10000
@@ -288,7 +288,7 @@ INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful
 만약 종료 시그널을 받고 요청처리에 아주 긴시간이 소요되는 작업이 있다면 해당 애플리케이션이 종료되기 까지 오래 걸릴 수 있다.  
 
 ```bash
-$ docker run -d --rm --name graceful-20000 -p 8080:8080 localhost/spring23-graceful-test:graceful-20000
+$ docker run -d --rm --name graceful-20000 -p 8080:8080 spring23-graceful-test:graceful-20000
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/9999999
@@ -317,11 +317,11 @@ INFO 1 --- [ionShutdownHook] o.s.b.w.e.tomcat.GracefulShutdown        : Commenci
 마지막으로 `server.shutdown` 이 `graceful` 이면서 `spring.lifecycle.timeout-per-shutdown-phase` 에 적절한 타임아웃이 설정된 경우를 살펴보자. 
 
 
-아래 명령으로 `localhost/spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
+아래 명령으로 `spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
 그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
 
 ```bash
-$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful-20
+$ docker run -d --rm --name graceful-20 -p 8080:8080 spring23-graceful-test:graceful-20
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/10000
@@ -356,7 +356,7 @@ INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful
 현재 타임아웃은 20초로 설정돼 있는 상태에서 요청 처리가 20초가 넘게 걸리는 상태에서 `SIGNTERM` 을 받는 상황을 가정해 본다.  
 
 ```bash
-$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful-20
+$ docker run -d --rm --name graceful-20 -p 8080:8080 spring23-graceful-test:graceful-20
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/30000
@@ -382,6 +382,8 @@ INFO 1 --- [tomcat-shutdown] o.s.b.w.e.tomcat.GracefulShutdown        : Graceful
 ### Spring Boot 2.2
 이번에는 `Spring Boot 2.2` 이하인 경우에 `graceful` 하게 애플리케이션을 종료하는 방법에 대해 알아본다. 
 앞서 언급한 것처럼 `Spring Boot 2.2` 이하인 경우에는 아래와 같은 별도 구현이 필요하다.  
+
+> 참고로 `Spring Actuator` 
 
 - `ApplicationListener<ContextClosedEvent>` 을 구현체에 애플리케이션이 종료 시그널을 받았을 때, `TomcatConnectorCustomizer` 빈을 사용해 이후 요청 차단과 최대 대기시간 설정
 - `TomcatConnectorCustomizer` 구현 빈 등록
@@ -585,19 +587,19 @@ server:
 ```bash
 $ docker image ls
 REPOSITORY                         TAG              IMAGE ID       CREATED        SIZE
-localhost/spring22-graceful-test   graceful         f9a0fe278401   53 years ago   237MB
-localhost/spring22-graceful-test   immediate        75aade957e66   53 years ago   237MB
+spring22-graceful-test   graceful         f9a0fe278401   53 years ago   237MB
+spring22-graceful-test   immediate        75aade957e66   53 years ago   237MB
 ```  
 
 #### immediate
 `Spring Boot 2.2` 이하 에서는 아무런 설정을 해주지 않으면 종료 시그널을 받은 후 애플리케이션은 즉시 종료된다. 
 
 
-아래 명령으로 `localhost/spring22-graceful-test:immediate` 이미지를 사용해서 컨테이너를 실행한다.
+아래 명령으로 `spring22-graceful-test:immediate` 이미지를 사용해서 컨테이너를 실행한다.
 그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
 
 ```bash
-$ docker run -d --rm --name immediate -p 8080:8080 localhost/spring23-graceful-test:immediate
+$ docker run -d --rm --name immediate -p 8080:8080 spring23-graceful-test:immediate
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/10000
@@ -624,11 +626,11 @@ curl: (52) Empty reply from server
 예제에서는 `closeServerSocketGraceful` 를 사용해서 진행한다.  
 
 
-아래 명령으로 `localhost/spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
+아래 명령으로 `spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
 그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
 
 ```bash
-$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful
+$ docker run -d --rm --name graceful-20 -p 8080:8080 spring23-graceful-test:graceful
 
 .. 터미널 1 ..
 $ curl -i localhost:8080/10000
