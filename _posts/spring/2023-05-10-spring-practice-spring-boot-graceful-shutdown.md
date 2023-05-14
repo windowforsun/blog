@@ -15,6 +15,8 @@ tags:
     - Spring Boot
     - Spring Boot Web
     - Graceful
+    - Spring Boot 2.3
+    - Spring Boot 2.2
 toc: true
 use_math: true
 ---  
@@ -518,9 +520,9 @@ public class GracefulShutdownEventListener implements ApplicationListener<Contex
     @Override
     public void onApplicationEvent(ContextClosedEvent event) {
         // pause 를 하면 이후 들어오는 요청은 응답되지 않고 종료 시그널 이전 요청들이 모두 처리 될떄까지 대기한다. 
-        this.gracefulShutdownTomcatConnector.getConnector().pause();
+        // this.gracefulShutdownTomcatConnector.getConnector().pause();
         // or closeServerSocketGraceful 를 하면 이후 요청에는 응답을 수행하지 않는다. 
-        // this.gracefulShutdownTomcatConnector.getConnector().getProtocolHandler().closeServerSocketGraceful();
+         this.gracefulShutdownTomcatConnector.getConnector().getProtocolHandler().closeServerSocketGraceful();
 
         ThreadPoolExecutor threadPoolExecutor = (ThreadPoolExecutor) this.gracefulShutdownTomcatConnector.getConnector()
                 .getProtocolHandler()
@@ -588,18 +590,78 @@ localhost/spring22-graceful-test   immediate        75aade957e66   53 years ago 
 ```  
 
 #### immediate
+`Spring Boot 2.2` 이하 에서는 아무런 설정을 해주지 않으면 종료 시그널을 받은 후 애플리케이션은 즉시 종료된다. 
 
+
+아래 명령으로 `localhost/spring22-graceful-test:immediate` 이미지를 사용해서 컨테이너를 실행한다.
+그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
+
+```bash
+$ docker run -d --rm --name immediate -p 8080:8080 localhost/spring23-graceful-test:immediate
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/10000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM immediate
+immediate
+
+.. 터미널 1 비정상 응답 .. 
+$ curl -i localhost:8080/10000
+curl: (52) Empty reply from server
+```  
+
+테스트 결과와 같이 기본 설정대로 웹 애플리케이션을 구성한다면 종료 시그널을 받은 시점에 수행중이던 요청들은 모두 정상적으로 처리되지 못한다.  
 
 #### graceful
+이번에는 직접 구현한 `Spring Boot 2.2` 의 `Graceful` 한 종료에 대해 테스트를 수행해 본다. 
+앞서 언급한 것처럼 종료 처리 법은 아래와 같은 2가지가 있다. 
+
+- `pause` : 종료 시그널 이후 요청들은 처리 중이던 요청이 완료될떄까지 대기 한다. 
+- `closeServerSocketGraceful` : 종료 시그널 이후 요청애는 응답을 수행하지 않는다. 
+
+예제에서는 `closeServerSocketGraceful` 를 사용해서 진행한다.  
 
 
+아래 명령으로 `localhost/spring23-graceful-test:graceful-20` 이미지를 사용해서 컨테이너를 실행한다.
+그리고 동일하게 10초 동안 요청을 처리하는 `/10000` 요청을 보내고 다른 터미널에서 해당 컨테이너를 `SIGTERM` 으로 종료한다.
+
+```bash
+$ docker run -d --rm --name graceful-20 -p 8080:8080 localhost/spring23-graceful-test:graceful
+
+.. 터미널 1 ..
+$ curl -i localhost:8080/10000
+.. 응답 대기 ..
+
+.. 터미널 2 ..
+$ docker kill --signal SIGTERM graceful
+graceful
+
+.. 티미널 3 SIGTERM 시그널을 받은 후 요청 응답은 수행되지 않는다. ..
+$ curl -i localhost:8080/1000
+curl: (52) Empty reply from server
+
+.. 터미널 1 정상 응답 후 컨테이너 종료 .. 
+$ curl -i localhost:8080/10000
+HTTP/1.1 200
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 2
+Date: Thu, 11 May 2023 18:20:00 GMT
+
+OK
 
 
+.. 터미널 4 애플리케이션 로그 ..
+$ docker logs -f graceful
+INFO 1 --- [nio-8080-exec-2] c.w.s.g.Spring22GracefulApplication      : start request timeout : 20000
+INFO 1 --- [extShutdownHook] c.w.s.g.GracefulShutdownEventListener    : Wait Graceful Shutdown ..
+INFO 1 --- [nio-8080-exec-2] c.w.s.g.Spring22GracefulApplication      : end request timeout : 20000
+INFO 1 --- [extShutdownHook] c.w.s.g.GracefulShutdownEventListener    : Done Graceful Shutdown ..
+INFO 1 --- [extShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
+```  
 
-
-
-
-
+주의할 점은 최대 타입아웃 시간이 20초 이기 때문에 처리 수행시간이 20초가 넘어가는 요청에 대해서는 정상 응답을 보장할 수 없다.  
 
 
 ---  
