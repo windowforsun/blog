@@ -663,7 +663,7 @@ INFO 1 --- [extShutdownHook] c.w.s.g.GracefulShutdownEventListener    : Done Gra
 INFO 1 --- [extShutdownHook] o.s.s.concurrent.ThreadPoolTaskExecutor  : Shutting down ExecutorService 'applicationTaskExecutor'
 ```  
 
-주의할 점은 최대 타입아웃 시간이 20초 이기 때문에 처리 수행시간이 20초가 넘어가는 요청에 대해서는 정상 응답을 보장할 수 없다.  
+주의할 점은 최대 타임아웃 시간이 20초 이기 때문에 처리 수행시간이 20초가 넘어가는 요청에 대해서는 정상 응답을 보장할 수 없다.  
 
 
 ---  
