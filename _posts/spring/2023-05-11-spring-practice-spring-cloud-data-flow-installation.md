@@ -54,7 +54,12 @@ use_math: true
     ├── skipper-config-kafka.yaml
     ├── skipper-deployment.yaml
     └── skipper-svc.yaml
+```  
 
+환경 구성에 앞서 `Minikube` 를 아래와 같이 넉넉한 `cpu` 와 `memory` 로 실행해 준다. 
+
+```bash
+$ minikube start --cpus=7 --memory=9000 --kubernetes-version=v1.20.15
 ```  
 
 ### Messaging Middleware 구성
@@ -577,7 +582,7 @@ http://127.0.0.1:50939
 
 웹 브라우저에 `http://127.0.0.1:50939/dashboard` 로 접속하면 `SCDF Server` 의 `Web UI` 에 접속할 수 있다.  
 
-spring-cloud-data-flow-installation-1.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-installation-1.png)
 
 `Add Aplication` 을 누르면 아래 화면이 나온다. 
 
