@@ -32,7 +32,9 @@ use_math: true
 - `SCDF Skipper`
 - `SCDF Server`
 
-`MySQL` 은 별도로 구성하지 않고 `SCDF` 에서는 기본으로 사용되는 내장 `H2` 를 사용하도록 한다. 
+`SCDF` 에서 배포하는 `Stream`, `Task` 의 정보를 `Persist` 하게 관리하기 위해 
+`Jenkins` 와 같이 외부 저장소와 연동해 `SCDF` 구성이 죽더라도 해당 정보를 유지할 수 있다. 
+이번 예제에서는 `MySQL` 은 별도로 구성하지 않고 `SCDF` 에서는 기본으로 사용되는 내장 `H2` 를 사용하도록 한다. 
 
 구성에 사용한 환경은 아래와 같다. 
 
