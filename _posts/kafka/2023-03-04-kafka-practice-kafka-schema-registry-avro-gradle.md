@@ -103,7 +103,7 @@ test {
 ```  
 
 `Procuder`, `Consumer` 애플리케이션의 `src/main/avro` 경로에 
-`Avro` 스키마 정의 파일을 `value.avcs` 파일로 생성해 준다.  
+`Avro` 스키마 정의 파일을 `value.avsc` 파일로 생성해 준다.  
 
 ```json
 {
