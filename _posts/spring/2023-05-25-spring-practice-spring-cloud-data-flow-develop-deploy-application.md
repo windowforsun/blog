@@ -396,18 +396,18 @@ $ docker push windowforsun/data-sink-log:test
 
 `SCDF` 대시보드에 접속해서 업로드한 3개 애플리케이션을 추가한다.  
 
-spring-cloud-data-flow-develop-deploy-application-1.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-1.png)
 
 추가를 완료하면 아래와 같이 3개 애플리케이션이 추가된 것을 확인 할 수 있다.  
 
-spring-cloud-data-flow-develop-deploy-application-2.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-2.png)
 
 아래와 같이 스트림을 구성한 뒤 `data-stream-test` 라는 이름으로 생성한다. 
 별도 프로퍼티 설정은 해당 단계에서는 하지 않는다. 
 
-spring-cloud-data-flow-develop-deploy-application-3.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-3.png)
 
-spring-cloud-data-flow-develop-deploy-application-4.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-4.png)
 
 생성된 `data-stream-test` 에 들어가 `Deploy Stream` 을 눌러 배포 화면으로 이동한다. 
 그리고 `Freetext` 를 사용해서 아래 프로퍼티를 사용해 배포를 수행한다.  
@@ -422,13 +422,14 @@ app.data-source.my-source.name=scdf-stream-test
 
 배포가 정상적으로 완료되면 아래와 같은 화면을 확인 할 수 있다.  
 
-spring-cloud-data-flow-develop-deploy-application-5.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-5.png)
 
 위 화면에서 `RUNTIME` 부분에 각 애플리케이션의 `VIEW LOG` 를 클릭하면, 
 애플리케이션에서 출력되는 로그를 통해 전체 스트림이 정상적으로 동작하는 것을 확인 할 수 있다. 
 대표적으로 `Sink` 만 확인하면 아래와 같다.  
 
-spring-cloud-data-flow-develop-deploy-application-6.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-develop-deploy-application-6.png)
+
 
 현재 스트림에서 사용하는 `Kafka` 에 접속해 생성된 토픽을 확인하면 아래와 같다.  
 
