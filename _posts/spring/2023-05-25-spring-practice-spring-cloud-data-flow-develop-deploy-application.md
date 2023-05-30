@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Cloud Data Flow(SCDF) Kubernetes 테스트 환경 구축"
+title: "[Spring 실습] Spring Cloud Stream Application 개발해서 SCDF에 배포하기 "
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Cloud Data Flow(SCDF) 를 Kubernetes(kubectl) 환경에서 구성해보자'
+excerpt: 'SCDF 에 직접 개발한 Spring Cloud Stream Application 을 배포하고 관리해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,8 +15,7 @@ tags:
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
-    - Kubernetes
-    - kubectl
+    - Spring Cloud Stream
 toc: true
 use_math: true
 ---  
@@ -460,4 +459,5 @@ data-stream-test.data-source
 
 ---  
 ## Reference
-[Spring Cloud Data Flow Installation Kubectl](https://dataflow.spring.io/docs/installation/kubernetes/kubectl/)
+[Stream Application Development](https://dataflow.spring.io/docs/stream-developer-guides/streams/standalone-stream-sample/)
+[Stream Processing using Spring Cloud Data Flow](https://dataflow.spring.io/docs/stream-developer-guides/streams/data-flow-stream/)
