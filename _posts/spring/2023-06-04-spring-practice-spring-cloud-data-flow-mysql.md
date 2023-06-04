@@ -21,7 +21,7 @@ use_math: true
 ---  
 
 ## Spring Cloud Data Flow with MySQL
-[SCDF Kubernetes 환경 구성]({{site.baseurl}}{% link _posts/spring/2023-05-25-spring-practice-spring-cloud-data-flow-develop-deploy-application.md %})
+[SCDF Kubernetes 환경 구성]({{site.baseurl}}{% link _posts/spring/2023-05-11-spring-practice-spring-cloud-data-flow-installation.md %})
 에서는 `SCDF` 를 `Kubernetes` 환경에 `kubectl` 를 사용해 구성하는 방법에 대해 알아보았다. 
 `SCDF` 는 `Spring Batch` 와 동일하게 `Batch`, `Stream` 의 구성과 수행 결과 및 관련 메타데이터와 히스토리를 
 저장소를 통해 `Persistence` 를 제공한다. 
