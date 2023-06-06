@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Cloud Stream Application 개발해서 SCDF에 배포하기 "
+title: "[Spring 실습] Spring Cloud Data Flow(SCDF) MySQL 연동"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: 'SCDF 에 직접 개발한 Spring Cloud Stream Application 을 배포하고 관리해보자'
