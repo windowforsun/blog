@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Cloud Data Flow(SCDF) MySQL 연동"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'SCDF 에 직접 개발한 Spring Cloud Stream Application 을 배포하고 관리해보자'
+excerpt: ''
 author: "window_for_sun"
 header-style: text
 categories :
@@ -739,5 +739,5 @@ mysql> show tables;
 
 ---  
 ## Reference
-[Stream Application Development](https://dataflow.spring.io/docs/stream-developer-guides/streams/standalone-stream-sample/)
+[Spring Cloud Data Flow Deploying with kubectl](https://dataflow.spring.io/docs/installation/kubernetes/kubectl/)
 [Stream Processing using Spring Cloud Data Flow](https://dataflow.spring.io/docs/stream-developer-guides/streams/data-flow-stream/)
