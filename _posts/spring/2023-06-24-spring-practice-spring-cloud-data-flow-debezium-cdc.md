@@ -21,6 +21,20 @@ use_math: true
 ---  
 
 
+
+
+```
+
+
+./gradlew debezium-cdc-index-processor:jibDockerBuild
+
+docker tag debezium-cdc-index-processor:v1 windowforsun/debezium-cdc-index-processor:v1
+
+docker push windowforsun/debezium-cdc-index-processor:v1
+
+```
+
+
 ---  
 ## Reference
 []()  
