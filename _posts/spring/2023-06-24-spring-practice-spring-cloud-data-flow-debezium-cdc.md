@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] Spring Cloud Data Flow(SCDF) MySQL 연동"
+title: "[Spring 실습] "
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'SCDF 의 데이터를 외부 저장소 MySQL 과 연동해 저장하고 관리해보자'
+excerpt: ''
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,7 +15,10 @@ tags:
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
+    - Debezium
+    - CDC
     - MySQL
+    - Elasticsearch
 toc: true
 use_math: true
 ---  
