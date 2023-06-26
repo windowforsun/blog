@@ -168,7 +168,7 @@ public class DebeziumCdcIndexProcessorApplication {
 @Data
 @ConfigurationProperties("index")
 public class IndexProperties {
-    private String name;
+    private String prefix;
     private boolean applyDate;
 }
 ```  
@@ -185,12 +185,28 @@ public class DebeziumCdcIndexProcessor {
     @Bean
     public Function<Message<Map<String, Object>>, Message<Map<String, Object>>> processor() {
         return mapMessage -> {
-            log.info("message : {}", mapMessage);
+            log.info("origin message : {}", mapMessage);
             Map<String, Object> payload = mapMessage.getPayload();
             MessageHeaders headers = mapMessage.getHeaders();
             Map<String, Object> newHeaders = new HashMap<>();
-            StringBuilder indexName = new StringBuilder(this.indexProperties.getName());
             LocalDateTime timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(headers.getTimestamp()), ZoneId.of("UTC"));
+            String db = (String) ((Map<String, Object>) payload.getOrDefault("source", Collections.emptyMap())).getOrDefault("db", "");
+            String table = (String) ((Map<String, Object>) payload.getOrDefault("source", Collections.emptyMap())).getOrDefault("table", "");
+            StringBuilder indexName = new StringBuilder();
+
+
+            // index name by prefix
+            if (StringUtils.hasText(this.indexProperties.getPrefix())) {
+                indexName
+                        .append(this.indexProperties.getPrefix())
+                        .append("-");
+            }
+
+            // index name by db, table
+            indexName
+                    .append(db)
+                    .append("-")
+                    .append(table);
 
             // create elasticsearch rolling index with date
             if (this.indexProperties.isApplyDate()) {
@@ -204,17 +220,20 @@ public class DebeziumCdcIndexProcessor {
 
             // apply index name
             if (StringUtils.hasText(indexName)) {
-                newHeaders.put("INDEX_NAME", indexName);
+                newHeaders.put("INDEX_NAME", indexName.toString());
             }
 
             // create timestamp for elasticsearch
             payload.put("timestamp", timestamp + "Z");
 
-            return MessageBuilder
+            Message<Map<String, Object>> transMessage = MessageBuilder
                     .withPayload(payload)
                     .copyHeaders(headers)
                     .copyHeaders(newHeaders)
                     .build();
+            log.info("trans message : {}", transMessage);
+
+            return transMessage;
         };
     }
 }
@@ -243,7 +262,7 @@ spring:
 - `DebeziumCdcIndexProcessorTest`
 
 ```java
-@SpringBootTest(properties = {"index.name=test", "index.apply-date=true"})
+@SpringBootTest(properties = {"index.prefix=test", "index.apply-date=true"})
 @Import(TestChannelBinderConfiguration.class)
 public class DebeziumCdcIndexProcessorTest {
     @Autowired
@@ -257,7 +276,8 @@ public class DebeziumCdcIndexProcessorTest {
     public void test() {
         Map<String, Object> payload = Map.of(
                 "schema", Map.of("key1", "value1"),
-                "payload", Map.of("key1", "value1")
+                "payload", Map.of("key1", "value1"),
+                "source", Map.of("db", "testDb", "table", "testTable")
         );
         Map<String, Object> headers = Map.of(
                 "timestamp", System.currentTimeMillis()
@@ -270,7 +290,7 @@ public class DebeziumCdcIndexProcessorTest {
         Map<String, Object> result = (Map<String, Object>) this.converter
                 .fromMessage(processMessage, Map.class);
 
-        assertThat(processMessage.getHeaders().get("INDEX_NAME").toString(), is("test-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))));
+        assertThat(processMessage.getHeaders().get("INDEX_NAME").toString(), is("test-testDb-testTable-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))));
     }
 }
 ```  
@@ -292,6 +312,49 @@ $ docker push windowforsun/debezium-cdc-index-processor:v1
 와 동일한 데이터베이스, 테이블, 데이터로 진행 한다.  
 
 
+```bash
+mysql> create database user;
+Query OK, 1 row affected (0.02 sec)
+
+mysql> use user;
+Database changed
+
+mysql> create table user_account (
+    ->    uid int,
+    ->    name varchar(255)
+    -> );
+Query OK, 0 rows affected (0.04 sec)
+
+mysql> create table user_role (
+    -> account_id int,
+    -> roll varchar(255)
+    -> );
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> insert into user_account(uid, name) values(1, 'jack');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> insert into user_role(account_id, role) values(1, 'normal');
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from user_account;
++------+------+
+| uid  | name |
++------+------+
+|    1 | jack |
++------+------+
+1 row in set (0.00 sec)
+
+mysql> select * from user_role;
++------------+--------+
+| account_id | role  |
++------------+--------+
+|          1 | normal |
++------------+--------+
+1 row in set (0.00 sec)
+```
+
+
 
 ### Stream 구성 
 스트림 구성에 사용할 `Stream Application` 은 아래와 같다. 
@@ -303,6 +366,7 @@ spring-cloud-data-flow-debezium-cdc-1.png
 - `debezium-source`(Source) : `docker:springcloudstream/debezium-source-kafka:4.0.0-RC1`
 - `debezium-cdc-index-processor`(Processor) : `docker:windowforsun/debezium-cdc-index-processor:v1`
 - `elasticsearch`(Sink) : `docker:springcloudstream/elasticsearch-sink-kafka:4.0.0-RC1`
+
 
 
 
@@ -355,13 +419,13 @@ app.elasticsearch.spring.elasticsearch.uris=http://${ES_SINGLE_SERVICE_HOST}:${E
 app.elasticsearch.elasticsearch.consumer.index=ignored-index
 app.elasticsearch.elasticsearch.consumer.id=headers.id
 app.debezium-cdc-index-processor.index.name=my-debezium-cdc-rolling-index
-app.debezium-cdc-index-processor.index.applyIndex=true
+app.debezium-cdc-index-processor.index.applyDate=true
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-path=/actuator/health
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-port=8080
 deployer.*.kubernetes.limits.cpu=3
 deployer.*.kubernetes.limits.memory=1000Mi
 spring.cloud.dataflow.skipper.platformName=default
-version.debezium-cdc-index-processor=v1
+version.debezium-cdc-index-processor=v2
 version.elasticsearch=4.0.0-RC1
 version.debezium-source=4.0.0-RC1
 ```
