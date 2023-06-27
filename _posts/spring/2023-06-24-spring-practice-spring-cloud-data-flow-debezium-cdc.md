@@ -385,8 +385,6 @@ spring-cloud-data-flow-debezium-cdc-1.png
 
 
 ```properties
-# ???????? Caused by: java.lang.ClassCastException: class java.lang.StringBuilder cannot be cast to class java.lang.String
-
 app.debezium-source.debezium.properties.database.server.id=111111
 app.debezium-source.debezium.properties.connector.class=io.debezium.connector.mysql.MySqlConnector
 app.debezium-source.debezium.properties.topic.prefix=my-debezium-cdc
@@ -418,7 +416,7 @@ app.elasticsearch.spring.data.elasticsearch.client.reactive.username=irteam
 app.elasticsearch.spring.elasticsearch.uris=http://${ES_SINGLE_SERVICE_HOST}:${ES_SINGLE_PORT_9200_TCP_PORT}
 app.elasticsearch.elasticsearch.consumer.index=ignored-index
 app.elasticsearch.elasticsearch.consumer.id=headers.id
-app.debezium-cdc-index-processor.index.name=my-debezium-cdc-rolling-index
+app.debezium-cdc-index-processor.index.name=debezium-cdc
 app.debezium-cdc-index-processor.index.applyDate=true
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-path=/actuator/health
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-port=8080
