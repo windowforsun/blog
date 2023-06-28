@@ -173,6 +173,22 @@ public class IndexProperties {
 }
 ```  
 
+- `DebeziumMessage`
+  - `debezium-source` 에서 전달되는 메시지 대략적인 형태를 클래스로 정의
+
+```java
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class DebeziumMessage {
+    private Map<String, Object> schema;
+    private Map<String, Object> payload;
+    // 커스텀 필드, ES 에서 타임 필드용
+    private String timestamp;
+}
+```  
+
 - `DeeziumCdcIndexProcessor`
 
 ```java
@@ -183,17 +199,17 @@ public class DebeziumCdcIndexProcessor {
     private final IndexProperties indexProperties;
 
     @Bean
-    public Function<Message<Map<String, Object>>, Message<Map<String, Object>>> processor() {
+    public Function<Message<DebeziumMessage>, Message<DebeziumMessage>> processor() {
         return mapMessage -> {
             log.info("origin message : {}", mapMessage);
-            Map<String, Object> payload = mapMessage.getPayload();
+            DebeziumMessage payload = mapMessage.getPayload();
             MessageHeaders headers = mapMessage.getHeaders();
             Map<String, Object> newHeaders = new HashMap<>();
             LocalDateTime timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(headers.getTimestamp()), ZoneId.of("UTC"));
-            String db = (String) ((Map<String, Object>) payload.getOrDefault("source", Collections.emptyMap())).getOrDefault("db", "");
-            String table = (String) ((Map<String, Object>) payload.getOrDefault("source", Collections.emptyMap())).getOrDefault("table", "");
+            Map<String, Object> payloadSource = (Map<String, Object>) payload.getPayload().getOrDefault("source", Collections.emptyMap());
+            String db = (String) payloadSource.getOrDefault("db", "");
+            String table = (String) payloadSource.getOrDefault("table", "");
             StringBuilder indexName = new StringBuilder();
-
 
             // index name by prefix
             if (StringUtils.hasText(this.indexProperties.getPrefix())) {
@@ -223,10 +239,10 @@ public class DebeziumCdcIndexProcessor {
                 newHeaders.put("INDEX_NAME", indexName.toString());
             }
 
-            // create timestamp for elasticsearch
-            payload.put("timestamp", timestamp + "Z");
+            // create time field for elasticsearch
+            payload.setTimestamp(timestamp + "Z");
 
-            Message<Map<String, Object>> transMessage = MessageBuilder
+            Message<DebeziumMessage> transMessage = MessageBuilder
                     .withPayload(payload)
                     .copyHeaders(headers)
                     .copyHeaders(newHeaders)
@@ -274,15 +290,17 @@ public class DebeziumCdcIndexProcessorTest {
 
     @Test
     public void test() {
-        Map<String, Object> payload = Map.of(
-                "schema", Map.of("key1", "value1"),
-                "payload", Map.of("key1", "value1"),
-                "source", Map.of("db", "testDb", "table", "testTable")
-        );
+        DebeziumMessage message = DebeziumMessage.builder()
+                .schema(Map.of("key1", "value1"))
+                .payload(Map.of(
+                        "key1", "value1", "source",
+                        Map.of("db", "testDb", "table", "testTable"))
+                )
+                .build();
         Map<String, Object> headers = Map.of(
                 "timestamp", System.currentTimeMillis()
         );
-        Message<?> sourceMessage = this.converter.toMessage(payload, new MessageHeaders(headers));
+        Message<?> sourceMessage = this.converter.toMessage(message, new MessageHeaders(headers));
 
         inputDestination.send(sourceMessage, "output");
 
@@ -399,7 +417,6 @@ app.debezium-source.debezium.properties.database.password=root
 app.debezium-source.debezium.properties.database.hostname=${MYSQL_SERVICE_HOST}
 app.debezium-source.debezium.properties.database.port=${MYSQL_SERVICE_PORT}
 app.debezium-source.debezium.properties.database.include.list=user
-app.debezium-source.debezium.properties.table.include.list=user.user_account
 app.debezium-source.debezium.properties.database.allowPublicKeyRetrieval=true
 app.debezium-source.debezium.properties.database.characterEncoding=utf8
 app.debezium-source.debezium.properties.database.connectionTimeZone=Asia/Seoul
@@ -416,16 +433,20 @@ app.elasticsearch.spring.data.elasticsearch.client.reactive.username=irteam
 app.elasticsearch.spring.elasticsearch.uris=http://${ES_SINGLE_SERVICE_HOST}:${ES_SINGLE_PORT_9200_TCP_PORT}
 app.elasticsearch.elasticsearch.consumer.index=ignored-index
 app.elasticsearch.elasticsearch.consumer.id=headers.id
-app.debezium-cdc-index-processor.index.name=debezium-cdc
+app.debezium-cdc-index-processor.index.prefix=debezium-test
 app.debezium-cdc-index-processor.index.applyDate=true
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-path=/actuator/health
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-port=8080
 deployer.*.kubernetes.limits.cpu=3
 deployer.*.kubernetes.limits.memory=1000Mi
 spring.cloud.dataflow.skipper.platformName=default
-version.debezium-cdc-index-processor=v2
+version.debezium-cdc-index-processor=v1
 version.elasticsearch=4.0.0-RC1
 version.debezium-source=4.0.0-RC1
+
+
+
+app.debezium-source.debezium.properties.table.include.list=user.user_account
 ```
 
 ```
