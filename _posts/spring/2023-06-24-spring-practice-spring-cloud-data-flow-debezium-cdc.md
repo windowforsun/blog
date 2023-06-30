@@ -71,6 +71,12 @@ use_math: true
 해당 값으로 인덱스를 사용한다는 스펙을 이용한다. 
 그리고 시계열 데이터 관리를 위해서는 `payload` 에 `timestamp` 새로운 필드를 추가한다.  
 
+정리하면 `Index Processor` 인 `debezium-index-processor` 는 아래와 같은 내용을 수행한다. 
+
+- `Debezium CDC Source` 의 `DB`, `Table` 기반 동적  `Elasticsearch Index name` 설정 제공
+- 날짜기반 `Rolling index` 제공
+- `Elasticsearch Index` 에서 사용될 `Time field` 인 `timestamp` 필드 추가
+
 - `build.gradle`
 
 ```groovy
