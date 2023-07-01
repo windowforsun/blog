@@ -77,6 +77,9 @@ use_math: true
 - 날짜기반 `Rolling index` 제공
 - `Elasticsearch Index` 에서 사용될 `Time field` 인 `timestamp` 필드 추가
 
+  
+<br>
+
 - `build.gradle`
 
 ```groovy
@@ -392,23 +395,163 @@ spring-cloud-data-flow-debezium-cdc-1.png
 - `elasticsearch`(Sink) : `docker:springcloudstream/elasticsearch-sink-kafka:4.0.0-RC1`
 
 
+<details><summary>Elasticsearch Kubernetes 구성</summary>
+<div markdown="1">
 
 
+```yaml
+# es-deploy.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: es-single
+  labels:
+    app: es-single
+
+data:
+  elasticsearch.yml: |-
+    xpack.security.enabled=false
+    node.name=${NODE_NAME}
+    cluster.name=${CLUSTER_NAME}
+    discovery.type=single-node
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: es-deployment
+  labels:
+    app: es-single
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: es-single
+  template:
+    metadata:
+      labels:
+        app: es-single
+    spec:
+      containers:
+        - name: es-single
+          image: docker.elastic.co/elasticsearch/elasticsearch:7.15.1
+          ports:
+            - name: rest
+              containerPort: 9200
+            - name: transport
+              containerPort: 9300
+          env:
+            - name: CLUSTER_NAME
+              value: es-single
+            - name: NODE_NAME
+              value: "es-single"
+            - name: discovery.type
+              value: single-node
+            - name: xpack.security.enabled
+              value: "false"
+            - name: "ES_JAVA_OPTS"
+              value: "-Xms512m -Xmx512m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: es-single
+spec:
+  selector:
+    app: es-single
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+```  
+
+```yaml
+# kibana-deploy.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana
+  labels:
+    app: kibana
+
+data:
+  kibana.yml: |-
+    server.host: 0.0.0.0
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kibana
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: docker.elastic.co/kibana/kibana:7.15.1
+          ports:
+            - name: view
+              containerPort: 5601
+          volumeMounts:
+            - name: config
+              mountPath: /usr/share/kibana/config/kibana.yml
+              readOnly: true
+              subPath: kibana.yml
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: 'http://es-single:9200'
+      volumes:
+        - name: config
+          configMap:
+            name: kibana
+            items:
+              - key: kibana.yml
+                path: kibana.yml
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+spec:
+  selector:
+    app: kibana
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 5601
+      targetPort: 5601
+```
 
 
+</div>
+</details>
 
+필요한 애플리케이션 추가를 완료했으면, `Streams` 에서 `CREATE STREAM` 을 통해 아래와 같이 `Debezium CDC` 를 위한 스트림을 생성한다.  
 
+spring-cloud-data-flow-debezium-cdc-2.png
 
+그리고 아래 `CREATE STREAM` 을 눌러 `scdf-debeizum-cdc` 라는 이름으로 스트림을 생성한다. 
 
+spring-cloud-data-flow-debezium-cdc-3.png
 
-
-
-
-
-
+스트림이 생성됐으면 `DEPLOY STREAM` 을 눌러 배포 설정을 해주는데, 
+배포 설정은 `FreeText` 를 사용하고 그 내용은 아래와 같다. 
 
 
 ```properties
+# debezium-source 설정
 app.debezium-source.debezium.properties.database.server.id=111111
 app.debezium-source.debezium.properties.connector.class=io.debezium.connector.mysql.MySqlConnector
 app.debezium-source.debezium.properties.topic.prefix=my-debezium-cdc
@@ -433,38 +576,98 @@ app.debezium-source.debezium.bootstrap.servers=kafka-service:9092
 app.debezium-source.debezium.properties.offset.storage=org.apache.kafka.connect.storage.MemoryOffsetBackingStore
 app.debezium-source.debezium.properties.database.history=io.debezium.relational.history.MemoryDatabaseHistory
 app.debezium-source.debezium.properties.schema.history.internal=io.debezium.relational.history.MemorySchemaHistory
+
+# debezium-cdc-index-processor 설정
+app.debezium-cdc-index-processor.index.prefix=debezium-test
+app.debezium-cdc-index-processor.index.applyDate=true
+
+# elasticsearch 설정
 app.elasticsearch.spring.data.elasticsearch.client.reactive.endpoints=${ES_SINGLE_SERVICE_HOST}:${ES_SINGLE_PORT_9200_TCP_PORT}
 app.elasticsearch.spring.data.elasticsearch.client.reactive.password=irteam123!@#
 app.elasticsearch.spring.data.elasticsearch.client.reactive.username=irteam
 app.elasticsearch.spring.elasticsearch.uris=http://${ES_SINGLE_SERVICE_HOST}:${ES_SINGLE_PORT_9200_TCP_PORT}
 app.elasticsearch.elasticsearch.consumer.index=ignored-index
 app.elasticsearch.elasticsearch.consumer.id=headers.id
-app.debezium-cdc-index-processor.index.prefix=debezium-test
-app.debezium-cdc-index-processor.index.applyDate=true
+
+# 배포 설정
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-path=/actuator/health
 deployer.debezium-cdc-index-processor.kubernetes.readiness-http-probe-port=8080
 deployer.*.kubernetes.limits.cpu=3
 deployer.*.kubernetes.limits.memory=1000Mi
-spring.cloud.dataflow.skipper.platformName=default
 version.debezium-cdc-index-processor=v1
 version.elasticsearch=4.0.0-RC1
 version.debezium-source=4.0.0-RC1
+spring.cloud.dataflow.skipper.platformName=default
+```  
 
+`DEPLOY STREAM` 을 눌러 배포를 시작한다. 
+그리고 스트림이 `DEPLOYED` 상태가 될때까지 가디란다.  
 
-
-app.debezium-source.debezium.properties.table.include.list=user.user_account
-```
-
-```
-
-
-./gradlew debezium-cdc-index-processor:jibDockerBuild
-
-docker tag debezium-cdc-index-processor:v1 windowforsun/debezium-cdc-index-processor:v1
-
-docker push windowforsun/debezium-cdc-index-processor:v1
+이후 `SCDF` 스트림 상세 정보에서 `debezium-cdc-index-processor` 로그를 확인하면, 
+아래와 같이 2개의 `MySQL` 로우에 대한 출력이 있는 것을 확인 할 수 있다.  
 
 ```
+2023-07-01 16:11:48.635  INFO 6 --- [container-0-C-1] c.w.s.p.DebeziumCdcIndexProcessor        : origin message : GenericMessage [payload=DebeziumMessage(schema={type=struct, fields=[{type=struct, fields=[{type=int32, optional=false, field=uid}, {type=string, optional=true, field=name}], optional=true, name=my-debezium-cdc.user.user_account.Value, field=before}, {type=struct, fields=[{type=int32, optional=false, field=uid}, {type=string, optional=true, field=name}], optional=true, name=my-debezium-cdc.user.user_account.Value, field=after}, {type=struct, fields=[{type=string, optional=false, field=version}, {type=string, optional=false, field=connector}, {type=string, optional=false, field=name}, {type=int64, optional=false, field=ts_ms}, {type=string, optional=true, name=io.debezium.data.Enum, version=1, parameters={allowed=true,last,false,incremental}, default=false, field=snapshot}, {type=string, optional=false, field=db}, {type=string, optional=true, field=sequence}, {type=string, optional=true, field=table}, {type=int64, optional=false, field=server_id}, {type=string, optional=true, field=gtid}, {type=string, optional=false, field=file}, {type=int64, optional=false, field=pos}, {type=int32, optional=false, field=row}, {type=int64, optional=true, field=thread}, {type=string, optional=true, field=query}], optional=false, name=io.debezium.connector.mysql.Source, field=source}, {type=string, optional=false, field=op}, {type=int64, optional=true, field=ts_ms}, {type=struct, fields=[{type=string, optional=false, field=id}, {type=int64, optional=false, field=total_order}, {type=int64, optional=false, field=data_collection_order}], optional=true, name=event.block, version=1, field=transaction}], optional=false, name=my-debezium-cdc.user.user_account.Envelope, version=1}, payload={before=null, after={uid=1, name=jack}, source={version=2.3.0.CR1, connector=mysql, name=my-debezium-cdc, ts_ms=1688195507000, snapshot=first, db=user, sequence=null, table=user_account, server_id=0, gtid=null, file=mysql-bin.000003, pos=37100403, row=0, thread=null, query=null}, op=r, ts_ms=1688195507990, transaction=null}, timestamp=null), headers={debezium_key=[B@32e84ff7, deliveryAttempt=1, kafka_timestampType=CREATE_TIME, kafka_receivedMessageKey=[B@261933e0, kafka_receivedTopic=scdf-debezium-cdc.debezium-source, target-protocol=kafka, kafka_offset=2, debezium_destination=my-debezium-cdc.user.user_account, scst_nativeHeadersPresent=true, kafka_consumer=org.apache.kafka.clients.consumer.KafkaConsumer@70c3206b, id=161f1a60-b2cd-5a1a-b1a2-cebc4b2d8c9c, kafka_receivedPartitionId=0, contentType=application/json, kafka_receivedTimestamp=1688195508538, kafka_groupId=scdf-debezium-cdc, timestamp=1688195508635}]
+2023-07-01 16:11:48.642  INFO 6 --- [container-0-C-1] c.w.s.p.DebeziumCdcIndexProcessor        : trans message : GenericMessage [payload=DebeziumMessage(schema={type=struct, fields=[{type=struct, fields=[{type=int32, optional=false, field=uid}, {type=string, optional=true, field=name}], optional=true, name=my-debezium-cdc.user.user_account.Value, field=before}, {type=struct, fields=[{type=int32, optional=false, field=uid}, {type=string, optional=true, field=name}], optional=true, name=my-debezium-cdc.user.user_account.Value, field=after}, {type=struct, fields=[{type=string, optional=false, field=version}, {type=string, optional=false, field=connector}, {type=string, optional=false, field=name}, {type=int64, optional=false, field=ts_ms}, {type=string, optional=true, name=io.debezium.data.Enum, version=1, parameters={allowed=true,last,false,incremental}, default=false, field=snapshot}, {type=string, optional=false, field=db}, {type=string, optional=true, field=sequence}, {type=string, optional=true, field=table}, {type=int64, optional=false, field=server_id}, {type=string, optional=true, field=gtid}, {type=string, optional=false, field=file}, {type=int64, optional=false, field=pos}, {type=int32, optional=false, field=row}, {type=int64, optional=true, field=thread}, {type=string, optional=true, field=query}], optional=false, name=io.debezium.connector.mysql.Source, field=source}, {type=string, optional=false, field=op}, {type=int64, optional=true, field=ts_ms}, {type=struct, fields=[{type=string, optional=false, field=id}, {type=int64, optional=false, field=total_order}, {type=int64, optional=false, field=data_collection_order}], optional=true, name=event.block, version=1, field=transaction}], optional=false, name=my-debezium-cdc.user.user_account.Envelope, version=1}, payload={before=null, after={uid=1, name=jack}, source={version=2.3.0.CR1, connector=mysql, name=my-debezium-cdc, ts_ms=1688195507000, snapshot=first, db=user, sequence=null, table=user_account, server_id=0, gtid=null, file=mysql-bin.000003, pos=37100403, row=0, thread=null, query=null}, op=r, ts_ms=1688195507990, transaction=null}, timestamp=2023-07-01T07:11:48.635Z), headers={debezium_key=[B@32e84ff7, deliveryAttempt=1, kafka_timestampType=CREATE_TIME, INDEX_NAME=debezium-test-user-user_account-2023.07.01, kafka_receivedMessageKey=[B@261933e0, kafka_receivedTopic=scdf-debezium-cdc.debezium-source, target-protocol=kafka, kafka_offset=2, debezium_destination=my-debezium-cdc.user.user_account, scst_nativeHeadersPresent=true, kafka_consumer=org.apache.kafka.clients.consumer.KafkaConsumer@70c3206b, id=7345430a-b829-8745-2e03-816eff17007b, kafka_receivedPartitionId=0, contentType=application/json, kafka_receivedTimestamp=1688195508538, kafka_groupId=scdf-debezium-cdc, timestamp=1688195508642}]
+2023-07-01 16:11:48.666  INFO 6 --- [container-0-C-1] c.w.s.p.DebeziumCdcIndexProcessor        : origin message : GenericMessage [payload=DebeziumMessage(schema={type=struct, fields=[{type=struct, fields=[{type=int32, optional=false, field=account_id}, {type=string, optional=false, field=user_role}], optional=true, name=my-debezium-cdc.user.user_role.Value, field=before}, {type=struct, fields=[{type=int32, optional=false, field=account_id}, {type=string, optional=false, field=user_role}], optional=true, name=my-debezium-cdc.user.user_role.Value, field=after}, {type=struct, fields=[{type=string, optional=false, field=version}, {type=string, optional=false, field=connector}, {type=string, optional=false, field=name}, {type=int64, optional=false, field=ts_ms}, {type=string, optional=true, name=io.debezium.data.Enum, version=1, parameters={allowed=true,last,false,incremental}, default=false, field=snapshot}, {type=string, optional=false, field=db}, {type=string, optional=true, field=sequence}, {type=string, optional=true, field=table}, {type=int64, optional=false, field=server_id}, {type=string, optional=true, field=gtid}, {type=string, optional=false, field=file}, {type=int64, optional=false, field=pos}, {type=int32, optional=false, field=row}, {type=int64, optional=true, field=thread}, {type=string, optional=true, field=query}], optional=false, name=io.debezium.connector.mysql.Source, field=source}, {type=string, optional=false, field=op}, {type=int64, optional=true, field=ts_ms}, {type=struct, fields=[{type=string, optional=false, field=id}, {type=int64, optional=false, field=total_order}, {type=int64, optional=false, field=data_collection_order}], optional=true, name=event.block, version=1, field=transaction}], optional=false, name=my-debezium-cdc.user.user_role.Envelope, version=1}, payload={before=null, after={account_id=1, user_role=normal}, source={version=2.3.0.CR1, connector=mysql, name=my-debezium-cdc, ts_ms=1688195507000, snapshot=last, db=user, sequence=null, table=user_role, server_id=0, gtid=null, file=mysql-bin.000003, pos=37100403, row=0, thread=null, query=null}, op=r, ts_ms=1688195507997, transaction=null}, timestamp=null), headers={debezium_key=[B@70429187, deliveryAttempt=1, kafka_timestampType=CREATE_TIME, kafka_receivedMessageKey=[B@7f2fcf4f, kafka_receivedTopic=scdf-debezium-cdc.debezium-source, target-protocol=kafka, kafka_offset=3, debezium_destination=my-debezium-cdc.user.user_role, scst_nativeHeadersPresent=true, kafka_consumer=org.apache.kafka.clients.consumer.KafkaConsumer@70c3206b, id=2078290d-6db4-1eea-5fa9-a927d1bd5aa2, kafka_receivedPartitionId=0, contentType=application/json, kafka_receivedTimestamp=1688195508557, kafka_groupId=scdf-debezium-cdc, timestamp=1688195508666}]
+2023-07-01 16:11:48.667  INFO 6 --- [container-0-C-1] c.w.s.p.DebeziumCdcIndexProcessor        : trans message : GenericMessage [payload=DebeziumMessage(schema={type=struct, fields=[{type=struct, fields=[{type=int32, optional=false, field=account_id}, {type=string, optional=false, field=user_role}], optional=true, name=my-debezium-cdc.user.user_role.Value, field=before}, {type=struct, fields=[{type=int32, optional=false, field=account_id}, {type=string, optional=false, field=user_role}], optional=true, name=my-debezium-cdc.user.user_role.Value, field=after}, {type=struct, fields=[{type=string, optional=false, field=version}, {type=string, optional=false, field=connector}, {type=string, optional=false, field=name}, {type=int64, optional=false, field=ts_ms}, {type=string, optional=true, name=io.debezium.data.Enum, version=1, parameters={allowed=true,last,false,incremental}, default=false, field=snapshot}, {type=string, optional=false, field=db}, {type=string, optional=true, field=sequence}, {type=string, optional=true, field=table}, {type=int64, optional=false, field=server_id}, {type=string, optional=true, field=gtid}, {type=string, optional=false, field=file}, {type=int64, optional=false, field=pos}, {type=int32, optional=false, field=row}, {type=int64, optional=true, field=thread}, {type=string, optional=true, field=query}], optional=false, name=io.debezium.connector.mysql.Source, field=source}, {type=string, optional=false, field=op}, {type=int64, optional=true, field=ts_ms}, {type=struct, fields=[{type=string, optional=false, field=id}, {type=int64, optional=false, field=total_order}, {type=int64, optional=false, field=data_collection_order}], optional=true, name=event.block, version=1, field=transaction}], optional=false, name=my-debezium-cdc.user.user_role.Envelope, version=1}, payload={before=null, after={account_id=1, user_role=normal}, source={version=2.3.0.CR1, connector=mysql, name=my-debezium-cdc, ts_ms=1688195507000, snapshot=last, db=user, sequence=null, table=user_role, server_id=0, gtid=null, file=mysql-bin.000003, pos=37100403, row=0, thread=null, query=null}, op=r, ts_ms=1688195507997, transaction=null}, timestamp=2023-07-01T07:11:48.666Z), headers={debezium_key=[B@70429187, deliveryAttempt=1, kafka_timestampType=CREATE_TIME, INDEX_NAME=debezium-test-user-user_role-2023.07.01, kafka_receivedMessageKey=[B@7f2fcf4f, kafka_receivedTopic=scdf-debezium-cdc.debezium-source, target-protocol=kafka, kafka_offset=3, debezium_destination=my-debezium-cdc.user.user_role, scst_nativeHeadersPresent=true, kafka_consumer=org.apache.kafka.clients.consumer.KafkaConsumer@70c3206b, id=0d11fd6d-7f59-f436-2031-57efd7696deb, kafka_receivedPartitionId=0, contentType=application/json, kafka_receivedTimestamp=1688195508557, kafka_groupId=scdf-debezium-cdc, timestamp=1688195508667}]
+```  
+
+`Kafka` 에 생성된 토픽을 확인하면 아래와 같이, 
+`scdf-debezium-cdc` 스트림에서 사용하는 2개의 토픽이 생성된 것을 확인 할 수 있다.  
+
+```bash
+$ kafka-topics --bootstrap-server localhost:29092 --list
+__consumer_offsets
+scdf-debezium-cdc.debezium-cdc-index-processor
+scdf-debezium-cdc.debezium-source
+```  
+
+```bash
+.. debezium-source(producer) - debezium-cdc-index-processor (consumer) ..
+$ kafka-console-consumer --bootstrap-server localhost:29092 --topic scdf-debezium-cdc.debezium-source --from-beginning
+{"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"int32","optional":false,"field":"uid"},{"type":"string","optional":true,"field":"name"}],"optional":true,"name":"my-debezium-cdc.user.user_account.Value","field":"before"},{"type":"struct","fields":[{"type":"int32","optional":false,"field":"uid"},{"type":"string","optional":true,"field":"name"}],"optional":true,"name":"my-debezium-cdc.user.user_account.Value","field":"after"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"version"},{"type":"string","optional":false,"field":"connector"},{"type":"string","optional":false,"field":"name"},{"type":"int64","optional":false,"field":"ts_ms"},{"type":"string","optional":true,"name":"io.debezium.data.Enum","version":1,"parameters":{"allowed":"true,last,false,incremental"},"default":"false","field":"snapshot"},{"type":"string","optional":false,"field":"db"},{"type":"string","optional":true,"field":"sequence"},{"type":"string","optional":true,"field":"table"},{"type":"int64","optional":false,"field":"server_id"},{"type":"string","optional":true,"field":"gtid"},{"type":"string","optional":false,"field":"file"},{"type":"int64","optional":false,"field":"pos"},{"type":"int32","optional":false,"field":"row"},{"type":"int64","optional":true,"field":"thread"},{"type":"string","optional":true,"field":"query"}],"optional":false,"name":"io.debezium.connector.mysql.Source","field":"source"},{"type":"string","optional":false,"field":"op"},{"type":"int64","optional":true,"field":"ts_ms"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"int64","optional":false,"field":"total_order"},{"type":"int64","optional":false,"field":"data_collection_order"}],"optional":true,"name":"event.block","version":1,"field":"transaction"}],"optional":false,"name":"my-debezium-cdc.user.user_account.Envelope","version":1},"payload":{"before":null,"after":{"uid":1,"name":"jack"},"source":{"version":"2.3.0.CR1","connector":"mysql","name":"my-debezium-cdc","ts_ms":1688195507000,"snapshot":"first","db":"user","sequence":null,"table":"user_account","server_id":0,"gtid":null,"file":"mysql-bin.000003","pos":37100403,"row":0,"thread":null,"query":null},"op":"r","ts_ms":1688195507990,"transaction":null}}
+{"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"int32","optional":false,"field":"account_id"},{"type":"string","optional":false,"field":"user_role"}],"optional":true,"name":"my-debezium-cdc.user.user_role.Value","field":"before"},{"type":"struct","fields":[{"type":"int32","optional":false,"field":"account_id"},{"type":"string","optional":false,"field":"user_role"}],"optional":true,"name":"my-debezium-cdc.user.user_role.Value","field":"after"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"version"},{"type":"string","optional":false,"field":"connector"},{"type":"string","optional":false,"field":"name"},{"type":"int64","optional":false,"field":"ts_ms"},{"type":"string","optional":true,"name":"io.debezium.data.Enum","version":1,"parameters":{"allowed":"true,last,false,incremental"},"default":"false","field":"snapshot"},{"type":"string","optional":false,"field":"db"},{"type":"string","optional":true,"field":"sequence"},{"type":"string","optional":true,"field":"table"},{"type":"int64","optional":false,"field":"server_id"},{"type":"string","optional":true,"field":"gtid"},{"type":"string","optional":false,"field":"file"},{"type":"int64","optional":false,"field":"pos"},{"type":"int32","optional":false,"field":"row"},{"type":"int64","optional":true,"field":"thread"},{"type":"string","optional":true,"field":"query"}],"optional":false,"name":"io.debezium.connector.mysql.Source","field":"source"},{"type":"string","optional":false,"field":"op"},{"type":"int64","optional":true,"field":"ts_ms"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"int64","optional":false,"field":"total_order"},{"type":"int64","optional":false,"field":"data_collection_order"}],"optional":true,"name":"event.block","version":1,"field":"transaction"}],"optional":false,"name":"my-debezium-cdc.user.user_role.Envelope","version":1},"payload":{"before":null,"after":{"account_id":1,"user_role":"normal"},"source":{"version":"2.3.0.CR1","connector":"mysql","name":"my-debezium-cdc","ts_ms":1688195507000,"snapshot":"last","db":"user","sequence":null,"table":"user_role","server_id":0,"gtid":null,"file":"mysql-bin.000003","pos":37100403,"row":0,"thread":null,"query":null},"op":"r","ts_ms":1688195507997,"transaction":null}}
+
+.. debezium-cdc-index-processor(producer) - elasticsearch(consumer)
+$ kafka-console-consumer --bootstrap-server localhost:29092 --topic scdf-debezium-cdc.debezium-cdc-index-processor --from-beginning
+{"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"int32","optional":false,"field":"uid"},{"type":"string","optional":true,"field":"name"}],"optional":true,"name":"my-debezium-cdc.user.user_account.Value","field":"before"},{"type":"struct","fields":[{"type":"int32","optional":false,"field":"uid"},{"type":"string","optional":true,"field":"name"}],"optional":true,"name":"my-debezium-cdc.user.user_account.Value","field":"after"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"version"},{"type":"string","optional":false,"field":"connector"},{"type":"string","optional":false,"field":"name"},{"type":"int64","optional":false,"field":"ts_ms"},{"type":"string","optional":true,"name":"io.debezium.data.Enum","version":1,"parameters":{"allowed":"true,last,false,incremental"},"default":"false","field":"snapshot"},{"type":"string","optional":false,"field":"db"},{"type":"string","optional":true,"field":"sequence"},{"type":"string","optional":true,"field":"table"},{"type":"int64","optional":false,"field":"server_id"},{"type":"string","optional":true,"field":"gtid"},{"type":"string","optional":false,"field":"file"},{"type":"int64","optional":false,"field":"pos"},{"type":"int32","optional":false,"field":"row"},{"type":"int64","optional":true,"field":"thread"},{"type":"string","optional":true,"field":"query"}],"optional":false,"name":"io.debezium.connector.mysql.Source","field":"source"},{"type":"string","optional":false,"field":"op"},{"type":"int64","optional":true,"field":"ts_ms"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"int64","optional":false,"field":"total_order"},{"type":"int64","optional":false,"field":"data_collection_order"}],"optional":true,"name":"event.block","version":1,"field":"transaction"}],"optional":false,"name":"my-debezium-cdc.user.user_account.Envelope","version":1},"payload":{"before":null,"after":{"uid":1,"name":"jack"},"source":{"version":"2.3.0.CR1","connector":"mysql","name":"my-debezium-cdc","ts_ms":1688195507000,"snapshot":"first","db":"user","sequence":null,"table":"user_account","server_id":0,"gtid":null,"file":"mysql-bin.000003","pos":37100403,"row":0,"thread":null,"query":null},"op":"r","ts_ms":1688195507990,"transaction":null},"timestamp":"2023-07-01T07:11:48.635Z"}
+{"schema":{"type":"struct","fields":[{"type":"struct","fields":[{"type":"int32","optional":false,"field":"account_id"},{"type":"string","optional":false,"field":"user_role"}],"optional":true,"name":"my-debezium-cdc.user.user_role.Value","field":"before"},{"type":"struct","fields":[{"type":"int32","optional":false,"field":"account_id"},{"type":"string","optional":false,"field":"user_role"}],"optional":true,"name":"my-debezium-cdc.user.user_role.Value","field":"after"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"version"},{"type":"string","optional":false,"field":"connector"},{"type":"string","optional":false,"field":"name"},{"type":"int64","optional":false,"field":"ts_ms"},{"type":"string","optional":true,"name":"io.debezium.data.Enum","version":1,"parameters":{"allowed":"true,last,false,incremental"},"default":"false","field":"snapshot"},{"type":"string","optional":false,"field":"db"},{"type":"string","optional":true,"field":"sequence"},{"type":"string","optional":true,"field":"table"},{"type":"int64","optional":false,"field":"server_id"},{"type":"string","optional":true,"field":"gtid"},{"type":"string","optional":false,"field":"file"},{"type":"int64","optional":false,"field":"pos"},{"type":"int32","optional":false,"field":"row"},{"type":"int64","optional":true,"field":"thread"},{"type":"string","optional":true,"field":"query"}],"optional":false,"name":"io.debezium.connector.mysql.Source","field":"source"},{"type":"string","optional":false,"field":"op"},{"type":"int64","optional":true,"field":"ts_ms"},{"type":"struct","fields":[{"type":"string","optional":false,"field":"id"},{"type":"int64","optional":false,"field":"total_order"},{"type":"int64","optional":false,"field":"data_collection_order"}],"optional":true,"name":"event.block","version":1,"field":"transaction"}],"optional":false,"name":"my-debezium-cdc.user.user_role.Envelope","version":1},"payload":{"before":null,"after":{"account_id":1,"user_role":"normal"},"source":{"version":"2.3.0.CR1","connector":"mysql","name":"my-debezium-cdc","ts_ms":1688195507000,"snapshot":"last","db":"user","sequence":null,"table":"user_role","server_id":0,"gtid":null,"file":"mysql-bin.000003","pos":37100403,"row":0,"thread":null,"query":null},"op":"r","ts_ms":1688195507997,"transaction":null},"timestamp":"2023-07-01T07:11:48.666Z"}
+```  
+
+이제 마지막으로 구성한 스트림의 엔드인 `Elasticsearch` 에 설정한 대로 인덱스와 데이터가 잘 들어갔는지 확인만 하면 된다. 
+`Kubernetes` 에 구성한 `Elasticsearch` 확인은 `Kibana` 를 통해 진행하는데, `Kibana` 접속은 `Service` 를 조회한 뒤 `EXTERNAL-IP` 를 통해 접속 할 수 있다.  
+
+```bash
+$ kubectl get svc
+NAME                                               TYPE           CLUSTER-IP       EXTERNAL-IP     PORT(S)          AGE
+kibana                                             LoadBalancer   xxx.xx.xxx.xxx   xx.xxx.xx.xxx   5601:45719/TCP   6d22h
+```  
+
+웹 브라우저에 `http://<kibana-external-ip>:5601` 로 접속한다. 
+그러면 `Kibana` 홈 화면이 나오는데 좌측 메뉴 `Management > Stack Management` 로 들어간다. 
+그리고 좌측 메뉴 `Kibana > Index patterns` 에 들어가고 `Create index pattern` 을 누른다.  
+
+`Name` 에 `app.debezium-cdc-index-processor.index.prefix=debezium-test` 입력한 값인, 
+`debezium-test` 를 입력해주면 아래와 같이 2개 테이블에 대한 2개의 인덱스가 날짜기반 `Rolling Index` 가 된 것을 확인 할 수 있다.  
+
+spring-cloud-data-flow-debezium-cdc-4.png
+
+생성된 각 인덱스의 필드와 대상 테이블이 다르기 때문에 각각 따로 인덱스 패턴을 지정해 주고, `Timestamp field` 또한 별도로 추가한 `timestamp` 필드로 지정한다.
+모두 완료됐으면 하단에 `Create index pattern` 을 눌러 생성을 완료한다.
+
+spring-cloud-data-flow-debezium-cdc-5.png
+
+spring-cloud-data-flow-debezium-cdc-6.png
+ 
+
+다시 좌측 메뉴에서 `Analytics > Discover` 로 접속한 뒤, 
+생성한 인덱스 패턴이 잘 설정 됐는지 확인하면 아래와 같다.  
+
+spring-cloud-data-flow-debezium-cdc-7.png
+
+spring-cloud-data-flow-debezium-cdc-8.png
+
 
 
 ---  
