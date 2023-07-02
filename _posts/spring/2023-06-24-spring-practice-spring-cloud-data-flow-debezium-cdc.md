@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Cloud Data Flow 에서 Debezium CDC 사용하기"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'SCDF 환경에서 Debezium Source 를 사용해서 CDC 를 구성해 보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -19,6 +19,7 @@ tags:
     - CDC
     - MySQL
     - Elasticsearch
+    - Kubernetes
 toc: true
 use_math: true
 ---  
@@ -386,7 +387,8 @@ mysql> select * from user_role;
 ### Stream 구성 
 스트림 구성에 사용할 `Stream Application` 은 아래와 같다. 
 
-spring-cloud-data-flow-debezium-cdc-1.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-1.png)
+
 
 애플리케이션 페이지에서 보이지 않는다면 `ADD APPLICATION` 을 통해 애플리케이션을 추가해준다. 
 
@@ -540,11 +542,11 @@ spec:
 
 필요한 애플리케이션 추가를 완료했으면, `Streams` 에서 `CREATE STREAM` 을 통해 아래와 같이 `Debezium CDC` 를 위한 스트림을 생성한다.  
 
-spring-cloud-data-flow-debezium-cdc-2.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-2.png)
 
 그리고 아래 `CREATE STREAM` 을 눌러 `scdf-debeizum-cdc` 라는 이름으로 스트림을 생성한다. 
 
-spring-cloud-data-flow-debezium-cdc-3.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-3.png)
 
 스트림이 생성됐으면 `DEPLOY STREAM` 을 눌러 배포 설정을 해주는데, 
 배포 설정은 `FreeText` 를 사용하고 그 내용은 아래와 같다. 
@@ -649,27 +651,31 @@ kibana                                             LoadBalancer   xxx.xx.xxx.xxx
 그리고 좌측 메뉴 `Kibana > Index patterns` 에 들어가고 `Create index pattern` 을 누른다.  
 
 `Name` 에 `app.debezium-cdc-index-processor.index.prefix=debezium-test` 입력한 값인, 
-`debezium-test` 를 입력해주면 아래와 같이 2개 테이블에 대한 2개의 인덱스가 날짜기반 `Rolling Index` 가 된 것을 확인 할 수 있다.  
+`debezium-test` 를 입력해주면 아래와 같이 2개 테이블에 대한 2개의 인덱스가 날짜기반 `Rolling Index` 가 된 것을 확인 할 수 있다. 
 
-spring-cloud-data-flow-debezium-cdc-4.png
+- `debezium-test-user-user_account-yyyy.MM.dd`
+- `debezium-test-user-user_role-yyyy.MM.dd`
+
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-4.png)
 
 생성된 각 인덱스의 필드와 대상 테이블이 다르기 때문에 각각 따로 인덱스 패턴을 지정해 주고, `Timestamp field` 또한 별도로 추가한 `timestamp` 필드로 지정한다.
 모두 완료됐으면 하단에 `Create index pattern` 을 눌러 생성을 완료한다.
 
-spring-cloud-data-flow-debezium-cdc-5.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-5.png)
 
-spring-cloud-data-flow-debezium-cdc-6.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-6.png)
  
 
 다시 좌측 메뉴에서 `Analytics > Discover` 로 접속한 뒤, 
 생성한 인덱스 패턴이 잘 설정 됐는지 확인하면 아래와 같다.  
 
-spring-cloud-data-flow-debezium-cdc-7.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-7.png)
 
-spring-cloud-data-flow-debezium-cdc-8.png
+![그림 1]({{site.baseurl}}/img/spring/spring-cloud-data-flow-debezium-cdc-8.png)
 
 
 
 ---  
 ## Reference
-[]()  
+[Debezium Source](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/source/debezium-source/README.adoc)  
+[Elasticsearch Sink](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/elasticsearch-sink/README.adoc)  
