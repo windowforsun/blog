@@ -70,7 +70,13 @@ use_math: true
 
 `Rolling Index` 를 위해서는 `elasticsearch-sink` 애플리케이션에서 헤더 중 `INDEX_NAME` 의 값이 있다면, 
 해당 값으로 인덱스를 사용한다는 스펙을 이용한다. 
-그리고 시계열 데이터 관리를 위해서는 `payload` 에 `timestamp` 새로운 필드를 추가한다.  
+그리고 시계열 데이터 관리를 위해서는 `payload` 에 `timestamp` 새로운 필드를 추가한다. 
+
+
+> 여기서 `elasticsearch-sink` 의 `INDEX_NAME` 헤더는 [v2020.0.2](https://github.com/spring-cloud/stream-applications/blob/v2020.0.2/functions/consumer/elasticsearch-consumer/src/main/java/org/springframework/cloud/fn/consumer/elasticsearch/ElasticsearchConsumerConfiguration.java)
+> 버전부터 존재하지만, 헤더에 `INDEX_NAME` 을 넣더라도 정상적으로 사용되지 않는 [이슈](https://github.com/spring-cloud/stream-applications/issues/440)
+> 가 있는데, 해당 이슈는 [v4.0.0-RC1](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/elasticsearch-sink/README.adoc)
+> 에서 수정되었다. 
 
 정리하면 `Index Processor` 인 `debezium-index-processor` 는 아래와 같은 내용을 수행한다. 
 
