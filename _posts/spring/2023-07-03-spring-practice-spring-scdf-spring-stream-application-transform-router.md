@@ -23,18 +23,19 @@ use_math: true
 ## SCDF 에서 Transform, Router, Tap 사용하기 
 `SCDF` 를 처음 구성하게 되면 기본으로 제공하는 [Spring Stream Application](https://github.com/spring-cloud/stream-applications)
 을 사용할 수 있다. 
-이번 포스트에서는 `Spring Stream Application` 에서 제공하는 것을 사용해서 메시지를 변환(`Transform`)하고, 
+이번 포스트에서는 `Spring Cloud Stream Application` 에서 제공하는 것을 사용해서 메시지를 변환(`Transform`)하고, 
 다른 채널로 전달(`Router`)하고 이를 다시 `Source` 로 사용하는 방법에 대해 알아본다. 
 
 사용할 애플리케이션은 아래 3개이다. 
 - `Transform` : [SpEL](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/functions/function/spel-function/README.adoc) 을 사용해서 메시지를 변환하는 `Processor`
 - `Router` : [SpEl](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/router-sink/README.adoc#spel-based-routing) 혹은 [Groovy](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/router-sink/README.adoc#groovy-based-routing) 방식으로 메시지를 타겟이 되는 채널로 전송하는 `Sink`
-- `Tap` : `SCDF` 에 정의된 특정 스트림 혹은 메시지의 토픽(채널)을 `Source` 로 사용할 수 있다. 
+- `Tap` or `Destination` : `SCDF` 에 정의된 특정 스트림 혹은 메시지의 토픽(채널)을 `Source` 로 사용할 수 있다. 
 
 
 구현할 스트림을 도식화하면 아래와 같다. 
 
-scdf-spring-stream-application-transform-router-1.drawio.png
+![그림 1]({{site.baseurl}}/img/spring/scdf-spring-stream-application-transform-router-1.drawio.png)
+
 
 실제로 생성할 스트림은 총3개로 간략한 설명은 아래와 같다. 
 
@@ -65,15 +66,16 @@ stream name : test-router-odd-log
 
 `CREATE STREAMS` 를 클릭한 뒤 위 `stream definition` 을 `Enter stream definition...` 에 입력해주면 된다. 
 
-scdf-spring-stream-application.transform-router-tap-1.png
+![그림 1]({{site.baseurl}}/img/spring/scdf-spring-stream-application.transform-router-tap-1.png)
 
-scdf-spring-stream-application.transform-router-tap-2.png
 
-scdf-spring-stream-application.transform-router-tap-3.png
+![그림 1]({{site.baseurl}}/img/spring/scdf-spring-stream-application.transform-router-tap-2.png)
+
+![그림 1]({{site.baseurl}}/img/spring/scdf-spring-stream-application.transform-router-tap-3.png)
 
 3개의 스트림을 모두 생성하면 아래 같이 리스트에서 확인 할 수 있다.  
 
-scdf-spring-stream-application.transform-router-tap-4.png
+![그림 1]({{site.baseurl}}/img/spring/scdf-spring-stream-application.transform-router-tap-4.png)
 
 가장 먼저 `time-transform-router` 를 배포한다. 
 스트림을 클릭후 `DEPLOY STREAM` 눌러 배포 화면으로 들어간다. 
@@ -125,7 +127,7 @@ $ kafka-console-consumer --bootstrap-server localhost:29092 --topic test-router-
 3
 ```  
 
-`Router` 에서 라우팅 해준 데이터를 각각 `Source` 로 사용해서 스트림이 이어서 진행 될수 있도록, 
+`Router` 에서 라우팅 해준 데이터를 각각 `Source` 로 사용해서 스트림이 연결 될 수 있도록, 
 `test-router-even-log` 스트림과 `test-router-odd-log` 스트림을 배포한다. 
 
 ```
@@ -173,42 +175,14 @@ spring.cloud.dataflow.skipper.platformName=default
 16:01:29.867  INFO [log-sink,373e66758cc3106d,0f2423397402f169] 6 --- [container-0-C-1] odd-log : 9
 16:01:31.867  INFO [log-sink,e73fcbdc66ded677,850761515f231610] 6 --- [container-0-C-1] odd-log : 1
 16:01:33.869  INFO [log-sink,51a165d6047d71d7,4ad13c211d6692d9] 6 --- [container-0-C-1] odd-log : 3
-```
+```  
 
-
-
-```
-stream definition : time | transform | router
-stream name : time-transform-router
-
-app.time.spring.integration.poller.fixed-rate=1000
-app.time.date-format=yyyy-MM-dd HH:mm:ss
-app.transform.spel.function.expression=payload.substring(payload.length() - 1)
-app.router.expression=new Integer(payload) % 2 == 0 ? 'test-router-even' : 'test-router-odd'
-deployer.*.kubernetes.limits.cpu=2
-deployer.*.kubernetes.limits.memory=1000Mi
-spring.cloud.dataflow.skipper.platformName=default
-
-stream definition : :test-router-even > log
-stream name : test-router-even-log
-
-app.log.name=even-log
-deployer.*.kubernetes.limits.cpu=2
-deployer.*.kubernetes.limits.memory=1000Mi
-spring.cloud.dataflow.skipper.platformName=default
-
-stream definition : :test-router-odd > log
-stream name : test-router-odd-log
-
-app.log.name=odd-log
-deployer.*.kubernetes.limits.cpu=2
-deployer.*.kubernetes.limits.memory=1000Mi
-spring.cloud.dataflow.skipper.platformName=default
-```
-
+`Spring Cloud Stream Application` 에서 기본으로 제공하는 애플리케이션을 사용해서, 
+`Transfrom` 으로 데이터를 변환하고 `Router` 로 데이터를 각 분류에 맞는 목적지로 전달 한뒤, 
+`Tap` 을 사용해서 기존 스트림의 결과를 목적지로 별도의 스트림이 연결될 수 있도록 구성해 보았다.  
 
 
 ---  
 ## Reference
-[Spring Cloud Data Flow Deploying with kubectl](https://dataflow.spring.io/docs/installation/kubernetes/kubectl/)
-[Stream Processing using Spring Cloud Data Flow](https://dataflow.spring.io/docs/stream-developer-guides/streams/data-flow-stream/)
+[Transform Processor](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/processor/transform-processor/README.adoc)
+[Router Sink](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/router-sink/README.adoc)
