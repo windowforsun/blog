@@ -186,3 +186,5 @@ spring.cloud.dataflow.skipper.platformName=default
 ## Reference
 [Transform Processor](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/processor/transform-processor/README.adoc)
 [Router Sink](https://github.com/spring-cloud/stream-applications/blob/v4.0.0-RC1/applications/sink/router-sink/README.adoc)
+[Named Destinations](https://dataflow.spring.io/docs/feature-guides/streams/named-destinations/)
+[Tapping a Stream](https://dataflow.spring.io/docs/feature-guides/streams/taps/)
