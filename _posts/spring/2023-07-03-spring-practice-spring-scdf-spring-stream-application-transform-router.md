@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] SCDF Spring Cloud Stream Application, Transform, Router, Tap"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'SCDF 에서 Spring Cloud Stream Application 의 Transform, Router, Tap 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,13 +15,17 @@ tags:
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
-    - MySQL
+    - Spring Cloud Stream Application
+    - Transform
+    - Router
+    - Tap
+    - Destination
 toc: true
 use_math: true
 ---  
 
 ## SCDF 에서 Transform, Router, Tap 사용하기 
-`SCDF` 를 처음 구성하게 되면 기본으로 제공하는 [Spring Stream Application](https://github.com/spring-cloud/stream-applications)
+`SCDF` 를 처음 구성하게 되면 기본으로 제공하는 [Spring Cloud Stream Application](https://github.com/spring-cloud/stream-applications)
 을 사용할 수 있다. 
 이번 포스트에서는 `Spring Cloud Stream Application` 에서 제공하는 것을 사용해서 메시지를 변환(`Transform`)하고, 
 다른 채널로 전달(`Router`)하고 이를 다시 `Source` 로 사용하는 방법에 대해 알아본다. 
