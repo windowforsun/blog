@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Cloud DataFlow Shell"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Cloud DataFlow 를 Dashboard 가 아닌 Shell 의 명령어로 조작하는 방법에 대해 알아보자'
+excerpt: 'Spring Cloud DataFlow 를 Shell 명령어로 조작하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,6 +16,7 @@ tags:
     - Spring Cloud Data Flow
     - SCDF
     - Shell
+    - Spring Cloud DataFlow Shell
 toc: true
 use_math: true
 ---  
@@ -303,7 +304,7 @@ dataflow:>stream list
 배포할 스트림별 프로퍼티 내용은 아래와 같다. 
 
 ```properties
-# shell-test-router-even-log 
+## shell-time-transform-router
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.memory=500Mi
@@ -313,7 +314,7 @@ app.time.date-format=yyyy-MM-dd HH:mm:ss
 app.transform.spel.function.expression=payload.substring(payload.length() - 1)
 app.router.expression=new Integer(payload) % 2 == 0 ? 'test-router-even' : 'test-router-odd'
 
-# shell-test-router-odd-log  
+## shell-test-router-even-log 
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.kubernetes.limits.memory=2000Mi
@@ -321,7 +322,7 @@ deployer.*.memory=1000Mi
 app.log.name=even-log
 spring.cloud.dataflow.skipper.platformName=default
 
-# shell-time-transform-router
+## shell-test-router-odd-log  
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.kubernetes.limits.memory=2000Mi
