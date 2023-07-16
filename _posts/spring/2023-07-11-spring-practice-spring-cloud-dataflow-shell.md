@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Cloud DataFlow Shell"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Cloud DataFlow 를 Dashboard 가 아닌 Shell 의 명령어로 조작하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,6 +15,7 @@ tags:
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
+    - Shell
 toc: true
 use_math: true
 ---  
@@ -331,6 +332,7 @@ spring.cloud.dataflow.skipper.platformName=default
 ```  
 
 > Shell 을 통해 배포할떄 프로퍼티 중 `deployer.*` 관련은 가장 앞에 두는게 좋다. 그렇지 않으면 파싱에러가 발생한 경험이 있다. 
+> `SpEL` 등을 사용하는 프로퍼티 배포 등에는 [Quotes and Escaping](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#dsl-quotes-escaping) 을 참고해서 작성이 필요하다.  
 
 ```bash
 dataflow:>stream deploy --name shell-time-transform-router --properties "deployer.*.cpu=100m,\
