@@ -3,30 +3,31 @@ layout: single
 classes: wide
 title: "[Spring 실습] Spring Cloud DataFlow Shell"
 header:
-  overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring Cloud DataFlow 를 Dashboard 가 아닌 Shell 의 명령어로 조작하는 방법에 대해 알아보자'
+overlay_image: /img/spring-bg.jpg
+excerpt: 'Spring Cloud DataFlow 를 Shell 명령어로 조작하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
-  - Spring
-tags:
+- Spring
+  tags:
     - Practice
     - Spring
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
     - Shell
-toc: true
-use_math: true
+    - Spring Cloud DataFlow Shell
+      toc: true
+      use_math: true
 ---  
 
 ## Spring Cloud DataFlow Shell
 [Spring Cloud DataFlow Shell](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#shell)
-을 사용하면 `UI` 대시보드 대신 `Spring Cloud DataFlow` 를 조작할 수 있다. 
-대시보드와 동일한 모든 기능을 수행할 수 있는 멍령어를 제공한다.  
+을 사용하면 `UI` 대시보드 대신 `Spring Cloud DataFlow` 를 조작할 수 있다.
+대시보드와 동일한 모든 기능을 수행할 수 있는 멍령어를 제공한다.
 
-[Shell 설치](https://dataflow.spring.io/docs/installation/local/manual/#shell) 
-는 아래와 같다.  
+[Shell 설치](https://dataflow.spring.io/docs/installation/local/manual/#shell)
+는 아래와 같다.
 
 ```bash
 $ wget -O spring-cloud-dataflow-shell-2.10.2.jar https://repo.maven.apache.org/maven2/org/springframework/cloud/spring-cloud-dataflow-shell/2.10.2/spring-cloud-dataflow-shell-2.10.2.jar
@@ -34,7 +35,7 @@ $ java -jar spring-cloud-dataflow-shell-2.10.2.jar
 ```  
 
 ### SCDF 연결
-`Shell` 과 `SCDF` 를 연결하는 방법은 2가지 방법이 있다.  
+`Shell` 과 `SCDF` 를 연결하는 방법은 2가지 방법이 있다.
 
 - 실행시 프로퍼티를 사용해서 연결
 
@@ -50,8 +51,8 @@ $ java -jar spring-cloud-dataflow-shell-2.10.2.jar
 server-unknown:>dataflow config server http://{SCDF_IP}:{SCDF_PORT}
 ```  
 
-### 명령어 살펴보기 
-`Shell` 에서 사용할 수 있는 쉘에서 `help` 명령을 통해 확인 할 수 있다.  
+### 명령어 살펴보기
+`Shell` 에서 사용할 수 있는 쉘에서 `help` 명령을 통해 확인 할 수 있다.
 
 ```bash
 dataflow:>help
@@ -135,11 +136,11 @@ Task Scheduler Commands
        task schedule list: List task schedules by task definition name
 ```  
 
-애플리케이션 추가/삭제 부터 시작해서 스트림 정의, 배포, 롤백, 업데이트 등 대부분 동작이 가능하다. 
-아래에서 몇가지 명령에 대해서만 예제로 알아본다. 
+애플리케이션 추가/삭제 부터 시작해서 스트림 정의, 배포, 롤백, 업데이트 등 대부분 동작이 가능하다.
+아래에서 몇가지 명령에 대해서만 예제로 알아본다.
 
 ### SCDF 정보 (dataflow config info)
-`dataflow config info` 를 사용하면 현재 `Shell` 과 연결된 `SCDF` 의 상세정보를 확인 할 수 있다.  
+`dataflow config info` 를 사용하면 현재 `Shell` 과 연결된 `SCDF` 의 상세정보를 확인 할 수 있다.
 
 ```bash
 dataflow:>dataflow config info
@@ -192,10 +193,10 @@ dataflow:>dataflow config info
 ```  
 
 ### 애플리케이션 추가 (app register)
-`app register --type {application_type} --name {application_name} --uri {application_uri}` 
-를 사용하면 새로운 애플리케이션을 추가할 수 있다. 
+`app register --type {application_type} --name {application_name} --uri {application_uri}`
+를 사용하면 새로운 애플리케이션을 추가할 수 있다.
 테스트를 위해 `Processor` 애플리케이션 중 [uppercase-transformer-kafka](https://hub.docker.com/r/springcloudstream/uppercase-transformer-kafka)
-라는 애플리케이션을 추가한다.  
+라는 애플리케이션을 추가한다.
 
 ```bash
 dataflow:>app register --type processor --name uppercase-transformer-kafka --uri docker:springcloudstream/uppercase-transformer-kafka
@@ -203,7 +204,7 @@ Successfully registered application 'processor:uppercase-transformer-kafka'
 ```  
 
 ### 애플리케이션 리스트 (app list)
-`app list` 명령은 현재 `SCDF` 에 추가된 애플리케이션의 전체 목록을 확인 할 수 있다.  
+`app list` 명령은 현재 `SCDF` 에 추가된 애플리케이션의 전체 목록을 확인 할 수 있다.
 
 ```bash
 dataflow:>app list
@@ -237,11 +238,11 @@ dataflow:>app list
 ╚═══╧═══════════════╧════════════════════════════╧══════════════════╧════╝
 ```  
 
-`Processor` 리스트를 보면 방금 추가한 `uppercase-transformer-kafka` 를 확인 할 수 있다.  
+`Processor` 리스트를 보면 방금 추가한 `uppercase-transformer-kafka` 를 확인 할 수 있다.
 
 ### 애플리케이션 정보 (app info)
-`app info --type {application_type} --name {application_name}` 명령은 
-해당 애플리케이션의 버전, 프로퍼티 등 상세 정보를 확인 할 수 있다.  
+`app info --type {application_type} --name {application_name}` 명령은
+해당 애플리케이션의 버전, 프로퍼티 등 상세 정보를 확인 할 수 있다.
 
 ```bash
 dataflow:>app info --type processor --name transform
@@ -257,8 +258,8 @@ Resource URI: docker:springcloudstream/transform-processor-kafka:3.2.1
 ```  
 
 ### 애플리케이션 삭제 (app unregister)
-`app unregister --type {application_type} --name {application_name}` 
-명령을 통해 등록한 애플리케이션을 삭제 할 수 있다.  
+`app unregister --type {application_type} --name {application_name}`
+명령을 통해 등록한 애플리케이션을 삭제 할 수 있다.
 
 ```bash
 dataflow:>app unregister --type processor --name uppercase-transformer-kafka
@@ -266,12 +267,12 @@ Successfully unregistered application 'uppercase-transformer-kafka' with type 'p
 ```  
 
 ### 스트림 생성 (stream create)
-`stream create --definition {stream_definition} --name {stream_name}` 
-명령을 사용하면 정의와 이름에 해당하는 새로운 스트림 생성이 가능하다. 
+`stream create --definition {stream_definition} --name {stream_name}`
+명령을 사용하면 정의와 이름에 해당하는 새로운 스트림 생성이 가능하다.
 
 테스트로 생성해볼 스트림은
 [Transformer, Router, Tap]({{site.baseurl}}{% link _posts/spring/2023-07-03-spring-practice-spring-scdf-spring-stream-application-transform-router.md %})
-와 동일한 스트림을 생성한다. 
+와 동일한 스트림을 생성한다.
 
 ```bash
 dataflow:>stream create --definition "time | transform | router" --name shell-time-transform-router
@@ -283,7 +284,7 @@ Created new stream 'shell-test-router-odd-log'
 ```  
 
 ### 스트림 리스트 조회 (stream list)
-`stream list` 명령으로 현재 `SCDF` 에 생성된 모든 스트림 이름, 설명, 상태를 조회 할 수 있다.  
+`stream list` 명령으로 현재 `SCDF` 에 생성된 모든 스트림 이름, 설명, 상태를 조회 할 수 있다.
 
 ```bash
 dataflow:>stream list
@@ -297,13 +298,13 @@ dataflow:>stream list
 ```  
 
 ### 스트림 배포 (stream deploy)
-`stream deploy --name {stream_name} --properties {stream_properties}` 
-명령으로 배포할 스트림과 배포할 때 애플리케이션에서 사용할 프로퍼티를 넣어주면 해당 내용으로 배포가 가능하다.  
+`stream deploy --name {stream_name} --properties {stream_properties}`
+명령으로 배포할 스트림과 배포할 때 애플리케이션에서 사용할 프로퍼티를 넣어주면 해당 내용으로 배포가 가능하다.
 
-배포할 스트림별 프로퍼티 내용은 아래와 같다. 
+배포할 스트림별 프로퍼티 내용은 아래와 같다.
 
 ```properties
-# shell-test-router-even-log 
+## shell-time-transform-router
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.memory=500Mi
@@ -313,7 +314,7 @@ app.time.date-format=yyyy-MM-dd HH:mm:ss
 app.transform.spel.function.expression=payload.substring(payload.length() - 1)
 app.router.expression=new Integer(payload) % 2 == 0 ? 'test-router-even' : 'test-router-odd'
 
-# shell-test-router-odd-log  
+## shell-test-router-even-log 
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.kubernetes.limits.memory=2000Mi
@@ -321,7 +322,7 @@ deployer.*.memory=1000Mi
 app.log.name=even-log
 spring.cloud.dataflow.skipper.platformName=default
 
-# shell-time-transform-router
+## shell-test-router-odd-log  
 deployer.*.cpu=100m
 deployer.*.kubernetes.limits.cpu=2000m
 deployer.*.kubernetes.limits.memory=2000Mi
@@ -331,8 +332,8 @@ spring.cloud.dataflow.skipper.platformName=default
 
 ```  
 
-> Shell 을 통해 배포할떄 프로퍼티 중 `deployer.*` 관련은 가장 앞에 두는게 좋다. 그렇지 않으면 파싱에러가 발생한 경험이 있다. 
-> `SpEL` 등을 사용하는 프로퍼티 배포 등에는 [Quotes and Escaping](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#dsl-quotes-escaping) 을 참고해서 작성이 필요하다.  
+> Shell 을 통해 배포할떄 프로퍼티 중 `deployer.*` 관련은 가장 앞에 두는게 좋다. 그렇지 않으면 파싱에러가 발생한 경험이 있다.
+> `SpEL` 등을 사용하는 프로퍼티 배포 등에는 [Quotes and Escaping](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#dsl-quotes-escaping) 을 참고해서 작성이 필요하다.
 
 ```bash
 dataflow:>stream deploy --name shell-time-transform-router --properties "deployer.*.cpu=100m,\
@@ -362,7 +363,7 @@ spring.cloud.dataflow.skipper.platformName=default"
 Deployment request has been sent for stream 'shell-test-router-odd-log'
 ```  
 
-다시 `stream list` 로 상태를 조회해서 `Status` 를 보면 아래와 같이 배포가 완료된 것을 확인 할 수 있다.  
+다시 `stream list` 로 상태를 조회해서 `Status` 를 보면 아래와 같이 배포가 완료된 것을 확인 할 수 있다.
 
 ```bash
 dataflow:>stream list
@@ -376,7 +377,7 @@ dataflow:>stream list
 ```  
 
 ### 실행 중인 스트림 애플리케이션 확인 (runtime apps)
-`runtime apps` 명령을 사용하면 현재 `SCDF` 을 통해 실행 중인 애플리케이션의 정보를 확인 할 수 있다.  
+`runtime apps` 명령을 사용하면 현재 `SCDF` 을 통해 실행 중인 애플리케이션의 정보를 확인 할 수 있다.
 
 ```bash
 dataflow:>runtime apps
@@ -466,7 +467,7 @@ dataflow:>runtime apps
 ```  
 
 ### 스트림 정보관련 확인하기 (stream info, stream manifest, stream validate)
-`stream info --name {stream_name}` 명령은 현재 스트림의 상태, 정의, 배포 프로퍼티 등을 확인 할 수 있다. 
+`stream info --name {stream_name}` 명령은 현재 스트림의 상태, 정의, 배포 프로퍼티 등을 확인 할 수 있다.
 
 ```bash
 dataflow:>stream info --name shell-time-transform-router
@@ -525,7 +526,7 @@ Stream Deployment properties: {
 
 ```  
 
-`stream manifest --name {stream_name}` 명령은 스트림의 배포 설정 파일을 조회 할 수 있다.  
+`stream manifest --name {stream_name}` 명령은 스트림의 배포 설정 파일을 조회 할 수 있다.
 
 ```bash
 dataflow:>stream manifest --name shell-time-transform-router
@@ -623,8 +624,8 @@ apiVersion": "skipper.spring.io/v1"
     "spring.cloud.deployer.group": "shell-time-transform-router"
 ```  
 
-`stream validate --name {stream_name}` 명령은 현재 설정된 스트림 구성 정보(프로퍼티 포함)이 
-옮바른지 검사를 할 수 있다.  
+`stream validate --name {stream_name}` 명령은 현재 설정된 스트림 구성 정보(프로퍼티 포함)이
+옮바른지 검사를 할 수 있다.
 
 ```bash
 dataflow:>stream validate --name shell-time-transform-router
@@ -664,15 +665,15 @@ shell-time-transform-router is a valid stream.
 ```  
 
 ### 스트림 업데이트 (stream update)
-`stream update --name {stream_name} --properties {stream_update_properties}` 
-명령을 사용하면 스트림의 프로퍼티를 수정해서 재배포 할 수 있다.  
+`stream update --name {stream_name} --properties {stream_update_properties}`
+명령을 사용하면 스트림의 프로퍼티를 수정해서 재배포 할 수 있다.
 
 ```bash
 dataflow:>stream update --name shell-time-transform-router --properties "app.time.spring.integration.poller.fixed-rate=100"
 Update request has been sent for the stream 'shell-time-transform-router'
 ```  
 
-`runtime apps` 로 다시 조회하면 `hell-time-transform-router-time` 만 `v9` 로 재시작되면 버전이 올라간것을 확인 할 수 있다.  
+`runtime apps` 로 다시 조회하면 `hell-time-transform-router-time` 만 `v9` 로 재시작되면 버전이 올라간것을 확인 할 수 있다.
 
 ```bash
 dataflow:>runtime apps
@@ -697,15 +698,15 @@ dataflow:>runtime apps
 ╚═══════════════════════════════════════════════════════════════╧═══════════╧══════════════════════════════════════════════════════════════════════════════════════════╝
 ```  
 
-`shell-transform-router` 스트림에서 `time` 애플리케이션의 프로퍼티만 변겅 됐기 때문에, 
-해당 애플리케이션만 새로운 버전으로 재시작 된다.  
+`shell-transform-router` 스트림에서 `time` 애플리케이션의 프로퍼티만 변겅 됐기 때문에,
+해당 애플리케이션만 새로운 버전으로 재시작 된다.
 
 ### 스트림 스케일 조정 (stream scale app)
-`stream scale app --name {stream_name} --applicationName {app_name_in_stream} --count {scale_count}` 
-명령은 스트림에서 특정 애플리케이션의 스케일을 조정할 수 있다.  
+`stream scale app --name {stream_name} --applicationName {app_name_in_stream} --count {scale_count}`
+명령은 스트림에서 특정 애플리케이션의 스케일을 조정할 수 있다.
 
-`shell-time-transform-router` 스트림의 `time` 애플리케이션을 2개로 늘리면, 
-아래와 같이 `runtime apps` 실행 시 2개의 `Pod` 이 조회되는 것을 확인 할 수 있다. 
+`shell-time-transform-router` 스트림의 `time` 애플리케이션을 2개로 늘리면,
+아래와 같이 `runtime apps` 실행 시 2개의 `Pod` 이 조회되는 것을 확인 할 수 있다.
 
 
 ```bash
@@ -750,7 +751,7 @@ dataflow:>runtime apps
 
 
 ### 스트림 배포 취소 (stream undeploy)
-`stream undeploy --name {stream_name}` 명령을 사용하면 배포된 스트림을 배포 취소 할 수 있다.  
+`stream undeploy --name {stream_name}` 명령을 사용하면 배포된 스트림을 배포 취소 할 수 있다.
 
 ```bash
 dataflow:>stream undeploy --name shell-test-router-even-log
@@ -772,7 +773,7 @@ dataflow:>stream list
 ```  
 
 ### 스트림 삭제 (stream destroy)
-`stream destroy --name {stream_name}` 명령은 이미 정의된 스트림을 삭제할 수 있다.  
+`stream destroy --name {stream_name}` 명령은 이미 정의된 스트림을 삭제할 수 있다.
 
 ```bash
 dataflow:>stream destroy --name shell-test-router-even-log
@@ -786,7 +787,7 @@ Destroyed stream 'shell-time-transform-router'
 
 
 ### 명령어 히스토리 조회 (history)
-`history` 명령은 그 동안 `Shell` 에서 수행한 명령어 이력을 조회해 볼 수 있다. 
+`history` 명령은 그 동안 `Shell` 에서 수행한 명령어 이력을 조회해 볼 수 있다.
 
 ```bash
 dataflow:>history
