@@ -515,7 +515,672 @@ spring.cloud.dataflow.skipper.platformName=default
 ```  
 
 
+```bash
+$ curl -X POST http://localhost:9393/streams/deployments/rest-time-transform-router \
+-H "Content-Type: application/json" \
+--data '{
+"deployer.*.cpu":"100m",
+"deployer.*.kubernetes.limits.cpu":"2000m",
+"deployer.*.memory":"500Mi",
+"deployer.*.kubernetes.limits.memory":"1000Mi",
+"app.time.spring.integration.poller.fixed-rate":1000,
+"app.time.date-format":"yyyy-MM-dd HH:mm:ss",
+"app.transform.spel.function.expression":"payload.substring(payload.length() - 1)",
+"app.router.expression":"new Integer(payload) % 2 == 0 ? ''test-router-even'' : ''test-router-odd''"
+}' | jq
 
+$ curl -X POST http://localhost:9393/streams/deployments/rest-test-router-even-log \
+-H "Content-Type: application/json" \
+--data '{
+"deployer.*.cpu":"100m",
+"deployer.*.kubernetes.limits.cpu":"2000m",
+"deployer.*.memory":"500Mi",
+"deployer.*.kubernetes.limits.memory":"1000Mi",
+"app.log.name":"even-log"
+}' | jq
+
+$ curl -X POST http://localhost:9393/streams/deployments/rest-test-router-odd-log \
+-H "Content-Type: application/json" \
+--data '{
+"deployer.*.cpu":"100m",
+"deployer.*.kubernetes.limits.cpu":"2000m",
+"deployer.*.memory":"500Mi",
+"deployer.*.kubernetes.limits.memory":"1000Mi",
+"app.log.name":"odd-log"
+}' | jq
+```  
+
+다시 `rest` 이름의 스트림들을 조회하면 아래와 같다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/definitions\?page\=0\&sort\=name,ASC\&search\=rest\&size\=50 | jq
+{
+  "_embedded": {
+    "streamDefinitionResourceList": [
+      {
+        "name": "rest-test-router-even-log",
+        "dslText": ":test-router-even > log --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --log.name=even-log --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown}",
+        "originalDslText": ":test-router-even > log",
+        "status": "deployed",
+        "description": "",
+        "statusDescription": "The stream has been successfully deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-test-router-even-log"
+          }
+        }
+      },
+      {
+        "name": "rest-test-router-odd-log",
+        "dslText": ":test-router-odd > log --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --log.name=odd-log --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown}",
+        "originalDslText": ":test-router-odd > log",
+        "status": "deployed",
+        "description": "",
+        "statusDescription": "The stream has been successfully deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-test-router-odd-log"
+          }
+        }
+      },
+      {
+        "name": "rest-time-transform-router",
+        "dslText": "time --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --time.date-format='yyyy-MM-dd HH:mm:ss' --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --spring.integration.poller.fixed-rate=1000 --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | transform --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --spel.function.expression='payload.substring(payload.length() - 1)' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | router --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --router.expression='new Integer(payload) % 2 == 0 ? test-router-even : test-router-odd' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown}",
+        "originalDslText": "time | transform | router",
+        "status": "deployed",
+        "description": "",
+        "statusDescription": "The stream has been successfully deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-time-transform-router"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/streams/definitions?search=rest&page=0&size=50&sort=name,asc"
+    }
+  },
+  "page": {
+    "size": 50,
+    "totalElements": 3,
+    "totalPages": 1,
+    "number": 0
+  }
+}
+```  
+
+상태값을 의미하는 `status` 필드가 `deployed` 로 변경됐고, 
+배포때 사용한 프로퍼티 값이 `dslText` 에 설정돼 있는 것을 확인 할 수 있다.  
+
+### 실행 중 애플리케이션 확인 (/runtime/apps)
+`GET /runtime/apps` 요청은 현재 `SCDF` 를 통해 실행 중인 전체 애플리케이션을 조회할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/runtime/apps | jq
+{
+  "_embedded": {
+    "appStatusResourceList": [
+      {
+        "deploymentId": "rest-test-router-even-log-log-v1",
+        "state": "deployed",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "rest-test-router-even-log-log-v1-699696646c-psxd2",
+                "state": "deployed",
+                "attributes": {
+                  "container.restartCount": "0",
+                  "guid": "3bb16063-b09d-4eeb-8414-caf499af6252",
+                  "host.ip": "10.172.113.207",
+                  "phase": "Running",
+                  "pod.ip": "10.174.131.110",
+                  "pod.name": "rest-test-router-even-log-log-v1-699696646c-psxd2",
+                  "pod.startTime": "2023-07-16T11:06:48Z",
+                  "service.name": "rest-test-router-even-log-log",
+                  "skipper.application.name": "log",
+                  "skipper.release.name": "rest-test-router-even-log",
+                  "skipper.release.version": "1",
+                  "spring.app.id": "rest-test-router-even-log-log-v1",
+                  "spring.deployment.id": "rest-test-router-even-log-log-v1"
+                },
+                "guid": "3bb16063-b09d-4eeb-8414-caf499af6252",
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/rest-test-router-even-log-log-v1/instances/rest-test-router-even-log-log-v1-699696646c-psxd2"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "name": "log",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-test-router-even-log-log-v1"
+          }
+        }
+      },
+      {
+        "deploymentId": "rest-test-router-odd-log-log-v1",
+        "state": "deployed",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "rest-test-router-odd-log-log-v1-85b675f4dd-tcpsg",
+                "state": "deployed",
+                "attributes": {
+                  "container.restartCount": "0",
+                  "guid": "9e5b4336-5116-43c5-a6b4-9288fd115c77",
+                  "host.ip": "10.172.113.207",
+                  "phase": "Running",
+                  "pod.ip": "10.174.131.122",
+                  "pod.name": "rest-test-router-odd-log-log-v1-85b675f4dd-tcpsg",
+                  "pod.startTime": "2023-07-16T11:06:53Z",
+                  "service.name": "rest-test-router-odd-log-log",
+                  "skipper.application.name": "log",
+                  "skipper.release.name": "rest-test-router-odd-log",
+                  "skipper.release.version": "1",
+                  "spring.app.id": "rest-test-router-odd-log-log-v1",
+                  "spring.deployment.id": "rest-test-router-odd-log-log-v1"
+                },
+                "guid": "9e5b4336-5116-43c5-a6b4-9288fd115c77",
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/rest-test-router-odd-log-log-v1/instances/rest-test-router-odd-log-log-v1-85b675f4dd-tcpsg"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "name": "log",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-test-router-odd-log-log-v1"
+          }
+        }
+      },
+      {
+        "deploymentId": "rest-time-transform-router-router-v2",
+        "state": "deployed",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "rest-time-transform-router-router-v2-6c897bdf49-7nplc",
+                "state": "deployed",
+                "attributes": {
+                  "container.restartCount": "0",
+                  "guid": "f9129c64-1639-4c56-96e1-a0edaf86ba82",
+                  "host.ip": "10.174.53.153",
+                  "phase": "Running",
+                  "pod.ip": "10.175.40.81",
+                  "pod.name": "rest-time-transform-router-router-v2-6c897bdf49-7nplc",
+                  "pod.startTime": "2023-07-16T11:06:33Z",
+                  "service.name": "rest-time-transform-router-router",
+                  "skipper.application.name": "router",
+                  "skipper.release.name": "rest-time-transform-router",
+                  "skipper.release.version": "2",
+                  "spring.app.id": "rest-time-transform-router-router-v2",
+                  "spring.deployment.id": "rest-time-transform-router-router-v2"
+                },
+                "guid": "f9129c64-1639-4c56-96e1-a0edaf86ba82",
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-router-v2/instances/rest-time-transform-router-router-v2-6c897bdf49-7nplc"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "name": "router",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-router-v2"
+          }
+        }
+      },
+      {
+        "deploymentId": "rest-time-transform-router-transform-v2",
+        "state": "deployed",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "rest-time-transform-router-transform-v2-bb755c845-4rz6s",
+                "state": "deployed",
+                "attributes": {
+                  "container.restartCount": "0",
+                  "guid": "75764bbd-fd76-43a1-9145-f02c6bb51a6d",
+                  "host.ip": "10.113.134.10",
+                  "phase": "Running",
+                  "pod.ip": "10.175.6.151",
+                  "pod.name": "rest-time-transform-router-transform-v2-bb755c845-4rz6s",
+                  "pod.startTime": "2023-07-16T11:06:33Z",
+                  "service.name": "rest-time-transform-router-transform",
+                  "skipper.application.name": "transform",
+                  "skipper.release.name": "rest-time-transform-router",
+                  "skipper.release.version": "2",
+                  "spring.app.id": "rest-time-transform-router-transform-v2",
+                  "spring.deployment.id": "rest-time-transform-router-transform-v2"
+                },
+                "guid": "75764bbd-fd76-43a1-9145-f02c6bb51a6d",
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-transform-v2/instances/rest-time-transform-router-transform-v2-bb755c845-4rz6s"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "name": "transform",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-transform-v2"
+          }
+        }
+      },
+      {
+        "deploymentId": "rest-time-transform-router-time-v2",
+        "state": "deployed",
+        "instances": {
+          "_embedded": {
+            "appInstanceStatusResourceList": [
+              {
+                "instanceId": "rest-time-transform-router-time-v2-667d54d7cd-tbwc6",
+                "state": "deployed",
+                "attributes": {
+                  "container.restartCount": "0",
+                  "guid": "a950d44c-2a8d-49ff-9edd-422682e9a531",
+                  "host.ip": "10.172.113.206",
+                  "phase": "Running",
+                  "pod.ip": "10.174.130.193",
+                  "pod.name": "rest-time-transform-router-time-v2-667d54d7cd-tbwc6",
+                  "pod.startTime": "2023-07-16T11:06:33Z",
+                  "service.name": "rest-time-transform-router-time",
+                  "skipper.application.name": "time",
+                  "skipper.release.name": "rest-time-transform-router",
+                  "skipper.release.version": "2",
+                  "spring.app.id": "rest-time-transform-router-time-v2",
+                  "spring.deployment.id": "rest-time-transform-router-time-v2"
+                },
+                "guid": "a950d44c-2a8d-49ff-9edd-422682e9a531",
+                "_links": {
+                  "self": {
+                    "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v2/instances/rest-time-transform-router-time-v2-667d54d7cd-tbwc6"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "name": "time",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v2"
+          }
+        }
+      },
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/runtime/apps?page=0&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 5,
+    "totalPages": 1,
+    "number": 0
+  }
+}
+```  
+
+`rest-time-transform-router`, `rest-test-router-even`, `rest-test-router-odd` 스트림에서 
+실행 중인 5개 애플리케이션이 조회되는 것을 확인 할 수 있다.  
+
+`GET /runtime/apps/{appIp}/instance` 요청은 실행 중인 전체 애플리케이션 중 
+특정 애플리케이션에 대한 인스턴스 정보를 조회할 수 있다. 
+테스트를 위해 시간값을 1초마다 생성하는 `rest-time-transform-router` 스트림 중 `time` 애플리케이션을 조회 하면 아래와 같다.  
+
+```bash
+$ curl -X GET http://localhost:9393/runtime/apps/rest-time-transform-router-time-v2/instances | jq 
+{
+  "_embedded": {
+    "appInstanceStatusResourceList": [
+      {
+        "instanceId": "rest-time-transform-router-time-v2-667d54d7cd-tbwc6",
+        "state": "deployed",
+        "attributes": {
+          "container.restartCount": "0",
+          "guid": "a950d44c-2a8d-49ff-9edd-422682e9a531",
+          "host.ip": "10.172.113.206",
+          "phase": "Running",
+          "pod.ip": "10.174.130.193",
+          "pod.name": "rest-time-transform-router-time-v2-667d54d7cd-tbwc6",
+          "pod.startTime": "2023-07-16T11:06:33Z",
+          "service.name": "rest-time-transform-router-time",
+          "skipper.application.name": "time",
+          "skipper.release.name": "rest-time-transform-router",
+          "skipper.release.version": "2",
+          "spring.app.id": "rest-time-transform-router-time-v2",
+          "spring.deployment.id": "rest-time-transform-router-time-v2"
+        },
+        "guid": "a950d44c-2a8d-49ff-9edd-422682e9a531",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v2/instances/rest-time-transform-router-time-v2-667d54d7cd-tbwc6"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v2/instances?page=0&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 1,
+    "totalPages": 1,
+    "number": 0
+  }
+}
+
+```  
+
+### 스트림 정보 관련 확인 (/streams/definitions/{name})
+`GET /streams/definitions/{name}` 요청은 특정 스트림의 상세 정보를 조회 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/definitions/rest-time-transform-router | jq
+{
+  "name": "rest-time-transform-router",
+  "dslText": "time --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --time.date-format='yyyy-MM-dd HH:mm:ss' --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --spring.integration.poller.fixed-rate=1000 --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | transform --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --spel.function.expression='payload.substring(payload.length() - 1)' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | router --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --router.expression='new Integer(payload) % 2 == 0 ? test-router-even : test-router-odd' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown}",
+  "originalDslText": "time | transform | router",
+  "status": "deployed",
+  "description": "",
+  "statusDescription": "The stream has been successfully deployed",
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/streams/definitions/rest-time-transform-router"
+    }
+  }
+}
+```  
+
+### 스트림 업데이트 (/streams/deployments/update/{name})
+`POST /streams/deployments/update/{name}` 요청과 함께 `Request Body` 에 
+업데이트가 필요한 프로퍼티를 함께 사용하면 기존 실행 중인 애플리케이션을 업데이트 할 수 있다.  
+
+아래는 `rest-time-transform-router` 스트림의 `time` 애플리케이션의 주기를 `1초 -> 0.1초`로 변경하고, 
+출력 포맷은 `yyyy-MM-dd HH:mm:ss -> yyyyMMddHHmmssSSS` 로 변경한 예시이다.  
+
+```bash
+$ curl -X POST http://localhost:9393/streams/deployments/update/rest-time-transform-router \
+-H "Content-Type: application/json" \
+--data '{
+"releaseName" : "rest-time-transform-router",
+    "packageIdentifier" : {
+          "repositoryName" : "test",
+          "packageName" : "rest-time-transform-router",
+          "packageVersion" : "1.0.0"
+      },
+    "updateProperties" : {
+        "app.time.spring.integration.poller.fixed-rate":100,
+        "app.time.date-format":"yyyyMMddHHmmssSSS"
+      }
+    }
+}'
+```  
+
+업데이트 확인을 위해 `rest-time-transform-router` 스트림의 상세 정보를 조회하면 아래와 같이 
+업데이트를 요청한 값과 동일하게 반영된 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/definitions/rest-time-transform-router | jq
+{
+  "name": "rest-time-transform-router",
+  "dslText": "time --time.date-format=yyyyMMddHHmmssSSS --spring.integration.poller.fixed-rate=100 --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | transform --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --spel.function.expression='payload.substring(payload.length() - 1)' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown} | router --wavefront.application.service=${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown}-${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --management.metrics.tags.application.type=${spring.cloud.dataflow.stream.app.type:unknown} --management.metrics.tags.stream.name=${spring.cloud.dataflow.stream.name:unknown} --management.metrics.tags.application=${spring.cloud.dataflow.stream.name:unknown}-${spring.cloud.dataflow.stream.app.label:unknown}-${spring.cloud.dataflow.stream.app.type:unknown} --router.expression='new Integer(payload) % 2 == 0 ? test-router-even : test-router-odd' --management.metrics.tags.application.guid=${spring.cloud.application.guid:unknown} --management.metrics.tags.application.name=${vcap.application.application_name:${spring.cloud.dataflow.stream.app.label:unknown}} --management.metrics.tags.instance.index=${vcap.application.instance_index:${spring.cloud.stream.instanceIndex:0}} --wavefront.application.name=${spring.cloud.dataflow.stream.name:unknown}",
+  "originalDslText": "time | transform | router",
+  "status": "deployed",
+  "description": "",
+  "statusDescription": "The stream has been successfully deployed",
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/streams/definitions/rest-time-transform-router"
+    }
+  }
+}
+```  
+
+
+### 스트림 스케일 조정 (/streams/deployments/scale)
+`POST /streams/deployments/scale/{streamName}/{appName}/instance/{count}` 
+요청을 통해서는 스트림을 구성하는 특정 애플리케이션의 스케일을 조정할 수 있다.  
+
+아래는 `rest-time-transform-router` 스트림의 `time` 애플리케이션의 스케일을 `2` 조정하는 예시이다.  
+
+```bash
+$ curl -X POST http://localhost:9393/streams/deployments/scale/rest-time-transform-router/time/instances/2 | jq
+
+```  
+
+위 요청을 수행한 뒤 `rest-time-transform-router` 스트림의 `time` 애플리케이션을 조회하면 아래와 같이 2개의 인스턴스가 조회되는 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/runtime/apps/rest-time-transform-router-time-v3/instances | jq
+{
+  "_embedded": {
+    "appInstanceStatusResourceList": [
+      {
+        "instanceId": "rest-time-transform-router-time-v3-7d85cc49b8-8gg6h",
+        "state": "deployed",
+        "attributes": {
+          "container.restartCount": "0",
+          "guid": "7ea6b44d-4a75-42ab-96e6-48b1ce5e3b25",
+          "host.ip": "10.174.53.157",
+          "phase": "Running",
+          "pod.ip": "10.175.42.65",
+          "pod.name": "rest-time-transform-router-time-v3-7d85cc49b8-8gg6h",
+          "pod.startTime": "2023-07-23T09:21:12Z",
+          "service.name": "rest-time-transform-router-time",
+          "skipper.application.name": "time",
+          "skipper.release.name": "rest-time-transform-router",
+          "skipper.release.version": "3",
+          "spring.app.id": "rest-time-transform-router-time-v3",
+          "spring.deployment.id": "rest-time-transform-router-time-v3"
+        },
+        "guid": "7ea6b44d-4a75-42ab-96e6-48b1ce5e3b25",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v3/instances/rest-time-transform-router-time-v3-7d85cc49b8-8gg6h"
+          }
+        }
+      },
+      {
+        "instanceId": "rest-time-transform-router-time-v3-7d85cc49b8-wwpxf",
+        "state": "deployed",
+        "attributes": {
+          "container.restartCount": "0",
+          "guid": "ceb87165-907b-4f6e-822f-6fb62de5e4f3",
+          "host.ip": "10.174.53.138",
+          "phase": "Running",
+          "pod.ip": "10.175.32.250",
+          "pod.name": "rest-time-transform-router-time-v3-7d85cc49b8-wwpxf",
+          "pod.startTime": "2023-07-23T09:34:53Z",
+          "service.name": "rest-time-transform-router-time",
+          "skipper.application.name": "time",
+          "skipper.release.name": "rest-time-transform-router",
+          "skipper.release.version": "3",
+          "spring.app.id": "rest-time-transform-router-time-v3",
+          "spring.deployment.id": "rest-time-transform-router-time-v3"
+        },
+        "guid": "ceb87165-907b-4f6e-822f-6fb62de5e4f3",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v3/instances/rest-time-transform-router-time-v3-7d85cc49b8-wwpxf"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/runtime/apps/rest-time-transform-router-time-v3/instances?page=0&size=20"
+    }
+  },
+  "page": {
+    "size": 20,
+    "totalElements": 2,
+    "totalPages": 1,
+    "number": 0
+  }
+}
+```  
+
+### 스트림 로그 (/streams/log)
+`GET /streams/logs/{streamName}` 요청은 스트림을 구성하는 전체 애플리케이션들의 로그를 한번에 조회 할 수 있다.  
+
+`rest-time-transform-router` 스트림의 로그를 조회하면 아래와 같다.
+
+```bash
+$ curl -X GET http://localhost:9393/streams/logs/rest-time-transform-router | jq
+{
+  "logs": {
+    "rest-time-transform-router-transform-v2": "... log output .....",
+    "rest-time-transform-router-router-v2": "... log output .....",
+    "rest-time-transform-router-time-v3": "... log output ....."
+  }
+}
+```  
+
+`GET /streams/logs/{streamName}/{appName}` 요청은 스트림을 구성하는 특정 애플리케이션의 로그를 확인 할 수 있다.  
+
+`rest-test-router-even-log` 스트림의 `log` 애플리케이션의 로그를 조회하면 아래와 같다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/logs/rest-test-router-even-log/rest-test-router-even-log-log-v1 | jq
+{
+  "logs": {
+    "rest-test-router-even-log-log-v1": "2023-07-16 20:07:20.257  INFO [log-sink,f7364e11d6268eb6,9ca258be2f55d15c] 6 --- [container-0-C-1] even-log                                 : 6\n2023-07-16 20:07:20.257  INFO [log-sink,0d0b379b11315fee,80dbb90fe7dffecf] 6 --- [container-0-C-1] even-log                                 : 6\n"
+  }
+}
+
+```  
+
+### 스트림 배포 취소 (/streams/deployments/{streamName})
+`DELETE /streams/deploymenets/{streamName}` 요청은 배포한 스트림 구성을 다시 취소할 수 있다.  
+
+```bash
+$ curl -X DELETE http://localhost:9393/streams/deployments/rest-time-transform-router | jq 
+
+$ curl -X DELETE http://localhost:9393/streams/deployments/rest-test-router-even-log | jq 
+
+$ curl -X DELETE http://localhost:9393/streams/deployments/rest-test-router-odd-log | jq
+```  
+
+다시 `rest` 로 시작하는 스트림을 조회하면 아래와 같이 상태가 `undeployed`로 변경된 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/definitions\?page\=0\&sort\=name,ASC\&search\=rest\&size\=50 | jq
+{
+  "_embedded": {
+    "streamDefinitionResourceList": [
+      {
+        "name": "rest-test-router-even-log",
+        "dslText": ".....",
+        "originalDslText": ":test-router-even > log",
+        "status": "undeployed",
+        "description": "",
+        "statusDescription": "The app or group is known to the system, but is not currently deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-test-router-even-log"
+          }
+        }
+      },
+      {
+        "name": "rest-test-router-odd-log",
+        "dslText": ".....",
+        "originalDslText": ":test-router-odd > log",
+        "status": "undeployed",
+        "description": "",
+        "statusDescription": "The app or group is known to the system, but is not currently deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-test-router-odd-log"
+          }
+        }
+      },
+      {
+        "name": "rest-time-transform-router",
+        "dslText": ".....",
+        "originalDslText": "time | transform | router",
+        "status": "undeployed",
+        "description": "",
+        "statusDescription": "The app or group is known to the system, but is not currently deployed",
+        "_links": {
+          "self": {
+            "href": "http://localhost:9393/streams/definitions/rest-time-transform-router"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/streams/definitions?search=rest&page=0&size=50&sort=name,asc"
+    }
+  },
+  "page": {
+    "size": 50,
+    "totalElements": 3,
+    "totalPages": 1,
+    "number": 0
+  }
+}
+
+```  
+
+### 스트림 삭제 (/streams/definitions/{streamName)
+`DELETE /streams/definitions/{streamName}` 요청은 생성한 스트림을 삭제할 수 있다.  
+
+```bash
+$ curl -X DELETE http://localhost:9393/streams/definitions/rest-test-router-odd-log | jq
+
+$ curl -X DELETE http://localhost:9393/streams/definitions/rest-test-router-even-log | jq
+
+$ curl -X DELETE http://localhost:9393/streams/definitions/rest-time-transform-router | jq
+```  
+
+다시 `rest` 로 시작하는 스트림을 조회하면 아래와 같이 매칭되는 애플리케이션이 조회되지 않는 것을 확인 할 수 있다.  
+
+```bash
+$ curl -X GET http://localhost:9393/streams/definitions\?page\=0\&sort\=name,ASC\&search\=rest\&size\=50 | jq
+{
+  "_links": {
+    "self": {
+      "href": "http://localhost:9393/streams/definitions?search=rest&page=0&size=50&sort=name,asc"
+    }
+  },
+  "page": {
+    "size": 50,
+    "totalElements": 0,
+    "totalPages": 0,
+    "number": 0
+  }
+}
+```  
 
 
 ---  
