@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Cloud DataFlow REST API"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Cloud DataFlow 를 REST API 를 사용해서 조작하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -15,6 +15,8 @@ tags:
     - Spring Boot
     - Spring Cloud Data Flow
     - SCDF
+    - REST API
+    - Rest API
 toc: true
 use_math: true
 ---  
@@ -1185,4 +1187,4 @@ $ curl -X GET http://localhost:9393/streams/definitions\?page\=0\&sort\=name,ASC
 
 ---  
 ## Reference
-[](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#api-guide)  
+[Spring Cloud DataFlow REST API](https://docs.spring.io/spring-cloud-dataflow/docs/2.10.3/reference/htmlsingle/#api-guide)  
