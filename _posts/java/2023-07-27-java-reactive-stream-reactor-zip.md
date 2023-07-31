@@ -101,8 +101,188 @@ reactive-stream-reactor-zip-2.svg
 예외처리를 수행하는 방법에 대해 알아본다.  
 
 
----
-## Reference
-[]()  
+### Mono.zip
+`Mono Stream` 을 결합하는 여러 `Mono.zip` 관련 메소드에 대해 알아본다. 
+
+#### Mono.zip tuple
+`zip` 연산 중 가장 간단한 형태로, 
+n개의 `Mono upstream` 소스의 결과를 받아 하나의 `Tuple` 로 반환하는 `zip` 함수이다. 
+`zip` 의 인수의 개수와 동일한 요소를 가지는 `Tuple` 을 반환한다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zip-reactor.core.publisher.Mono-reactor.core.publisher.Mono-
+ */
+@Test
+public void mono_zip_return_tuple() {
+    Mono.zip(Mono.just("first"), Mono.just("second"))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("first", "second"))
+            .verifyComplete();
+}
+```  
+
+`first` 를 방출하는 `Mono` 와 `second` 를 방출하는 `Mono` 를 `Tuple` 로 결합한 예시이다.  
+
+#### Mono.zip combinator
+여러 `Mono upstream` 소스의 결과를 바탕으로 원하는 타입과 값으로 결합해서 최종 결과를 방출 할 수 있다. 
+`Mono.zip Tuple` 과는 지정된 결과 타입만 도출하는 것이 아니라, 원하는 결과 타입을 도출할 수 있도록 직접 `combinator` 를 구현하면 된다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zip-java.lang.Iterable-java.util.function.Function-
+ */
+@Test
+public void mono_zip_combinator() {
+    Mono.zip(List.of(Mono.just("first"), Mono.just("second")),
+                    // combinator
+                    objects -> Map.of("key1", objects[0], "key2", objects[1]))
+            .as(StepVerifier::create)
+            .expectNext(Map.of("key1", "first", "key2", "second"))
+            .verifyComplete();
+}
+```  
+
+`first` 를 방출하는 `Mono` 와 `second` 를 방출하는 `Mono` 를 `combinator` 를 사용해서 `Map` 르로 결합한 예시이다.  
+
+만약 N개의 `Mono` 로 구성된 `List` 를 하나로 결합하고 싶은 경우에도 `Mono.zip combinator` 를 사용할 수 있는데, 
+그 예시는 아래와 같다.  
+
+```java
+Mono.zip(List.of(Mono.just("first"), Mono.just("second")),
+                // combinator
+                Tuples.fn2());
+```  
 
 
+#### Mono.zipWhen
+`Mono.zipWhen` 은 입력 값으로 받은 `Mono upstream` 소스가 방출되는 시점에 결합 할 수 있다. 
+`Mono upstream` 소스가 방출될 때, 방출된 값을 메소드의 인자로 전달해 수행 한 뒤 그 결과와 함께 결합하는 등의 방식으로 활용 할 수 있다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zipWhen-java.util.function.Function-
+ */
+@Test
+public void mono_zipWhen() {
+    Mono.just("first")
+            .zipWhen(s -> Mono.just(s + ":second"))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("first", "first:second"))
+            .verifyComplete();
+}
+```  
+
+`first` 를 방출하는 `Mono` 가 방출 될때 `zipWhen` 이 수행되고, 
+`zipWhen` 에서는 방출된 값이 `first` 를 바탕으로 `first:second` 라는 결과를 만들어 낸다. 
+그러면 최종적으로 `Tuple` 에 `first` 와 `zipWhen` 의 결과인 `first:second` 가 담기게 된다.  
+
+
+#### Mono.zipWith
+`Mono.zipWith` 는 `Mono upstream` 이 방출 될때 추가적인 `Mono` 와 결합 할 수 있다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zipWith-reactor.core.publisher.Mono-
+ */
+@Test
+public void mono_zipWith() {
+    Mono.just("first")
+            .zipWith(Mono.just("second"))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("first", "second"))
+            .verifyComplete();
+}
+```  
+
+`first` 를 방출하는 `Mono` 가 결과를 방출 하고 나서, 
+`zipWith` 에서 `second` 를 방출하는 `Mono` 와 결합한다. 
+최종적으로 `Tuple` 에는 `first` 와 `second` 가 담기게 된다.  
+
+
+#### Mono.zipDelayError
+`Mono.zipDelayError` 는 결합할 `Mono upstream` 소스들이 오류를 반환 하더라도 결과를 바로 반환하지 않고, 
+모든 소스가 완료 될떄까지 결과 방출을 보류한다.  
+
+먼저 일반적인 `Mono.zip` 에서 오류를 방출되면 어떻게 동작하는지 확인하면, 
+측정 소스 하나가 오류를 방출하자 마자 다른 소스의 결과는 기다리지 않고 에러 결과를 방출 한다.  
+
+```java
+@Test
+public void mono_zip_error() {
+    Mono.zip(Mono.just("first"),
+                    Mono.error(new RuntimeException("exception1")),
+                    Mono.error(new RuntimeException("exception2")))
+            .as(StepVerifier::create)
+            .verifyErrorMatches(throwable -> throwable.getMessage().equals("exception1"));
+}
+```  
+
+`Mono.zipDelayError` 는 위 `Mono.zip` 에서 에러가 발생 했을 때와는 다르게, 
+모든 소스에서 결과를 방출 할떄까지 기다리므로 여러 소스에서 에러가 발생했음을 추가로 확인 할 수 있다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zipDelayError-java.util.function.Function-reactor.core.publisher.Mono...-
+ */
+@Test
+public void mono_zipDelayError() {
+    Mono.zipDelayError(Mono.just("first"),
+                    Mono.error(new RuntimeException("exception1")),
+                    Mono.error(new RuntimeException("exception2")))
+            .as(StepVerifier::create)
+            .verifyErrorMatches(throwable -> throwable.getMessage().equals("Multiple exceptions") &&
+                    throwable.getSuppressed()[0].getMessage().equals("exception1") &&
+                    throwable.getSuppressed()[1].getMessage().equals("exception2"));
+}
+```  
+
+`Multiple exception` 이라는 메시지와 함께 어떤 에러들이 방생했는지 추가로 확인 가능하다.  
+
+#### Mono.zip fallback 및 기본값 처리
+`Reactive Stream` 에서 일반적인 기본값과 예외처리를 살펴보면, 
+특정 값을 반환하도록 작성해주는 경우도 있지만, `Mono.empty()` 를 방출하는 경우가 많다. 
+`Mono.zip` 에서 특정 소스가 `Mono.empty()` 를 반환하면 
+아래와 같이 다른 소스가 결과를 방출 하더라도 `Mono.empty()` 를 결과로 방출 한다.  
+
+```java
+@Test
+public void mono_zip_empty() {
+    Mono.zip(Mono.just("first"), Mono.empty())
+            .as(StepVerifier::create)
+            .verifyComplete();
+}
+```  
+
+그러므로 `zip` 에 포함된 어느 하나의 소스라도 값을 방출 할떄, 
+결과를 만들어 내야 한다면 아래와 같이 `Optional.empty()` 를 사용해서 `Mono.empty()` 인 경우에 기본값 설정을 해줄 수 있다.  
+
+```java
+@Test
+public void mono_zip_empty_properly() {
+    Mono.zip(Mono.just("first"), 
+                    Mono.empty().switchIfEmpty(Mono.just(Optional.empty())))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("first", Optional.empty()))
+            .verifyComplete();
+}
+```  
+
+그리고 앞서 살펴 본것 처럼 `Mono.zip` 에서 하나의 소스라도 에러를 방출 한다면, 
+`zip` 의 결과 또한 에러이므로 위 `Optional.empty()` 를 활용한 `Mono.zip` 기본값 처리를 사용해 `fallback` 처리를 하면 아래와 같다.  
+
+```java
+@Test
+public void zip_error_fallback() {
+    Mono.zip(Mono.just("first"),
+                    Mono.error(new RuntimeException("exception1")).onErrorReturn(Optional.empty()),
+                    Mono.error(new RuntimeException("exception2")).onErrorReturn(Optional.empty()))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("first", Optional.empty(), Optional.empty()))
+            .verifyComplete();
+}
+```  
+
+`Optional.empty()` 를 통한 기본 값 처리가 중요한게 아니라, 
+에러 발생 상황에라도 어떠한 결과를 내려줘야 한다면, 
+`zip` 에 포함된 소스들에 `onErrorReturn` 과 같은 예외처리를 꼭 필요하다.  
