@@ -286,3 +286,207 @@ public void zip_error_fallback() {
 `Optional.empty()` 를 통한 기본 값 처리가 중요한게 아니라, 
 에러 발생 상황에라도 어떠한 결과를 내려줘야 한다면, 
 `zip` 에 포함된 소스들에 `onErrorReturn` 과 같은 예외처리를 꼭 필요하다.  
+
+
+### Flux.zip
+`Flux Stream` 을 결합하는 여러 `Flux.zip` 관련 메소드에 대해 알아본다.
+
+#### Flux.zip tuple
+`Flux` 의 `zip` 연산중 가장 간단한 형태를 지닌 메소드로, 
+`Flux.zip` 은 N개 이상의 `Flux upstream` 소스를 결합해 결과를 `Tuple` 로 반환한다. 
+입력한 `Flus upstream` 소스의 수 만큼의 요소를 지니는 `Tuple` 을 생성한다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#zip-org.reactivestreams.Publisher-org.reactivestreams.Publisher-
+ */
+@Test
+public void flux_zip_tuple() {
+    Flux.zip(Flux.fromIterable(List.of(1, 2, 3, 4)), Flux.fromIterable(List.of("a", "b", "c")))
+            .as(StepVerifier::create)
+            .recordWith(ArrayList::new)
+            .thenConsumeWhile(tuple2s -> true)
+            .consumeRecordedWith(tuple2s -> {
+                assertThat(tuple2s, hasSize(3));
+                assertThat(tuple2s, contains(Tuples.of(1, "a"), Tuples.of(2, "b"), Tuples.of(3, "c")));
+            })
+            .verifyComplete();
+}
+```  
+
+`1, 2, 3, 4` 를 방출하는 `Flux` 스트림과 `a, b, c,` 를 방출하는 `Flux` 스트림을 결합하면, 
+최종적으로 `(1, a), (2, b), (3, c)` 와 같은 총 3개의 `Tuple` 이 생성된다. 
+가장 적은 데이터수를 가지는 `Flux upstream` 이 기준이 되기 때문에 `4` 는 결과로 반환되지 않는다.  
+
+
+#### Flux.zip combinator
+N개 이상의 `Flux upstream` 을 소스로 가지는 `zip` 연산의 결과를 원하는 결과타입을 생성해서 반환 할 수 있다. 
+원하는 결과 타입을 생성하기 위해서 `combinator` 를 알 맞게 정의해줘야 한다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#zip-java.lang.Iterable-java.util.function.Function-
+ */
+@Test
+public void flux_zip_combinator() {
+    Flux.zip(List.of(Flux.fromIterable(List.of(1, 2, 3)),
+                    Flux.fromIterable(List.of("a", "b", "c", "d")),
+                    Flux.fromIterable(List.of("first", "second", "third"))),
+                    objects -> Map.of("key1", objects[0], "key2", objects[1], "key3", objects[2]))
+            .as(StepVerifier::create)
+            .expectNext(Map.of("key1", 1, "key2", "a", "key3", "first"))
+            .expectNext(Map.of("key1", 2, "key2", "b", "key3", "second"))
+            .expectNext(Map.of("key1", 3, "key2", "c", "key3", "third"))
+            .verifyComplete();
+}
+```  
+
+`1, 2, 3` 을 방출하는 `Flux` 와 `a, b, c, d` 를 방출하는 `Flux`, `first, second, third` 를 방출하는 `Flux` 를 
+`combinator` 에서 `Map` 형식으로 결합해 결과를 반환한다. 
+그러면 최종적으로 `{key1 : 1, key2 : a, key3 : first}, {key1 : 2, key2 : b, key3 : second}, {key1 : 3, key2 : c, key3 : third}` 
+와 같은 3개의 `Map` 이 결과로 방출 된다.  
+
+
+#### Flux.zipWith
+`Flux.zipWith` 는 `Flux upstream` 소스와의 결합을 수행한다. 
+`Flux upstream` 소스와 자신의 `Flux stream` 을 결합한다는 점을 기억해야 하고, 
+그러므로 `combinator` 를 따로 정의하지 않았다면 결과 타입은 2개의 요소를 갖는 `Tuple` 이다.  
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#zipWith-org.reactivestreams.Publisher-
+ */
+@Test
+public void flux_zipWith() {
+    Flux.fromIterable(List.of(1, 2, 3, 4))
+            .zipWith(Flux.fromIterable(List.of("a", "b", "c", "d")))
+            .zipWith(Flux.fromIterable(List.of("first", "second", "third")))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of(Tuples.of(1, "a"), "first"))
+            .expectNext(Tuples.of(Tuples.of(2, "b"), "second"))
+            .expectNext(Tuples.of(Tuples.of(3, "c"), "third"))
+            .verifyComplete();
+}
+```  
+
+`1, 2, 3, 4` 를 방출하는 `Flux` 와 `a, b, c, d` 를 방출하는 `Flux` 를 결합해서, 
+`(1, a), (2, b), (3, c), (4, d)` 와 같은 4개의 `Tuple` 을 결과를 생성한다. 
+그리고 `first, second, third` 를 방출하는 `Flux` 와 결합해서 
+최종적으로 `((1, a), first), ((2, b), second), ((3, c), third)` 처럼 3개의 `Tuple` 이 중첩된 형태로 결과가 생성된다.  
+
+
+#### Flux.zipWithIterable
+`Flux.zipWithIterable` 는 바로 앞에서 알아본 `Flux.zipWith` 와 `Flux upstream` 과 결합한다는 점에서는 매우 비슷하다.
+다른 점은 인수로 `Flux Stream` 이 아닌 방출 할 데이터를 `Iterable` 타입으로 전달해주면 된다는 점에서 차이가 있다.   
+
+```java
+/**
+ * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#zipWithIterable-java.lang.Iterable-
+ */
+@Test
+public void flux_zipWithIterable() {
+    Flux.fromIterable(List.of(1, 2, 3, 4))
+            .zipWithIterable(List.of("a", "b", "c", "d"), List::of)
+            .zipWithIterable(List.of("first", "second", "third"), (serializables, s) -> Stream.concat(serializables.stream(), Stream.of(s)).collect(Collectors.toList()))
+            .as(StepVerifier::create)
+            .expectNext()
+            .expectNext(List.of(1, "a", "first"))
+            .expectNext(List.of(2, "b", "second"))
+            .expectNext(List.of(3, "c", "third"))
+            .verifyComplete();
+
+}
+```  
+
+`1, 2, 3, 4` 를 방출하는 `Flux` 와 `a, b, c, d` 를 방출하는 `Flux` 를 결합해서, 
+`[1, a], [2, b], [3, c], [4, d]` 와 같은 2개의 원소를 갖는 4개 리스트를 결과로 생성한다. 
+그리고 `first, second, thrid` 를 방출하는 `Flux` 와 결합해서 
+최종적으로 `[1, a, first], [2, b, second], [3, c, third]` 와 같은 3개의 원소를 갖는 3개 리스트의 결과가 생성된다.  
+
+
+#### Flux.zip fallback 및 기본값 처리
+`Flux` 에서 예외상황등에 기본값 처리르 `Flux.empty` 를 사용할 수 있다. 
+이처럼 `Flux.zip` 에 포함된 `Flux stream` 중 하나가 `Flux.empty` 를 방출할 떄 상황을 살펴 보자.  
+
+```java
+@Test
+public void flux_zip_empty() {
+    Flux.zip(Flux.fromIterable(List.of(1, 2, 3, 4)),
+            Flux.concat(Mono.just("first"), Mono.empty()),
+            Flux.fromIterable(List.of("a", "b", "c")))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of(1, "first", "a"))
+            .verifyComplete();
+}
+```  
+
+`Flux.zip` 소스 중 다른 소스들은 모두 정상적으로 결과를 방출 하지만, 
+하나의 소스가 `empty` 를 방출하자 전체 스트림이 중단되었다. 
+만약 처음 부터 `empty` 를 방출한다면 어떤 결과도 방출되지 않을 것이다.  
+
+만약 위 처럼 `empty` 가 방출될 수 있는 상황에서 `zip` 을 구성하는 스트림 중 
+정상적인 결과를 방출한 스트림이 있을 때도 이어 결과를 방출하고 싶다면 적절한 기본 값 처리가 필요하다. 
+다양한 기본값 처리 방법이 있을 수 있겠지만, `Mono.zip` 에서 사용한 방법과 동일하게 
+`Optional.empty()` 를 사용한 방법에 대해 살펴보자.  
+
+```java
+@Test
+public void flux_zip_empty_properly() {
+    Flux.zip(Flux.fromIterable(List.of(1, 2, 3, 4)),
+                    Flux.empty().switchIfEmpty(Mono.just(Optional.empty()).repeat()),
+                    Flux.fromIterable(List.of("a", "b", "c")))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of(1, Optional.empty(), "a"))
+            .expectNext(Tuples.of(2, Optional.empty(), "b"))
+            .expectNext(Tuples.of(3, Optional.empty(), "c"))
+            .verifyComplete();
+}
+```  
+
+`zip` 을 구성하는 `Flux stream` 중 `empty` 가 방출되는 상황을 재현한 코드를 구성했다. 
+중요한 부분은 `swithIfEmpty` 를 통해 `Flux stream` 이 `empty` 를 방출 할 떄의 예외처리가 수행 될 수 있도록 했고, 
+수행되는 예외처리는 `Mono.empty()` 를 계속해서 방출하는 스트림을 생성했다. 
+위와 같은 처리를 구현한 이유는 `zip` 은 앞서 설명한 것처럼 가장 짧은 방출 데이터의 길이를 갖는 스트림을 기준으로 하기 때문에, 
+`zip` 을 구성하는 `Flux stream` 중 어느 하나라도 `Complete` 시그널을 보낸다면 전체 스트림은 완료 된다는 성질을 이용한 것이다.  
+
+`Flux.zip` 을 수행하던 과정에 예외가 발생한 상황을 가정해 본다. 
+아래 처럼 특정 방출 시점에 예외가 발생한다면, 
+`Mono.zip` 과는 다르게 `Flux.zip` 은 예외 자체를 결과 그대로 방출한다.  
+
+```java
+@Test
+public void flux_zip_error() {
+    RuntimeException testException = new RuntimeException("test exception");
+    Flux.zip(Flux.fromIterable(List.of(1, 2, 3, 4, 5)),
+                    Flux.fromIterable(List.of("a", testException, "c", testException)),
+                    Flux.fromIterable(List.of(testException, "second", testException, "fourth")))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of(1, "a", testException))
+            .expectNext(Tuples.of(2, testException, "second"))
+            .expectNext(Tuples.of(3, "c", testException))
+            .expectNext(Tuples.of(4, testException, "fourth"))
+            .verifyComplete();
+}
+```  
+
+만약 예외 발생시 기본값 처리와 같은 예외처리가 필요하다면, 
+`onErrorResume`, `onErrorReturn` 등과 같은 `Operation` 을 사용해서 구현해 볼 수 있다. 
+예외를 `Optional.empty()` 로 치환이 필요하다면 아래와 같이 `combinator` 에서 수행 해줄 수 있다.  
+
+```java
+@Test
+public void flux_zip_error_fallback() {
+    RuntimeException testException = new RuntimeException("test exception");
+    Flux.zip(List.of(Flux.fromIterable(List.of(1, 2, 3, 4, 5)),
+                    Flux.fromIterable(List.of("a", testException, "c", testException)),
+                    Flux.fromIterable(List.of(testException, "second", testException, "fourth"))),
+                    objects -> Tuples.fn3().apply(Arrays.stream(objects).map(o -> o instanceof Throwable ? Optional.empty() : o).toArray()))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of(1, "a", Optional.empty()))
+            .expectNext(Tuples.of(2, Optional.empty(), "second"))
+            .expectNext(Tuples.of(3, "c", Optional.empty()))
+            .expectNext(Tuples.of(4, Optional.empty(), "fourth"))
+            .verifyComplete();
+}
+```  
+
