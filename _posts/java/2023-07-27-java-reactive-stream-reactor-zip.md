@@ -490,3 +490,55 @@ public void flux_zip_error_fallback() {
 }
 ```  
 
+
+### Execution time of Zip
+앞서 간략하게 언급 했지만, 
+`Zip` 연산이 결과를 방출하기 까지 소요되는 시간은 구성하는 스트림 중 가장 느린 스트림을 기준으로 한다.  
+
+```java
+@Test
+public void zip_when_delay() {
+    Mono.zip(Mono.just("1s")
+                            .delayElement(Duration.ofSeconds(1))
+                            .doOnNext(s -> log.info("next {}", s))
+                            .doOnTerminate(() -> log.info("terminate 1s")),
+                    Mono.just("100ms")
+                            .delayElement(Duration.ofMillis(100))
+                            .doOnNext(s -> log.info("next {}", s))
+                            .doOnTerminate(() -> log.info("terminate 100ms")),
+                    Mono.just("2s")
+                            .delayElement(Duration.ofSeconds(2))
+                            .doOnNext(s -> log.info("next {}", s))
+                            .doOnTerminate(() -> log.info("terminate 2s")),
+                    Mono.just("50ms")
+                            .delayElement(Duration.ofMillis(50))
+                            .doOnNext(s -> log.info("next {}", s))
+                            .doOnTerminate(() -> log.info("terminate 50ms")))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("1s", "100ms", "2s", "50ms"))
+            .expectComplete()
+            .verifyThenAssertThat()
+            .tookMoreThan(Duration.ofMillis(2000))
+            .tookLessThan(Duration.ofMillis(2100));
+}
+```
+
+위 코드가 수행되며 발생한 로그는 아래와 같다.  
+
+```
+[parallel-4] INFO com.windowforsun.reactor.zip.TmpTest - next 50ms
+[parallel-4] INFO com.windowforsun.reactor.zip.TmpTest - terminate 50ms
+[parallel-2] INFO com.windowforsun.reactor.zip.TmpTest - next 100ms
+[parallel-2] INFO com.windowforsun.reactor.zip.TmpTest - terminate 100ms
+[parallel-1] INFO com.windowforsun.reactor.zip.TmpTest - next 1s
+[parallel-1] INFO com.windowforsun.reactor.zip.TmpTest - terminate 1s
+[parallel-3] INFO com.windowforsun.reactor.zip.TmpTest - next 2s
+[parallel-3] INFO com.windowforsun.reactor.zip.TmpTest - terminate 2s
+```  
+
+`Zip` 을 구성하는 4개의 스트림의 실제 실행 순서는 방출하고 스트림이 종료되는 것은 소요되는 시간이 짧은 것부터 수행되었다. 
+하지만 최종적으로 `Zip` 의 결과는 방출까지 가장 소요시간이 오래걸리는 `2s` 스트림이 완료 될때까지 다른 결과는 지연되는 것으 확인 할 수 있다. 
+당연한 결과라고 할 수도 있지만 `Zip` 을 사용해서 결과를 만들어 낼때 하나의 스트림이라도 크게 지연된다면 전체 결과가 지연될 수 있으므로, 
+이 부분은 주의해서 사용이 필요하다.  
+
+
