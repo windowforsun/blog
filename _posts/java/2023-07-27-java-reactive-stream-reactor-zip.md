@@ -542,3 +542,9 @@ public void zip_when_delay() {
 이 부분은 주의해서 사용이 필요하다.  
 
 
+---
+## Reference
+[API Reference Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html)  
+[API Reference Flux](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)  
+
+
