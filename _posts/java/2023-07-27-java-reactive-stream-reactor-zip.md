@@ -493,27 +493,95 @@ public void flux_zip_error_fallback() {
 
 ### Execution time of Zip
 앞서 간략하게 언급 했지만, 
-`Zip` 연산이 결과를 방출하기 까지 소요되는 시간은 구성하는 스트림 중 가장 느린 스트림을 기준으로 한다.  
+`Zip` 연산이 결과를 방출하기 까지 소요되는 시간은 구성하는 스트림 중 가장 느린 스트림을 기준으로 한다. 
+그 예시에 해당하는 코드는 아래와 같다. 방출까지 1s, 100ms, 2s, 50ms 가 소요되는 4개의 `Mono` 를 `zip` 연산을 수행해본다. 
+
 
 ```java
 @Test
 public void zip_when_delay() {
-    Mono.zip(Mono.just("1s")
-                            .delayElement(Duration.ofSeconds(1))
-                            .doOnNext(s -> log.info("next {}", s))
-                            .doOnTerminate(() -> log.info("terminate 1s")),
-                    Mono.just("100ms")
-                            .delayElement(Duration.ofMillis(100))
-                            .doOnNext(s -> log.info("next {}", s))
-                            .doOnTerminate(() -> log.info("terminate 100ms")),
-                    Mono.just("2s")
-                            .delayElement(Duration.ofSeconds(2))
-                            .doOnNext(s -> log.info("next {}", s))
-                            .doOnTerminate(() -> log.info("terminate 2s")),
-                    Mono.just("50ms")
-                            .delayElement(Duration.ofMillis(50))
-                            .doOnNext(s -> log.info("next {}", s))
-                            .doOnTerminate(() -> log.info("terminate 50ms")))
+    Mono<String> mono1s = Mono.fromCallable(() -> {
+                Thread.sleep(1000);
+                return "1s";
+            })
+            .doOnNext(s -> log.info("publish : {}", s));
+    Mono<String> mono100ms = Mono.fromCallable(() -> {
+                Thread.sleep(100);
+                return "100ms";
+            })
+            .doOnNext(s -> log.info("publish : {}", s));
+    Mono<String> mono2s = Mono.fromCallable(() -> {
+                Thread.sleep(2000);
+                return "2s";
+            })
+            .doOnNext(s -> log.info("publish : {}", s));
+    Mono<String> mono50ms = Mono.fromCallable(() -> {
+                Thread.sleep(50);
+                return "50ms";
+            })
+            .doOnNext(s -> log.info("publish : {}", s));
+
+    Mono.zip(mono1s, mono100ms, mono2s, mono50ms)
+            .doOnNext(s -> log.info("{}", s))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("1s", "100ms", "2s", "50ms"))
+            .expectComplete()
+            .verifyThenAssertThat()
+            .tookMoreThan(Duration.ofMillis(3000))
+            .tookLessThan(Duration.ofMillis(3200));
+}
+```
+
+위 코드가 수행되며 발생한 로그는 아래와 같다.  
+
+```
+19:59:43.897 [main] INFO com.windowforsun.reactor.zip.ZipTest - publish : 1s
+19:59:44.002 [main] INFO com.windowforsun.reactor.zip.ZipTest - publish : 100ms
+19:59:46.003 [main] INFO com.windowforsun.reactor.zip.ZipTest - publish : 2s
+19:59:46.053 [main] INFO com.windowforsun.reactor.zip.ZipTest - publish : 50ms
+19:59:46.053 [main] INFO com.windowforsun.reactor.zip.ZipTest - zip : [1s,100ms,2s,50ms]
+```  
+
+`Zip` 을 구성하는 4개의 스트림의 실제 실행 순서는 방출하고 스트림이 종료되는 것은 `Zip` 의 인자 순서대로 진행되었다. 
+하지만 최종적으로 `Zip` 의 결과는 방출까지 가장 소요시간이 오래걸리는 `2s` 스트림이 완료 될때까지 다른 결과는 지연되는 것으 확인 할 수 있다. 
+당연한 결과라고 할 수도 있지만 `Zip` 을 사용해서 결과를 만들어 낼때 하나의 스트림이라도 크게 지연된다면 전체 결과가 지연될 수 있으므로, 
+이 부분은 주의해서 사용이 필요하다. 
+최종적으로 `Zip` 의 결과는 4개의 모든 `Mono` 가 방출할 떄까지 소요된 시간의 합인 3.2초 정도가 소요된 것을 확인 할 수 있다. 
+이는 `Zip` 연상을 수행하는 스레드와 동일한 스레드에서 모든 `Reactive Stream` 이 수행되기 때문에 발생한 결과이다. 
+
+`Zip` 연산을 수행하는 스레드(`main`, ..)와는 별개로 스트림을 수행하는 병렬 처리 방식으로 `Schedulers` 를 사용해서, 
+`Zip` 결과에 소요되는 시간을 `Zip` 을 구성하는 스트림 중 가장 오래걸리는 스트림의 시간까지 단축 시킬 수 있다.  
+
+```java
+@Test
+public void zip_when_delay_4() {
+    Mono<String> mono1s = Mono.fromCallable(() -> {
+                Thread.sleep(1000);
+                return "1s";
+            })
+            .doOnNext(s -> log.info("publish : {}", s))
+            .subscribeOn(Schedulers.boundedElastic());
+    Mono<String> mono100ms = Mono.fromCallable(() -> {
+                Thread.sleep(100);
+                return "100ms";
+            })
+            .doOnNext(s -> log.info("publish : {}", s))
+            .subscribeOn(Schedulers.boundedElastic());
+    Mono<String> mono2s = Mono.fromCallable(() -> {
+                Thread.sleep(2000);
+                return "2s";
+            })
+            .doOnNext(s -> log.info("publish : {}", s))
+            .subscribeOn(Schedulers.boundedElastic());
+    Mono<String> mono50ms = Mono.fromCallable(() -> {
+                Thread.sleep(50);
+                return "50ms";
+            })
+            .doOnNext(s -> log.info("publish : {}", s))
+            .subscribeOn(Schedulers.boundedElastic());
+
+    Mono.zip(mono1s, mono100ms, mono2s, mono50ms)
+            .doOnNext(s -> log.info("zip : {}", s))
             .as(StepVerifier::create)
             .expectNext(Tuples.of("1s", "100ms", "2s", "50ms"))
             .expectComplete()
@@ -521,25 +589,19 @@ public void zip_when_delay() {
             .tookMoreThan(Duration.ofMillis(2000))
             .tookLessThan(Duration.ofMillis(2100));
 }
-```
-
-위 코드가 수행되며 발생한 로그는 아래와 같다.  
-
-```
-[parallel-4] INFO com.windowforsun.reactor.zip.TmpTest - next 50ms
-[parallel-4] INFO com.windowforsun.reactor.zip.TmpTest - terminate 50ms
-[parallel-2] INFO com.windowforsun.reactor.zip.TmpTest - next 100ms
-[parallel-2] INFO com.windowforsun.reactor.zip.TmpTest - terminate 100ms
-[parallel-1] INFO com.windowforsun.reactor.zip.TmpTest - next 1s
-[parallel-1] INFO com.windowforsun.reactor.zip.TmpTest - terminate 1s
-[parallel-3] INFO com.windowforsun.reactor.zip.TmpTest - next 2s
-[parallel-3] INFO com.windowforsun.reactor.zip.TmpTest - terminate 2s
 ```  
 
-`Zip` 을 구성하는 4개의 스트림의 실제 실행 순서는 방출하고 스트림이 종료되는 것은 소요되는 시간이 짧은 것부터 수행되었다. 
-하지만 최종적으로 `Zip` 의 결과는 방출까지 가장 소요시간이 오래걸리는 `2s` 스트림이 완료 될때까지 다른 결과는 지연되는 것으 확인 할 수 있다. 
-당연한 결과라고 할 수도 있지만 `Zip` 을 사용해서 결과를 만들어 낼때 하나의 스트림이라도 크게 지연된다면 전체 결과가 지연될 수 있으므로, 
-이 부분은 주의해서 사용이 필요하다.  
+```
+20:09:58.297 [boundedElastic-4] INFO com.windowforsun.reactor.zip.ZipTest - publish : 50ms
+20:09:58.347 [boundedElastic-2] INFO com.windowforsun.reactor.zip.ZipTest - publish : 100ms
+20:09:59.247 [boundedElastic-1] INFO com.windowforsun.reactor.zip.ZipTest - publish : 1s
+20:10:00.247 [boundedElastic-3] INFO com.windowforsun.reactor.zip.ZipTest - publish : 2s
+20:10:00.247 [boundedElastic-3] INFO com.windowforsun.reactor.zip.ZipTest - zip : [1s,100ms,2s,50ms]
+```
+
+첫 번째 예제와 다른 점은 `Zip` 에 사용되는 2개의 `Mono` 에 `Schedulers` 를 통해 각 스트림이 병렬로 수행 될 수 있도록 설정 했다. 
+로그는 `Zip` 인자의 순서대로가 아닌 소요시간이 짧은 것부터 차례로 방출되고,
+결과 또한 방출까지 소요되는 최대 소요시간인 2초를 기준으로 `Mono.zip` 의 연산도 마무리 되는 것을 확인 할 수 있다.  
 
 
 ---
