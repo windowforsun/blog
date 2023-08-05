@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Zip"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactive Stream 에서 스트림의 결과를 병합할 수 있는 Reactor Zip 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,9 @@ categories :
 tags:
   - Concept
   - Java
+  - Reactive Stream
+  - Reactor
+  - Zip
 toc: true 
 use_math: true
 ---  
