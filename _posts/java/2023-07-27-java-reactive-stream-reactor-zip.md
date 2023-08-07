@@ -50,7 +50,8 @@ public void zip_of_flatMap() {
 아래는 [Mono.zip](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#zip-reactor.core.publisher.Mono-reactor.core.publisher.Mono-)
 의 `API Document` 에서 발췌한 마블 다이어그램이다.  
 
-reactive-stream-reactor-zip-1.svg
+![그림 1]({{site.baseurl}}/img/java/reactive-stream-reactor-zip-1.svg)
+
 
 `Mono.zip` 연산은 2개 이상의 스트림을 사용해서 구성할 수 있다. 
 수행되는 시그널을 간력하게 설명하면 아래와 같다.  
@@ -72,7 +73,8 @@ reactive-stream-reactor-zip-1.svg
 아래는 [Flux.zip](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#zip-org.reactivestreams.Publisher-org.reactivestreams.Publisher-)
 의 `API Document` 에서 발췌한 마블 다이어그램이다. 
 
-reactive-stream-reactor-zip-2.svg
+![그림 1]({{site.baseurl}}/img/java/reactive-stream-reactor-zip-2.svg)
+
 
 `Flux.zip` 또한 2개 이상의 무한 스트림을 사용해서 구생할 수 있다. 
 수행되는 시그널에 대한 설명은 아래와 같다.  
