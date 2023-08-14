@@ -225,3 +225,47 @@ public void parallelism_test() {
 이를 통해 `parallel()` 과 `runOn()` 을 사용하면 `Flux Stream` 에서 방출되는 신호를 원하는 동시성을 할당해,
 기대하는 병렬처리 동작을 수행 할 수 있음을 다시 확인 해 보았다.  
 
+
+### Performance test
+`Flux Stream` 을 병렬처리로 사용하려는 것은 성능적인 이점을 보기 위함일 것이다. 
+직접 간단한 성능 테스트를 해보며 어느 정도의 성능 차이가 있는지 살펴본다. 
+성능 테스트에 사용할 `Flux Stream` 은 아래와 같다.  
+
+```java
+Flux.range(1, 400)
+        .map(integer -> {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            return integer;
+        })
+```  
+
+`1 ~ 400` 의 정수를 방출하는 `Flux Stream` 인데 시퀀스 하나를 방출하기 까지 `10ms` 정도가 소요된다는 것을 가정했다. 
+위 `Flux Stream` 에 대해서 소요시간을 확인해보면 아래의 검증 코드처럼 `4000ms` 정도가 소요되는 것을 확인 할 수 있다.  
+
+
+```java
+@Test
+public void performance_exam() {
+    Flux.range(1, 400)
+            .map(integer -> {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                return integer;
+            })
+            .as(StepVerifier::create)
+            .expectNextCount(400)
+            .expectComplete()
+            .verifyThenAssertThat()
+            .tookMoreThan(Duration.ofMillis(4000))
+            .tookLessThan(Duration.ofMillis(5000));
+}
+```  
