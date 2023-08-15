@@ -269,3 +269,38 @@ public void performance_exam() {
             .tookLessThan(Duration.ofMillis(5000));
 }
 ```  
+
+#### publishOn, subscribeOn 과 비교
+
+`Flux Parallel` 을 사용해보기 전에 정말로 `Scheduler` 의 대표적인 사용처인 `publishOn()` 과 `subscribeOn()` 을 사용하면, 
+위와 같은 예제에서 성능적인 이점이 없는지 확인 해보고 넘어가 본다. 
+
+```java
+@Test
+public void performance_bad() {
+    Flux.range(1, 400)
+            .map(integer -> {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                return integer;
+            })
+            .publishOn(Schedulers.boundedElastic())
+            .subscribeOn(Schedulers.boundedElastic())
+            .as(StepVerifier::create)
+            .expectNextCount(400)
+            .expectComplete()
+            .verifyThenAssertThat()
+            .tookMoreThan(Duration.ofMillis(4000))
+            .tookLessThan(Duration.ofMillis(5000));
+}
+```  
+
+위 코드를 보면 `publishOn()` 과 `subscribeOn()` 을 사용해서 `Scheduler` 를 할당해 주었다. 
+하지만 앞서 설명한 것처럼 `publishOn()` 과 `subscribeOn()` 은 `Reactive Stream` 이 어느 `thread` 에서 실행 될지 할당해주는 역할이기 때문에,  
+위 상황에서는 동일한 소요시간을 보여준다. 
+해당 코드는 `10ms` 가 소요되는 `Blocking` 동작을 `parallel thread` 가 아닌 `elastic thread` 로 할당해 
+여러 `Reactive Stream` 이 수행되는 전체 애플리케이션 관점에서는 성능적인 이점은 가져다 줄 수 있다.  
