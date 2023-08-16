@@ -304,3 +304,61 @@ public void performance_bad() {
 위 상황에서는 동일한 소요시간을 보여준다. 
 해당 코드는 `10ms` 가 소요되는 `Blocking` 동작을 `parallel thread` 가 아닌 `elastic thread` 로 할당해 
 여러 `Reactive Stream` 이 수행되는 전체 애플리케이션 관점에서는 성능적인 이점은 가져다 줄 수 있다.  
+
+#### parallel, runOn 사용 결과
+
+이제 `Flux parallel` 을 사용해 결과를 살펴보자. 
+한가지 주의점은 아래와 같이 `parallel()` 과 `runOn()` 이 위치 한다면 기대하는 동작은 수행되지 못하고, 
+동일한 `4000ms` 의 소요시간이 걸린다. 
+즉 `Blocking` 혹은 `Delay` 가 발생하는 스트림 전에 `parallel()` 과 `runOn()` 을 사용해야 
+그 이후 `Reactive Stream` 부터 병렬 처리가 가능하다.  
+
+```java
+// 기대하는 것처럼 병렬로 수행되지 못함
+Flux.range(1, 400)
+        .map(integer -> {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            return integer;
+        })
+        .parallel(4)
+        .runOn(Schedulers.newParallel("myTest", 4))
+```  
+
+4개의 `Rails` 과 4개의 `thread pool` 을 할당해준다면 `rail` 당 100개의 시퀀스가 할당되고, 
+시퀀스 마다 `10ms` 가 소요될 것이기 때문에 총 소요시간은 `1000ms` 정도를 기대할 수 있을 것이다. 
+아래 코드를 통해 기대하는 것과 동일한 결과를 보여주는지 살펴보자.  
+
+```java
+@Test
+public void performance_good() {
+    Flux.range(1, 400)
+            .parallel(4)
+            .runOn(Schedulers.newParallel("myTest", 4))
+            .map(integer -> {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                return integer;
+            })
+            .as(StepVerifier::create)
+            .expectNextCount(400)
+            .expectComplete()
+            .verifyThenAssertThat()
+            .tookMoreThan(Duration.ofMillis(1000))
+            .tookLessThan(Duration.ofMillis(1500));
+}
+```  
+
+최종 결과를 보면 앞서 계산한 것과 동일하게 `1000ms` 정도의 소요시간이 걸린 것을 확인 할 수 있다. 
+이렇게 `parallel()` 과 `runOn()` 을 통해 `Flux Stream` 을 벙렬처리 한다면, 
+기존 동작에 퍼포먼스를 개선 할 수 있을 것이다.  
+
+
