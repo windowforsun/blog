@@ -362,3 +362,128 @@ public void performance_good() {
 기존 동작에 퍼포먼스를 개선 할 수 있을 것이다.  
 
 
+### Rails parallelism, Scheduler parallelism
+`Flux Stream` 을 병렬로 처리하는 방법을 위해서는 
+`parallel()` 을 통해 `upstream` 을 몇개로 나눌지에 대한 `rail` 수를 지정하고, 
+나눠진 `rail` 의 신호를 처리할 스레드를 `runOn()` 을 통해 `Scheduler` 를 사용해서 할당한다. 
+이때 `rail` 의 수가 스레드의 수보다 많은 경우, 
+스레드는 스레드 수에 맞는 `rail` 를 각 선턱해 해당 `rail` 의 데이터를 먼저 처리하고 
+남은 데이터가 없으면 다른 `rail` 을 선택해서 처리하게 된다. 
+즉 `rail` 에 있는 데이터의 수에 따라 스케줄러가 선택하는 `rail` 이 달라지게 된다.  
+
+반대로 `rail` 수 보다 스레드의 수가 더 많으면 `rail` 은 각 스레드에 모두 할당 될 수 있지만, 
+전체 스레드가 모두 `rail` 신호를 처리하는 스레드로 사용되지는 않는다.  
+
+먼저 `rail` 수 > 스레드 수인 상황을 살펴보자.  
+
+```java
+@Test
+public void railCount_Gt_ThreadCount() {
+    Flux.range(1, 12)
+            .parallel(4)
+            .runOn(Schedulers.newParallel("myTest", 2))
+            .doOnNext(integer -> log.info("receive : {}", integer))
+            .as(StepVerifier::create)
+            .expectNextCount(12)
+            .verifyComplete();
+}
+```  
+
+코드를 실행 했을 떄 출력되는 로그는 아래와 같다.  
+
+```
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 1
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 2
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 5
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 6
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 9
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 10
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 3
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 7
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 11
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 4
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 8
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 12
+```  
+
+로그를 함께보며 `rail` 의 분류와 스레드 할당 과정을 함께 설명하면 아래와 같다. 
+먼저 아래와 같이 `1 ~ 12` 의 데이터가 4개의 `rail` 로 분류 될 것이다.  
+
+```
+rail-0 : 1, 5, 9
+rail-1 : 2, 6, 10
+rail-2 : 3, 7, 11
+rail-3 : 4, 9, 12
+```  
+
+가용 가능한 스레드인 `myTest-1` 과 `myTest-2` 스레드는 최초에 `rail-0` 과 `rail-1` 을 각각 선택해서 데이터를 처리한다.  
+
+```
+rail-0 : 1, 5, 9  (myTest-1)
+rail-1 : 2, 6, 10 (myTest-2)
+rail-2 : 3, 7, 11
+rail-3 : 4, 9, 12
+```  
+
+`rail-0` 과 `rail-1` 에 데이터가 더 이상 없으면 `myTest-1` 과 `myTest-2` 은 `rail-2` 과 `rail-3` 을 각각 선택해서 이어서 데이터를 처리하면, 
+위 로그와 동일한 순서로 데이터가 처리되는 것을 확인 할 수 있다.  
+
+```
+rail-0 : 
+rail-1 : 
+rail-2 : 3, 7, 11 (myTest-1)
+rail-3 : 4, 9, 12 (myTest-2)
+```  
+
+다음은 `rail` 수 < 스레드 수 인 경우를 살펴보자. 
+
+```java
+@Test
+public void railCount_Lt_ThreadCount() {
+    Flux.range(1, 12)
+            .parallel(2)
+            .runOn(Schedulers.newParallel("myTest", 4))
+            .doOnNext(integer -> log.info("receive : {}", integer))
+            .as(StepVerifier::create)
+            .expectNextCount(12)
+            .verifyComplete();
+}
+```  
+
+출력 로그는 아래와 같다.  
+
+```
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 1
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 2
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 3
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 4
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 5
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 6
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 7
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 8
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 9
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 10
+[myTest-1] INFO com.windowforsun.bachpressure.ParallelTest - receive : 11
+[myTest-2] INFO com.windowforsun.bachpressure.ParallelTest - receive : 12
+```  
+
+최초에 `rail` 분류는 아래와 같다. 
+
+```
+rail-0 : 1, 3, 5, 7, 9, 11
+rail-1 : 2, 4, 6, 8, 10, 12
+```  
+
+가용 가능한 스레드는 총 4개로 `myTest-1`, `myTest-2`, `myTest-3`, `myTest-4` 가 있지만, 
+실제로 할당해서 데이터를 처리하는 스레드는 `myTest-1`, `myTest-2` 만이다.  
+
+```
+rail-0 : 1, 3, 5, 7, 9, 11 (myTest-1)
+rail-1 : 2, 4, 6, 8, 10, 12 (myTest-2)
+```  
+
+위와 같은 상황은 만약 `Scheduler` 객체를 여러 스트림에서 공유한다면 다른 스트림에 대한 처리가, 
+`myTest-3`, `myTest-4` 에 할당돼 여러 스트림을 병렬로 처리하는 식으로 공유 할 수 있다.  
+
+
+
