@@ -486,4 +486,95 @@ rail-1 : 2, 4, 6, 8, 10, 12 (myTest-2)
 `myTest-3`, `myTest-4` 에 할당돼 여러 스트림을 병렬로 처리하는 식으로 공유 할 수 있다.  
 
 
+### Rail buffer
+`Flux Stream` 의 `Parallel` 동작에서 `Scheduler` 에 대한 정의를 해주는 [runOn()](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/ParallelFlux.html#runOn-reactor.core.scheduler.Scheduler-int-) 
+메서드에는 `prefetch` 라는 `Backpressure` 관련 인수값이 있다. 
+`prefetch` 는 `rail` 당 `Queues.SMALL_BUFFER_SIZE` 만큼 데이터를 저장하는데, 
+해당 값은 `reactor.bufferSize.small` 라는 시스템 프로퍼티 값으로 조정 가능하다. 
+이 값이 지정돼있지 않으면 256 을 사용하고 16보다 작은 경우에는 16을 사용한다.  
+
+정리하면 `parallel()` 과 `runOn()` 을 통해 `rail` 을 생성하면, 
+각 `rail` 은 별도로 설정하지 않았을 때 기본으로 `request(256)` 으로 256 개의 데이터를 요청한다. 
+확인을 위해 아래 코드와 로그 결과를 살펴보자.  
+
+```java
+@Test
+public void default_buffer() {
+    Flux.range(1, 1000)
+            .parallel(2)
+            .log()
+            .runOn(Schedulers.newParallel("myTest", 2))
+            .as(StepVerifier::create)
+            .expectNextCount(1000)
+            .verifyComplete();
+}
+```  
+
+위 코드를 실행 했을 떄 로그를 보면 아래와 같이, 
+`upstream` 으로 부터 `request(256)` 으로 256개의(이후에는 192) 데이터를 요청하고 버퍼에 받아 `downstream` 으로 필요한 만큼 다시 전달하게 된다.  
+
+```
+[main] INFO reactor.Parallel.Source.1 - onSubscribe(ParallelSource.ParallelSourceMain.ParallelSourceInner)
+[main] INFO reactor.Parallel.Source.1 - request(256)
+[main] INFO reactor.Parallel.Source.1 - onSubscribe(ParallelSource.ParallelSourceMain.ParallelSourceInner)
+[main] INFO reactor.Parallel.Source.1 - request(256)
+
+... onNext() ...
+
+[myTest-1] INFO reactor.Parallel.Source.1 - request(192)
+[myTest-2] INFO reactor.Parallel.Source.1 - request(192)
+
+... onNext() ...
+
+[myTest-1] INFO reactor.Parallel.Source.1 - request(192)
+[myTest-2] INFO reactor.Parallel.Source.1 - request(192)
+
+...
+```  
+
+`prefetch` 인수를 사용하면 처리에 필요한 만큼 버퍼 크기인 `Backpressure` 를 조정할 수 있다. 
+아래 코드는 `prefetch` 를 10으로 지정했을 떄의 코드와 로그인다.  
+
+```java
+@Test
+public void custom_buffer() {
+    Flux.range(1, 1000)
+            .parallel(2)
+            .log()
+            .runOn(Schedulers.newParallel("myTest", 2), 10)
+            .as(StepVerifier::create)
+            .expectNextCount(1000)
+            .verifyComplete();
+}
+```  
+
+위 코드는 `upstream` 으로부터 `request(10)` 으로 10개의(이후에는 8) 데이터를 요청하고 버퍼에 받아 `downstream` 으로 필요한 만큼 전달한다. 
+
+```
+[main] INFO reactor.Parallel.Source.1 - onSubscribe(ParallelSource.ParallelSourceMain.ParallelSourceInner)
+[main] INFO reactor.Parallel.Source.1 - request(10)
+[main] INFO reactor.Parallel.Source.1 - onSubscribe(ParallelSource.ParallelSourceMain.ParallelSourceInner)
+[main] INFO reactor.Parallel.Source.1 - request(10)
+
+... onNext() ...
+
+[myTest-1] INFO reactor.Parallel.Source.1 - request(8)
+[myTest-2] INFO reactor.Parallel.Source.1 - request(8)
+
+... onNext() ...
+
+[myTest-1] INFO reactor.Parallel.Source.1 - request(8)
+[myTest-2] INFO reactor.Parallel.Source.1 - request(8)
+
+...
+```  
+
+이렇게 `runOn()` 의 `prefetch` 인수를 사용하면 `Flux Stream` 의 병렬 처리에 있어서 필요한 양만큼 `Backpressure` 조정이 가능하다.  
+
+
+
+---
+## Reference
+[]()  
+
 
