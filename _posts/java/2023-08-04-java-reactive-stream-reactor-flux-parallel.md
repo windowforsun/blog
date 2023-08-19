@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Flux Parallel"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactive Stream 의 Flux 에서 다량의 데이터 처리를 병렬로 수행하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
   - Concept
   - Java
+  - Reactive Stream
+  - Reactor
+  - Flux
+  - parallel
+  - ParallelFlux
+  - runOn
+  - rains
 toc: true 
 use_math: true
 ---  
@@ -575,6 +582,7 @@ public void custom_buffer() {
 
 ---
 ## Reference
-[]()  
+[Flux.parallel()](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#parallel-int-)  
+[ParallelFlux.runOn()](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/ParallelFlux.html#runOn-reactor.core.scheduler.Scheduler-)  
 
 
