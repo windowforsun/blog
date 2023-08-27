@@ -34,6 +34,7 @@ use_math: true
 - `Subscriber` 는 `Common Buffer` 에서 데이터를 읽어온다. 
 - `Common Buffer` 의 크기는 제한돼 있다. 
 
+`Reactor Flux` 는 기보적으로 `256` 크기의 `Small Buffer` 를 가진다.   
 
 > `Backpressure` 의 동작은 `Multi-thread` 환경에서 비로서 의미가 있음을 기억해야 한다. 
 
@@ -194,3 +195,7 @@ reactor.core.Exceptions$OverflowException: Could not emit tick 32 due to lack of
 `0 ~ 31` 까지 데이터가 모두 크기가 32인 버퍼에 들어가 꽉차 있는 상태에서 
 `interval()` 는 `Subscriber` 의 처리 속도와는 무관하게 `1ms` 마다 추가적으로 아이템을 방출하려 하기 때문에 
 `OverflowException` 이 발생하게 되는 것이다.  
+
+
+### Prefetch
+https://beer1.tistory.com/18
