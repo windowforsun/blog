@@ -199,3 +199,19 @@ reactor.core.Exceptions$OverflowException: Could not emit tick 32 due to lack of
 
 ### Prefetch
 https://beer1.tistory.com/18
+
+### Reactor backpressure strategy
+앞선 예제에서 처럼 `Publisher` 와 `Subscriber` 간 데이터를 전달 할때, 
+`Buffer` 가 꽉차버린 상황을 `Overflow` 라고 한다. 
+`Reactor` 는 이런 `Overflow/Backpressure` 상황을 좀더 `Gracefully` 하게 적용 할 수 있는 전략으로 아래와 같은 `Backpressure Strategy`를 제공한다.  
+
+
+Strategy|Desc
+---|---
+IGNORE|`Downstream` 의 `Backpressure` 를 무시한다.
+IGNORE|`Downstream` 에 데이터를 전달 할떄 사용하는 `Buffer` 가 가득 찬 경우, 초과되는 데이터를 무시하고 계속 처리한다. 
+ERROR|`Downstream` 에 데이터를 전달 할떄 사용하는 `Buffer` 가 가득 찬 경우, 예외를 발생시켜 처리를 중단한다.
+DROP|`Donwstream` 에 데이터를 전달 할떄 사용한는 `Buffer` 가 가득 찬 경우, 초과된 데이터를 무시하고 처리하지 않는다. 
+LASTEST|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 초과된 데이터 중 가장 최신 값부터 처리한다. 
+BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 있는 데이터를 버리고 새롭게 방출된 데이터를 버퍼에 넣는다. 
+BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 저장해 나중에 처리하도록 한다. 
