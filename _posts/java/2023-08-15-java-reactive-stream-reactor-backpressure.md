@@ -215,3 +215,12 @@ DROP|`Donwstream` 에 데이터를 전달 할떄 사용한는 `Buffer` 가 가�
 LASTEST|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 초과된 데이터 중 가장 최신 값부터 처리한다. 
 BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 있는 데이터를 버리고 새롭게 방출된 데이터를 버퍼에 넣는다. 
 BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 저장해 나중에 처리하도록 한다. 
+
+
+#### DROP
+`DROP` 전략은 `Downstream` 이 너무 `Upstream` 의 데이터 방출을 따라가지 못할 떄, 가장 최근의 다음 값을 버리는 전략이다. 
+`DROP` 전략으로 버려진 값들은 `Consumer` 구현을 통해 별도 처리를 수행할 수 있도록 제공한다. 
+
+아래 코드는 보면 `Producer` 는 `0 ~ 499` 까지 데이터를 방출하고,
+`Subcriber` 인 `concatMap()` 은 방출 된 데이터를 `10ms` 마다 소비한다. 
+이후 다른 전략들에도 동일한 코드에서 `backpressure` 전략만 변경해 어떻게 수행 결과가 달라지는지 살펴본다.  
