@@ -224,3 +224,60 @@ BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가
 아래 코드는 보면 `Producer` 는 `0 ~ 499` 까지 데이터를 방출하고,
 `Subcriber` 인 `concatMap()` 은 방출 된 데이터를 `10ms` 마다 소비한다. 
 이후 다른 전략들에도 동일한 코드에서 `backpressure` 전략만 변경해 어떻게 수행 결과가 달라지는지 살펴본다.  
+
+
+```java
+@Test
+public void backpressure_overflow_drop() {
+    Flux.<Integer>create(fluxSink -> {
+        for(int i = 0; i < 500; i++) {
+            log.info("publish : {}", i);
+            fluxSink.next(i);
+        }
+
+        fluxSink.complete();
+    }, FluxSink.OverflowStrategy.DROP)
+            .onBackpressureDrop(integer -> log.info("drop : {}", integer))
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.boundedElastic())
+            .concatMap(integer -> Mono.just(integer).delayElement(Duration.ofMillis(10)))
+            .doOnNext(integer -> log.info("next : {}", integer))
+            .doOnError(throwable -> log.error("error", throwable))
+            .as(StepVerifier::create)
+            .expectNextSequence(IntStream.range(0, 256).boxed().collect(Collectors.toList()))
+            .verifyComplete();
+}
+```  
+
+
+위 시나리오에서 `DROP` 전략을 사용하면 아래와 같은 출력 결과가 나온다. 
+기본 버퍼 크기인 `256` 개의 데이터인 `0 ~ 255` 의 데이터는 구독자인 `concatMap()` 까지 모두 정상적으로 전달이 된다. 
+하지만 그 이후의 데이터는 버퍼가 꽉찬 상태이기 때문에 버려져서 `drop` 로그에 찍힌 것을 확인 할 수 있다.  
+
+```
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 0
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 1
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 2
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 254
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 255
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 256
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - drop : 256
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 257
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - drop : 257
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 258
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - drop : 497
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - drop : 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 499
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - drop : 499
+[parallel-1] INFO com.windowforsun.bachpressure.BackpressureTest - next : 0
+[parallel-2] INFO com.windowforsun.bachpressure.BackpressureTest - next : 1
+[parallel-3] INFO com.windowforsun.bachpressure.BackpressureTest - next : 2
+...
+[parallel-4] INFO com.windowforsun.bachpressure.BackpressureTest - next : 253
+[parallel-5] INFO com.windowforsun.bachpressure.BackpressureTest - next : 254
+[parallel-6] INFO com.windowforsun.bachpressure.BackpressureTest - next : 255
+```  
+
