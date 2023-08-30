@@ -34,7 +34,7 @@ use_math: true
 - `Subscriber` 는 `Common Buffer` 에서 데이터를 읽어온다. 
 - `Common Buffer` 의 크기는 제한돼 있다. 
 
-`Reactor Flux` 는 기보적으로 `256` 크기의 `Small Buffer` 를 가진다.   
+`Reactor Flux` 는 일반적으로 `256` 크기의 `Small Buffer` 를 가진다.   
 
 > `Backpressure` 의 동작은 `Multi-thread` 환경에서 비로서 의미가 있음을 기억해야 한다. 
 
@@ -196,10 +196,6 @@ reactor.core.Exceptions$OverflowException: Could not emit tick 32 due to lack of
 `interval()` 는 `Subscriber` 의 처리 속도와는 무관하게 `1ms` 마다 추가적으로 아이템을 방출하려 하기 때문에 
 `OverflowException` 이 발생하게 되는 것이다.  
 
-
-### Prefetch
-https://beer1.tistory.com/18
-
 ### Reactor backpressure strategy
 앞선 예제에서 처럼 `Publisher` 와 `Subscriber` 간 데이터를 전달 할때, 
 `Buffer` 가 꽉차버린 상황을 `Overflow` 라고 한다. 
@@ -216,9 +212,12 @@ LASTEST|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 �
 BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 있는 데이터를 버리고 새롭게 방출된 데이터를 버퍼에 넣는다. 
 BUFFER|`Downstream` 에 데이터를 전달 할때 사용하는 `Buffer` 가 가득 찬 경우, 버퍼에 저장해 나중에 처리하도록 한다. 
 
+이러한 처리 전략은 `onBackpressureXXX()` 를 사용해서 `Reactive Stream` 에 쉽게 적용 할 수 있다.  
+
 
 #### DROP
-`DROP` 전략은 `Downstream` 이 너무 `Upstream` 의 데이터 방출을 따라가지 못할 떄, 가장 최근의 다음 값을 버리는 전략이다. 
+`DROP` 전략은 `Downstream` 이 너무 `Upstream` 의 데이터 방출을 따라가지 못할 떄, 
+가장 최근의 다음 값을 버리는 전략이다. (버퍼 밖에서 대기하는 데이터 중 먼저 방출된 데이터 부터 버린다.)
 `DROP` 전략으로 버려진 값들은 `Consumer` 구현을 통해 별도 처리를 수행할 수 있도록 제공한다. 
 
 아래 코드는 보면 `Producer` 는 `0 ~ 499` 까지 데이터를 방출하고,
@@ -250,8 +249,9 @@ public void backpressure_overflow_drop() {
 ```  
 
 
-위 시나리오에서 `DROP` 전략을 사용하면 아래와 같은 출력 결과가 나온다. 
-기본 버퍼 크기인 `256` 개의 데이터인 `0 ~ 255` 의 데이터는 구독자인 `concatMap()` 까지 모두 정상적으로 전달이 된다. 
+위 시나리오에서 `DROP` 전략을 사용하면 아래와 같은 출력 결과가 나온다.
+`Publisher` 는 앞서 ` 0 ~ 499` 까지 데이터를 모두 방출 한다.
+그리고 `Subscriber` 는 비동기로 기본 버퍼 크기인 `256` 개의 데이터인 `0 ~ 255` 의 데이터는 구독자인 `concatMap()` 까지 모두 정상적으로 전달이 된다. 
 하지만 그 이후의 데이터는 버퍼가 꽉찬 상태이기 때문에 버려져서 `drop` 로그에 찍힌 것을 확인 할 수 있다.  
 
 ```
