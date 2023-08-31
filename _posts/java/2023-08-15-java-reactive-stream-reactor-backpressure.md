@@ -281,3 +281,56 @@ public void backpressure_overflow_drop() {
 [parallel-6] INFO com.windowforsun.bachpressure.BackpressureTest - next : 255
 ```  
 
+
+#### LATEST
+`LATEST` 전략은 `Downstream` 이 `Upstream` 의 전송 속도를 따라가지 못할 때, 
+최신 값 부터 처리 하는 전략으로, 
+버퍼 밖에서 대기하는 가종 최근에 방출된 데이터 부터 버퍼에 채우는 전략이다.  
+
+```java
+@Test
+public void backpressure_overflow_latest() {
+    Flux.<Integer>create(fluxSink -> {
+                for(int i = 0; i < 500; i++) {
+                    log.info("publish : {}", i);
+                    fluxSink.next(i);
+                }
+
+                fluxSink.complete();
+            }, FluxSink.OverflowStrategy.LATEST)
+            // or
+//          .onBackpressureLatest()
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.boundedElastic())
+            .concatMap(integer -> Mono.just(integer).delayElement(Duration.ofMillis(10)))
+            .doOnNext(integer -> log.info("next : {}", integer))
+            .doOnError(throwable -> log.error("error", throwable))
+            .as(StepVerifier::create)
+            .expectNextSequence(IntStream.range(0, 256).boxed().collect(Collectors.toList()))
+            .expectNext(499)
+            .verifyComplete();
+}
+```  
+
+위 시나리오에서 `LATEST` 전략을 사용하면 아래와 같은 출력 결과가 나온다. 
+`Publisher` 는 앞서 ` 0 ~ 499` 까지 데이터를 모두 방출 한다. 
+그리고 `Subscriber` 는 비동기로 기본 버퍼 크기인 `0 ~ 255` 까지 데이터는 정상적으로 수신하지만, 
+그 이후 데이터는 모두 무시되다가 마지막 데이터인 `499` 만 수신하고 스트림은 종료된다. 
+
+```
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 0
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 1
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 2
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 497
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 499
+[parallel-1] INFO com.windowforsun.bachpressure.BackpressureTest - next : 0
+[parallel-2] INFO com.windowforsun.bachpressure.BackpressureTest - next : 1
+[parallel-3] INFO com.windowforsun.bachpressure.BackpressureTest - next : 2
+...
+[parallel-5] INFO com.windowforsun.bachpressure.BackpressureTest - next : 254
+[parallel-6] INFO com.windowforsun.bachpressure.BackpressureTest - next : 255
+[parallel-7] INFO com.windowforsun.bachpressure.BackpressureTest - next : 499
+```  
+
