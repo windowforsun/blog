@@ -334,3 +334,77 @@ public void backpressure_overflow_latest() {
 [parallel-7] INFO com.windowforsun.bachpressure.BackpressureTest - next : 499
 ```  
 
+
+#### ERROR
+`ERROR` 전략은 `Downstream` 이 `Upstream` 의 전송 속도를 따라가지 못할 때, 
+예외를 발생시켜 `Downstream` 에서 예외처리를 수행 할 수 있다.  
+
+```java
+@Test
+public void backpressure_overflow_error() {
+    Flux.<Integer>create(fluxSink -> {
+                for(int i = 0; i < 500; i++) {
+                    log.info("publish : {}", i);
+                    fluxSink.next(i);
+                }
+
+                fluxSink.complete();
+            }, FluxSink.OverflowStrategy.ERROR)
+            // or
+//          .onBackpressureError()
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.boundedElastic())
+            .concatMap(integer -> Mono.just(integer).delayElement(Duration.ofMillis(100)))
+            .doOnNext(integer -> log.info("next : {}", integer))
+            .doOnError(throwable -> log.error("error", throwable))
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(throwable -> {
+                Assertions.assertTrue(throwable instanceof IllegalStateException);
+                Assertions.assertTrue(throwable.getMessage().contains("The receiver is overrun by more signals than expected"));
+            })
+            .verify();
+}
+```  
+
+
+위 시나리오에서 `ERROR` 전략을 사용하면 아래와 같은 출력 결과가 나온다.
+`Publisher` 는 앞서 ` 0 ~ 499` 까지 데이터를 모두 방출을 시도한다. 
+하지만 `Subscriber` 는 `10ms` 주기로 데이터를 소비하는데, 
+`Publisher` 는 `10ms` 이내에 `Subscriber` 의 버퍼 크기보다 큰 데이터 개수를 방출하던 과정에서 기본 버퍼 크기에 가까운 `0 ~ 256` 까지는 정상적으로 방출 된다. 
+하지만 `257` 부터는 `Overflow` 로 인해 버려지고 `OverflowException` 이 발생하게 되며 `onError()` 를 통해 `Overflow` 에 대한 예외 처리가 가능하다. 
+
+```
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 0
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 1
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 2
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 254
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 255
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 256
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 257
+[boundedElastic-2] DEBUG reactor.core.publisher.Operators - onNextDropped: 257
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 258
+[boundedElastic-2] DEBUG reactor.core.publisher.Operators - onNextDropped: 258
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 498
+[boundedElastic-2] DEBUG reactor.core.publisher.Operators - onNextDropped: 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 499
+[boundedElastic-2] DEBUG reactor.core.publisher.Operators - onNextDropped: 499
+[boundedElastic-1] ERROR com.windowforsun.bachpressure.BackpressureTest - error
+reactor.core.Exceptions$OverflowException: The receiver is overrun by more signals than expected (bounded queue...)
+	at reactor.core.Exceptions.failWithOverflow(Exceptions.java:220)
+	at reactor.core.publisher.FluxCreate$ErrorAsyncSink.onOverflow(FluxCreate.java:687)
+	at reactor.core.publisher.FluxCreate$NoOverflowBaseAsyncSink.next(FluxCreate.java:652)
+	at reactor.core.publisher.FluxCreate$SerializedFluxSink.next(FluxCreate.java:154)
+	at com.windowforsun.bachpressure.BackpressureTest.lambda$backpressure_overflow_error$68(BackpressureTest.java:282)
+	at reactor.core.publisher.FluxCreate.subscribe(FluxCreate.java:94)
+	at reactor.core.publisher.FluxSubscribeOn$SubscribeOnSubscriber.run(FluxSubscribeOn.java:193)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
