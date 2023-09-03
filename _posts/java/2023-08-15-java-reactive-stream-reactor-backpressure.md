@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Backpressure"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactive Stream 흐름상에서 데이터의 유량을 제어 할 수 있는 Backpressure 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,10 @@ categories :
 tags:
   - Concept
   - Java
+  - Reactive Stream
+  - Reactor
+  - Backpressure
+  - Flux
 toc: true 
 use_math: true
 ---  
@@ -19,7 +23,7 @@ use_math: true
 ## Reactor Backpressure
 `Reactive Stream` 에서 `Backpressure` 란 `Publisher` 와 `Subscriber` 사이에서 서로 과부하기 걸리지 않도록, 
 제어하는 것을 의미한다. 
-이는 `Reactive Stream` 에서는 매오 중요한 특성으로, 
+이는 `Reactive Stream` 에서는 매우 중요한 특성으로, 
 `Publisher` 의 데이터를 받아 처리하는 `Subscriber` 간의 적절한 속도를 맞추는 것으로 
 시스템 간의 `Overloading` 이 발생하는 것을 방지한다.  
 
@@ -408,3 +412,69 @@ reactor.core.Exceptions$OverflowException: The receiver is overrun by more signa
 	at java.base/java.lang.Thread.run(Thread.java:829)
 ```  
 
+
+#### IGNORE
+`IGNORE` 전략은 `Downstream` 이 `Upstream` 의 전송 속도를 따라가지 못할 때, 
+`Backpressure Strategy` 를 적용하지 않는다. 
+이는 즉 `Subscriber` 측에서 `Overflow` 에 대한 처리를 해야하고, 
+적절한 처리가 되지 않았다면 예외가 발생하게 된다.  
+
+```java
+@Test
+public void backpressure_overflow_ignore() {
+    Flux.<Integer>create(fluxSink -> {
+                for(int i = 0; i < 500; i++) {
+                    log.info("publish : {}", i);
+                    fluxSink.next(i);
+                }
+
+                fluxSink.complete();
+            }, FluxSink.OverflowStrategy.IGNORE)
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.boundedElastic())
+            .concatMap(integer -> Mono.just(integer).delayElement(Duration.ofMillis(10)))
+            .doOnNext(integer -> log.info("next : {}", integer))
+            .doOnError(throwable -> log.error("error", throwable))
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(throwable -> {
+                Assertions.assertTrue(throwable instanceof IllegalStateException);
+                Assertions.assertTrue(throwable.getMessage().contains("Queue is full: Reactive Streams source doesn't respect backpressure"));
+            })
+            .verify();
+}
+```  
+
+
+위 시나리오에서 `IGNORE` 전략을 사용하면 아래와 같은 출력 결과가 나온다.
+`Publisher` 는 앞서 ` 0 ~ 499` 까지 데이터를 모두 방출을 시도한다.
+하지만 `Subscriber` 는 `10ms` 주기로 데이터를 소비하는데,
+`Publisher` 는 `10ms` 이내에 `Subscriber` 의 버퍼 크기보다 큰 데이터 개수를 방출하던 과정에서 기본 버퍼 크기는 모두 차게 된다. 
+`Publisher` 는 `Subscriber` 에 `Backpressure` 를 무시하고 아이템을 방출 하기 때문에 `Overflow` 로 `OverflowException` 가 출력된다. 
+
+
+```
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 0
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 1
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 2
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 497
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 499
+reactor.core.Exceptions$OverflowException: Queue is full: Reactive Streams source doesn't respect backpressure
+	at reactor.core.Exceptions.failWithOverflow(Exceptions.java:233)
+	at reactor.core.publisher.FluxPublishOn$PublishOnSubscriber.onNext(FluxPublishOn.java:233)
+	at reactor.core.publisher.FluxSubscribeOn$SubscribeOnSubscriber.onNext(FluxSubscribeOn.java:150)
+	at reactor.core.publisher.FluxCreate$IgnoreSink.next(FluxCreate.java:618)
+	at reactor.core.publisher.FluxCreate$SerializedFluxSink.next(FluxCreate.java:154)
+	at com.windowforsun.bachpressure.BackpressureTest.lambda$backpressure_overflow_ignore$73(BackpressureTest.java:312)
+	at reactor.core.publisher.FluxCreate.subscribe(FluxCreate.java:94)
+	at reactor.core.publisher.FluxSubscribeOn$SubscribeOnSubscriber.run(FluxSubscribeOn.java:193)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+
+```  
