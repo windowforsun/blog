@@ -478,3 +478,69 @@ reactor.core.Exceptions$OverflowException: Queue is full: Reactive Streams sourc
 	at java.base/java.lang.Thread.run(Thread.java:829)
 
 ```  
+
+
+#### BUFFER
+`BUFFER` 전략은 `Downstream` 이 `Upstream` 의 전송 속도를 따라가지 못할 때,
+기본 버퍼에 초과하는 아이템들도 모두 `Downstream` 에서 처리 할 수 있도록 버퍼링된다. 
+버퍼링 되는 버퍼 크기도 지정 할 순 있지만, 기본적으론 무한하므로 아이템 수가 너무 많거나, 
+`Downstream` 처리 속도가 너무 느리면 `memory-leak` 이 발생 될 수 있으므로 주의해야 한다. 
+추가적으로 `onBackpressureBuffer()` 를 사용하면 버퍼의 크기, `ttl`, 저징된 버퍼 크기를 넘었을 때 처리할 `callback` 등을 지정 할 수 있다.  
+
+```java
+@Test
+public void backpressure_overflow_buffer() {
+    Flux.<Integer>create(fluxSink -> {
+                for(int i = 0; i < 500; i++) {
+                    log.info("publish : {}", i);
+                    fluxSink.next(i);
+                }
+
+                fluxSink.complete();
+            }, FluxSink.OverflowStrategy.BUFFER)
+            // or
+//          .onBackpressureBuffer()
+            .subscribeOn(Schedulers.boundedElastic())
+            .publishOn(Schedulers.boundedElastic())
+            .concatMap(integer -> Mono.just(integer).delayElement(Duration.ofMillis(10)))
+            .doOnNext(integer -> log.info("next : {}", integer))
+            .doOnError(throwable -> log.error("error", throwable))
+            .as(StepVerifier::create)
+            .expectNextSequence(IntStream.range(0, 500).boxed().collect(Collectors.toList()))
+            .verifyComplete();
+}
+```  
+
+
+위 시나리오에서 `BUFFER` 전략을 사용하면 아래와 같은 출력 결과가 나온다.
+`Publisher` 는 앞서 ` 0 ~ 499` 까지 데이터를 모두 방출한다.
+하지만 `Subscriber` 는 `10ms` 주기로 데이터를 소비하는데, 
+중간에 무한한 `buffer` 가 있기 때문에, `10ms` 주기로 `Publisher` 에서 방출한 데이터를 모두 소비할 수 있게 된다. 
+
+
+```
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 0
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 1
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 2
+...
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 497
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 498
+[boundedElastic-2] INFO com.windowforsun.bachpressure.BackpressureTest - publish : 499
+...
+[parallel-1] INFO com.windowforsun.bachpressure.BackpressureTest - next : 0
+[parallel-2] INFO com.windowforsun.bachpressure.BackpressureTest - next : 1
+[parallel-3] INFO com.windowforsun.bachpressure.BackpressureTest - next : 2
+...
+[parallel-2] INFO com.windowforsun.bachpressure.BackpressureTest - next : 497
+[parallel-3] INFO com.windowforsun.bachpressure.BackpressureTest - next : 498
+[parallel-4] INFO com.windowforsun.bachpressure.BackpressureTest - next : 499
+```  
+
+
+---
+## Reference
+[Reactor Hot Versus Cold](https://projectreactor.io/docs/core/release/reference/#reactor.hotCold)  
+[On Backpressure and Ways to Reshape Requests](https://projectreactor.io/docs/core/release/reference/#_on_backpressure_and_ways_to_reshape_requests)  
+[Reactor Basics with example | Backpressure (Overflow) – DROP, ERROR, LATEST, IGNORE, BUFFER](https://itsallbinary.com/reactor-basics-with-example-backpressure-overflow-drop-error-latest-ignore-buffer-good-for-beginners/)  
+
+
