@@ -29,10 +29,11 @@ use_math: true
 
 `Backpressure` 는 `Reactive Stream` 에서만 존재하는 개념은 아니다. 
 어떻게 보면 유체역학에서 유량제어에 관련된 [Backpressure](https://en.wikipedia.org/wiki/Back_pressure)
-를 소프트웨어 데이터 흐름제어 관점으로 차용한 것이라고 할 수 있다.  
+를 소프트웨어 데이터 흐름제어 관점으로 차용한 것으로, 
+다양한 플랫픔 등에서도 차용하고 있는 개념이다.  
 
 말그대로 `Backpressure` 는 `Publisher` 와 `Subscriber` 사이에서 오고가는 데이터의 양을 컨트롤 하는 것인데, 
-아래와 같은 일반적인 특성을 기억해야 한다. 
+`Reactor` 의 `Backpressure` 는 아래와 같은 일반적인 특성을 기억해야 한다. 
 
 - `Publisher` 에서 방출한 데이터는 `Common Buffer` 에 추가된다. 
 - `Subscriber` 는 `Common Buffer` 에서 데이터를 읽어온다. 
