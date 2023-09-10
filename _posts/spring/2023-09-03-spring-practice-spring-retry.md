@@ -44,3 +44,15 @@ use_math: true
 - `Stateful Retry` : 트랜잭션과 역인 경우 등으로, `RetryCallback` 이 이미 콜스택에 나와 `Stateless Retry` 로는 해결이 불가한 경우 `RetryContext` 를 `RetryContextCache` 로 전역에 저장해서 사용하는 경우이다. 
 - `Retry Policies` : 재사작 동작에 대한 정책을 정의 할 수 있다. 횟수, 소요시간, 적용할 예외, 제외할 예외 등이 있고, 대표적으로 `SimpleRetryPolicy` 와 `TimeoutRetryPolcy`(둘다 `Stateless Retry`) 가 있다. 
 - `Backoff Policies` : 실패가 일시적인 경우 잠시 기다렸다가 하는 경우에 대한 정책을 정의한다. 대기 주기나, 시작 주기 등을 정의 할 수 있다.
+
+### buidl.gradle
+`Spring Retry` 를 프로젝트에 적용하기 위해서는 아래와 같은 의존성이 필요하다.  
+
+```groovy
+dependencies {
+    // ...
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework:spring-aspects'
+    // ...
+}
+```  
