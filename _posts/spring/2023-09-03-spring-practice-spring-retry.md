@@ -56,3 +56,207 @@ dependencies {
     // ...
 }
 ```  
+
+### Retry Annotation
+`Annotation` 방식으로 `Spring Retry` 적용은 `AOP` 방식으로 동작이 수행된다. 
+그리고 이러한 방식을 활성화 하기 위해서는 `@EnableRetry` 를 설정 혹은 애플리케이션 클래스에 선언해야 한다.  
+
+```java
+@EnableRetry
+@SpringBootApplication
+public class ExamRetryApplication {
+    public static void main(String... args) {
+        SpringApplication.run(ExamRetryApplication.class, args);
+    }
+}
+```  
+
+`@EnableRetry` 가 프로젝트에 선언된 상태에서 
+재시작 동작을 적용하고 싶은 메소드에 `@Retryable` 어노테이션을 선언하면 해당 메소드가 예외를 던졌을 때 설정된 값에 따라서 재시작을 수행한다. 
+`@Retryable` 어노테이션에는 다양한 설정 값들이 있는데 그 원형을 살펴보면 아래와 같다.  
+
+```java
+@Target({ ElementType.METHOD, ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Retryable {
+
+    // 적용 할 recover 수행 메소드, 동일한 클래스에 존재해야 한다. 
+	String recover() default "";
+
+    // 적용 할 interceptor 빈 이름
+	String interceptor() default "";
+
+    // 재시작을 수행 할 예외
+	Class<? extends Throwable>[] value() default {};
+
+    // 재사작에 포함 시킬 예외
+	Class<? extends Throwable>[] include() default {};
+
+    // 재시작에 제외 할 예외
+	Class<? extends Throwable>[] exclude() default {};
+
+    // 재시작 통계에 사용할 라벨
+	String label() default "";
+
+    // stateless, stateful 설정
+	boolean stateful() default false;
+
+    // 최대 시도 횟수, 타겟 메소드 첫 수행도 횟수에 포함
+	int maxAttempts() default 3;
+
+    // 최대 시도 횟수 표현식 e.g. ${max.attempts}
+	String maxAttemptsExpression() default "";
+
+    // backoff 정책 e.g. @Backoff(delay = 100)
+	Backoff backoff() default @Backoff();
+
+    // 재시작 적용 판별 표현식 e.g. @retryCheckerService.isNeedRetry(#root)
+	String exceptionExpression() default "";
+
+    // 적용 할 listeners 빈 이름
+	String[] listeners() default {};
+
+}
+```  
+
+아무런 설정을 하지 않고 기본 값 그대로 `@Retryable` 을 적용하고 수행해 주면 아래 같은 결과가 출력된다. 
+
+```java
+public static AtomicInteger COUNTER = new AtomicInteger(1);
+
+@Retryable
+public int getCount() {
+    int result = COUNTER.getAndIncrement();
+    log.info("result : {}", result);
+
+    if (result % 3 == 0) {
+        return result;
+    } else {
+        throw new IllegalArgumentException("test exception");
+    }
+}
+```  
+
+아무런 설정없이 선언한 경우 타겟 메소드에서 어떤 예외라도 발생한다면, 1초 주기로 최대 3회 수행하게 된다.
+
+```java
+@Test
+public void retryAnnotation() {
+    Assertions.assertEquals(3, this.retryAnnotationCountService.getCount());
+}
+/*
+14:48:57.548  INFO 14787 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 1
+14:48:58.554  INFO 14787 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 2
+14:48:59.559  INFO 14787 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 3
+ */
+```
+
+그리고 아래와 같이 `@Retryable` 설정을 커스텀한 예시는 아래와 같다.  
+
+```java
+@Retryable(maxAttempts = 3,
+        value = IllegalArgumentException.class,
+        backoff = @Backoff(delay = 100))
+public int getCountRetryAnnotationIllegalArgumentException() {
+    int result = COUNTER.getAndIncrement();
+    log.info("result : {}", result);
+
+    if (result % 3 == 0) {
+        return result;
+    } else {
+        throw new IllegalArgumentException("test exception");
+    }
+}
+
+@Retryable(maxAttempts = 3,
+        value = IllegalArgumentException.class,
+        backoff = @Backoff(delay = 100))
+public int getCountRetryAnnotationRuntimeException() {
+    int result = COUNTER.getAndIncrement();
+    log.info("result : {}", result);
+
+    if (result % 3 == 0) {
+        return result;
+    } else {
+        throw new RuntimeException("test exception");
+    }
+}
+
+@Retryable(maxAttempts = 3,
+        value = IllegalArgumentException.class,
+        backoff = @Backoff(delay = 100))
+public int getCountRetryAnnotationNumberFormatException() {
+    int result = COUNTER.getAndIncrement();
+    log.info("result : {}", result);
+
+    if (result % 3 == 0) {
+        return result;
+    } else {
+        throw new NumberFormatException("test exception");
+    }
+}
+
+@Retryable(maxAttempts = 3,
+        value = IllegalArgumentException.class,
+        exclude = {MissingFormatArgumentException.class},
+        backoff = @Backoff(delay = 100))
+public int getCountRetryAnnotationMissingFormatArgumentException() {
+    int result = COUNTER.getAndIncrement();
+    log.info("result : {}", result);
+
+    if (result % 3 == 0) {
+        return result;
+    } else {
+        throw new MissingFormatArgumentException("test exception");
+    }
+}
+```  
+
+위 예제에 대응되는 테스트와 그 결과는 아래와 같다.  
+
+```java
+@Test
+public void retryAnnotation_match_exception() {
+    Assertions.assertEquals(3, 
+            this.retryAnnotationCountService.getCountRetryAnnotationIllegalArgumentException());
+}
+/*
+15:13:37.734  INFO 17007 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 1
+15:13:37.839  INFO 17007 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 2
+15:13:37.942  INFO 17007 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 3
+ */
+
+@Test
+public void retryAnnotation_child_exception() {
+    Assertions.assertEquals(3, 
+            this.retryAnnotationCountService.getCountRetryAnnotationNumberFormatException());
+}
+/*
+15:14:25.014  INFO 17056 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 1
+15:14:25.117  INFO 17056 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 2
+15:14:25.223  INFO 17056 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 3
+ */
+
+@Test
+public void retryAnnotation_parent_exception() {
+    Assertions.assertThrows(RuntimeException.class, 
+            () -> this.retryAnnotationCountService.getCountRetryAnnotationRuntimeException());
+}
+/*
+15:14:37.611  INFO 17091 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 1
+ */
+
+@Test
+public void retryAnnotation_exclude_exception() {
+    Assertions.assertThrows(MissingFormatArgumentException.class, 
+            () -> this.retryAnnotationCountService.getCountRetryAnnotationMissingFormatArgumentException());
+}
+/*
+15:14:52.019  INFO 17100 --- [           main] c.w.s.retry.RetryAnnotationCountService  : result : 1
+ */
+```  
+
+재사작 타겟이 되는 예외는 `IllegalArgumentException` 을 지정했고, 최대 시도 횟수는 3회, 재시도 간격은 `100ms` 로 설정했다. 
+설정과 일치하거나 하위 예외인 `IllegalArgumentException` 과 `NumberFormatException` 은 모두 재시작이 정상적으로 수행되지만, 
+상위 예외이거나 `exclude` 에 포함된 `RuntimeException` 과 `MissingFormatArgumentException` 은 재시작이 수행되지 않고 그대로 예외를 던지게 된다.  
