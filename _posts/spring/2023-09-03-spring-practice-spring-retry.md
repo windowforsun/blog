@@ -260,3 +260,25 @@ public void retryAnnotation_exclude_exception() {
 재사작 타겟이 되는 예외는 `IllegalArgumentException` 을 지정했고, 최대 시도 횟수는 3회, 재시도 간격은 `100ms` 로 설정했다. 
 설정과 일치하거나 하위 예외인 `IllegalArgumentException` 과 `NumberFormatException` 은 모두 재시작이 정상적으로 수행되지만, 
 상위 예외이거나 `exclude` 에 포함된 `RuntimeException` 과 `MissingFormatArgumentException` 은 재시작이 수행되지 않고 그대로 예외를 던지게 된다.  
+
+
+### RetryTemplate
+`RetryTemplate` 은 `Retry Annotation` 방식 보다 더 상세하고 커스텀한 설정이 가능하다. 
+재시도 과정에서 `RetryOperation` 에 있는 `RetryCallback` 을 직접 제어할 수 있으므로, 
+좀 더 다양하고 커스텀한 작업을 수행 할 수 있다.  
+
+`RetryTemplate` 에서 사용할 수 있는 `RetryOperation` 의 원형은 아래와 같다.  
+
+```java
+public interface RetryOperations {
+
+	<T, E extends Throwable> T execute(RetryCallback<T, E> retryCallback) throws E;
+
+	<T, E extends Throwable> T execute(RetryCallback<T, E> retryCallback, RecoveryCallback<T> recoveryCallback) throws E;
+
+	<T, E extends Throwable> T execute(RetryCallback<T, E> retryCallback, RetryState retryState) throws E, ExhaustedRetryException;
+
+	<T, E extends Throwable> T execute(RetryCallback<T, E> retryCallback, RecoveryCallback<T> recoveryCallback, RetryState retryState) throws E;
+
+}
+```  
