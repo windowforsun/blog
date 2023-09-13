@@ -282,3 +282,56 @@ public interface RetryOperations {
 
 }
 ```  
+
+그리고 실제 재시도 동작의 로직이 담기게 되는 `RetryCallback` 원형은 아래와 같다.  
+
+```java
+public interface RetryCallback<T, E extends Throwable> {
+
+	T doWithRetry(RetryContext context) throws E;
+
+}
+```  
+
+`RetryTemplate` 을 사용하기 위해서는 먼저 객체를 생성하는 과정이 필요하다. 
+아래 처럼 생성자와 빌더를 사용하는 2가지 방법이 가능하다.  
+
+```java
+RetryTemplate constructorRetryTemplate = new RetryTemplate();
+FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+backOffPolicy.setBackOffPeriod(100);
+constructorRetryTemplate.setBackOffPolicy(backOffPolicy);
+    SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(3,
+        Map.of(IllegalArgumentException.class, true,
+            MissingFormatArgumentException.class, false));
+constructorRetryTemplate.setRetryPolicy(retryPolicy);
+
+// or
+        
+RetryTemplate builderRetryTemplate = RetryTemplate.builder()
+        .maxAttempts(3)
+        .fixedBackoff(100)
+        .retryOn(IllegalArgumentException.class)
+        .notRetryOn(MissingFormatArgumentException.class)
+        .build();
+```  
+
+생성한 `RetryTemplate` 은 범용적으로 사용 할 수 있도록 빈으로 등록하면 된다.  
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class RetryTemplateConfig {
+
+    @Bean
+    public RetryTemplate retryTemplate() {
+        return RetryTemplate.builder()
+                .maxAttempts(3)
+                .fixedBackoff(100)
+                .retryOn(IllegalArgumentException.class)
+                .notRetryOn(MissingFormatArgumentException.class)
+                .build();
+    }
+}
+```  
+
