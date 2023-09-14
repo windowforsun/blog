@@ -335,3 +335,115 @@ public class RetryTemplateConfig {
 }
 ```  
 
+
+`RetryTemplate` 을 사용해서 재시도를 적용한 서비스의 예시는 아래와 같다.  
+
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class RetryTemplateCountService {
+    public static AtomicInteger COUNTER = new AtomicInteger(1);
+    private final RetryTemplate retryTemplate;
+
+    public int getCountRetryTemplateIllegalArgumentException() {
+        return this.retryTemplate.execute(context -> {
+            int result = COUNTER.getAndIncrement();
+            log.info("result : {}", result);
+
+            if (result % 3 == 0) {
+                return result;
+            } else {
+                throw new IllegalArgumentException("test exception");
+            }
+        });
+    }
+
+    public int getCountRetryTemplateRuntimeException() {
+        return this.retryTemplate.execute(context -> {
+            int result = COUNTER.getAndIncrement();
+            log.info("result : {}", result);
+
+            if (result % 3 == 0) {
+                return result;
+            } else {
+                throw new RuntimeException("test exception");
+            }
+        });
+    }
+
+    public int getCountRetryTemplateNumberFormatException() {
+        return this.retryTemplate.execute(context -> {
+            int result = COUNTER.getAndIncrement();
+            log.info("result : {}", result);
+
+            if (result % 3 == 0) {
+                return result;
+            } else {
+                throw new NumberFormatException("test exception");
+            }
+        });
+    }
+
+    public int getCountRetryTemplateMissingFormatArgumentException() {
+        return this.retryTemplate.execute(context -> {
+            int result = COUNTER.getAndIncrement();
+            log.info("result : {}", result);
+
+            if (result % 3 == 0) {
+                return result;
+            } else {
+                throw new MissingFormatArgumentException("test exception");
+            }
+        });
+    }
+}
+```  
+
+위 예제에 대응되는 테스트와 그 결과는 아래와 같다.  
+
+```java
+@Test
+public void retryTemplate_match_exception() {
+    Assertions.assertEquals(3,
+            this.retryTemplateCountService.getCountRetryTemplateIllegalArgumentException());
+}
+/*
+16:53:19.573  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 1
+16:53:19.678  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 2
+16:53:19.779  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 3
+ */
+
+@Test
+public void retryTemplate_child_exception() {
+    Assertions.assertEquals(3,
+            this.retryTemplateCountService.getCountRetryTemplateNumberFormatException());
+}
+/*
+16:53:19.796  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 1
+16:53:19.901  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 2
+16:53:20.004  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 3
+ */
+
+@Test
+public void retryTemplate_parent_exception() {
+    Assertions.assertThrows(RuntimeException.class,
+            () -> this.retryTemplateCountService.getCountRetryTemplateRuntimeException());
+}
+/*
+16:53:19.791  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 1
+ */
+
+@Test
+public void retryTemplate_exclude_exception() {
+    Assertions.assertThrows(MissingFormatArgumentException.class,
+            () -> this.retryTemplateCountService.getCountRetryTemplateMissingFormatArgumentException());
+}
+/*
+16:53:19.788  INFO 75528 --- [           main] c.w.s.retry.RetryTemplateCountService    : result : 1
+ */
+```  
+
+`RetryTemplate` 설정은 앞서 진행한 `Retry Annotation` 과 동일하다. 
+설정과 일치하거나 하위 예외인 `IllegalArgumentException` 과 `NumberFormatException` 은 모두 재시작이 정상적으로 수행되지만,
+상위 예외이거나 `exclude` 에 포함된 `RuntimeException` 과 `MissingFormatArgumentException` 은 재시작이 수행되지 않고 그대로 예외를 던지게 된다.  
