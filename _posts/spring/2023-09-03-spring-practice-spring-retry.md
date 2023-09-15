@@ -447,3 +447,108 @@ public void retryTemplate_exclude_exception() {
 `RetryTemplate` 설정은 앞서 진행한 `Retry Annotation` 과 동일하다. 
 설정과 일치하거나 하위 예외인 `IllegalArgumentException` 과 `NumberFormatException` 은 모두 재시작이 정상적으로 수행되지만,
 상위 예외이거나 `exclude` 에 포함된 `RuntimeException` 과 `MissingFormatArgumentException` 은 재시작이 수행되지 않고 그대로 예외를 던지게 된다.  
+
+
+### Recover
+`Recover` 는 설정된 재시도 동작을 모두 수행 했음에도 실패한 경우 후처리를 담당하는 로직으로, 
+`Retry Annotation` 방식을 사용하는 경우 `@Recover` 어노테이션을 통해 메서드에 선언해 지정 할 수 있는데, 
+필요한 조건은 아래와 같다. 
+
+- `@Retryable` 이 정의된 메소드와 동일한 클래스에 위치
+- `@Recover` 메소드의 맨 첫 파라미터는 `@Retryable` 가 수행되는 예외 클래스 이거나 부모 클래스 
+- `@Recover` 메소드는 `@Retryable` 메소드와 반환 타입 및 파라미터가 동일 해야함
+- `@Recover` 어노테이션이 해당 클래스에 한 개만 존재한다면, 별도 선언 없이 `recover` 동작 수행
+- 동일 클래스에 2개 이상의 동일하게 적용 가능한 `@Recover` 메소드가 있다면, `@Retryable` 의 `recover` 필드로 메소드 이름으로 지정 가능
+
+`RetryTemplate` 을 사용하는 경우에는 `execute()` 메소드에 적용할 `recover` 동작을 정의할 수 있다.  
+
+아래는 `Retry Annotation` 과 `RetryTemplate` 을 사용해서 `Recover` 를 적용한 예시이다.  
+
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class RecoverCounterService {
+    public static AtomicInteger COUNTER = new AtomicInteger(1);
+    private final RetryTemplate retryTemplate;
+    
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            backoff = @Backoff(delay = 100))
+    public int getCountRetryAnnotationIllegalArgumentException() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 4 == 0) {
+            return result;
+        } else {
+            throw new IllegalArgumentException("test exception");
+        }
+    }
+    
+    @Retryable(maxAttempts = 3,
+            value = IndexOutOfBoundsException.class,
+            backoff = @Backoff(delay = 100),
+            recover = "recoverGetCountRetryAnnotationIndexOutOfBoundsException2")
+    public int getCountRetryAnnotationIndexOutOfBoundsException(String param1) {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 4 == 0) {
+            return result;
+        } else {
+            throw new IndexOutOfBoundsException("test exception");
+        }
+    }
+    
+    @Retryable(maxAttempts = 3,
+            value = IndexOutOfBoundsException.class,
+            backoff = @Backoff(delay = 100),
+            recover = "recoverGetCountRetryAnnotationIndexOutOfBoundsException2")
+    public int getCountRetryAnnotationRuntimeException(String param1) {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 4 == 0) {
+            return result;
+        } else {
+            throw new RuntimeException("test exception");
+        }
+    }
+    
+    @Recover
+    public int recoverGetCountRetryAnnotationIllegalArgumentException(IllegalArgumentException e) {
+        log.info("recoverGetCountRetryAnnotationIllegalArgumentException");
+        return -1;
+    }
+
+    @Recover
+    public int recoverGetCountRetryAnnotationIndexOutOfBoundsException1(IndexOutOfBoundsException e, String param1) {
+        log.info("recoverGetCountRetryAnnotationIndexOutOfBoundsException1 : {}", param1);
+        return -1;
+    }
+
+    @Recover
+    public int recoverGetCountRetryAnnotationIndexOutOfBoundsException2(RuntimeException e, String param1) {
+        log.info("recoverGetCountRetryAnnotationIndexOutOfBoundsException2 : {}", param1);
+        return -2;
+    }
+    
+    public int getCountRetryTemplateIllegalArgumentException() {
+        return this.retryTemplate.execute(context -> {
+                    int result = COUNTER.getAndIncrement();
+                    log.info("result : {}", result);
+
+                    if (result % 4 == 0) {
+                        return result;
+                    } else {
+                        throw new IllegalArgumentException("test exception");
+                    }
+                },
+                context -> {
+                    log.info("recoverGetCountRetryTemplateIllegalArgumentException");
+                    return -1;
+                });
+    }
+}
+```  
