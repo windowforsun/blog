@@ -552,3 +552,67 @@ public class RecoverCounterService {
     }
 }
 ```  
+
+위 예제에 대응되는 테스트와 그 결과는 아래와 같다.  
+
+```java
+@Test
+public void retryAnnotation_illegalArgumentException_recover() {
+    Assertions.assertEquals(-1,
+            this.recoverCounterService.getCountRetryAnnotationIllegalArgumentException());
+}
+/*
+06:25:37.432  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 1
+06:25:37.533  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 2
+06:25:37.635  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 3
+06:25:37.635  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : recoverGetCountRetryAnnotationIllegalArgumentException
+ */
+
+@Test
+public void retryAnnotation_indexOutOfBoundsException_recover() {
+    Assertions.assertEquals(-2,
+            this.recoverCounterService.getCountRetryAnnotationIndexOutOfBoundsException("test param"));
+}
+/*
+06:25:37.221  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 1
+06:25:37.326  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 2
+06:25:37.429  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 3
+06:25:37.429  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : recoverGetCountRetryAnnotationIndexOutOfBoundsException2 : test param
+ */
+
+@Test
+public void retryAnnotation_runtimeException_recover() {
+    Assertions.assertEquals(-2,
+            this.recoverCounterService.getCountRetryAnnotationRuntimeException("test param"));
+}
+/*
+06:25:37.218  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 1
+06:25:37.218  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : recoverGetCountRetryAnnotationIndexOutOfBoundsException2 : test param
+ */
+
+@Test
+public void retryTemplate_illegalArgumentException_recover() {
+    Assertions.assertEquals(-1,
+            this.recoverCounterService.getCountRetryTemplateIllegalArgumentException());
+}
+/*
+06:25:36.997  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 1
+06:25:37.103  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 2
+06:25:37.208  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : result : 3
+06:25:37.208  INFO 40951 --- [           main] c.w.spring.retry.RecoverCounterService   : recoverGetCountRetryTemplateIllegalArgumentException
+ */
+```  
+
+먼저 `Retry Annotation` 의 결과를 살펴 보면 아래와 같다. 
+`getCountRetryAnnotationIllegalArgumentException` 는 `@Retryable` 에 `recover` 를 따로 지정해 주지 않았지만, 
+매칭되는 `@Recover` 메소드가 1개만 있어서 자동으로 `recoverGetCountRetryAnnotationIllegalArgumentException` 가 수행됐다. 
+그리고 `getCountRetryAnnotationIndexOutOfBoundsException` 는 와 매칭될 수 있는 `@Recover` 메소드는 2개가 있지만, 
+`@Retryable` 의 `recover` 에 설정한 `recoverGetCountRetryAnnotationIndexOutOfBoundsException2` 가 
+`RuntimeException` 은 `IndexOutOfBoundsException` 의 부모 클래스 이므로 수행 될 수 있다. 
+다른 경우로 `getCountRetryAnnotationRuntimeException` 는 `RuntimeException` 을 던지기 때문에 
+`@Retryable` 에는 해당되지 않지만 `recoverGetCountRetryAnnotationIndexOutOfBoundsException2` 가 `RuntimeException` 을 받기 때문에 
+`@Recover` 는 정상적으로 수행 될 수 있다.  
+
+`RetryTemplate` 을 사용한 경우에는, 
+`execute()` 메소드에서 `RetryCallback` 의 다음 파라미터에 필요한 `RecoverCallback` 을 적절하게 정의해주면 `recover` 동작을 적용 할 수 있다.  
+
