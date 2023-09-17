@@ -616,3 +616,70 @@ public void retryTemplate_illegalArgumentException_recover() {
 `RetryTemplate` 을 사용한 경우에는, 
 `execute()` 메소드에서 `RetryCallback` 의 다음 파라미터에 필요한 `RecoverCallback` 을 적절하게 정의해주면 `recover` 동작을 적용 할 수 있다.  
 
+
+### Listener
+`Listern` 는 재시도 수행 과정 사이에 `RetryContext`, `RetryCallback` 등의 파라미터를 받아, 
+로깅이나 필요한 검증 및 추가 동작을 수행 할 수 있다. 
+`Listener` 는 `RetryListener` 인터페이스를 구현하는 방식으로 사용 가능한데 그 원형은 아래와 같다.  
+
+```java
+public interface RetryListener {
+
+	<T, E extends Throwable> boolean open(RetryContext context, RetryCallback<T, E> callback);
+
+	<T, E extends Throwable> void close(RetryContext context, RetryCallback<T, E> callback, Throwable throwable);
+
+	<T, E extends Throwable> void onError(RetryContext context, RetryCallback<T, E> callback, Throwable throwable);
+
+}
+```  
+
+`Retry Annotation` 방식의 경우 구현된 `RetryListener` 를 빈으로 등록해주면 자동으로 사용 가능하고, 
+`RetryTemplate` 방식의 경우 직접 `RetryListener` 를 `RetryTemplate` 에 설정해야 한다.  
+
+```java
+@Slf4j
+@Component
+public class MyRetryListener implements RetryListener {
+    @Override
+    public <T, E extends Throwable> boolean open(RetryContext context, RetryCallback<T, E> callback) {
+        log.info("open : {}, {}", context, callback);
+        return true;
+    }
+
+    @Override
+    public <T, E extends Throwable> void close(RetryContext context, RetryCallback<T, E> callback, Throwable throwable) {
+        log.info("close : {}, {}, {}", context, callback, throwable);
+    }
+
+    @Override
+    public <T, E extends Throwable> void onError(RetryContext context, RetryCallback<T, E> callback, Throwable throwable) {
+        log.info("onError : {}, {}, {}", context, callback, throwable);
+    }
+}
+```  
+
+```java
+@Configuration
+@RequiredArgsConstructor
+public class RetryTemplateConfig {
+    private final MyRetryListener myRetryListener;
+
+    @Bean
+    public RetryTemplate retryTemplate() {
+        RetryTemplate retryTemplate = new RetryTemplate();
+        retryTemplate.registerListener(this.myRetryListener);
+
+        FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+        backOffPolicy.setBackOffPeriod(100);
+        retryTemplate.setBackOffPolicy(backOffPolicy);
+
+        SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy(3,
+                Map.of(IllegalArgumentException.class, true,
+                        MissingFormatArgumentException.class, false));
+        retryTemplate.setRetryPolicy(retryPolicy);
+
+        return retryTemplate;
+    }
+}
+```  
