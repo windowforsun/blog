@@ -683,3 +683,150 @@ public class RetryTemplateConfig {
     }
 }
 ```  
+
+앞서 구현해서 사용했던 `RetryAnnotation` 과 대부분 동일한 내용으로 `RetryListener` 가 적용된 코드는 아래와 같다.  
+
+```java
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ListenerCountService {
+    public static AtomicInteger COUNTER = new AtomicInteger(1);
+    
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            backoff = @Backoff(delay = 100))
+    public int getCount() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        return result;
+    }
+
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            backoff = @Backoff(delay = 100))
+    public int getCountIllegalArgumentException() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 3 == 0) {
+            return result;
+        } else {
+            throw new IllegalArgumentException("test exception");
+        }
+    }
+
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            backoff = @Backoff(delay = 100))
+    public int getCountRuntimeException() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 3 == 0) {
+            return result;
+        } else {
+            throw new RuntimeException("test exception");
+        }
+    }
+
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            backoff = @Backoff(delay = 100))
+    public int getCountNumberFormatException() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 3 == 0) {
+            return result;
+        } else {
+            throw new NumberFormatException("test exception");
+        }
+    }
+
+    @Retryable(maxAttempts = 3,
+            value = IllegalArgumentException.class,
+            exclude = {MissingFormatArgumentException.class},
+            backoff = @Backoff(delay = 100))
+    public int getCountMissingFormatArgumentException() {
+        int result = COUNTER.getAndIncrement();
+        log.info("result : {}", result);
+
+        if (result % 3 == 0) {
+            return result;
+        } else {
+            throw new MissingFormatArgumentException("test exception");
+        }
+    }
+}
+```  
+
+`Retry` 와 `RetryListener` 가 적용된 위 코드를 사용한 테스트 코드는 아래와 같다.  
+
+```java
+@Test
+public void retry() {
+    Assertions.assertEquals(1, this.listenerCountService.getCount());
+}
+/*
+16:19:57.125  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : open
+16:19:57.125  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 1
+16:19:57.125  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
+ */
+
+@Test
+public void retry_match_exception() {
+    Assertions.assertEquals(3,
+            this.listenerCountService.getCountIllegalArgumentException());
+}
+/*
+16:19:56.902  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : open
+16:19:56.906  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 1
+16:19:56.907  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.009  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 2
+16:19:57.009  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.114  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 3
+16:19:57.115  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
+ */
+
+@Test
+public void retry_child_exception() {
+    Assertions.assertEquals(3,
+            this.listenerCountService.getCountNumberFormatException());
+}
+/*
+16:19:57.128  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : open
+16:19:57.128  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 1
+16:19:57.128  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.233  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 2
+16:19:57.233  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.338  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 3
+16:19:57.338  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
+ */
+
+@Test
+public void retry_parent_exception() {
+    Assertions.assertThrows(RuntimeException.class,
+            () -> this.listenerCountService.getCountRuntimeException());
+}
+/*
+16:19:57.343  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : open
+16:19:57.343  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 1
+16:19:57.343  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.343  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
+ */
+
+@Test
+public void retry_exclude_exception() {
+    Assertions.assertThrows(MissingFormatArgumentException.class,
+            () -> this.listenerCountService.getCountMissingFormatArgumentException());
+}
+/*
+16:19:57.346  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : open
+16:19:57.346  INFO 17077 --- [           main] c.w.spring.retry.ListenerCountService    : result : 1
+16:19:57.346  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+16:19:57.346  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
+ */
+```
+ 
