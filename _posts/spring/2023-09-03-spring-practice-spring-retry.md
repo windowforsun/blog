@@ -829,4 +829,61 @@ public void retry_exclude_exception() {
 16:19:57.346  INFO 17077 --- [           main] c.w.spring.retry.MyRetryListener         : close
  */
 ```
- 
+
+`RetryListener` 의 실행 순서를 나열하면 아래와 같다.  
+
+1. 재시도 메소드 수행전 `RetryListener.open()` 수행
+2. 재시도 메소드 수행
+3. 2번(재시도 메소드)에서 예외 발생시 `RetryListener.onError()` 수행
+4. 2번(재시도 메소드)에서 발생한 예외가 재시작에 해당하는 메소드라면, 다시 재시도 메소드 수행(최대 `maxAttempts`)
+5. 재시도 동작이 모두 완료되면 `RetryListener.close()` 수행
+
+
+### Apply retry to RestTemplate
+`RestTemplate` 에 재시도 동작을 적용하는 방법은 기존 방식들과 동일하게, 
+`Retry Annotation` 과 `Retry Template` 방식이 있다. 
+`Retry Annotation` 은 기존 방법과 동일하게 `RestTemplate` 사용하는 메소드에 
+`@Retry` 어노테이션을 달아 주는 방식으로 가능하다. 
+하지만 이런 방식은 공통적인 에러에 대한 재시도 동작 적용에 번거로움이 있는데, 
+이를 한번에 공통적으로 적용 할 수 있는 방법이 `RetryTemplate` 과 `ClientHttpRequestInterceptor` 를 사용해 
+`RestTemplate` 설정에 적용하는 방법이다.  
+
+아래 설정이 `RestTemplate` 에 `RetryTemplate` 을 적용한 예시이다.  
+
+```java
+@Slf4j
+@Configuration
+@RequiredArgsConstructor
+public class RetryRestTemplate {
+    private final MyRetryListener myRetryListener;
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplateBuilder()
+                .setConnectTimeout(Duration.ofSeconds(5))
+                .setReadTimeout(Duration.ofSeconds(1))
+                .additionalInterceptors(this.clientHttpRequestInterceptor())
+                .build();
+    }
+
+    public ClientHttpRequestInterceptor clientHttpRequestInterceptor() {
+        return (request, body, execution) -> {
+            RetryTemplate retryTemplate = new RetryTemplate();
+            retryTemplate.registerListener(this.myRetryListener);
+
+            FixedBackOffPolicy backOffPolicy = new FixedBackOffPolicy();
+            backOffPolicy.setBackOffPeriod(100);
+            retryTemplate.setBackOffPolicy(backOffPolicy);
+            retryTemplate.setRetryPolicy(new SimpleRetryPolicy(3));
+
+            try {
+                log.info("start retry request");
+                return retryTemplate.execute(context -> execution.execute(request, body));
+            } catch (Throwable throwable) {
+                log.error("retry error", throwable);
+                throw new RuntimeException(throwable);
+            }
+        };
+    }
+}
+```  
