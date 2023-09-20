@@ -887,3 +887,127 @@ public class RetryRestTemplate {
     }
 }
 ```  
+
+`RestTemplate` 재시도 동작 테스트를 위해 아래와 같은 테스트용 커트롤러를 작성한다.  
+
+```java
+@Slf4j
+@RestController
+public class TestController {
+    public static AtomicInteger COUNTER = new AtomicInteger(1);
+    public static int MAX_EXCEPTION_COUNT = 2;
+
+    @GetMapping("/timeout/{timeout}")
+    public String timeout(@PathVariable long timeout) throws InterruptedException {
+        if(COUNTER.getAndIncrement() <= MAX_EXCEPTION_COUNT) {
+            log.info("response wait : {}ms", timeout);
+            Thread.sleep(timeout);
+        } else {
+            log.info("response no wait");
+        }
+
+        return "ok";
+    }
+}
+```  
+
+위 두 코드를 사용해서 테스트를 수행하는 내용은 아래와 같다.  
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@ExtendWith(SpringExtension.class)
+public class RetryRestTemplateTest {
+    @Autowired
+    private RestTemplate restTemplate;
+    @Value("${local.server.port}")
+    private int port;
+    private String hostPort;
+
+    @BeforeEach
+    public void setUp() {
+        this.hostPort = "http://localhost:" + this.port;
+        TestController.MAX_EXCEPTION_COUNT = 2;
+        TestController.COUNTER = new AtomicInteger(1);
+    }
+
+    @Test
+    public void restTemplate_timeout_noRetry_ok() {
+        ResponseEntity<String> actual = this.restTemplate
+                .exchange(this.hostPort + "/timeout/10",
+                        HttpMethod.GET,
+                        null,
+                        String.class);
+
+        Assertions.assertEquals(HttpStatus.OK, actual.getStatusCode());
+        Assertions.assertEquals("ok", actual.getBody());
+    }
+    /*
+    17:26:16.290  INFO 27598 --- [           main] c.w.spring.retry.RetryRestTemplate       : start retry request
+    17:26:16.290  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : open
+    17:26:16.372  INFO 27598 --- [ctor-http-nio-2] c.w.spring.retry.TestController          : response wait : 10ms
+    17:26:16.399  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : close
+     */
+
+    @Test
+    public void restTemplate_timeout_retry_ok() {
+        ResponseEntity<String> actual = this.restTemplate
+                .exchange(this.hostPort + "/timeout/3000",
+                        HttpMethod.GET,
+                        null,
+                        String.class);
+
+        Assertions.assertEquals(HttpStatus.OK, actual.getStatusCode());
+        Assertions.assertEquals("ok", actual.getBody());
+    }
+    /*
+    17:26:19.653  INFO 27598 --- [           main] c.w.spring.retry.RetryRestTemplate       : start retry request
+    17:26:19.653  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : open
+    17:26:19.660  INFO 27598 --- [ctor-http-nio-5] c.w.spring.retry.TestController          : response wait : 3000ms
+    17:26:20.659  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+    17:26:20.780  INFO 27598 --- [ctor-http-nio-6] c.w.spring.retry.TestController          : response wait : 3000ms
+    17:26:21.773  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+    17:26:21.887  INFO 27598 --- [ctor-http-nio-7] c.w.spring.retry.TestController          : response no wait
+    17:26:21.889  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : close
+     */
+
+    @Test
+    public void restTemplate_timeout_retry_fail() {
+        TestController.MAX_EXCEPTION_COUNT = 3;
+
+        Assertions.assertThrows(RuntimeException.class,
+                () -> this.restTemplate
+                        .exchange(this.hostPort + "/timeout/3000",
+                                HttpMethod.GET,
+                                null,
+                                String.class));
+    }
+    /*
+    17:26:16.409  INFO 27598 --- [           main] c.w.spring.retry.RetryRestTemplate       : start retry request
+    17:26:16.409  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : open
+    17:26:16.410  INFO 27598 --- [ctor-http-nio-2] c.w.spring.retry.TestController          : response wait : 3000ms
+    17:26:17.414  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+    17:26:17.526  INFO 27598 --- [ctor-http-nio-3] c.w.spring.retry.TestController          : response wait : 3000ms
+    17:26:18.524  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+    17:26:18.650  INFO 27598 --- [ctor-http-nio-4] c.w.spring.retry.TestController          : response wait : 3000ms
+    17:26:19.637  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : onError
+    17:26:19.638  INFO 27598 --- [           main] c.w.spring.retry.MyRetryListener         : close
+    17:26:19.645 ERROR 27598 --- [           main] c.w.spring.retry.RetryRestTemplate       : retry error
+    java.net.SocketTimeoutException: Read timed out
+     */
+}
+```  
+
+`RetryTemplate` 을 적용한 내용은 `RestTemplate` 에서 던지는 예외에 대한 것들만 재시도가 수행된다. 
+즉 `500` 에러 등에도 재시도 적용이 필요하다면 별도의 판별이 필요하다. 
+`RestTemplate` 의 `ReadTimeout` 설정은 2초이다. 
+그러므로 `/timeout/10` 으로 요청을 보내면 정상적으로 성공한다. 
+그리고 `/timeout/3000` 요청을 보내면 `ReadTimeout` 으로 요청은 실패되지만, 
+3번째 시도에서 성공하도록 코드를 작성했기 때문에 성공하는 것을 확인 할 수 있다. 
+하지만 예외 발생 횟수를 3회로 늘리고 다시 `/timeout/3000` 요청을 수행하면, 
+마지막 시도인 3번째 시도에서도 `ReadTimeout` 이 발생하기 때문에 
+재시도 동작이 실패 했을 때의 `try-catch` 에서 `RuntimeException` 이 발생한다.  
+
+
+---  
+## Reference
+[]()  
