@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Retry"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring 에서 간편한 설정으로 재시도 동작 적용이 가능한 Spring Retry 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,8 @@ tags:
     - Practice
     - Spring
     - Spring Boot
+    - Spring Retry
+    - RestTemplate
 toc: true
 use_math: true
 ---  
@@ -1010,4 +1012,4 @@ public class RetryRestTemplateTest {
 
 ---  
 ## Reference
-[]()  
+[spring-retry](https://github.com/spring-projects/spring-retry)  
