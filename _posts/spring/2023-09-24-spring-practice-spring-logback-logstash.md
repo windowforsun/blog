@@ -33,3 +33,24 @@ use_math: true
 
 라이브러를 사용해서 `logstash` 에 로그를 전송하는 간단한 예제와 
 그 성능에 대해 알아본다.  
+
+### How to use
+사용법을 알아보기 위해 `Webflux` 의 `access log` 를 `Logstash` 로 전송하는 예제를 만들어 본다.  
+
+라이브러리 적용을 위해서는 `build.gradle` 에 아래와 같은 의존성을 추가한다. 
+
+```groovy
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.3'
+    implementation 'ch.qos.logback:logback-access:1.4.5'
+    implementation 'ch.qos.logback:logback-classic:1.4.5'
+}
+```   
+
+애플리케이션을 설정하는 `application.yaml` 에는 `Logback` 설정 파일의 위치를 명시해 준다.  
+
+```yaml
+logging:
+  config: classpath:${spring.profiles.active}-logback.xml
+```  
