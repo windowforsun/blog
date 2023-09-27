@@ -54,3 +54,63 @@ dependencies {
 logging:
   config: classpath:${spring.profiles.active}-logback.xml
 ```  
+
+그리고 설정한 경로에 `logback.xml` 파일을 아래 내용으로 작성한다. 
+아래 파일 내용은 `LogstashTcpSocketAppender` 를 사용해서 `info` 레벨에 해당하는 
+로그를 모두 `localhost:5000` 의 타겟이 되는 `Logstash` 로 전송하겠다는 내용이다. 
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+    
+    <appender name="LOGBACK" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>localhost:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        </encoder>
+    </appender>
+
+    <logger name="org.springframework" level="info"/>
+
+    <root level="info">
+        <appender-ref ref="LOGBACK"/>
+    </root>
+
+</configuration>
+```  
+
+테스트로 `Logstash` 가 필요하다면 `Docker` 와 `docker-compose` 를 사용해 아래 템플릿으로 구성 할 수 있다.  
+
+```yaml
+version: '3.3'
+
+services:
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.6.0
+    container_name: logstash
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config/:/usr/share/logstash/pipeline/
+```  
+
+`config` 경로에 위치하는 `Logstash` 설정 파일인 `logstash.conf` 내용은 아래와 같다. 
+
+```conf
+# logstash.conf
+
+input {
+    tcp {
+        port => 5000
+        codec => json_lines
+    }
+
+}
+
+output {
+    stdout {
+        codec => rubydebug
+    }
+}
+```  
