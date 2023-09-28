@@ -114,3 +114,51 @@ output {
     }
 }
 ```  
+
+실행 할 땐 `docker-compose up --build` 명령을 사용하고, 
+종료하고 삭제할 때는 `docker-compose stop` 혹은 `docker-compose rm` 을 사용한다.  
+
+이제 구성한 애플리케이션을 실행 할때 `VM` 옵션으로 
+`-Dreactor.netty.http.server.accessLogEnabled=true` 값을 설정해 준다. 
+그리고 `info` 레벨 로그를 발생하거나, 요청을 보내면 아래와 같이 `Logstash` 로 애플리케이션 로그가 전송된 것을 확인 할 수 있다.  
+
+```bash
+$ docker logs -f logstash
+
+logstash  | {
+logstash  |         "message" => "Started LogbackLogstashApplication in 0.813 seconds (JVM running for 1.205)",
+logstash  |     "level_value" => 20000,
+logstash  |        "@version" => "1",
+logstash  |      "@timestamp" => 2023-09-16T08:55:12.162Z,
+logstash  |     "logger_name" => "com.windowforsun.logstash.LogbackLogstashApplication",
+logstash  |     "thread_name" => "main",
+logstash  |           "level" => "INFO"
+logstash  | }
+logstash  | {
+logstash  |         "message" => "127.0.0.1 - - [16/9월/2023:17:55:25 +0900] \"GET /ok HTTP/1.1\" 200 2 56",
+logstash  |     "level_value" => 20000,
+logstash  |        "@version" => "1",
+logstash  |      "@timestamp" => 2023-09-16T08:55:26.022Z,
+logstash  |     "logger_name" => "reactor.netty.http.server.AccessLog",
+logstash  |     "thread_name" => "reactor-http-nio-2",
+logstash  |           "level" => "INFO"
+logstash  | }
+logstash  | {
+logstash  |         "message" => "127.0.0.1 - - [16/9월/2023:17:55:27 +0900] \"GET /ok HTTP/1.1\" 200 2 3",
+logstash  |     "level_value" => 20000,
+logstash  |        "@version" => "1",
+logstash  |      "@timestamp" => 2023-09-16T08:55:27.400Z,
+logstash  |     "logger_name" => "reactor.netty.http.server.AccessLog",
+logstash  |     "thread_name" => "reactor-http-nio-3",
+logstash  |           "level" => "INFO"
+logstash  | }
+logstash  | {
+logstash  |         "message" => "127.0.0.1 - - [16/9월/2023:17:55:27 +0900] \"GET /ok HTTP/1.1\" 200 2 1",
+logstash  |     "level_value" => 20000,
+logstash  |        "@version" => "1",
+logstash  |      "@timestamp" => 2023-09-16T08:55:27.997Z,
+logstash  |     "logger_name" => "reactor.netty.http.server.AccessLog",
+logstash  |     "thread_name" => "reactor-http-nio-4",
+logstash  |           "level" => "INFO"
+logstash  | }
+```  
