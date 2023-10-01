@@ -162,3 +162,61 @@ logstash  |     "thread_name" => "reactor-http-nio-4",
 logstash  |           "level" => "INFO"
 logstash  | }
 ```  
+
+### Performance test
+[logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)
+를 실제 애플리케이션에 사용 했을 때 어느정도의 성능을 보이는지 알아보기 위해 테스트를 진행한다. 
+진행할 테스트 유형은 아래와 같다. 
+
+- `file` : 로그를 파일로 남기는 경우
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <appender name="FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>utf8</charset>
+        </encoder>
+        <file>app-log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>app-log.%d{yyyyMMdd}</fileNamePattern>
+        </rollingPolicy>
+    </appender>
+
+    <logger name="org.springframework" level="info"/>
+
+    <root level="info">
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
+```  
+
+- `logstash` : 로그를 `Logstash appender` 의 `TCP` 방식을 사용해 남기는 경우  
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <appender name="LOGSTASH_TCP" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>logstash:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"type":"LOGSTASH_TCP"}</customFields>
+        </encoder>
+    </appender>
+
+    <logger name="org.springframework" level="info"/>
+
+    <root level="info">
+        <appender-ref ref="LOGSTASH_TCP"/>
+    </root>
+
+</configuration>
+```  
