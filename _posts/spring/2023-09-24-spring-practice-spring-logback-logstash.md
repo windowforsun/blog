@@ -220,3 +220,31 @@ logstash  | }
 
 </configuration>
 ```  
+
+- `aync-logstash` : 로그를 `Logstash async appender` 의 `TCP` 방식을 사용해 남기는 경우
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true">
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
+
+    <appender name="LOGSTASH_TCP" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
+        <destination>logstash:5000</destination>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"type":"ASYNC_LOGSTASH_TCP"}</customFields>
+        </encoder>
+    </appender>
+
+    <appender name="ASYNC_LOGSTASH_TCP" class="net.logstash.logback.appender.LoggingEventAsyncDisruptorAppender">
+        <appender-ref ref="LOGSTASH_TCP"/>
+    </appender>
+
+    <logger name="org.springframework" level="info"/>
+
+    <root level="info">
+        <appender-ref ref="ASYNC_LOGSTASH_TCP"/>
+    </root>
+
+</configuration>
+```
