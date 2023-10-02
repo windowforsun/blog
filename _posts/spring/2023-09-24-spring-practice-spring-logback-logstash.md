@@ -248,3 +248,59 @@ logstash  | }
 
 </configuration>
 ```
+
+테스트 대상 `Endpoint` 가 되는 `Controller` 내용은 아래와 같다.  
+
+```java
+@RestController
+public class HelloController {
+    @GetMapping("/ok")
+    public Mono<String> ok() {
+        return Mono.fromSupplier(() -> "ok");
+    }
+}
+```  
+
+`Docker` 와 `docker-compose` 를 테스트 환경 구성에 사용하는데 `Docker image` 를 빌드하는 `build.gradle` 내용은 아래와 같다.  
+
+```groovy
+plugins {
+    id 'org.springframework.boot' version '2.6.4'
+    id 'java'
+    id 'com.google.cloud.tools.jib' version '3.2.0'
+}
+
+ext {
+    // 원하는 환경 프로필 지정
+    // file, logstash, async-logstash
+    profile = 'file'
+}
+
+jib {
+    from {
+        image = "openjdk:11-jre-slim"
+        // for mac m1
+        platforms {
+            platform {
+                architecture = "arm64"
+                os = "linux"
+            }
+        }
+    }
+    to {
+        image = "logback-app"
+        tags = ["${profile}".toString()]
+    }
+    container {
+        mainClass = "com.windowforsun.logstash.LogbackLogstashApplication"
+        jvmFlags = [
+                "-Dreactor.netty.http.server.accessLogEnabled=true"
+        ]
+        ports = ["8080"]
+        environment = [
+                'SPRING_PROFILES_ACTIVE' : "${profile}".toString()
+        ]
+    }
+
+}
+```  
