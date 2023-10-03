@@ -304,3 +304,69 @@ jib {
 
 }
 ```  
+
+위 `build.gradle` 내용을 사용하면 `./gradlew jibDockerBuild` 명령으로 원하는 애플리케이션 이미지를 빌드할 수 있다.  
+
+빌드한 이미지를 사용해 테스트 환경을 구성하는 `docker-compose` 템플릿 내용은 아래와 같다. 
+모든 컨테이너는 `cpu` 제한을 `2core` 로 설정해서 동일 리소스에서 테스트가 진행 될 수 있도록 했다.  
+
+```yaml
+version: '3.3'
+
+services:
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.6.0
+    container_name: logstash
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+    ports:
+      - "5000:5000"
+      - target: 514
+        published: 514
+        protocol: udp
+    volumes:
+      - ./config/:/usr/share/logstash/pipeline/
+    networks:
+      - test-net
+
+  app-logstash:
+    image: logback-app:logstash
+    container_name: app-logstash
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+    ports:
+      - "8081:8080"
+    networks:
+      - test-net
+
+  app-async-ogstash:
+    image: logback-app:async-logstash
+    container_name: app-async-logstash
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+    ports:
+      - "8082:8080"
+    networks:
+      - test-net
+
+  app-file:
+    image: logback-app:file
+    container_name: app-file
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+    ports:
+      - "8083:8080"
+    networks:
+      - test-net
+
+networks:
+  test-net:
+```  
