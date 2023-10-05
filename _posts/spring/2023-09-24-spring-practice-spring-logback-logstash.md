@@ -370,3 +370,29 @@ services:
 networks:
   test-net:
 ```  
+
+#### 테스트 결과
+`docker-compose up --build` 로 전체 구성을 실행하고,
+테스트는 `Jmeter` 를 사용해서 `/ok` 경로에 요청을 보내 `Access log` 가 발생되는 상황에서
+얼마 만큼의 `TPS` 가 나오는지에 대해 측정 했다. 
+모든 테스트 결과는 5번 반복한 평균 값을 구했다.  
+
+
+로그 방식|CPU|Throughput/s|Avg response time
+---|---|---|---
+File|100%|10826|8ms
+Logstash|100%|11999|7ms
+Async Logstash|100%|11222|8ms
+
+테스트 결과를 보면 생각보다 `File` 로 로그를 남기는 것과 
+큰 차이가 없거나 오히려 더 높은 성능으 보여 주었다. 
+물론 로컬 환경에서 진행한 테스트 이기 때문에, 네트워크 환경 등이 실제 환경과 다를 순 있지만 
+비교적 준수한 성능을 보여준 것을 확인 할 수 있다.  
+
+성능적으로 민감하지 않는 애플리케이션의 경우 손쉬운 설정으로 로그를 `Logstash` 에 전송 할 수 있으므로 
+잘 활용하면 좋을 것 같고, 
+성능적으로 민감한 애플리케이션 또한 테스트 진행 후 도입도 검토해 볼만 하다.  
+
+---  
+## Reference
+[logstash-logback-encoder](https://github.com/logfellow/logstash-logback-encoder)  
