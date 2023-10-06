@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Logback logging with Logstash"
 header:
   overlay_image: /img/spring-bg.jpg
 excerpt: ''
