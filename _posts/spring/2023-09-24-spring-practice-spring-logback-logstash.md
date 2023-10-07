@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Logback logging with Logstash"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring 에서 발생하는 로그를 Logback 을 사용해 Logstash'
 author: "window_for_sun"
 header-style: text
 categories :
