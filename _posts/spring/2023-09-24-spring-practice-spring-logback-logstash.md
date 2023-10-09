@@ -13,10 +13,6 @@ tags:
     - Practice
     - Spring
     - Spring Boot
-    - Spring Cloud Data Flow
-    - SCDF
-    - REST API
-    - Rest API
 toc: true
 use_math: true
 ---  
