@@ -13,6 +13,9 @@ tags:
     - Practice
     - Spring
     - Spring Boot
+    - Logback
+    - Logging
+    - Logstash
 toc: true
 use_math: true
 ---  
