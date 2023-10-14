@@ -32,3 +32,11 @@ use_math: true
 이 또한 데이터 크기나 직렬화 퍼포먼스등의 단점이 존재한다.  
 
 그래서 이번 포스트에서는 `Java` 언에서 `Json` 을 대신해서 사용할 수 있는 직렬화 포멧인 `MessagePack` 과 `Protobuf` 에 대해 알아본다.  
+
+### MessagePack
+`MessagePack` 은 `C#` 용 직렬화 포멧으로 다양한 언어에서도 사용할 수 있도록 라이브러리를 제공한다. 
+`Json` 은 직렬화 결과가 문자열 스트림인 것에 비해 `MessagePack` 은 `byte` 형태이면서 별도의 `metadata` 가 
+붙지 않아 `Json` 에 비해 용량 절검에 이득이 있다. 
+또한 직렬화/역직렬화 생능 또한 `Json` 과 비교 했을 때 비교적 이점이 있다고 한다. 
+자세한 내용은 [MessagePack](https://msgpack.org/)
+에서 확인 가능하다.  
