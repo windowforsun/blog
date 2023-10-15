@@ -40,3 +40,35 @@ use_math: true
 또한 직렬화/역직렬화 생능 또한 `Json` 과 비교 했을 때 비교적 이점이 있다고 한다. 
 자세한 내용은 [MessagePack](https://msgpack.org/)
 에서 확인 가능하다.  
+
+`MessagePack` 을 사용하는 방법은 `Jackson json` 라이브러리가 포함된 상태에서 
+아래 의존성만 추가해주면 된다.  
+
+```groovy
+dependencies {
+    // json
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
+
+    // message pack
+    implementation group: 'org.msgpack', name: 'jackson-dataformat-msgpack', version: '0.9.5'
+}
+```  
+
+사용법은 기존 `Jackson` 라이브러리의 인터페이스와 동일하다.  
+
+```java
+// 저장할 객체 생성
+ExamModel examModel = ExamModel.builder()
+        .innerModelList(list)
+        .innerModelMap(map)
+        .build();
+
+// 직렬화 라이브러리 객체 초기화
+ObjectMapper objectMapper = new MessagePackMapper();
+
+// 직렬화
+byte[] msgPackBytes = objectMapper.writeValueAsBytes(examModel);
+
+// 역직렬화
+ExamModel decode = objectMapper.readValue(msgPackBytes, ExamModel.class);
+```  
