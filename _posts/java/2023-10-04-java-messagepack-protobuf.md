@@ -72,3 +72,25 @@ byte[] msgPackBytes = objectMapper.writeValueAsBytes(examModel);
 // 역직렬화
 ExamModel decode = objectMapper.readValue(msgPackBytes, ExamModel.class);
 ```  
+
+### Protobuf
+`Protobuf` 는 `Protocol Buffers` 의 약자로 `Google` 에서 개발한 데이터 직렬화 포멧이다. 
+구조화된 데이터를 `byte` 형태로 효율적이고 컴팩트하게 저장해서 네트워크를 통해 더 빠르게 전송이 가능하다. 
+`Protobuf` 또한 다양한 언어를 지원하는 라이브러리가 있어 용이하게 사용 할 수 있다. 
+`Json` 과 비교해서 구조화된 `byte` 형식으로 더 적은 용량으로 결과를 만들어 낼 수 있고, 
+직렬화/역직렬화도 더 빠른 성능을 보여준다.  
+
+하지만 구조화된 `byte` 형태를 만들기 위해서, `Protobuf` 을 위한 별도의 스키마 파일을 구성해야 한다는 
+불편한 점이 있다. 
+자세한 내용은 [Protobuf](https://protobuf.dev/)
+에서 확인 가능하다.  
+
+`Java` 에서 `Protobuf` 를 사용하기 위해서는 아래와 같은 과정을 거쳐야 한다.  
+
+1. 빌드 도구(`maven`, `gradle`) 에 의존성과 스키마 빌드를 위한 플러그인 추가 및 설정
+2. `Protobuf` 스키마 정의
+3. 스키마를 `Java Class` 로 빌드
+
+[의존성 가이드](https://github.com/protocolbuffers/protobuf/tree/main/java),
+[플러그인 가이드](https://github.com/google/protobuf-gradle-plugin)
+를 보고 아래와 같이 `build.gradle` 에 설정을 추가한다.  
