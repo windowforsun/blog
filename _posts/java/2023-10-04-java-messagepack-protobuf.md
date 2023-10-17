@@ -94,3 +94,89 @@ ExamModel decode = objectMapper.readValue(msgPackBytes, ExamModel.class);
 [의존성 가이드](https://github.com/protocolbuffers/protobuf/tree/main/java),
 [플러그인 가이드](https://github.com/google/protobuf-gradle-plugin)
 를 보고 아래와 같이 `build.gradle` 에 설정을 추가한다.  
+
+```groovy
+plugins {
+    id 'java'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+
+apply plugin: 'com.google.protobuf'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  // protobuf
+  implementation 'com.google.protobuf:protobuf-java:3.22.3'
+  implementation 'com.google.protobuf:protobuf-java-util:3.22.2'
+}
+
+// 스키마에 해당하는 Java Class 가 생성될 위치
+sourceSets {
+  main {
+    java {
+      srcDirs 'build/generated/source/proto/main/java'
+    }
+  }
+}
+
+protobuf {
+  protoc {
+    if (osdetector.os == 'osx') {
+      artifact = 'com.google.protobuf:protoc:3.22.2:osx-x86_64'
+    } else {
+      artifact = 'com.google.protobuf:protoc:3.22.2'
+    }
+  }
+
+  generateProtoTasks {
+    all()*.plugins {
+      grpc {}
+    }
+  }
+}
+
+test {
+  useJUnitPlatform()
+}
+```  
+
+그리고 `scr/main/proto` 디렉토리를 생성하고, 
+그 하위에 `.proto` 확장자로 `Protobuf` 의 스키마를 아래와 같이 정의한다.  
+
+```protobuf
+// schema.proto
+
+syntax = "proto3";
+package com.windowforsun.serialize.proto;
+
+option java_package = "com.windowforsun.serialize.proto";
+option java_outer_classname = "Proto";
+
+message ExamModel {
+  repeated ExamInnerModel inner_model_list = 1;
+  map<string, ExamInnerModel> inner_model_map = 2;
+}
+
+message ExamInnerModel {
+  string str = 1;
+  int32 intValue = 2;
+  double doubleValue = 3;
+
+}
+```  
+
+`Protobuf` 스키마 작성을 위한 가이드는 [여기](https://protobuf.dev/programming-guides/proto3/)
+를 참고한다.  
+
+이제 빌드 도구를 사용해서 스키마를 `Java Class` 로 빌드한다.  
+
+```bash
+$ ./gradlew generateProto
+
+BUILD SUCCESSFUL in 1s
+6 actionable tasks: 6 executed
+```  
