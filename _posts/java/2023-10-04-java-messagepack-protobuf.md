@@ -180,3 +180,42 @@ $ ./gradlew generateProto
 BUILD SUCCESSFUL in 1s
 6 actionable tasks: 6 executed
 ```  
+
+빌드에 성공하면 `build.gradle` 에 설정한 경로에 스키마에 해당하는 `Java Class` 가 만들어지는데, 
+해당 클래스를 사용해서 직렬화/역질렬화가 가능하다.  
+
+```java
+// 일반 도메인 객체를 Protobuf 객체로 변환하도록 구현한 메소드
+
+public Proto.ExamModel toProto() {
+    return Proto.ExamModel.newBuilder()
+            .addAllInnerModelList(Objects.requireNonNullElse(this.innerModelList, Collections.<ExamInnerModel>emptyList())
+                    .stream()
+                    .map(ExamInnerModel::toProto)
+                    .collect(Collectors.toList()))
+            .putAllInnerModelMap(Objects.requireNonNullElse(this.innerModelMap, Collections.<String, ExamInnerModel>emptyMap())
+                    .entrySet()
+                    .stream()
+                    .collect(Collectors.<Map.Entry<String, ExamInnerModel>, String, Proto.ExamInnerModel>toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().toProto()
+                    )))
+            .build();
+}
+
+// 도메인 객체 생성
+ExamModel examModel = ExamModel.builder()
+        .innerModelList(list)
+        .innerModelMap(map)
+        .build();
+
+// 도메인 객체를 Protobuf 객체로 변환
+Proto.ExamModel examModelProto = examModel.toProto();
+
+// 직렬화
+byte[] protoBytes = examModelProto.toByteArray();
+        
+// 역직렬화
+Proto.ExamModel decode = Proto.ExamModel.parseFrom(protoBytes);
+```  
+
