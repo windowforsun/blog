@@ -219,3 +219,52 @@ byte[] protoBytes = examModelProto.toByteArray();
 Proto.ExamModel decode = Proto.ExamModel.parseFrom(protoBytes);
 ```  
 
+
+### Comparison of Json, MessagePack, Protobuf
+테스트로 사용할 도메인 객체의 클래스는 아래와 같다.  
+
+
+```java
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamModel {
+    private List<ExamInnerModel> innerModelList;
+    private Map<String, ExamInnerModel> innerModelMap;
+
+    public Proto.ExamModel toProto() {
+        return Proto.ExamModel.newBuilder()
+                .addAllInnerModelList(Objects.requireNonNullElse(this.innerModelList, Collections.<ExamInnerModel>emptyList())
+                        .stream()
+                        .map(ExamInnerModel::toProto)
+                        .collect(Collectors.toList()))
+                .putAllInnerModelMap(Objects.requireNonNullElse(this.innerModelMap, Collections.<String, ExamInnerModel>emptyMap())
+                        .entrySet()
+                        .stream()
+                        .collect(Collectors.<Map.Entry<String, ExamInnerModel>, String, Proto.ExamInnerModel>toMap(
+                                Map.Entry::getKey,
+                                entry -> entry.getValue().toProto()
+                        )))
+                .build();
+    }
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamInnerModel {
+  private String str;
+  private int intValue;
+  private double doubleValue;
+
+  public Proto.ExamInnerModel toProto() {
+    return Proto.ExamInnerModel.newBuilder()
+            .setStr(this.str)
+            .setIntValue(this.intValue)
+            .setDoubleValue(this.doubleValue)
+            .build();
+  }
+}
+```  
