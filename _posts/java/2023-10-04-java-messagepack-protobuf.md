@@ -268,3 +268,27 @@ public class ExamInnerModel {
   }
 }
 ```  
+
+앞서 설명이 됐지만, 위 클래스를 `Protobuf` 스키마로 작성하면 아래와 같다.  
+
+```protobuf
+// schema.proto
+
+syntax = "proto3";
+package com.windowforsun.serialize.proto;
+
+option java_package = "com.windowforsun.serialize.proto";
+option java_outer_classname = "Proto";
+
+message ExamModel {
+  repeated ExamInnerModel inner_model_list = 1;
+  map<string, ExamInnerModel> inner_model_map = 2;
+}
+
+message ExamInnerModel {
+  string str = 1;
+  int32 intValue = 2;
+  double doubleValue = 3;
+
+}
+```
