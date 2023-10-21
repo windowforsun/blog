@@ -292,3 +292,47 @@ message ExamInnerModel {
 
 }
 ```
+
+#### Data size Comparison
+먼저 3개의 직렬화 방식에 대한 크기 비교먼저 진행한다. 
+테스트로 사용할 데이터를 생성하는 코드는 아래와 같다.  
+
+```java
+public static ExamModel createExamModel() {
+    List<ExamInnerModel> list = new ArrayList<>();
+    Map<String, ExamInnerModel> map = new HashMap<>();
+    Random random = new Random();
+
+    for (int i = 0; i < 10000; i++) {
+        ExamInnerModel examInnerModel = ExamInnerModel.builder()
+                .str(UUID.randomUUID().toString())
+                .intValue(random.nextInt())
+                .doubleValue(random.nextDouble())
+                .build();
+        list.add(examInnerModel);
+        map.put(String.valueOf(i), examInnerModel);
+    }
+
+    ExamModel examModel = ExamModel.builder()
+            .innerModelList(list)
+            .innerModelMap(map)
+            .build();
+
+    return examModel;
+}
+```  
+
+테스트 데이터는 `ExamInnerModel` 이 10000 개인 리스트와 맵을 사용한다.
+대략적인 결과를 비교하면 아래와 같다.  
+
+
+종류|크기
+---|---
+Json|2.1MB
+MessagePack|1.6MB(-23%)
+Protobuf|1.2MB(-42%)
+
+최대 크기인 `Json` 을 기준으로 비교하면 `MessagePack` 은 `23%` 정도의 용량 절감이 있었고, 
+`Protobuf` 는 `42%` 정도의 절감으로 `Protobuf` 가 가장 효율이 좋았다. 
+대부분의 경우 `Protobuf` 가 크기 절감 측면에서 가장 효율이 좋겠지만, 
+절감이 되는 퍼센트는 절대적인 수치는 아니고 직렬화하는 데이터의 구성이 어떻게 돼 있냐에 따라 달라질 수 있음을 유의해야 한다.  
