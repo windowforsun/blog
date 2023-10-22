@@ -336,3 +336,29 @@ Protobuf|1.2MB(-42%)
 `Protobuf` 는 `42%` 정도의 절감으로 `Protobuf` 가 가장 효율이 좋았다. 
 대부분의 경우 `Protobuf` 가 크기 절감 측면에서 가장 효율이 좋겠지만, 
 절감이 되는 퍼센트는 절대적인 수치는 아니고 직렬화하는 데이터의 구성이 어떻게 돼 있냐에 따라 달라질 수 있음을 유의해야 한다.  
+
+#### Performance Comparison
+성능비교 테스트는 데이터 크기 비교와 동일한 데이터를 사용해서 직렬화/역직렬화에 대한 성능을 테스트한다. 
+또한 단일 스레드 환경과 멀티 스레드 환경으로도 구분해서 진행한다.  
+
+성능 테스트에는 `Java` 의 `Benchmark` 툴인 `JMH` 를 사용해서 진행한다. 
+테스트에 앞서 `JMH` 사용을 위해 `build.gradle` 에 플러그인과 설정을 추가해 준다.  
+
+```groovy
+plugins {
+  // ...
+  id 'me.champeau.jmh' version '0.6.5'
+}
+
+// ...
+
+apply plugin: 'me.champeau.jmh'
+
+// ...
+
+jmh {
+    fork = 1
+    iterations = 5
+    warmupIterations = 3
+}
+```  
