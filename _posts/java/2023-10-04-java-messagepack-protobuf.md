@@ -362,3 +362,101 @@ jmh {
     warmupIterations = 3
 }
 ```  
+
+그리고 `JMH` 테스트 코드는 `scr/jmh` 디렉토리를 생성하고 그 하위에 작성하면 되는데, 
+단일 스레드와 멀티 스레드 테스트 코드를 구분해서 작성해 준다.  
+
+
+```java
+@State(Scope.Benchmark)
+@Threads(value = 1)
+public class SingleThreadTest {
+
+
+    public static ExamModel createExamModel() {
+        List<ExamInnerModel> list = new ArrayList<>();
+        Map<String, ExamInnerModel> map = new HashMap<>();
+        Random random = new Random();
+
+        for (int i = 0; i < 10000; i++) {
+            ExamInnerModel examInnerModel = ExamInnerModel.builder()
+                    .str(UUID.randomUUID().toString())
+                    .intValue(random.nextInt())
+                    .doubleValue(random.nextDouble())
+                    .build();
+            list.add(examInnerModel);
+            map.put(String.valueOf(i), examInnerModel);
+        }
+
+        ExamModel examModel = ExamModel.builder()
+                .innerModelList(list)
+                .innerModelMap(map)
+                .build();
+
+        return examModel;
+    }
+
+    @State(Scope.Benchmark)
+    public static class SerializeTools {
+        public ObjectMapper jsonMapper = new ObjectMapper();
+        public ObjectMapper msgPackMapper = new MessagePackMapper();
+        public ExamModel examModel;
+        public Proto.ExamModel examModelProto;
+        public String jsonStr;
+        public byte[] msgPackBytes;
+        public byte[] protoBytes;
+    }
+
+    @Setup(Level.Trial)
+    public void setUp(SerializeTools tools) throws JsonProcessingException {
+        tools.examModel = createExamModel();
+        tools.examModelProto = createExamModel().toProto();
+        tools.jsonStr = tools.jsonMapper.writeValueAsString(tools.examModel);
+        tools.msgPackBytes = tools.msgPackMapper.writeValueAsBytes(tools.examModel);
+        tools.protoBytes = tools.examModelProto.toByteArray();
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public String jsonSerialize(SerializeTools tools) throws JsonProcessingException {
+        return tools.jsonMapper.writeValueAsString(tools.examModel);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public byte[] msgPackSerialize(SerializeTools tools) throws JsonProcessingException {
+        return  tools.msgPackMapper.writeValueAsBytes(tools.examModel);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public byte[] protobufSerialize(SerializeTools tools) {
+        return tools.examModelProto.toByteArray();
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public ExamModel jsonDeserialize(SerializeTools tools) throws JsonProcessingException {
+        return tools.jsonMapper.readValue(tools.jsonStr, ExamModel.class);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public ExamModel msgPackDeserialize(SerializeTools tools) throws IOException {
+        return tools.msgPackMapper.readValue(tools.msgPackBytes, ExamModel.class);
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MICROSECONDS)
+    public Proto.ExamModel protoDeserialize(SerializeTools tools) throws InvalidProtocolBufferException {
+        return Proto.ExamModel.parseFrom(tools.protoBytes);
+    }
+
+}
+```  
