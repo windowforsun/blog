@@ -552,3 +552,37 @@ public class MultiThreadTest {
     }
 }
 ```  
+
+`JMH` 구성 및 성능 테스트 코드 작성까지 완료 됐으면, 
+`Gradle` 명령을 통해 성능 테스트를 시작한다.  
+
+```bash
+$ ./gradlew :json-msgpack-protobuf-exam:jmh
+
+... 
+
+Benchmark                            Mode  Cnt      Score      Error  Units
+MultiThreadTest.jsonDeserialize      avgt    5  54495.772 ± 2001.621  us/op
+MultiThreadTest.jsonSerialize        avgt    5  32704.151 ± 1447.786  us/op
+MultiThreadTest.msgPackDeserialize   avgt    5  42599.475 ± 1099.773  us/op
+MultiThreadTest.msgPackSerialize     avgt    5  24704.338 ±  543.355  us/op
+MultiThreadTest.protoDeserialize     avgt    5  13755.321 ± 1858.523  us/op
+MultiThreadTest.protobufSerialize    avgt    5   6517.008 ±  231.575  us/op
+SingleThreadTest.jsonDeserialize     avgt    5   8757.344 ±  125.560  us/op
+SingleThreadTest.jsonSerialize       avgt    5   4617.624 ±   28.051  us/op
+SingleThreadTest.msgPackDeserialize  avgt    5   6456.009 ±   64.789  us/op
+SingleThreadTest.msgPackSerialize    avgt    5   3266.589 ±   16.255  us/op
+SingleThreadTest.protoDeserialize    avgt    5   2323.993 ±    4.372  us/op
+SingleThreadTest.protobufSerialize   avgt    5    999.677 ±   10.219  us/op
+
+Benchmark result is saved to /Users/user/gitrepos/spring-protobuf/json-msgpack-protobuf-exam/build/results/jmh/results.txt
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 8.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+See https://docs.gradle.org/7.4/userguide/command_line_interface.html#sec:command_line_warnings
+
+BUILD SUCCESSFUL in 16m 20s
+15 actionable tasks: 9 executed, 6 up-to-date
+```  
