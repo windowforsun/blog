@@ -586,3 +586,22 @@ See https://docs.gradle.org/7.4/userguide/command_line_interface.html#sec:comman
 BUILD SUCCESSFUL in 16m 20s
 15 actionable tasks: 9 executed, 6 up-to-date
 ```  
+
+테스트 결과는 직렬화/역직렬화 수행당 소요시간으로 시간 단위는 마이크로초이다. 
+즉 작은 결과가 더 좋은 성능을 보여준다고 할 수 있다. 
+위 결과를 다시 표로 정리하면 아래와 같다.  
+
+| 환경           |방식|포멧|소요시간(us)
+|--------------|---|---|---
+|Single Thread |Serialize|Json|4617
+| | |MessagePack|3266(-29%)
+| | |Protobuf|999(-78%)
+| |Deserialize|Json|8757
+| | |MessagePack|6456(-26%)
+| | |Protobuf|2323(-73%)
+|Multi Thread|Serialize|Json|32704
+| | |MessagePack|24704(-24%)
+| | |Protobuf|6517(-80%)
+| |Deserialize|Json|54495
+| | |MessagePack|42599(-21%)
+| | |Protobuf|13755(-74%)
