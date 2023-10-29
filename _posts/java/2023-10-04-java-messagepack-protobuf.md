@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Java MessagePack, Protobuf with Gradle"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Java 에서 MessagePack 과 Protobuf 를 사용해서 데이터 직렬/역직렬화를 수행해보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -16,6 +16,7 @@ tags:
   - Protobuf
   - Serialize
   - Deserialize
+  - Gradle
 toc: true 
 use_math: true
 ---  
@@ -605,3 +606,7 @@ BUILD SUCCESSFUL in 16m 20s
 | |Deserialize|Json|54495
 | | |MessagePack|42599(-21%)
 | | |Protobuf|13755(-74%)
+
+성능 결과는 전체적으로 `Single Thread` 환경이 `Multi Thread` 보다 더 성능적으로 유리 했고, 
+일반적으로 `Protobuf` 는 `Json` 과 비교해서 `70 ~ 80%` 정도 성능 향상이 있었고, 
+`MessagePack` 는 `Json` 과 비교해서 `20 ~ 30%` 정도 성능 향상이 있었다.  
