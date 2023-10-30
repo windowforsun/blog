@@ -610,3 +610,14 @@ BUILD SUCCESSFUL in 16m 20s
 성능 결과는 전체적으로 `Single Thread` 환경이 `Multi Thread` 보다 더 성능적으로 유리 했고, 
 일반적으로 `Protobuf` 는 `Json` 과 비교해서 `70 ~ 80%` 정도 성능 향상이 있었고, 
 `MessagePack` 는 `Json` 과 비교해서 `20 ~ 30%` 정도 성능 향상이 있었다.  
+
+---
+## Reference
+[Protocol Buffers](https://protobuf.dev/)  
+[MessagePack](https://msgpack.org/)  
+[Protobuf Gradle Plugin](https://github.com/google/protobuf-gradle-plugin)  
+[Protobuf](https://github.com/protocolbuffers/protobuf)  
+[msgpack-java](https://github.com/msgpack/msgpack-java)  
+[msgpack-jackson](https://github.com/msgpack/msgpack-java/blob/main/msgpack-jackson)  
+
+
