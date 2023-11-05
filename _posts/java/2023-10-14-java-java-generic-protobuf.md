@@ -30,3 +30,22 @@ use_math: true
 지원하는 기능은 없다. 
 하지만 `Protobuf` 에서 제공하는 몇가지 기능을 함께 사용하는 트릭을 사용하면, 
 어느정도 `Java Generic` 을 `Protobuf` 스키마로 표현해서 사용 할 수 있다.  
+
+### Oneof
+[Oneof](https://protobuf.dev/programming-guides/proto3/#oneof)
+는 `Protobuf` 메시지 특정 필드에 여러 필드나 타입이 올 수 있을 때, 
+`oneof` 집합 중 하나의 필드를 사용 할 수 있도록 해준다.  
+
+
+```protobuf
+message Sample {
+  oneof test_oneof {
+    string str = 1;
+    int32 num = 2;
+    OtherMessage other_message = 3;
+  }
+}
+```  
+
+위 예시처럼 `test_oneof` 라는 `oneof` 집합을 구성하는 3개의 필드중 하나의 필드만 선택적으로 사용 될 수 있고, 
+사용되지 않은 나머지 필드는 모두 지워진다.  
