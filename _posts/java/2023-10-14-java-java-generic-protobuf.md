@@ -49,3 +49,24 @@ message Sample {
 
 위 예시처럼 `test_oneof` 라는 `oneof` 집합을 구성하는 3개의 필드중 하나의 필드만 선택적으로 사용 될 수 있고, 
 사용되지 않은 나머지 필드는 모두 지워진다.  
+
+### Wrapper Message
+`Wrapper Message` 란 표현 그대로 `Protobuf` 의 `Message` 를 동적 타입 표현을 목적으로 
+한번 더 `Message` 로 감싼 형태를 의미한다. 
+그 예시는 아래와 같다.  
+
+```protobuf
+message MyMessage {
+  SampleWrapper sample = 1;
+}
+
+message SampleWrapper {
+  oneof sample_oneof {
+    SampleA sample_a = 1;
+    SampleB sample_b = 2;
+  }
+}
+```  
+
+`MyMessage` 메시지 스키마를 기준으로 `sample` 이름을 가진 필드는 
+필요에 따라 런타임에 `SampleA`, `SampleB` 2가지 타입이 올 수 있는 필드로 사용 할 수 있다.  
