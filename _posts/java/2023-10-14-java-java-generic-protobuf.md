@@ -70,3 +70,59 @@ message SampleWrapper {
 
 `MyMessage` 메시지 스키마를 기준으로 `sample` 이름을 가진 필드는 
 필요에 따라 런타임에 `SampleA`, `SampleB` 2가지 타입이 올 수 있는 필드로 사용 할 수 있다.  
+
+### Example
+간단한 `Java` 코드를 통해 `Java Generic` 을 `Protobuf` 스키마로 구성하는 예시에 대해 살펴본다. 
+`build.gradle` 은 [여기]()
+를 참고해서 구성 할 수 있다. 
+아래는 `Java` 도메인 클래스의 예시이다.  
+
+```java
+public class ExamModel<T extends ExamInnerModel> {
+    private List<T> innerModelList;
+    private Map<String, T> innerModelMap;
+}
+
+public interface ExamInnerModel {
+}
+
+public class ExamInnerModelA implements ExamInnerModel {
+  private String strA;
+
+}
+
+public class ExamInnerModelB implements ExamInnerModel {
+  private int numberB;
+
+}
+```  
+
+위 도메인 클래스 구조를 `Oneof` 와 `Wrapper Message` 를 사용해서 `Protobuf` 스키마로 표현하면 아래와 같다.  
+
+```protobuf
+syntax = "proto3";
+package com.windowforsun.generic.proto;
+
+option java_package = "com.windowforsun.generic.proto";
+option java_outer_classname = "Proto";
+
+message ExamModel {
+  repeated ExamInnerModel inner_model_list = 1;
+  map<string, ExamInnerModel> inner_model_map = 2;
+}
+
+message ExamInnerModel {
+  oneof value_oneof {
+    ExamInnerModelA ExamInnerModelA = 1;
+    ExamInnerModelB ExamInnerModelB = 2;
+  }
+}
+
+message ExamInnerModelA {
+  string str_a = 1;
+}
+
+message ExamInnerModelB {
+  int32 number_b = 1;
+}
+```  
