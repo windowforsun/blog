@@ -126,3 +126,76 @@ message ExamInnerModelB {
   int32 number_b = 1;
 }
 ```  
+
+기존 도메인 클래스에서 `Protobuf` 클래스로 변환하는 코드를 추가하면 아래와 같이 작성 할 수 있다.  
+
+```java
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamModel<T extends ExamInnerModel> {
+    private List<T> innerModelList;
+    private Map<String, T> innerModelMap;
+
+    public Proto.ExamModel toProto() {
+
+        return Proto.ExamModel.newBuilder()
+                .addAllInnerModelList(this.innerModelList
+                        .stream()
+                        .map(t -> Proto.ExamInnerModel.newBuilder()
+                                .setField(Proto.ExamInnerModel
+                                        .getDescriptor()
+                                        .findFieldByName(t.getClass().getSimpleName()), t.toProto())
+                                .build())
+                        .collect(Collectors.toList()))
+                .putAllInnerModelMap(this.innerModelMap
+                        .entrySet()
+                        .stream()
+                        .collect(Collectors.<Map.Entry<String, T>, String, Proto.ExamInnerModel>toMap(
+                                Map.Entry::getKey,
+                                entry -> Proto.ExamInnerModel.newBuilder()
+                                        .setField(Proto.ExamInnerModel
+                                                        .getDescriptor()
+                                                        .findFieldByName(entry.getValue().getClass().getSimpleName()),
+                                                entry.getValue().toProto())
+                                        .build()
+                        )))
+                .build();
+    }
+}
+
+public interface ExamInnerModel {
+  MessageLite toProto();
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamInnerModelA implements ExamInnerModel {
+  private String strA;
+
+  @Override
+  public MessageLite toProto () {
+    return Proto.ExamInnerModelA.newBuilder()
+            .setStrA(this.strA)
+            .build();
+  }
+}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ExamInnerModelB implements ExamInnerModel {
+  private int numberB;
+
+  @Override
+  public MessageLite toProto() {
+    return Proto.ExamInnerModelB.newBuilder()
+            .setNumberB(this.numberB)
+            .build();
+  }
+}
+```  
