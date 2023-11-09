@@ -199,3 +199,127 @@ public class ExamInnerModelB implements ExamInnerModel {
   }
 }
 ```  
+
+동작을 검증하는 테스트 코드를 작성하면 아래와 같다.  
+
+```java
+public class GenericTest {
+  @Test
+  public void generic_to_json() throws JsonProcessingException {
+    List<ExamInnerModelA> innerModelAList = new ArrayList<>();
+    List<ExamInnerModelB> innerModelBList = new ArrayList<>();
+    Map<String, ExamInnerModelA> innerModelAMap = new HashMap<>();
+    Map<String, ExamInnerModelB> innerModelBMap = new HashMap<>();
+
+    for (int i = 0; i < 2; i++) {
+      ExamInnerModelA a = ExamInnerModelA.builder()
+              .strA("a" + i)
+              .build();
+      innerModelAList.add(a);
+      innerModelAMap.put(String.valueOf(i), a);
+
+      ExamInnerModelB b = ExamInnerModelB.builder()
+              .numberB(i)
+              .build();
+      innerModelBList.add(b);
+      innerModelBMap.put(String.valueOf(i), b);
+    }
+
+    // create ExamModel Java Generic
+    ExamModel<ExamInnerModelA> aExamModel = ExamModel.<ExamInnerModelA>builder()
+            .innerModelList(innerModelAList)
+            .innerModelMap(innerModelAMap)
+            .build();
+    ExamModel<ExamInnerModelB> bExamModel = ExamModel.<ExamInnerModelB>builder()
+            .innerModelList(innerModelBList)
+            .innerModelMap(innerModelBMap)
+            .build();
+
+    // encode json
+    ObjectMapper objectMapper = new ObjectMapper();
+    String aJson = objectMapper.writeValueAsString(aExamModel);
+    String bJson = objectMapper.writeValueAsString(bExamModel);
+
+    // decode json
+    ExamModel<ExamInnerModelA> decodeAExamModel = objectMapper.readValue(aJson, new TypeReference<ExamModel<ExamInnerModelA>>() {
+    });
+    ExamModel<ExamInnerModelB> decodeBExamModel = objectMapper.readValue(bJson, new TypeReference<ExamModel<ExamInnerModelB>>() {
+    });
+
+    Assertions.assertEquals(aExamModel.getInnerModelList().get(0).getStrA(), decodeAExamModel.getInnerModelList().get(0).getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelList().get(1).getStrA(), decodeAExamModel.getInnerModelList().get(1).getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelMap().get("0").getStrA(), decodeAExamModel.getInnerModelMap().get("0").getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelMap().get("1").getStrA(), decodeAExamModel.getInnerModelMap().get("1").getStrA());
+    Assertions.assertEquals(bExamModel.getInnerModelList().get(0).getNumberB(), decodeBExamModel.getInnerModelList().get(0).getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelList().get(1).getNumberB(), decodeBExamModel.getInnerModelList().get(1).getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelMap().get("0").getNumberB(), decodeBExamModel.getInnerModelMap().get("0").getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelMap().get("1").getNumberB(), decodeBExamModel.getInnerModelMap().get("1").getNumberB());
+  }
+
+  @Test
+  public void generic_to_protobuf() throws InvalidProtocolBufferException {
+    List<ExamInnerModelA> innerModelAList = new ArrayList<>();
+    List<ExamInnerModelB> innerModelBList = new ArrayList<>();
+    Map<String, ExamInnerModelA> innerModelAMap = new HashMap<>();
+    Map<String, ExamInnerModelB> innerModelBMap = new HashMap<>();
+
+    for (int i = 0; i < 2; i++) {
+      ExamInnerModelA a = ExamInnerModelA.builder()
+              .strA("a" + i)
+              .build();
+      innerModelAList.add(a);
+      innerModelAMap.put(String.valueOf(i), a);
+
+      ExamInnerModelB b = ExamInnerModelB.builder()
+              .numberB(i)
+              .build();
+      innerModelBList.add(b);
+      innerModelBMap.put(String.valueOf(i), b);
+    }
+
+    // create ExamModel Java Generic
+    ExamModel<ExamInnerModelA> aExamModel = ExamModel.<ExamInnerModelA>builder()
+            .innerModelList(innerModelAList)
+            .innerModelMap(innerModelAMap)
+            .build();
+    ExamModel<ExamInnerModelB> bExamModel = ExamModel.<ExamInnerModelB>builder()
+            .innerModelList(innerModelBList)
+            .innerModelMap(innerModelBMap)
+            .build();
+
+    // generate protobuf class
+    Proto.ExamModel protoAExamModel = aExamModel.toProto();
+    Proto.ExamModel protoBExamModel = bExamModel.toProto();
+
+    // encode protobuf
+    byte[] aBytes = protoAExamModel.toByteArray();
+    byte[] bBytes = protoBExamModel.toByteArray();
+
+    // decode protobuf
+    Proto.ExamModel decodeAExamModel = Proto.ExamModel.parseFrom(aBytes);
+    Proto.ExamModel decodeBExamModel = Proto.ExamModel.parseFrom(bBytes);
+
+    Assertions.assertEquals(aExamModel.getInnerModelList().get(0).getStrA(), decodeAExamModel.getInnerModelListList().get(0).getExamInnerModelA().getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelList().get(1).getStrA(), decodeAExamModel.getInnerModelListList().get(1).getExamInnerModelA().getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelMap().get("0").getStrA(), decodeAExamModel.getInnerModelMapMap().get("0").getExamInnerModelA().getStrA());
+    Assertions.assertEquals(aExamModel.getInnerModelMap().get("1").getStrA(), decodeAExamModel.getInnerModelMapMap().get("1").getExamInnerModelA().getStrA());
+    Assertions.assertEquals(bExamModel.getInnerModelList().get(0).getNumberB(), decodeBExamModel.getInnerModelListList().get(0).getExamInnerModelB().getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelList().get(1).getNumberB(), decodeBExamModel.getInnerModelListList().get(1).getExamInnerModelB().getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelMap().get("0").getNumberB(), decodeBExamModel.getInnerModelMapMap().get("0").getExamInnerModelB().getNumberB());
+    Assertions.assertEquals(bExamModel.getInnerModelMap().get("1").getNumberB(), decodeBExamModel.getInnerModelMapMap().get("1").getExamInnerModelB().getNumberB());
+  }
+}
+```  
+
+`Json` 을 사용하는 직렬화와는 약간 사용 방식에 차이점은 있지만, 
+`Java Generic` 형태에 대해서 `Protobuf` 를 사용해서 직렬화/역직렬화가 가능함을 알 수 있다.  
+
+하지만 위 방식은 단점이 있는데, 
+`Wrapper Message` 를 사용한 방식이기 때문에 데이터의 전체 깊이가 `Wrapper` 의 수 만큼 늘어 난다는 점이 있다. 
+`Generic` 당 하나의 `Wrapper Message` 를 사용한다면 메시지에 표현에 사용된 `Generic` 의 수 만큼 깊이가 깊어 질 수 있다는 것을 주의해야 한다.  
+
+
+---
+## Reference
+[]()  
+
