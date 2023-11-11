@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Java Generic to Protobuf"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Java Generic 과 같은 동적 타입을 Progobuf Schema 를 사용해서 표현하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,10 +12,9 @@ categories :
 tags:
   - Concept
   - Java
-  - Reactive Stream
-  - Reactor
-  - Backpressure
-  - Flux
+  - Generic
+  - Protobuf
+  - Oneof
 toc: true 
 use_math: true
 ---  
@@ -73,7 +72,7 @@ message SampleWrapper {
 
 ### Example
 간단한 `Java` 코드를 통해 `Java Generic` 을 `Protobuf` 스키마로 구성하는 예시에 대해 살펴본다. 
-`build.gradle` 은 [여기]()
+`build.gradle` 은 [여기](https://windowforsun.github.io/blog/java/java-messagepack-protobuf/#protobuf)
 를 참고해서 구성 할 수 있다. 
 아래는 `Java` 도메인 클래스의 예시이다.  
 
@@ -321,5 +320,5 @@ public class GenericTest {
 
 ---
 ## Reference
-[]()  
+[Oneof](https://protobuf.dev/programming-guides/proto3/#oneof)  
 
