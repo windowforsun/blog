@@ -39,3 +39,15 @@ Mono.zip(Mono.just("a"), Mono.just(1), Mono.just(1L), Mono.just(1d), Mono.just(t
             return new Result(str, i, l, d, b);
         })
 ```  
+
+`TupleUtils` 에 정의된 정적 메소드를 사용하면 최소 2개에서 부터 최대 8개 까지 원소를 갖는 `Tuple` 를 사용 할 수 있는, 
+함수형 인터페이스와 유사한 인터페이스로 연결해준다. 
+정적 메소드는 `consumer`, `function`, `predicate` 와 같이 3종류가 있는데 
+이름과 매칭되는 역할을 수행한다.  
+
+아래는 앞선 코드 예시와 대응되는 역할을 수행하는 `function` 을 사용해 개선한 결과이다.  
+
+```java
+Mono.zip(Mono.just("a"), Mono.just(1), Mono.just(1L), Mono.just(1d), Mono.just(true))
+    .map(TupleUtils.function(Result::new))
+```  
