@@ -51,3 +51,88 @@ Mono.zip(Mono.just("a"), Mono.just(1), Mono.just(1L), Mono.just(1d), Mono.just(t
 Mono.zip(Mono.just("a"), Mono.just(1), Mono.just(1L), Mono.just(1d), Mono.just(true))
     .map(TupleUtils.function(Result::new))
 ```  
+
+위 결과와 같이 `TupleUtils` 의 정적 메소드를 잘 활용하면 `Reactor` 의 `zip` 연산을 사용할 때 
+코드를 좀더 간결하고, 명시적인 함수형 인터페이스 사용을 통해 가독성도 올릴 수 있다.  
+
+아래는 좀더 자세한 `TupleUtils` 의 사용 예시 이다.  
+
+```java
+public class TupleUtilsTest {
+  public String concatString(String str, int i) {
+    return new StringBuilder()
+            .append(str)
+            .append(":")
+            .append(i)
+            .toString();
+  }
+
+  @Test
+  public void mono_zip_map() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .map(tuple2 -> {
+              String str = tuple2.getT1();
+              int i = tuple2.getT2();
+
+              return this.concatString(str, i);
+            })
+            .as(StepVerifier::create)
+            .expectNext("a:1")
+            .verifyComplete();
+  }
+
+  @Test
+  public void mono_zip_map_with_tupleUtils_function() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .map(TupleUtils.function(this::concatString))
+            .as(StepVerifier::create)
+            .expectNext("a:1")
+            .verifyComplete();
+  }
+
+  @Test
+  public void mono_zip_doOnNext() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .doOnNext(tuple2 -> {
+              String str = tuple2.getT1();
+              int i = tuple2.getT2();
+
+              System.out.println(this.concatString(str, i));
+            })
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("a", 1))
+            .verifyComplete();
+  }
+
+  @Test
+  public void mono_zip_doOnNext_with_tupleUtils_consumer() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .doOnNext(TupleUtils.consumer((s, integer) -> System.out.println(this.concatString(s, integer))))
+            .as(StepVerifier::create)
+            .expectNext(Tuples.of("a", 1))
+            .verifyComplete();
+  }
+
+  @Test
+  public void mono_zip_filter() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .filter(tuple2 -> {
+              String str = tuple2.getT1();
+              int i = tuple2.getT2();
+
+              return this.concatString(str, i).startsWith("b");
+            })
+            .as(StepVerifier::create)
+            .verifyComplete();
+  }
+
+  @Test
+  public void mono_zip_filter_with_tupleUtils_predicate() {
+    Mono.zip(Mono.just("a"), Mono.just(1))
+            .filter(TupleUtils.predicate((s, integer) -> this.concatString(s, integer).startsWith("b")))
+            .as(StepVerifier::create)
+            .verifyComplete();
+
+  }
+}
+```  
