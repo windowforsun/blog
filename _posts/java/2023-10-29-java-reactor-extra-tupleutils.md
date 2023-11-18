@@ -136,3 +136,9 @@ public class TupleUtilsTest {
   }
 }
 ```  
+
+---
+## Reference
+[Reactor Extra, TupleUtils](https://projectreactor.io/docs/extra/release/api/index.html?reactor/function/TupleUtils.html)  
+[TupleUtils and Functional Interfaces](https://projectreactor.io/docs/core/release/reference/#extra-tuples)  
+
