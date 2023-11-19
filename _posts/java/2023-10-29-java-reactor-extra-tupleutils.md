@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Extra TupleUtils"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactor 에서 zip 연산의 결과를 더 간편하게 사용 할 수 있는 Reactor Extra 의 TupleUtils 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
