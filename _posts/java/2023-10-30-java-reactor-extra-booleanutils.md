@@ -34,3 +34,11 @@ Mono.zip(Mono.just(true), Mono.just(false))
 
 2개 이상의 결과를 소스로 결과를 만들어야 하기 때문에 `zip` 연산을 사용해 2개의 `Boolean` 결과를 병합하고, 
 `downstream` 인 `map` 에서 `and` 연산을 수행하는 방법으로 구현할 수 있다.  
+
+하지만 `BooleanUtils` 를 사용하면 위 코드를 아래와 같이 변경해 결과를 `downstream` 으로 방출 할 수 있다.  
+
+```java
+BooleanUtils.and(Mono.just(true), Mono.just(false))
+```  
+
+아래는 `BooleanUtils` 에서 제공하는 연산의 종류와 간단한 사용 예시이다.  
