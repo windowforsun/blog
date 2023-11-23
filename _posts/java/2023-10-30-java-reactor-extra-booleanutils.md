@@ -42,3 +42,85 @@ BooleanUtils.and(Mono.just(true), Mono.just(false))
 ```  
 
 아래는 `BooleanUtils` 에서 제공하는 연산의 종류와 간단한 사용 예시이다.  
+
+```java
+public class BooleanUtilsTest {
+    @Test
+    public void booleanUtils_and() {
+        BooleanUtils.and(Mono.just(true), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        BooleanUtils.and(Mono.just(true), Mono.just(true))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @Test
+    public void booleanUtils_nand() {
+        BooleanUtils.nand(Mono.just(true), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        BooleanUtils.nand(Mono.just(true), Mono.just(true))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    public void booleanUtils_or() {
+        BooleanUtils.or(Mono.just(true), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        BooleanUtils.or(Mono.just(false), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    public void booleanUtils_nor() {
+        BooleanUtils.nor(Mono.just(true), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        BooleanUtils.nor(Mono.just(false), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @Test
+    public void booleanUtils_xor() {
+        BooleanUtils.xor(Mono.just(true), Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        BooleanUtils.xor(Mono.just(true), Mono.just(true))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    public void booleanUtils_not() {
+        BooleanUtils.not(Mono.just(true))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        BooleanUtils.not(Mono.just(false))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+    }
+}
+```  
