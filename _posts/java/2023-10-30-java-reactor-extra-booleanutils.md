@@ -124,3 +124,10 @@ public class BooleanUtilsTest {
     }
 }
 ```  
+
+
+
+---
+## Reference
+[Reactor Extra, BooleanUtils](https://projectreactor.io/docs/extra/release/api/index.html?reactor/function/TupleUtils.html)
+
