@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Extra BooleanUtils"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactor 에서 bool 관련 처리를 좀 더 쉽게 도와주는 Reactor Extra 의 BooleanUtils 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
