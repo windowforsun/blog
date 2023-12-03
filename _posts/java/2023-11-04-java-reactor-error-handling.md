@@ -53,3 +53,25 @@ public void not_error_handing() {
             .verify();
 }
 ```  
+
+위 경우를 보면 에러가 발생하는 `flatMap(this::getMonoResult)` 에서 가장 가까우면서 `downstream` 인 `fallback1` 
+예외처리가 수행되는 것을 확인 할 수 있다.  
+
+`Error` 처리 시뮬레이션을 위해 사용한 `getMonoResult()` 메서드의 형태와 자세한 내용은 아래와 같다. 
+이후 예제에서 발생하는 모든 예외는 `i` 값이 짝수일 때 `RuntimeException` 를 상속하는 `IllagalArgumentException` 임을 기억하자. 
+
+```java
+public String getResult(String i) {
+    log.info("execute getResult : {}", i);
+
+    if(Integer.parseInt(i) % 2 == 0) {
+        throw new IllegalArgumentException("test exception");
+    }
+
+    return "result:" + i;
+}
+
+public Mono<String> getMonoResult(String i) {
+    return Mono.fromSupplier(() -> this.getResult(i));
+}
+```  
