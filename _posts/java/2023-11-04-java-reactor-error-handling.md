@@ -75,3 +75,17 @@ public Mono<String> getMonoResult(String i) {
     return Mono.fromSupplier(() -> this.getResult(i));
 }
 ```  
+
+`Error Handling` 과 관련된 `Reactor` 메서드들은 아래와 같이 3가지의 조건이 다른 파라미터를 갖는 형태로 구성되는데, 
+가장 먼저 알아볼 `onErrorReturn` 을 예시로 들면 아래와 같다.  
+
+```java
+// 발생한 모든 예외 대신 방출할 fallback 값을 설정한다. 
+public final Mono<T> onErrorReturn(final T fallback);
+
+// 특정 예외 티입이 발생 했을 떄 방출할 fallback 값 설정한다. 
+public final <E extends Throwable> Mono<T> onErrorReturn(Class<E> type, T fallbackValue);
+
+// 예외를 별도 Predicate 구현으로 판별해 fallback 값을 방출할지 결정한다. 
+public final Mono<T> onErrorReturn(Predicate<? super Throwable> predicate, T fallbackValue);
+```  
