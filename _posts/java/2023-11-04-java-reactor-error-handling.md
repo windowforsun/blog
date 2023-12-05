@@ -89,3 +89,33 @@ public final <E extends Throwable> Mono<T> onErrorReturn(Class<E> type, T fallba
 // 예외를 별도 Predicate 구현으로 판별해 fallback 값을 방출할지 결정한다. 
 public final Mono<T> onErrorReturn(Predicate<? super Throwable> predicate, T fallbackValue);
 ```  
+
+### onErrorReturn
+`onErrorReturn` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때, 
+방출 할 지정된 값인 `Fallback value` 를 사용해서 `Error Handling` 하는 방법이다.  
+
+reactor-error-handling-1.svg
+
+```java
+@Test
+public void mono_onErrorReturn() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .onErrorReturn(RuntimeException.class, "fallback")
+            .as(StepVerifier::create)
+            .expectNext("fallback")
+            .verifyComplete();
+}
+
+@Test
+public void flux_onErrorReturn() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .onErrorReturn("fallback")
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("fallback")
+            .verifyComplete();
+}
+```  
