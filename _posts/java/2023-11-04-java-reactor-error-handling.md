@@ -119,3 +119,10 @@ public void flux_onErrorReturn() {
             .verifyComplete();
 }
 ```  
+
+`Mono` 예제에서는 `RuntimeException` 에 해당하는 예외에 대해서 `fallback` 이라는 값을 방출하도록
+선언 했기 때문에 예외 대신 `fallback` 이라는 문자열이 방출되는 것을 확인 할 수 있다.  
+
+`Flux` 예제를 보면 원본 `source` 에서는 3개의 아이템을 방출하지만, 
+첫번째 아이템은 정상적으로 결과를 확인 할 수 있지만 두번째 아이템에서 예외 발생으로 `fallback` 이라는 
+문자열이 방출되고 스트림은 종료된다.  
