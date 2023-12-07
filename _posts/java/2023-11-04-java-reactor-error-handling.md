@@ -126,3 +126,37 @@ public void flux_onErrorReturn() {
 `Flux` 예제를 보면 원본 `source` 에서는 3개의 아이템을 방출하지만, 
 첫번째 아이템은 정상적으로 결과를 확인 할 수 있지만 두번째 아이템에서 예외 발생으로 `fallback` 이라는 
 문자열이 방출되고 스트림은 종료된다.  
+
+### onErrorResume
+`onErrorResume` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때, 
+이어서 방출할 `Fallback publisher` 를 사용해서 `Error Handling` 을 하는 방법이다. 
+
+reactor-error-handling-2.svg
+
+```java
+@Test
+public void mono_onErrorResume() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .onErrorResume(throwable -> throwable.getMessage().equals("test exception"),
+                    e -> Mono.just("fallback"))
+            .doOnNext(s -> log.info("{}", s))
+            .as(StepVerifier::create)
+            .expectNext("fallback")
+            .verifyComplete();
+}
+
+@Test
+public void flux_onErrorResume() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .onErrorResume(throwable -> Flux.fromIterable(List.of("3", "5"))
+                    .flatMap(this::getMonoResult))
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:3")
+            .expectNext("result:5")
+            .verifyComplete();
+}
+```  
