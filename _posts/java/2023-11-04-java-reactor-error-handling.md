@@ -160,3 +160,10 @@ public void flux_onErrorResume() {
             .verifyComplete();
 }
 ```  
+
+`Mono` 예제에서는 `Predicate` 구현을 통해 `Error message` 가 `test exception` 인 경우 
+`fallback` 문자열을 방출하는 스트림을 구독해서 이어 방출하도록 `Error Handling` 을 수행했다.  
+
+`Flux` 예제는 초기 `Source` 는 `1, 2, 3` 3개의 아이템을 방출하도록 하지만
+두 번째 아이템인 `2`에서 예외가 발생하게 된다. 
+그러면 `3, 5` 를 사용해서 결과를 만드는 스트림을 구독해서 이어 방출하도록 `Error Handling` 을 수행했다.  
