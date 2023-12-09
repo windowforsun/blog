@@ -167,3 +167,33 @@ public void flux_onErrorResume() {
 `Flux` 예제는 초기 `Source` 는 `1, 2, 3` 3개의 아이템을 방출하도록 하지만
 두 번째 아이템인 `2`에서 예외가 발생하게 된다. 
 그러면 `3, 5` 를 사용해서 결과를 만드는 스트림을 구독해서 이어 방출하도록 `Error Handling` 을 수행했다.  
+
+### onErrorMap
+`onErrorMap` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때,
+던질 예외를 `Mapper` 를 사용해서 필요한 예외 타입으로 변경해서 `Error Handling` 을 하는 방법이다.
+
+reactor-error-handling-3.svg
+
+```java
+@Test
+public void mono_onErrorMap() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .onErrorMap(throwable -> new ClassNotFoundException())
+            .as(StepVerifier::create)
+            .expectError(ClassNotFoundException.class)
+            .verify();
+}
+
+@Test
+public void flux_onErrorMap() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .onErrorMap(throwable -> new ClassNotFoundException())
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectError(ClassNotFoundException.class)
+            .verify();
+}
+```  
