@@ -197,3 +197,41 @@ public void flux_onErrorMap() {
             .verify();
 }
 ```  
+
+`Mono` 예제에서는 `upstream` 에서 발생하는 모든 예외에 대해서 `ClassNotFoundException` 으로 
+변환해 `downstream` 으로 예외를 전달하는 방식으로 `Error Handling` 을 수행하였다.  
+
+`Flux` 또한 `upstream` 에서 발생하는 모든 예외를 `ClassNotFoundException` 으로
+치환해 `donwstream` 으로 전달하기 때문에 두 번째 아이템에서 치환된 예외가 전달된 것을 확인 할 수 있다.  
+
+
+### onErrorContinue
+`onErrorContinue` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때,
+`Error consumer` 를 사용해서 예외를 처리(로깅,..)하고 남은 아이템들을 이어서 처리하는 `Error Handling` 방식이다.  
+
+reactor-error-handling-3.svg
+
+```java
+@Test
+public void mono_onErrorContinue() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .onErrorContinue((throwable, o) -> log.info("error at : {}, {}", o, throwable.getMessage()))
+            .as(StepVerifier::create)
+            .expectError(IllegalArgumentException.class)
+            .verify();
+}
+
+@Test
+public void flux_onErrorContinue() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .onErrorContinue(RuntimeException.class,
+                    (throwable, o) -> log.info("error at : {}, exception : {}", o, throwable.getMessage()))
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:3")
+            .verifyComplete();
+}
+```  
