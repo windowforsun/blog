@@ -197,7 +197,6 @@ public void flux_onErrorMap() {
             .verify();
 }
 ```  
-
 `Mono` 예제에서는 `upstream` 에서 발생하는 모든 예외에 대해서 `ClassNotFoundException` 으로 
 변환해 `downstream` 으로 예외를 전달하는 방식으로 `Error Handling` 을 수행하였다.  
 
@@ -235,3 +234,21 @@ public void flux_onErrorContinue() {
             .verifyComplete();
 }
 ```  
+
+`Mono` 예제는 스트림상 단일 아이템만 존재하기 때문에 `onErrorContinue()` 에 로깅 처리를 해주었지만, 
+이후 이어 진행할 스트림이 없기 때문에 `Error Handling` 이 정상적으로 수행되지 않고 `upstream` 에서 발생한 
+`IllegalArgumentException` 이 그대로 `downstream` 까지 전달된 것을 확인 할 수 있다.  
+
+반면 `Flux` 의 경우 두 번째 아이템인 `2` 에서 에러가 발생하므로 해당 경우는 `onErrorContinue()` 에 정의한 로깅이 수행되고, 
+결과는 `1, 3` 의 결과가 정상적으로 전달된 것을 확인 할 수 있다.  
+
+
+## Retry Strategy
+로직 수행이 외부 네트워크를 사용하는 경우에는 네트워크 상태에 따라 `Reactive Stream` 에서 `Error` 가 발생할 수 있다. 
+이는 장비의 네트워크에 문제가 있거나 타겟이 되는 서버의 네트워크에 문제가 있을 수도 있고, 
+타겟 서버가 배포 중이거나 하는 등의 클라이언트 측에서는 예측 불가능한 경우가 무수히 많다.  
+
+일반적으로 이런 경우 앞서 알아본 `Error Handling` 처럼 로그를 남기거나, 기본값 처리를 하는 등의 처리도 방법이 될 수 있다. 
+하지만 좀 더 추전 되는 방안은 재시도 동작이다. 
+네트워크 이슈처럼 원인이 불명확한 상태인 경우에는 재시도 동작으로 에러가 발생하는 경우를 줄여 볼 수 있다. 
+하지만 재시도 동작이 과하게 설정된다면, 타겟 서버에 큰 부하를 줄 수 있으므로 적절한 수치값 지정이 필요하다.  
