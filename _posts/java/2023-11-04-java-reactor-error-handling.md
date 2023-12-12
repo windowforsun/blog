@@ -252,3 +252,49 @@ public void flux_onErrorContinue() {
 하지만 좀 더 추전 되는 방안은 재시도 동작이다. 
 네트워크 이슈처럼 원인이 불명확한 상태인 경우에는 재시도 동작으로 에러가 발생하는 경우를 줄여 볼 수 있다. 
 하지만 재시도 동작이 과하게 설정된다면, 타겟 서버에 큰 부하를 줄 수 있으므로 적절한 수치값 지정이 필요하다.  
+
+### retry
+`retry` 는 재시도를 수행할 횟수를 파라미터로 넘겨주면 `upstream` 에서 
+`Error` 가 발생하면 `upstream` 을 재수도 횟수만큼 다시 구독한다. 
+만약 `retry()` 와 같이 파라미터에 아무것도 넘겨 주지 않으면 무한정 재구독이 수행 될 수 있으므로 주의가 필요하다.  
+
+reactor-error-handling-retry-1.svg
+
+```java
+@Test
+public void mono_retry() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .retry(2)
+            .as(StepVerifier::create)
+            .expectError(IllegalArgumentException.class)
+            .verify();
+}
+/**
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+
+@Test
+public void flux_retry() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .retry(2)
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectError(IllegalArgumentException.class)
+            .verify();
+}
+/**
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+```  
