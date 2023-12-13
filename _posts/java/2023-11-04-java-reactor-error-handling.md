@@ -298,3 +298,38 @@ public void flux_retry() {
  * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
  */
 ```  
+
+`Mono` 의 경우 `source stream` 이 에러가 발생되는 값만 방출하기 때문에 
+초기 구독과 재구독를 포함해서 총 3번의 `getResult()` 메소드 호출이 수행된 것을 확인 할 수 있다. 
+그리고 2번의 재시도 이후에도 실패하기 때문에 최종적으로 `IllelgalArgumentException` 이 발생했다.  
+
+`Flux` 는 `source stream` 이 `1, 2, 3` 을 방출하므로 `2` 에서 에러가 발생한다. 
+그러므로 총 3번의 `1` 에 대한 결과가 수행되고 `2` 로 인한 3번의 에러가 발생하게 된다.  
+재시도 이후에도 에러는 동일하게 발생하는 코드로 돼 있어서 최종적으로 예외 결과가 나온 것을 확인 할 수 있다.  
+
+### retryWhen(Retry.max)
+`retryWhen` 은 [Retry](https://projectreactor.io/docs/core/3.5.4/api/reactor/util/retry/Retry.html) 
+를 통해 재시작에 대한 조건을 다양하게 주고 싶을 때 `RetrySpec` 을 통해 원하는 조건으로 재시도를 가능하게 할 수 있다.  
+
+reactor-error-handling-retry-2.svg
+
+`RetrySpec` 의 다양한 조건 중 먼저 얼아 볼 것은 `Retry.max` 이다. 
+`Retry.max` 는 앞서 알아본 `retry(maxAttempts)` 와 동일한 기능으로, 
+재시도를 수행할 최대 횟수를 설정할 수 있다. 
+`retry()` 와 치아점이 있다면, 재시도에도 성공하지 못했을 때 발생하는 예외가 
+`retry()` 는 `upstream` 에서 발생한 예외롤 그대로 던진다면, 
+`retryWhen()` 은 아래와 같이 `RetryExhaustedException` 에 감싸진 예외가 
+어떤 재시도 조건에 실패해서 발생한 예외인지 설명과 함께 발생한다. 
+
+```
+Suppressed: reactor.core.Exceptions$RetryExhaustedException: Retries exhausted: 2/2
+    at reactor.core.Exceptions.retryExhausted(Exceptions.java:290)
+    at reactor.util.retry.RetrySpec.lambda$static$2(RetrySpec.java:61)
+    at reactor.util.retry.RetrySpec.lambda$generateCompanion$5(RetrySpec.java:369)
+    at reactor.core.publisher.FluxConcatMap$ConcatMapImmediate.drain(FluxConcatMap.java:374)
+    ... 85 more
+Caused by: java.lang.IllegalArgumentException: test exception
+    at com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest.getResult(ReactorErrorRetryTest.java:23)
+    at com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest.lambda$getMonoResult$0(ReactorErrorRetryTest.java:31)
+    ... 85 more
+```  
