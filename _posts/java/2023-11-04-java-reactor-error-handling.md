@@ -333,3 +333,55 @@ Caused by: java.lang.IllegalArgumentException: test exception
     at com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest.lambda$getMonoResult$0(ReactorErrorRetryTest.java:31)
     ... 85 more
 ```  
+
+reactor-error-handling-retry-3.svg
+
+```java
+@Test
+public void mono_retryWhen_max() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.max(2))
+            .as(StepVerifier::create)
+            .expectErrorMessage("Retries exhausted: 2/2")
+            .verify();
+}
+
+/**
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+
+
+@Test
+public void flux_retryWhen_max() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.max(2))
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectErrorMessage("Retries exhausted: 2/2")
+            .verify();
+}
+/**
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+```  
+
+`Mono` 의 경우 `source stream` 이 에러가 발생되는 값만 방출하기 때문에
+초기 구독과 재구독를 포함해서 총 3번의 `getResult()` 메소드 호출이 수행된 것을 확인 할 수 있다.
+그리고 2번의 재시도 이후에도 실패하기 때문에 최종적으로 `Retries exhausted: 2/2` 라는 재시도 횟수 초과라는 메세지가 발생한다. 
+
+`Flux` 는 `source stream` 이 `1, 2, 3` 을 방출하므로 `2` 에서 에러가 발생한다.
+그러므로 총 3번의 `1` 에 대한 결과가 수행되고 `2` 로 인한 3번의 에러가 발생하게 된다.  
+재시도 이후에도 에러는 동일하게 발생하는 코드로 돼 있어서 `Retries exhausted: 2/2` 라는 재시도 횟수 초과라는 메시지가 발생한다.  
+
