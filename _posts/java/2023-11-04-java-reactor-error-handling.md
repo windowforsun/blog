@@ -385,3 +385,48 @@ public void flux_retryWhen_max() {
 그러므로 총 3번의 `1` 에 대한 결과가 수행되고 `2` 로 인한 3번의 에러가 발생하게 된다.  
 재시도 이후에도 에러는 동일하게 발생하는 코드로 돼 있어서 `Retries exhausted: 2/2` 라는 재시도 횟수 초과라는 메시지가 발생한다.  
 
+
+### retryWhen(Retry.fixedDelay)
+`retryWhen` 에 사용할 수 있는 `Retry.fixedDelay` 는 정해진 시간 동안 `delay` 를 
+가진 뒤 재시도 횟수만큼 재시도를 수행하는 조건이다.  
+
+reactor-error-handling-retry-4.svg
+
+```java
+@Test
+public void mono_retryWhen_fixedDelay() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.fixedDelay(2, Duration.ofSeconds(1)))
+            .as(StepVerifier::create)
+            .expectErrorMessage("Retries exhausted: 2/2")
+            .verify();
+}
+/**
+ * 18:45:56.715 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:45:57.730 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:45:58.735 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+
+@Test
+public void flux_retryWhen_fixedDelay() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.fixedDelay(2, Duration.ofSeconds(1)))
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectErrorMessage("Retries exhausted: 2/2")
+            .verify();
+}
+/**
+ * 18:46:15.216 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:46:15.219 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:46:16.237 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:46:16.238 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:46:17.243 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:46:17.243 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+```  
