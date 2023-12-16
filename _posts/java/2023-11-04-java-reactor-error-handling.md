@@ -430,3 +430,72 @@ public void flux_retryWhen_fixedDelay() {
  * 18:46:17.243 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
  */
 ```  
+
+`Mono`, `Flux` 결과를 보면 모두 이전에 살펴번 `retryWhen(Retry.max)` 와 비슷한 흐름을 보이지만, 
+재시도에 해당하는 메소드가 호출 돼 찍힌 로그의 주가기가 파라미터로 전달한 1초 주기인 것을 확인 할 수 있다. 
+재시도 중간에 적정한 `delay` 를 가진 뒤 수행이 필요할 때 사용할 수 있는 조건이다.  
+
+### retryWhen(Retry.backoff)
+`retryWhen` 에 사용할 수 있는 `Retry.backoff` 조건은 `upstream` 에서 예외가 발생 했을 때, 
+`backoff` 시간만큼 `delay` 후 재시도 횟수 만큼 재시도를 수행하는 조건이다. 
+`Retry.fixedDelay` 와 차이는 `Retry.backoff` 는 재시도 횟수가 늘어 날때마다 `backoff` 로 `delay` 되는 시간이 지수 형태로 늘어난다는 점에 있다.  
+
+
+reactor-error-handling-retry-4.svg
+
+```java
+@Test
+public void mono_retryWhen_backoff() {
+    Mono.just("2")
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+            .as(StepVerifier::create)
+            .expectErrorMessage("Retries exhausted: 3/3")
+            .verify();
+}
+/**
+ * 18:52:26.808 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:52:28.030 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:52:30.933 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:52:35.003 [parallel-3] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+
+
+@Test
+public void flux_retryWhen_backoff() {
+    Mono.just(List.of("1", "2", "3"))
+            .flatMapMany(Flux::fromIterable)
+            .flatMap(this::getMonoResult)
+            .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+            .as(StepVerifier::create)
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectNext("result:1")
+            .expectErrorMessage("Retries exhausted: 3/3")
+            .verify();
+}
+/**
+ * 18:52:57.363 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:52:57.365 [main] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:52:58.522 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:52:58.522 [parallel-1] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:53:01.151 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:53:01.151 [parallel-2] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ * 18:53:04.383 [parallel-3] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 1
+ * 18:53:04.383 [parallel-3] INFO com.windowforsun.reactor.errorhanding.ReactorErrorRetryTest - execute getResult : 2
+ */
+```  
+
+`Mono` 와 `Flux` 예제에서 `backoff` 의 `delay` 시간이 실패 횟수가 늘어남에 따라 지수형태로 늘어나느 것을 
+더 잘 보기 위해 재시도 횟수를 3회로 주었다. 
+전체적인 실행 흐름과 결과는 동일하지만 재시도가 수행되는 시간의 텀을 보면, 
+첫 번째 재시도 까지는 1초가 `delay` 후 수행 되었고, 
+두 번째 재시도 까지는 2.5초 `delay` 후 수행 되었고, 
+세 번째 재시도 까지는 3.3초 `delay` 후 수행 되는 것처럼 재시도 횟수간 `delay` 시간이 늘어나는 것을 확인 할 수 있다.  
+
+
+---
+## Reference
+[Reactor Retry](https://projectreactor.io/docs/core/release/api/reactor/util/retry/Retry.html)  
+
