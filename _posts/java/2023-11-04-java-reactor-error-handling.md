@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Error Handling"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactor Reactive Stream 상에서 Error 가 발생했을 떄 예외 및 재처리 하는 방법에 해대 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,8 @@ tags:
   - Java
   - Reactive Stream
   - Reactor
-  - Reactor Extra
-  - BooleanUtils
+  - Error Handling
+  - Exception
 toc: true 
 use_math: true
 ---  
