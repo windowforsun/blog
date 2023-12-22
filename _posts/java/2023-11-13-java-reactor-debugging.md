@@ -106,3 +106,86 @@ java.lang.IllegalArgumentException: test exception
 일반적인 메소드 단위 `StackTrace` 만 출력된 결과이다. 
 그러므로 `Reactive Stream` 의 어떤 경로에서 에러가 발생했는지 찾기에는 내용이 부족하다. 
 
+
+### Hooks.onOperatorDebug()
+`Reactor API` 문서를 보면 `Hooks` 라는 클래스가 있는데, 내부에 선언된 전역 메소드 중 
+[onOperatorDebug()](https://projectreactor.io/docs/core/3.5.4/api/reactor/core/publisher/Hooks.html#onOperatorDebug--)
+를 사용하면 간단하게 디버그 모드를 활성화 할 수 있다.  
+
+이는 런타임 `StackTrace` 로 부터 조립 정보를 가져오는 것으로, 
+`Reactor` 의 `Operator` 가 생성 될 때마다 스택을 캡쳐해서 유지하는 방식이다. 
+그리고 특정 `Operator` 에서 에러가 발생하면 `onError` 로 전달되는 `Throwable` 이 `StackTrace` 에
+[Suppressed Exception](https://www.baeldung.com/java-suppressed-exceptions) 와 같이 추가된다. 
+이러한 동작을 통해 일반적인 `StackTrace` 와 비교했을 때, 
+`Reactive Stream` 측면에서 좀 더 상세한 정보와 경로를 확인 할 수 있다.  
+
+```java
+public class HookOperatorDebugStackTraceTest {
+    @Test
+    public void reactor_hook_operator_debug_stack_trace() {
+        Hooks.onOperatorDebug();
+
+        TestSource.produceSquare(2)
+                .as(StepVerifier::create)
+                .expectErrorSatisfies(Throwable::printStackTrace)
+                .verify();
+    }
+}
+```  
+
+비교를 위해 `onOperatorDebug()` 를 적용한 위 코드를 실행하면 아래와 같은 `StackTrace` 를 확인 할 수 있다.  
+
+```
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Assembly trace from producer [reactor.core.publisher.MonoFlatMap] :
+	reactor.core.publisher.Mono.flatMap(Mono.java:3100)
+	com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$1(TestSource.java:24)
+Error has been observed at the following site(s):
+	*_______Mono.flatMap ⇢ at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$1(TestSource.java:24)
+	*_______Mono.flatMap ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:23)
+	|_ Mono.delayElement ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:25)
+	|_  Mono.subscribeOn ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:26)
+Original Stack Trace:
+		at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+		at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+		at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+앞선 `일반적인 StackTrace` 와 비교 했을 떄, 상단 `StackTrace` 에는 아래와 같은 내용이 추가 된 것을 확인 할 수 있다.  
+
+```
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Assembly trace from producer [reactor.core.publisher.MonoFlatMap] :
+	reactor.core.publisher.Mono.flatMap(Mono.java:3100)
+	com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$1(TestSource.java:24)
+Error has been observed at the following site(s):
+	*_______Mono.flatMap ⇢ at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$1(TestSource.java:24)
+	*_______Mono.flatMap ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:23)
+	|_ Mono.delayElement ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:25)
+	|_  Mono.subscribeOn ⇢ at com.windowforsun.reactor.debug.TestSource.produceSquare(TestSource.java:26)
+```  
+
+예외가 발생한 위치 그리고 메소드의 콜스택과 비슷하게, 
+예외가 발생한 위치로 부터 `Reactive Stream` 의 경로를 확인해 볼 수 있다.  
+
+하지만 `Hooks.onOperatorDebug()` 는 애플리케이션에서 사용되는 모든 `Operator` 에 대해 
+`Operation Hook` 이 걸리면서 연산자맏 `StackTrace` 캡쳐에 대한 오버해드가 발생한다. 
+이는 코드에 에러가 없는 경우에도 발생하기 때문에, 비용이 비싼 동작이므로 실제 환경에서 사용하기에는 무리가 있으므로 
+개발이나 로컬 환경처럼 성능에 민감하지 않는 곳에서 사용해야 한다.  
+
