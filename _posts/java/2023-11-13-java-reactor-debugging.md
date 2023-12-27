@@ -265,3 +265,182 @@ Original Stack Trace:
 `Hooks.onOperatorDebug()` 와 동일한 `StackTrace` 를 출력해주었다. 
 `Spring Webflux` 에서 기본 설정이 활성화시키기 때문에 리얼 환경에서도 큰 부담없이, 
 `Reactive Stream` 처리 과정에서 에러가 발생했을 때 디버깅 정보로 활용 할 수 었을 것같다.  
+
+
+### checkpoint()
+[checkpoint()](https://projectreactor.io/docs/core/3.5.4/api/reactor/core/publisher/Flux.html#checkpoint--) 
+는 특정 `Operator` 체인 내의 `StackTrace` 만 캡쳐하는 방식이다. 
+`checkpoint()` 사용 할때는 에러가 발생하는 `downstream` 에 `checkpoint()` 가 위치해야 한다. 
+아래 코드에서 에러 발생지점은 `TestSource.produceSquare` 이다.  
+
+```java
+@Test
+public void no_checkpoint() {
+    Mono.just(2)
+            .checkpoint()
+            .flatMap(TestSource::produceSquare)
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+위 코드를 실행하면 아래의 에러 메시지와 같이 아무런 `StackTrace` 가 되지 않은 결과가 나온다.  
+
+```
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+	at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+	at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+	at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+	at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+	at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+	at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+	at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+정상적인 에러 발생 위치를 `StackTrace` 에 캡쳐하고 싶다면 에러 발생이 예상되는 지점을 기준으로 `downstream` 에 `checkpoint()` 를 위치시켜야 한다.  
+
+```java
+@Test
+public void checkpoint() {
+    Mono.just(2)
+            .checkpoint()
+            .flatMap(TestSource::produceSquare)
+            .checkpoint()
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+```
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Assembly trace from producer [reactor.core.publisher.MonoFlatMap] :
+	reactor.core.publisher.Mono.checkpoint(Mono.java:2190)
+	com.windowforsun.reactor.debug.CheckpointDebugTest.checkpoint(CheckpointDebugTest.java:13)
+Error has been observed at the following site(s):
+	*__checkpoint() ⇢ at com.windowforsun.reactor.debug.CheckpointDebugTest.checkpoint(CheckpointDebugTest.java:13)
+Original Stack Trace:
+		at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+		at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+		at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+`checkpoint()` 로 부터 `upstream` 에서 에러가 발생하자 해당 `checkpoint` 지점이 `StackTrace` 에 찍힌 것을 확인 할 수 있다. 
+이제 해당 지점으로 부터 `upstream` 에 대해 다시 에러 발생 위치 검증을 수행해 주면 된다.    
+
+디버깅을 위해 `checkpoint()` 를 여기저기 위치시키다 보면 출력된 `StackTrace` 를 파악하는 것도 쉽지 않을 것이다. 
+이런 경우를 위해 `checkpoint(String)` 을 사용해서 식별자를 추가할 수 있다.  
+
+```java
+@Test
+public void checkpoint_description() {
+    Mono.just(2)
+            .checkpoint()
+            .flatMap(TestSource::produceSquare)
+            .checkpoint("here")
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+```
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Error has been observed at the following site(s):
+	*__checkpoint ⇢ here
+Original Stack Trace:
+		at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+		at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+		at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+출력결과를 보면 입력한 식별자가 정상적으로 출력된 것을 확인 할 수 있다.  
+
+하지만 위와 같이 식별자를 추가해버리면 `StackTrace` 의 내용을 자세히 알수 없다. 
+어느 클래스 어느 위치에서 발생했는지에 대한 정보가 모두 `description` 으로 대체됐기 때문이다. 
+이럴 때는 `true/false` 인수 하나를 더 념겨 줘서 `description` 과 자세한 `StackTrace` 정보를 함께 받아 볼 수 있다.  
+
+```java
+@Test
+public void checkpoint_description_stacktrace() {
+    Mono.just(2)
+            .checkpoint()
+            .flatMap(TestSource::produceSquare)
+            .checkpoint("here", true)
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+```
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	Suppressed: The stacktrace has been enhanced by Reactor, refer to additional information below: 
+Assembly trace from producer [reactor.core.publisher.MonoFlatMap], described as [here] :
+	reactor.core.publisher.Mono.checkpoint(Mono.java:2255)
+	com.windowforsun.reactor.debug.CheckpointDebugTest.checkpoint_description_stacktrace(CheckpointDebugTest.java:46)
+Error has been observed at the following site(s):
+	*__checkpoint(here) ⇢ at com.windowforsun.reactor.debug.CheckpointDebugTest.checkpoint_description_stacktrace(CheckpointDebugTest.java:46)
+Original Stack Trace:
+		at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+		at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+		at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+		at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+		at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+		at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+		at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+		at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+		at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+		at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+		at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+에러 출력을 확인하면 `description` 과 `StackTrace` 정보가 모두 정상적으로 출력된 것을 확인 할 수 있다.  
+
+
