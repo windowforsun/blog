@@ -444,3 +444,92 @@ Original Stack Trace:
 에러 출력을 확인하면 `description` 과 `StackTrace` 정보가 모두 정상적으로 출력된 것을 확인 할 수 있다.  
 
 
+
+### log()
+`Reactive Stream` 을 디버깅 하는 가장 전통적인 방법은 `Reactor` 의 `Log Operator` 를 사용하는 것이다. 
+`log()` 는 `Reactive stream` 에서 발생하는 모든 `Signal` 의 전파되는 과정과 흐름을 확인 할 수 있는 `Operator` 이다.  
+
+```java
+@Test
+public void log_on_upstream() {
+    Mono.just(2)
+            .log()
+            .flatMap(TestSource::produceSquare)
+            .log()
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+위 소스는 `flatMap()` 에서 에러가 발생하는데, `log()` 는 `flatMap()` 을 기준으로 `upstream 에 위치해 있다.
+
+```
+16:08:14.916 [main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+16:08:14.917 [main] INFO reactor.Mono.Just.1 - | request(unbounded)
+16:08:14.917 [main] INFO reactor.Mono.Just.1 - | onNext(2)
+16:08:14.922 [main] INFO reactor.Mono.Just.1 - | onComplete()
+```  
+
+출력된 로그를 보면 `just()` 를 구독하고 `request()` 를 사용해서 데이터를 `just()` 에세 요청하면 
+`onNext()` 를 통해 `just()` 로 부터 방출된 데이터가 2인 것을 확인 할 수 있다.
+그리고 `log()` 는 `onComplete()` 과 함께 역할이 종료된다.  
+
+하지만 그 이후에 에러가 발생했지만 `log()` 에는 해당 내용이 담겨져 있지 않다. 
+`log()` 는 자신을 기준으로 `upstream` 에 대한 시그널을 로그로 출력하기 때문에, 
+위 소스는 `log()` 기준으로 `downstream` 에서 에러가 발생했기 때문에 에러 관련 로그는 아무것도 출력되지 않은 것이다.  
+
+```java
+@Test
+public void log() {
+    Mono.just(2)
+            .log()
+            .flatMap(TestSource::produceSquare)
+            .log()
+            .as(StepVerifier::create)
+            .expectErrorSatisfies(Throwable::printStackTrace)
+            .verify();
+}
+```  
+
+위 소스는 에러가 발생하는 위치인 `flatMap()` 의 `downstream` 에도 `log()` 를 추가했다. 
+
+```
+16:12:25.317 [main] INFO reactor.Mono.Just.1 - | onSubscribe([Synchronous Fuseable] Operators.ScalarSubscription)
+16:12:25.318 [main] INFO reactor.Mono.FlatMap.2 - | onSubscribe([Fuseable] MonoFlatMap.FlatMapMain)
+16:12:25.319 [main] INFO reactor.Mono.FlatMap.2 - | request(unbounded)
+16:12:25.319 [main] INFO reactor.Mono.Just.1 - | request(unbounded)
+16:12:25.319 [main] INFO reactor.Mono.Just.1 - | onNext(2)
+16:12:25.324 [main] INFO reactor.Mono.Just.1 - | onComplete()
+16:12:25.325 [parallel-1] INFO com.windowforsun.reactor.debug.TestSource - execute getResult : 2
+16:12:25.327 [parallel-1] ERROR reactor.Mono.FlatMap.2 - | onError(java.lang.IllegalArgumentException: test exception)
+16:12:25.329 [parallel-1] ERROR reactor.Mono.FlatMap.2 - 
+java.lang.IllegalArgumentException: test exception
+	at com.windowforsun.reactor.debug.TestSource.square(TestSource.java:15)
+	at com.windowforsun.reactor.debug.TestSource.lambda$produceSquare$0(TestSource.java:24)
+	at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:152)
+	at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+	at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+	at reactor.core.publisher.FluxFlatMap.trySubscribeScalarMap(FluxFlatMap.java:200)
+	at reactor.core.publisher.MonoFlatMap.subscribeOrReturn(MonoFlatMap.java:53)
+	at reactor.core.publisher.Mono.subscribe(Mono.java:4480)
+	at reactor.core.publisher.MonoSubscribeOn$SubscribeOnSubscriber.run(MonoSubscribeOn.java:126)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:84)
+	at reactor.core.scheduler.WorkerTask.call(WorkerTask.java:37)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
+	at java.base/java.lang.Thread.run(Thread.java:829)
+```  
+
+출력된 로그를 보면 `just()` 는 `onComplete()` 를 통해 모든 시그널이 정상적으로 완료됐지만, 
+`flatMap()` 에서 `onErorr()` 가 발생하며 에러를 방출한 것을 확인 할 수 있다. 
+이후 더 자세한 원인 분석이 필요하다면 `flatMap()` 내부에서 방출하는 시그널에 대해서 다시 `log()` 를 통해 더 자세한 에러 발생 위치를 파악할 수 있을 것이다.  
+
+
+
+---
+## Reference
+[Debugging Reactor](https://projectreactor.io/docs/core/release/reference/#debugging)  
+
