@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Java 실습] "
+title: "[Java 실습] Reactive Stream, Reactor Debugging"
 header:
   overlay_image: /img/java-bg.jpg 
-excerpt: ''
+excerpt: 'Reactor 에서 Debugging 을 하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,8 +14,8 @@ tags:
   - Java
   - Reactive Stream
   - Reactor
+  - Debugging
   - Reactor Extra
-  - BooleanUtils
 toc: true 
 use_math: true
 ---  
