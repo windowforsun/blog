@@ -177,3 +177,144 @@ range-strategy-group strategy-topic-2 4          0               0              
 | range-consumer-client-3 | strategy-topic-1  |4
 |                         | strategy-topic-2  |4
 
+
+### RoundRobinAssignor
+`RoundRobinAssignor` 는 이름 그대로 `Round-Robin` 방식으로 `Parition` 을 할당하는 전략이다. 
+`Consumer Group` 내 `Consumer` 들에게 토픽의 파티션을 균등하고 순차적으로 할당하는 방식으로, 
+주요한 목적은 작업 부하를 `Consumer Group` 의 모든 `Consumer` 에게 균등하게 분산시키는 것이다.  
+
+균등분배 방식으로 토픽의 파티션을 모든 `Consumer` 에게 순차적으로 할당한다. 
+각 `Consumer` 가 동일한 수의 파티션을 가질 수 있도록 하는데 목적이 있다.  
+
+그리고 순차적 할당방식을 통해 `Consumer A` 가 `Partition 1` 을 할당 받았다면, 
+`Consumer B` 는 `Partition 2` 를 `Consumer C` 는 `Partition 3` 를 할당 받는다. 
+이러한 방식으로 모든 컨슈머에 파티션이 할당 될떄 까지 반복한다.  
+
+이러한 `RoundRobin` 방식은 부하를 각 `Consumer` 에게 균등하게 분산하고, 
+간단한 방식이라는 점이 시스템 관리에 용이함을 가져 올 수 있다.  
+
+하지만 모든 파티션의 데이터가 균등하지 않는 경우에는 부하가 균등하지 않고 특정 `Consumer` 에게 부하가 집중 될 수 있다. 
+또한 `Consumer Group` 의 멤버가 변경 될 때마다 `Rebalancing` 이 발생 하게 된다. 
+이는 변경된 `Consumer Group` 에 맞게 다시 균등 분배를 하기 위함 인데, 
+이로 인한 시스템에 부하가 발생 할 수 있기에 주의해야 한다.  
+
+
+#### 테스트
+`RangeAssignor` 에서 생성한 `strategy-topic-1` 과 `strategy-topic-2` 를 동일하게 사용한다. 
+`RoundRobin` 방식을 사용했을 때는 어떤 식으로 할당되는지 확인하기 위해, 
+`Consumer Group` 은 `roundrobin-strategy-group`, `Client Id` 는 `roundrobin-strategy-client-1` 로 
+두 토픽을 구독하도록 한다.  
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group roundrobin-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor \
+--consumer-property client.id=roundrobin-consumer-client-1
+
+```  
+
+그리고 `roundrobin-strategy-group` 의 상세 정보를 조회해서 구독 토픽의 파티션과 `Consumer` 의 할당 현황을 살펴보면 아래와 같다.  
+
+```bash
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group roundrobin-strategy-group --describe
+
+GROUP                     TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                       HOST            CLIENT-ID
+roundrobin-strategy-group strategy-topic-1 0          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 1          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 2          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 3          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 4          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 0          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 1          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 2          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 3          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 4          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+```  
+
+단일 클라이언트인 경우 2개의 토픽 모든 파티션이 `roundrobin-strategy-client-1` 에 할당된 것을 확인 할 수 있다. 
+동일한 조건으로 `roundrobin-strategy-client-2` 를 추가로 구독 시키고 다시 할당 현황을 살펴보면 아래와 같다.  
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group roundrobin-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor \
+--consumer-property client.id=roundrobin-consumer-client-2
+
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group roundrobin-strategy-group --describe
+
+GROUP                     TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                       HOST            CLIENT-ID
+roundrobin-strategy-group strategy-topic-1 0          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 1          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-1 2          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 3          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-1 4          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 0          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-2 1          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 2          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-2 3          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 4          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+```  
+
+각 토픽당 `Consumer` 를 순차적으로 할당하기 때문에, 
+`strategy-topic-1` 은 `roundrobin-consumer-client-1` 이 먼저 할당 받고, 
+`strategy-topic-2` 은 `roundrobin-consumer-client-2` 이 먼저 할당 받았기 때문에 아래와 같이 정리해 볼 수 있다.  
+
+
+| Topic            | Partition |Consumer|Rebalancing
+|------------------|-----------|---|---
+| strategy-topic-1 | 0         |roundrobin-consumer-client-1|X
+|                  | 1         |roundrobin-consumer-client-2|O
+|                  | 2         |roundrobin-consumer-client-1|X
+|                  | 3         |roundrobin-consumer-client-2|O
+|                  | 4         |roundrobin-consumer-client-1|X
+| strategy-topic-2 | 0         |roundrobin-consumer-client-2|O
+|                  | 1         |roundrobin-consumer-client-1|X
+|                  | 2         |roundrobin-consumer-client-2|O
+|                  | 3         |roundrobin-consumer-client-1|X
+|                  | 4         |roundrobin-consumer-client-2|O
+
+마지막으로 `roundrobin-strategy-client-3` 을 동일한 조건으로 추가한 후 현황을 보면 아래와 같다.  
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group roundrobin-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.RoundRobinAssignor \
+--consumer-property client.id=roundrobin-consumer-client-3
+
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group roundrobin-strategy-group --describe
+
+GROUP                     TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                       HOST            CLIENT-ID
+roundrobin-strategy-group strategy-topic-1 0          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 3          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 1          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-2 4          0               0               0               roundrobin-consumer-client-1-8f2ccc9e-6ad4-4615-bdea-4090d40df99b /172.23.0.3     roundrobin-consumer-client-1
+roundrobin-strategy-group strategy-topic-1 1          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-2 2          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-1 4          0               0               0               roundrobin-consumer-client-2-34c2c497-1b86-4fbb-9a0c-d982566ebafd /172.23.0.3     roundrobin-consumer-client-2
+roundrobin-strategy-group strategy-topic-1 2          0               0               0               roundrobin-consumer-client-3-3df29831-6d8c-4844-a762-23a3a892062c /172.23.0.3     roundrobin-consumer-client-3
+roundrobin-strategy-group strategy-topic-2 0          0               0               0               roundrobin-consumer-client-3-3df29831-6d8c-4844-a762-23a3a892062c /172.23.0.3     roundrobin-consumer-client-3
+roundrobin-strategy-group strategy-topic-2 3          0               0               0               roundrobin-consumer-client-3-3df29831-6d8c-4844-a762-23a3a892062c /172.23.0.3     roundrobin-consumer-client-3
+```  
+
+`strategy-topic-1` 은 `roundrobin-strategy-client-1` 에서 3번 순으로 할당 받고,
+`strategy-topic-2` 는 `roundrobin-strategy-client-3` 에서 1번 순으로 할당 할당 받았다는 것을 인지하면 아래와 할당 결과를 토픽별 순서대로 정리하면 아래와 같다.  
+
+| Topic            | Partition |Consumer|Rebalcning
+|------------------|-----------|---|---
+| strategy-topic-1 | 0         |roundrobin-consumer-client-1|X
+|                  | 1         |roundrobin-consumer-client-2|X
+|                  | 2         |roundrobin-consumer-client-3|O
+|                  | 3         |roundrobin-consumer-client-1|O
+|                  | 4         |roundrobin-consumer-client-2|O
+| strategy-topic-2 | 0         |roundrobin-consumer-client-3|O
+|                  | 1         |roundrobin-consumer-client-1|X
+|                  | 2         |roundrobin-consumer-client-2|X
+|                  | 3         |roundrobin-consumer-client-3|O
+|                  | 4         |roundrobin-consumer-client-1|O
+
+결과적으로 보면 각 `Consumer`를 기준으로 본다면 동일한 파티션 수를 할당 받았지만, 
+`Consumer` 가 추가될 때마다 매번 절반정도의 파티션에서 `Reblancing` 이 발생한 것을 확인 할 수 있다.    
+
