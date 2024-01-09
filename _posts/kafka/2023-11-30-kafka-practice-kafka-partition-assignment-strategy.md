@@ -318,3 +318,253 @@ roundrobin-strategy-group strategy-topic-2 3          0               0         
 결과적으로 보면 각 `Consumer`를 기준으로 본다면 동일한 파티션 수를 할당 받았지만, 
 `Consumer` 가 추가될 때마다 매번 절반정도의 파티션에서 `Reblancing` 이 발생한 것을 확인 할 수 있다.    
 
+
+### StickyAssignor
+`StickyAssignor` 는 `Consumer Group` 의 `Rebalancing` 중에 현재 파티션 할당을 최대한 유지하는 전략이다. 
+`Rebalancing` 을 최소화하기 때문에 `Consumer` 가 `Rebalancing` 이후 새로운 파티션을 할당 받고 초기화 하는 작업을 줄여, 
+전체적인 효율을 향상시킬 수 있다.  
+
+기존 파티션 할당을 유지하며 부하 균형을 맞추는 방식으로 이뤄지는데, 
+이로 인해 `Consumer` 는 `Rebalancing` 이후에도 동일한 파티션을 계속 처리할 가능성이 높아지게 된다. 
+초기 할당은 `RoundRobin` 과 비슷하지만 재할당의 경우 전체를 재할당 하는 것이 아니라 기존 할당 유지와 부하 분산을 모두 고려해서 동작이 수행된다.  
+
+
+#### 테스트
+토픽은 앞서 테스트에 사용한 토픽과 동일한 것을 사용한다. 
+`Sticky` 방식을 사용했을 때는 어떤 식으로 할당되는지 확인하기 위해,
+`Consumer Group` 은 `sticky-strategy-group`, `Client Id` 는 `sticky-strategy-client-1` 로
+두 토픽을 구독하도록 한다.  
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group sticky-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.StickyAssignor \
+--consumer-property client.id=sticky-consumer-client-1
+
+```  
+
+그리고 `sticky-strategy-group` 의 상세 정보를 조회해서 구독 토픽의 파티션과 `Consumer` 의 할당 현황을 살펴보면 아래와 같다.
+
+
+```bash
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group sticky-strategy-group --describe
+
+GROUP                 TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                   HOST            CLIENT-ID
+sticky-strategy-group strategy-topic-1 0          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-1 1          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-1 2          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-1 3          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-1 4          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 0          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 1          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 2          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 3          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 4          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+```  
+
+단일 클라이언트인 경우 2개의 토픽 모든 파티션이 `sticky-strategy-client-1` 에 할당된 것을 확인 할 수 있다.
+동일한 조건으로 `sticky-strategy-client-2` 를 추가로 구독 시키고 다시 할당 현황을 살펴보면 아래와 같다.
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group sticky-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.StickyAssignor \
+--consumer-property client.id=sticky-consumer-client-2
+
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group sticky-strategy-group --describe
+
+GROUP                 TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                   HOST            CLIENT-ID
+sticky-strategy-group strategy-topic-1 0          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 1          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 2          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 3          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 4          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-2 0          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 1          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 2          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 3          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 4          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+```  
+
+`RoundRobin` 과 달리 토픽 `strategy-topic-1` 은 `sticky-consumer-client-2` 에 할당되고, 
+`strategy-topic-2` 는 `sticky-consumer-client-1` 에 핼당 된 것을 확인 할 수 있다. 
+`Rebalancing` 은 `strategy-topic-1` 의 토픽에 대해서만 발생한 것을 확인 할 수 있다.  
+
+| Topic            | Partition | Consumer                 |Rebalcning
+|------------------|-----------|--------------------------|---
+| strategy-topic-1 | 0         | sticky-consumer-client-2 |O
+|                  | 1         | sticky-consumer-client-2 |O
+|                  | 2         | sticky-consumer-client-2 |O
+|                  | 3         | sticky-consumer-client-2 |O
+|                  | 4         | sticky-consumer-client-2 |O
+| strategy-topic-2 | 0         | sticky-consumer-client-1 |X
+|                  | 1         | sticky-consumer-client-1 |X
+|                  | 2         | sticky-consumer-client-1 |X
+|                  | 3         | sticky-consumer-client-1 |X
+|                  | 4         | sticky-consumer-client-1 |X
+
+
+
+마지막으로 `sticky-strategy-client-3` 을 동일한 조건으로 추가한 후 현황을 보면 아래와 같다.  
+
+```bash
+$ kafka-console-consumer.sh --bootstrap-server localhost:9092 \
+--group sticky-strategy-group  \
+--whitelist 'strategy-topic-1|strategy-topic-2' \
+--consumer-property partition.assignment.strategy=org.apache.kafka.clients.consumer.StickyAssignor \
+--consumer-property client.id=sticky-consumer-client-3
+
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group sticky-strategy-group --describe
+
+GROUP                 TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                   HOST            CLIENT-ID
+sticky-strategy-group strategy-topic-1 0          0               0               0               sticky-consumer-client-3-496f069f-baf0-402d-ba70-02b50017c1b8 /172.23.0.3     sticky-consumer-client-3
+sticky-strategy-group strategy-topic-1 1          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 2          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 3          0               0               0               sticky-consumer-client-2-a343d9d3-a719-44a7-8529-9afb06a39458 /172.23.0.3     sticky-consumer-client-2
+sticky-strategy-group strategy-topic-1 4          0               0               0               sticky-consumer-client-3-496f069f-baf0-402d-ba70-02b50017c1b8 /172.23.0.3     sticky-consumer-client-3
+sticky-strategy-group strategy-topic-2 0          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 1          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 2          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 3          0               0               0               sticky-consumer-client-1-6f007c57-9952-40de-a1c2-388f611935e8 /172.23.0.3     sticky-consumer-client-1
+sticky-strategy-group strategy-topic-2 4          0               0               0               sticky-consumer-client-3-496f069f-baf0-402d-ba70-02b50017c1b8 /172.23.0.3     sticky-consumer-client-3
+```  
+
+| Topic            | Partition | Consumer                 |Rebalcning
+|------------------|-----------|--------------------------|---
+| strategy-topic-1 | 0         | sticky-consumer-client-3 |O
+|                  | 1         | sticky-consumer-client-2 |X
+|                  | 2         | sticky-consumer-client-2 |X
+|                  | 3         | sticky-consumer-client-2 |X
+|                  | 4         | sticky-consumer-client-3 |O
+| strategy-topic-2 | 0         | sticky-consumer-client-1 |X
+|                  | 1         | sticky-consumer-client-1 |X
+|                  | 2         | sticky-consumer-client-1 |X
+|                  | 3         | sticky-consumer-client-1 |X
+|                  | 4         | sticky-consumer-client-3 |O
+
+마지막 `Consumer` 를 추가했을 때로 비교하면 앞선 `Roundrobin` 에 비해 `Rebalancing` 이 발생하는 파티션이 절반정도 줄어든 것을 확인 할 수 있다. 
+하지만 `sticky-consumer-client-1` 은 `strategy-topic-1` 을 할당 받지 못했고, 
+`sticky-consumer-client-2` 는 `strategy-topic-2` 를 할당 받지 못한 것처럼 의도와 달리 `Consumer` 하나가 2개의 토픽을 모두 구독하지 않는 증상이 발생 할 수 있으므로 주의가 필요하다.  
+
+
+
+### CooperativeStickyAssignor
+`CoorativeStickyAssignor` 는 `StickyAssignor` 의 개선 버전으로 `Rebalancing` 과정을 `협력적` 으로 만들어 `Consumer Group` 내의 파티션 재할당을 점진적으로 수행한다. 
+`StickyAssignor` 처럼 기존 파티션 할당을 유지하려 하지만, `Rebalancing` 이 필요한 경우 한 번에 모든 파티션을 재할당하지 않고, 
+점진적으로 파티션을 재할당한다. 
+이러한 동작으로 `Rebalancing` 시 발생할 수 있는 영향을 최소화하고 `Consumer Group` 의 안전성과 처리 성능 향상을 가져올 수 있다. 
+그리고 점진적이라는 특성으로 `Rebalancing` 과정에서 파티션의 일부만 잃거나 얻기 때문에 전체 시스템의 부하를 줄이고 데이터 처리의 연속성을 유지할 수 있다.  
+
+여기서 점진적인 리밸런싱이란 리밸런싱 동안에도 일부 컨슈머가 계속해서 파티션의 데이터를 소비할 수 있음을 의미한다. 
+컨슈머 입장에서는 컨슈머가 데이터 소비를 중단하지 않고 새로운 파티션 할당을 수용 할 수 있음을 의미한다.  
+
+점진적 리밸런싱에 대해 더 자세하 설명하면 아래와 같다. 
+- `Rebalancing` 과정은 아래 2단계로 설명할 수 있다. 
+- 1단계: 준비
+  - 초기 리밸런싱 : `Consumer Group` 에 `Consumer` 추가/삭제와 같은 변경이 감지되면 리밸런싱 프로세스가 시작된다. 
+  - 현재 상태 파악 : 각 `Consumer` 가 구독하고 있는 파티션에 대한 정보를 `Group Coodinate` 에게 공유한다. 리밸런싱의 기반 데이터로 구독 파티션, 토픽등의 정보가 있다. 
+- 2단계 : 실제 리밸런싱
+  - 파티션 재할당 : 새로운 파티션 할당 계획인 수립되면, 점진적으로 적용된다. 이는 기존 할당을 가능한 유지하며 필요한 재할당만 수행하는 방식이다. 
+  - 새할당 적용 : `Consumer` 가 새로 할당된 파티션에 데이터를 소비할 수 있도록 한다. 이는 기존 할당을 유지하며 새로운 할당을 받아 들이는 방식이기 때문에 기존 파티션 중 일부는 계속 소비하게 될 수도 있꼬, 일부는 다른 컨슈머에게 넘어갈 수도 있다. 
+
+`CooperativeStickyAssignor` 는 `Kafka Rebalancing Protocol` 중 `Incremental Rebalancing` 을 사용함을 기억하자. 
+
+#### 테스트
+`CooperativeSticky` 테스트의 파티션 할당 결과는 `Sticky` 의 결과와 동일하기 하다. 
+그러므로 간단하게 출력 결과만 정리한다.  
+
+- 첫 번째 `Consumer` 생성
+
+```bash
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group cooperative-sticky-strategy-group --describe
+
+GROUP                             TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                               HOST            CLIENT-ID
+cooperative-sticky-strategy-group strategy-topic-1 0          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 0          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 3          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 4          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 3          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 2          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 1          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 2          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 4          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 1          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+```  
+
+- 두 번째 `Consumer` 생성
+
+
+```bash
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group cooperative-sticky-strategy-group --describe
+
+GROUP                             TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                               HOST            CLIENT-ID
+cooperative-sticky-strategy-group strategy-topic-1 0          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 1          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 2          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 3          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 4          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-2 0          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 1          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 2          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 3          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 4          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+```  
+
+| Topic            | Partition | Consumer                 |Rebalcning
+|------------------|-----------|--------------------------|---
+| strategy-topic-1 | 0         | sticky-consumer-client-1 |X
+|                  | 1         | sticky-consumer-client-1 |X
+|                  | 2         | sticky-consumer-client-1 |X
+|                  | 3         | sticky-consumer-client-1 |X
+|                  | 4         | sticky-consumer-client-1 |X
+| strategy-topic-2 | 0         | sticky-consumer-client-2 |O
+|                  | 1         | sticky-consumer-client-2 |O
+|                  | 2         | sticky-consumer-client-2 |O
+|                  | 3         | sticky-consumer-client-2 |O
+|                  | 4         | sticky-consumer-client-2 |O
+
+- 세 번째 `Consumer` 생성
+
+
+```bash
+$ kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group cooperative-sticky-strategy-group --describe
+
+GROUP                             TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                               HOST            CLIENT-ID
+cooperative-sticky-strategy-group strategy-topic-1 0          0               0               0               cooperative-sticky-consumer-client-3-589262ae-7d58-490b-ac0a-0a217f586334 /172.23.0.3     cooperative-sticky-consumer-client-3
+cooperative-sticky-strategy-group strategy-topic-1 1          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 2          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 3          0               0               0               cooperative-sticky-consumer-client-1-4c648dc3-d5a2-42b3-bd81-23ef169f1fdb /172.23.0.3     cooperative-sticky-consumer-client-1
+cooperative-sticky-strategy-group strategy-topic-1 4          0               0               0               cooperative-sticky-consumer-client-3-589262ae-7d58-490b-ac0a-0a217f586334 /172.23.0.3     cooperative-sticky-consumer-client-3
+cooperative-sticky-strategy-group strategy-topic-2 0          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 1          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 2          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 3          0               0               0               cooperative-sticky-consumer-client-2-2054cda0-94a9-4c09-897d-2f7e5c4f73d7 /172.23.0.3     cooperative-sticky-consumer-client-2
+cooperative-sticky-strategy-group strategy-topic-2 4          0               0               0               cooperative-sticky-consumer-client-3-589262ae-7d58-490b-ac0a-0a217f586334 /172.23.0.3     cooperative-sticky-consumer-client-3
+```
+
+| Topic            | Partition | Consumer                 |Rebalcning
+|------------------|-----------|--------------------------|---
+| strategy-topic-1 | 0         | sticky-consumer-client-3 |O
+|                  | 1         | sticky-consumer-client-1 |X
+|                  | 2         | sticky-consumer-client-1 |X
+|                  | 3         | sticky-consumer-client-1 |X
+|                  | 4         | sticky-consumer-client-3 |O
+| strategy-topic-2 | 0         | sticky-consumer-client-2 |X
+|                  | 1         | sticky-consumer-client-2 |X
+|                  | 2         | sticky-consumer-client-2 |X
+|                  | 3         | sticky-consumer-client-2 |X
+|                  | 4         | sticky-consumer-client-3 |O
+
+
+
+---  
+## Reference
+[partition.assignment.strategy](https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html#partition-assignment-strategy)  
+[Rebalance & Partition Assignment Strategies in Kafka](https://medium.com/trendyol-tech/rebalance-and-partition-assignment-strategies-for-kafka-consumers-f50573e49609)  
+[Kafka Partition Assignment Strategy](https://www.conduktor.io/blog/kafka-partition-assignment-strategy/)  
+[RangeAssignor](https://kafka.apache.org/36/javadoc/org/apache/kafka/clients/consumer/RangeAssignor.html)  
+
+
+
