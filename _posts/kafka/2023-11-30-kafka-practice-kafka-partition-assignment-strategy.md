@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Partition Assignment Strategy"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 에서 Consumer Group 의 각 Consumer 가 Topic 의 Partition 을 할당 받는 전략에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -17,6 +17,7 @@ tags:
     - Consumer Group
     - Consumer
     - Topic
+    - Partition Assignment Strategy
 toc: true
 use_math: true
 ---  
