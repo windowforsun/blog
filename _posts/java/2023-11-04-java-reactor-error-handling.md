@@ -94,7 +94,8 @@ public final Mono<T> onErrorReturn(Predicate<? super Throwable> predicate, T fal
 `onErrorReturn` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때, 
 방출 할 지정된 값인 `Fallback value` 를 사용해서 `Error Handling` 하는 방법이다.  
 
-reactor-error-handling-1.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-1.svg)  
+
 
 ```java
 @Test
@@ -131,7 +132,7 @@ public void flux_onErrorReturn() {
 `onErrorResume` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때, 
 이어서 방출할 `Fallback publisher` 를 사용해서 `Error Handling` 을 하는 방법이다. 
 
-reactor-error-handling-2.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-2.svg)  
 
 ```java
 @Test
@@ -172,7 +173,7 @@ public void flux_onErrorResume() {
 `onErrorMap` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때,
 던질 예외를 `Mapper` 를 사용해서 필요한 예외 타입으로 변경해서 `Error Handling` 을 하는 방법이다.
 
-reactor-error-handling-3.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-3.svg)  
 
 ```java
 @Test
@@ -208,7 +209,7 @@ public void flux_onErrorMap() {
 `onErrorContinue` 는 `Reactive Stream` 중 `Error` 가 발생 했을 때,
 `Error consumer` 를 사용해서 예외를 처리(로깅,..)하고 남은 아이템들을 이어서 처리하는 `Error Handling` 방식이다.  
 
-reactor-error-handling-3.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-4.svg)  
 
 ```java
 @Test
@@ -258,7 +259,7 @@ public void flux_onErrorContinue() {
 `Error` 가 발생하면 `upstream` 을 재수도 횟수만큼 다시 구독한다. 
 만약 `retry()` 와 같이 파라미터에 아무것도 넘겨 주지 않으면 무한정 재구독이 수행 될 수 있으므로 주의가 필요하다.  
 
-reactor-error-handling-retry-1.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-retry-1.svg)  
 
 ```java
 @Test
@@ -311,7 +312,8 @@ public void flux_retry() {
 `retryWhen` 은 [Retry](https://projectreactor.io/docs/core/3.5.4/api/reactor/util/retry/Retry.html) 
 를 통해 재시작에 대한 조건을 다양하게 주고 싶을 때 `RetrySpec` 을 통해 원하는 조건으로 재시도를 가능하게 할 수 있다.  
 
-reactor-error-handling-retry-2.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-retry-2.svg)  
+
 
 `RetrySpec` 의 다양한 조건 중 먼저 얼아 볼 것은 `Retry.max` 이다. 
 `Retry.max` 는 앞서 알아본 `retry(maxAttempts)` 와 동일한 기능으로, 
@@ -334,7 +336,8 @@ Caused by: java.lang.IllegalArgumentException: test exception
     ... 85 more
 ```  
 
-reactor-error-handling-retry-3.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-retry-3.svg)  
+
 
 ```java
 @Test
@@ -390,7 +393,8 @@ public void flux_retryWhen_max() {
 `retryWhen` 에 사용할 수 있는 `Retry.fixedDelay` 는 정해진 시간 동안 `delay` 를 
 가진 뒤 재시도 횟수만큼 재시도를 수행하는 조건이다.  
 
-reactor-error-handling-retry-4.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-retry-4.svg)  
+
 
 ```java
 @Test
@@ -441,7 +445,8 @@ public void flux_retryWhen_fixedDelay() {
 `Retry.fixedDelay` 와 차이는 `Retry.backoff` 는 재시도 횟수가 늘어 날때마다 `backoff` 로 `delay` 되는 시간이 지수 형태로 늘어난다는 점에 있다.  
 
 
-reactor-error-handling-retry-4.svg
+![그림 1]({{site.baseurl}}/img/java/reactor-error-handling-retry-5.svg)  
+
 
 ```java
 @Test
