@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Rebalancing Protocol"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 의 Consumer Group 변환가 있을 때 수행되는 Rebalancing 의 Protocol 종류와 개념에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Rebalancing
+    - Consumer Group
+    - Rebalancing Protocol
+    - Group Coordinator
+    - Group Leader
+    - Eager Rebalancing
+    - Incremental Rebalancing
 toc: true
 use_math: true
 ---  
@@ -44,7 +51,8 @@ use_math: true
 이래 그림은 새로운 `Consumer`(`Consumer B`) 가 `Consumer Group` 에 가입 할 떄, 
 기존 `Consumer`(`Consumer A`) 에게 미치는 영향과 관련 소요 시간을 보여주고 있다.  
 
-img/kafka/kafka-rebalancing-protocol-1.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/img/kafka/kafka-rebalancing-protocol-1.drawio.png)
+
 
 1. 기존 `Consumer A` 는 구독하는 `Topic` 의 `Partition` 중 자신에게 할당된 `Partition` 으로부터 메시지를 `Polling` 한다.
 그리고 `Kafka Broker` 중 하나인  `Group Coordinator` 에게 `Heartbeat` 를 전송해 전상임을 알린다. 
@@ -88,7 +96,8 @@ img/kafka/kafka-rebalancing-protocol-1.drawio.png
 정리하면 실제로 처리가 중단되는 기존 `Consumer` 는 1단계 `Rebalancing` 에서 재할당이 필요한 `Partition` 을 사용중인 기존 `Consumer` 로 한정된다. 
 즉 메시지 처리는 재할당이 필요한 `Partition` 만 중단된다고 할 수 있고, 그외 `Partition` 은 모두 정상 처리 된다. 
 
-img/kafka/kafka-rebalancing-protocol-2.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/img/kafka/kafka-rebalancing-protocol-2.drawio.png)
+
 
 1. 기존 `Consumer A` 는 새로운 `Consumer B` 가 참여하기 전에는 토픽의 모든 `Partition` 을 `Polling` 한다. 
 2. 새로운 `Consumer B` 가 `Consumer Group` 에 가입하게 되면, `Incremental Rebalancing` 이 트리거 된다. 
