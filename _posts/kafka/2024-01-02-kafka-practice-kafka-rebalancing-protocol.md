@@ -51,7 +51,7 @@ use_math: true
 이래 그림은 새로운 `Consumer`(`Consumer B`) 가 `Consumer Group` 에 가입 할 떄, 
 기존 `Consumer`(`Consumer A`) 에게 미치는 영향과 관련 소요 시간을 보여주고 있다.  
 
-![그림 1]({{site.baseurl}}/img/kafka/img/kafka/kafka-rebalancing-protocol-1.drawio.png)
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-protocol-1.drawio.png)
 
 
 1. 기존 `Consumer A` 는 구독하는 `Topic` 의 `Partition` 중 자신에게 할당된 `Partition` 으로부터 메시지를 `Polling` 한다.
@@ -96,7 +96,7 @@ use_math: true
 정리하면 실제로 처리가 중단되는 기존 `Consumer` 는 1단계 `Rebalancing` 에서 재할당이 필요한 `Partition` 을 사용중인 기존 `Consumer` 로 한정된다. 
 즉 메시지 처리는 재할당이 필요한 `Partition` 만 중단된다고 할 수 있고, 그외 `Partition` 은 모두 정상 처리 된다. 
 
-![그림 1]({{site.baseurl}}/img/kafka/img/kafka/kafka-rebalancing-protocol-2.drawio.png)
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-protocol-2.drawio.png)
 
 
 1. 기존 `Consumer A` 는 새로운 `Consumer B` 가 참여하기 전에는 토픽의 모든 `Partition` 을 `Polling` 한다. 
