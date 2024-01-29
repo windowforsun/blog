@@ -1,9 +1,45 @@
-<mxfile host="app.diagrams.net" modified="2024-01-29T17:38:07.365Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" version="23.0.1" etag="Z0yhvtSlGYZDmD-sItga" type="github">
+<mxfile host="app.diagrams.net" modified="2024-01-29T17:45:07.151Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" etag="SGnEa7en1ZTNcRSN9EtG" version="23.0.1" type="github">
   <diagram name="페이지-1" id="CwAUzYBDm4NGoXd9SNC2">
-    <mxGraphModel>
+    <mxGraphModel dx="524" dy="997" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-1" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="80" y="160" width="400" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-2" value="&lt;b&gt;Kafka Broker&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="240" y="160" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-8" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="EZ0PoP8Amor2atPTo2D8-3" target="EZ0PoP8Amor2atPTo2D8-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-3" value="Inbound Topic" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="90" y="200" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-4" value="Outbound Topic" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="210" y="200" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-5" value="Consumer Offset Topic" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="200" width="140" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-9" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="EZ0PoP8Amor2atPTo2D8-6" target="EZ0PoP8Amor2atPTo2D8-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-10" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="EZ0PoP8Amor2atPTo2D8-6" target="EZ0PoP8Amor2atPTo2D8-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-6" value="&lt;b&gt;Service&lt;br&gt;Kafka Client&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="215" y="360" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-11" value="1. consume&lt;br&gt;message" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="120" y="290" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-12" value="2. produce result" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="270" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="EZ0PoP8Amor2atPTo2D8-13" value="3. commit consumer offset" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="280" y="250" width="90" height="30" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
