@@ -24,7 +24,8 @@ use_math: true
 ---  
 
 ## Kafka Rebalancing 이해를 위해 몇가지 배경 지식
-[Kafka Rebalancing]()
+[Kafka Rebalancing]({{site.baseurl}}{% link _posts/kafka/2024-01-02-kafka-practice-kafka-rebalancing-protocol.md %})
+
 에서 설명한 것과 같이 `Rebalancing` 은 `Kafka` 에서 중요한 개념이고 처리량에 영향을 줄 수 있다. 
 그러므로 이에 대한 과정과 원리를 어느정돈 이해할 필요가 있는데 알아두면 `Rebalancing` 이해에 도움이 되는 몇가지 배경지식을 소개하고자 한다. 
 
