@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Rebalancing 관련 배경 시직"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Rebalancing 동작에 필요한 개념과 관련 설정'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Rebalancing
+    - Consumer Group
+    - Rebalancing Trigger
+    - Heartbeat
+    - Session Timeout
+    - Poll Interval
+    - Consumer Health
 toc: true
 use_math: true
 ---  
@@ -41,7 +48,7 @@ use_math: true
 
 아래 그림은 `group.id` 가 `foo` 인 `Consumer` 가 6개의 `Partition` 으로 구성된 `first` `Topic` 을 구독하는 예시이다. 
 
-kafka-rebalancing-bg-info-1.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-1.drawio.png)
 
 이 후 `Consumer Group` 의 두 번째 멤버가 그룹에 참여한다. 
 해당 `Consumer` 또한 `group.id` 는 `foo` 이고 `first` `Topic` 를 구독한다. 
@@ -49,7 +56,7 @@ kafka-rebalancing-bg-info-1.drawio.png
 `Partition` 은 `Consumer Group` 멤버 전체를 대상으로 재할당 된다. 
 결과적으로 2개 멤버가 각 3개의 `Partition` 을 아래와 같이 할당 받는다.
 
-kafka-rebalancing-bg-info-2.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-2.drawio.png)
 
 한가지 주의할 점은 `Partition` 의 수보다 `Consumer Group` 의 멤버 즉 인스턴스 수가 더 많은 경우, 
 몇 인스턴스는 `Partition` 할당을 받지 않을 수 있다. 
@@ -60,7 +67,7 @@ kafka-rebalancing-bg-info-2.drawio.png
 이는 별도의 `Consumer Group` 이 추가된 상황이 된다. 
 즉 `Partition` 의 할당은 `group.id` 가 `foo` 인 할당과 별개로 `group.id` 가 `bar` 인 `Consumer` 들에게 할당이 수행된다.  
 
-kafka-rebalancing-bg-info-3.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-3.drawio.png)
 
 
 ### Rebalancing trigger
@@ -87,7 +94,7 @@ kafka-rebalancing-bg-info-3.drawio.png
 `gorup.instance.id` 가 `2` 인 `Consumer` 는 `second` 라는 `Topic` 을 구독하는 상태이다. 
 위 상황에서 `1번 Consumer` 의 처리시간이 너무 오래 걸려 `Rebalancing` 이 트리거 된다면 `2번 Consumer` 의 파티션도 함께 재할당 된다.  
 
-kafka-rebalancing-bg-info-4.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-4.drawio.png)
 
 위와 같은 상황을 피하기 위해서는 `Consumer Group` 의 전체 멤버가 서로 다른 `Topic` 을 처리하는 상황은 피하는 것이 좋다.  
 
@@ -107,19 +114,20 @@ kafka-rebalancing-bg-info-4.drawio.png
 `Heartbeat` 는 `session.timeout.ms` 이내 수신해야 하는데, 
 `Hearbeat` 를 수신하면 `session.timeout.ms` 의 값을 리셋되고 다시 타임아웃을 리셋한다.  
 
-kafka-rebalancing-bg-info-5.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-5.drawio.png)
+
 
 `heartbeat.interval.ms` 는 `session.timeout.ms` 의 `1/3` 수준으로 설정하는 것이 좋다. 
 이러한 방식은 일시적인 네트워크 오류등으로 `Heartbeat` 가 한두번 실패하더라도, `Consumer` 실패로 이어지지 않기 때문이다. 
 아래 도식화된 그림을 보면 한번의 일시적인 실패에도 `session.timeout.ms` 이전에 `Heartbeat` 가 성공했기 때문에, 
 `Group Coordinator` 는 `Consumer` 을 가용상태로 인식한다.  
 
-kafka-rebalancing-bg-info-6.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-6.drawio.png)
 
 아래와 같이 `session.timeout.ms` 가 만료될때까지 `Heartbeat` 가 `Group Coordinator` 로 전달되지 않으면, 
 `Consumer` 를 가용할 수 없는 상태로 인식하고 `Reblancing` 이 트리거 된다. 
 
-kafka-rebalancing-bg-info-7.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-7.drawio.png)
 
 #### Poll interval
 `Consumer` 에서 `Hearbeat` 를 수행하는 스레드는 데이터를 처리하는 메인 스레드와 별도의 스레드로 이뤄진다. 
@@ -127,7 +135,7 @@ kafka-rebalancing-bg-info-7.drawio.png
 이러한 폴링 동작은 `max.pool.interval.ms` 내에 수행돼야 한다. 
 아래 그림은 앞선 그림에서 데이터를 처리하는 스레드를 추가했을 떄의 그림이다.  
 
-kafka-rebalancing-bg-info-8.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-8.drawio.png)
 
 첫 번째 `poll()` 수행은 구독 데이터에 대한 기존 `poll()` 동작 뿐아니라 `Parition` 할당과 같은 변경사항 정보도 함께 포함한다. 
 그리고 첫 번째 `poll()` 이 수행된 이후 `Heartbeat` 스레드가 시작되고, 
@@ -137,7 +145,7 @@ kafka-rebalancing-bg-info-8.drawio.png
 `max.poll.interval.ms` 가 초과됐다면 `LeaveGroup` 요청을 `Group Coordinator` 에게 보내 해당 `Consumer` 가 제거되고 
 `Rebalancing` 이 트리거 될 수 있도록 한다.  
 
-kafka-rebalancing-bg-info-9.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-bg-info-9.drawio.png)
 
 `Rebalancing` 이 수행되면 기존 `Consumer` 들은 `Rebalancing` 이라는 응답을 다음 `Heartbeat` 의 응답으로 받는다. 
 그리고 각 `Consumer` 들은 `max.poll.interval.ms` 타임아웃 전까지 `poll()` 을 수행해서 `Group Coordinator` 에게 
