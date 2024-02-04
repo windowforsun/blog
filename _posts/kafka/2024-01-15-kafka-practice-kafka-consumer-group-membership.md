@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Group Membership"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 의 Consumer Group 이 구성원을 관리하는 방법인 Dynamic 과 Static 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,9 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Consumer
+    - Consumer Group
+    - Consumer Group Membership
 toc: true
 use_math: true
 ---  
@@ -40,7 +43,7 @@ use_math: true
 - `Consumer Group` 안전성 : `Consumer Group` 의 잦은 변경은 `Kafka` 시스템 전체에 영향을 줄 수 있고, 이는 처리량이 크고 실시간성이 중요할 수록 더 민감해 질 수 있다. 
 - `Offset` 관리 : `Rebalancing` 이 자주 발생 할 경우 각 `Offset` 관리는 더욱 복잡해지고, 관리가 잘못 되면 데이터 유실 혹은 중복 처리 증상이 발생하여 데이터 신뢰성에 영향을 미칠 수 있다. 
 
-`Dynamic Menber` 의 수행 과정은 []()
+`Dynamic Menber` 의 수행 과정은 [Dynamic Member Rebalancing](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-rebalancing-protocol/#eager-rebalancing)
 에서 살펴본 도식화된 처리 과정들을 참고 할 수 있다. 
 
 
@@ -75,7 +78,8 @@ use_math: true
 그리고 두 `Consumer` 모두 동일한 `Topic` 에서 서로 다른 `Partition` 을 구독 중이다. 
 위 상태에서 `Consumer B` 가 잠시 떠나고 `session.timeout.ms` 이내 다시 `Consumer Group` 에 참여하면 기존 `Partition` 을 그대로 할당 받기 때문에 `Rebalancing` 은 발생하지 않는다.  
 
-kafka-rebalancing-protocol-3.drawio.png
+![그림 1]({{site.baseurl}}/img/kafka/kafka-rebalancing-protocol-3.drawio.png)  
+
 
 한번 더 강조하지만 `Static Membership` 은 `Consumer` 가 반복해서 재시작 되는 환경이라면 `Rebalancing` 을 줄이고, 
 메시지 처리 효율을 높일 수 있는 좋은 방법이다. 
@@ -85,8 +89,7 @@ kafka-rebalancing-protocol-3.drawio.png
 적절한 최적의 값으로 설정이 필요하다. 
 
 
-
-
 ---  
 ## Reference
 [Dynamic vs. Static Consumer Membership in Apache Kafka](https://www.confluent.io/blog/dynamic-vs-static-kafka-consumer-rebalancing/)  
+[Kafka Consumer Group Rebalance - Part 2 of 2](https://www.lydtechconsulting.com/blog-kafka-rebalance-part2.html)  
