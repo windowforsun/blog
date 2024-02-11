@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Duplication Patterns"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Consumer 에서 중복 메시지 상황과 해결 할 수 있는 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,12 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Consumer
+    - Consumer
+    - Duplication Patterns
+    - Idempotent Consumer
+    - Transactional Outbox
+    - Kafka Transaction
 toc: true
 use_math: true
 ---  
