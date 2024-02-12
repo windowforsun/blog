@@ -1,0 +1,107 @@
+@startuml
+
+participant kafkainboundtopic as "Kafka Inbound Topic"
+participant kafkainboundoffset as "Kafka Inbound Offset"
+participant kafkaoutbound as "Kafka Outbound"
+participant consumer as "Consumer"
+participant 3service as "3rd party Service"
+participant db as "DB"
+
+title No duplication pattern
+
+group no failure
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    consumer -> kafkaoutbound : produce
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group failure after POST & INSERT
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    consumer -[hidden]-> db
+    destroy consumer
+    deactivate consumer
+
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Duplicate POST
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    note over consumer : Duplicate INSERT
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    consumer -> kafkaoutbound : produce
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group failure after Produce
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    consumer -> kafkaoutbound : produce
+    consumer -[hidden]-> db
+    destroy consumer
+    deactivate consumer
+
+
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Duplicate POST
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    note over consumer : Duplicate INSERT
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    note over consumer : Duplicate Produce
+    consumer -> kafkaoutbound : produce
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group consume time out
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    consumer -> 3service : POST
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT record
+    note over consumer : Commit DB transaction
+    note over consumer : long time process
+    note over consumer : consume time out(kafka rebalancing)
+    consumer -> kafkaoutbound : produce
+    consumer -> kafkainboundoffset : write
+    deactivate
+
+
+    group new consumer
+        note over consumer : kafka assign other consumer
+
+        kafkainboundtopic -> consumer : consume
+        activate consumer
+        note over consumer : Duplicate POST
+        consumer -> 3service : POST
+        note over consumer : Begin DB transaction
+        note over consumer : Duplicate INSERT
+        consumer -> db : INSERT record
+        note over consumer : Commit DB transaction
+        note over consumer : Duplicate Produce
+        consuzmer -> kafkaoutbound : produce
+        consumer -> kafkainboundoffset : write
+        deactivate
+    end
+end
+
+@enduml
