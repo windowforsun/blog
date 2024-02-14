@@ -1,0 +1,134 @@
+@startuml
+
+participant kafkainboundtopic as "Kafka Inbound Topic"
+participant kafkainboundoffset as "Kafka Inbound Offset"
+participant kafkaoutbound as "Kafka Outbound"
+participant consumer as "Consumer"
+participant 3service as "3rd party Service"
+participant db as "DB"
+
+title Idempotent consumer pattern
+
+group no failure
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    consumer -> kafkaoutbound : produce
+    note over consumer : Commit DB transaction
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group failure after POST & INSERT
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    consumer -[hidden]-> db
+    deactivate consumer
+    destroy consumer
+    note over db : Transaction rollback
+
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    note over consumer : Duplicate POST
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    consumer -> kafkaoutbound : produce
+    note over consumer : Commit DB transaction
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group failure after Produce
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    consumer -> kafkaoutbound : produce
+    consumer -[hidden]-> db
+    deactivate consumer
+    destroy consumer
+    note over db : Transaction rollback
+
+
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    note over consumer : Duplicate POST
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    note over consumer : Duplicate Produce
+    consumer -> kafkaoutbound : produce
+    note over consumer : Commit DB transaction
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group failure after DB commit
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    consumer -> kafkaoutbound : produce
+    note over consumer : Commit DB transaction
+    consumer -[hidden]-> db
+    deactivate consumer
+    destroy consumer
+
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    activate db
+    note over db : Transaction rollback
+    db --> consumer : Constraint violation
+    deactivate db
+    consumer -> kafkainboundoffset : write
+    deactivate
+end
+
+group consume time out
+    kafkainboundtopic -> consumer : consume
+    activate consumer
+    note over consumer : Begin DB transaction
+    consumer -> db : INSERT message id
+    consumer -> 3service : POST
+    consumer -> db : INSERT record
+    note over consumer : long time process
+    note over consumer : consume time out(kafka rebalancing)
+    consumer -> kafkaoutbound : produce
+    note over consumer : Commit DB transaction
+    consumer -> kafkainboundoffset : write
+    deactivate
+
+    group new consumer
+        note over consumer : kafka assign other consumer
+
+        kafkainboundtopic -> consumer : consume
+        activate consumer
+        note over consumer : Begin DB transaction
+        consumer -> db : INSERT message id
+        activate db
+        db -> db : wait before consumer transaction lock
+        note over db : before consumer transaction commit
+        note over db : new consumer transaction rollback
+        db --> consumer : constraint violation
+        deactivate db
+        deactivate
+    end
+end
+
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+
+participant kafkainboundtopic as "Kafka Inbound Topic"
+participant kafkainboundoffset as "Kafka Inbound Offset"
+participant kafkaoutbound as "Kafka Outbound"
+participant consumer as "Consumer"
+participant 3service as "3rd party Service"
+participant db as "DB"
+
+kafkainboundtopic -> consumer : consume
+activate consumer
+consumer -> 3service : POST
+consumer -> db : INSERT
+consumer -> kafkaoutbound : produce
+consumer -> kafkainboundoffset : write
+deactivate
+
+@enduml
