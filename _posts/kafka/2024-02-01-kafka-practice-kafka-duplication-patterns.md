@@ -127,7 +127,7 @@ Kafka Transaction|None|POST|- POST<br>- INSERT|해당없음|- POST<br>- INSERT
 `Outbound topic` 이벤트 전달을 직접 전달하지 않고 `DB` 와 같은 저장소에 추가한 뒤 `CDC` 를 통해 `Outbound` 에 이벤트를 전달하는 경우이다.
 각 중복 이벤트 처리가 될 수 있는 경우마다 흐름을 살펴보면 아래와 같다.
 
-![그림 1]({{site.baseurl}}/img/kafka/dduplication-pattern-transaction-outbox-pattern.png)
+![그림 1]({{site.baseurl}}/img/kafka/duplication-pattern-transaction-outbox-pattern.png)
 
 
 #### Idempotent Consumer & Transactional Outbox
