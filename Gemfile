@@ -15,5 +15,5 @@ group :jekyll_plugins do
   gem "jekyll-include-cache"
   gem "jekyll-algolia"
   gem "jekyll-plantuml"
-  gem "jekyll-timeago", "~> 0.13.1"
+  gem "faraday-retry"
 end
