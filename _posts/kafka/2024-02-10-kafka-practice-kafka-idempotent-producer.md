@@ -24,3 +24,20 @@ use_math: true
 [Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-01-13-kafka-practice-kafka-duplication-patterns.md %}) 에서는 중복 이벤트를 소비하지 않는 방법에 대해 알아 봤다면,
 본 포스팅에서는 어떤 상황에서 중복 이벤트가 발생 횔 수 있고, 
 중복 이벤트를 방지 할 수 있는 `Idempotent Producer` 에 대해 알아본다.  
+
+### Publish duplication message
+중복 메시지는 아래와 같은 시나리오에서 발생 할 수 있다. 
+
+1. `Producer` 가 `Kafka Broker` 에 메시지를 전송하고 `Kafka Broker` 는 메시지는 해당하는 `Partition` 에 쓴다. 
+2. 이후 `Kafka Broker` 는 `Producer` 에게 완료 신호인 `ack` 를 전송해야 하는데, 일시적인 오류로 해당 `ack` 가 유실 됐다. 
+3. `Producer` 는 1번에서 전송한 메시지가 쓰여졌는지 아닌지 알 수 없으므로 다시 재전송을 시도한다. 
+4. 해당 `Producer` 는 `Idempotent` 가 아니므로 `Partition` 에 메시지는 중복된다. 
+
+![그림 1]({{site.baseurl}}/img/kafka/idempotent-producer-1.drawio.png)
+
+`Idempotent Producer` 로 구성하게 되면, 각 `Producer` 들은 고유한 `ID`(PID) 가 할당된다. 
+그리고 메시지들에는 순차적으로 증가하는 번호가 부여되게 되고, 
+`Kafka Broker` 는 `ID + 메시지 번호` 와 같이 조합해서 `Duplication Message` 를 판별하고 거부할 수 있다.   
+
+![그림 1]({{site.baseurl}}/img/kafka/idempotent-producer-2.drawio.png)
+
