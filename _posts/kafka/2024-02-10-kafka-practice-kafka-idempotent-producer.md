@@ -41,3 +41,28 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/kafka/idempotent-producer-2.drawio.png)
 
+
+### How to make Idempotent Producer
+`Kafka Producer` 의 옵션 중 하나인 `enable.idempotent` 는 중복 메시지 가능성이 있는 오류가 발생했을 때,
+재시도된 메시지를 `Topic` 의 `Partition` 에 쓸 수 있는지 설정하는 옵션이다. 
+여기서 일시적인 오류라는 것은 `Kafka Leader` 가 가용 불가 상태거나, `Partition` 의 복제본이 충분하지 않다거나 등이 있다. 
+`true/false` 로 설정 할 수 있고, 기본 값은 `false` 이다.  
+
+그리고 `retires` 의 옵션은 반드시 `0` 보다 큰 값으로 설정해야 한다.  (Kafka 2.0 이하 인 경우 0이 기본값)
+
+`Idempotent` 의 성질을 지니기 위해서는 `ack` 옵션을 `all` 로 해야 한다. 
+`Kafka Leader` 는 수신한 메시지에 대한 승인 응답을 하기 전에, 
+최소 개수의 동기화 복제본 `Partition` 이 메시지 승인을 승인할 때까지 대기해야 한다. 
+여기서 최소 개수에 대한 구성은 `min.insync.replicas` 옵션으로 가능하다.  
+
+`ack` 옵션을 `all` 로 하게되면 성능보다는 내구성에 초점을 맞춘 `Producer` 가 된다. 
+즉 메시지 중복은 피할 수 있지만 기본보다 성능저하는 피할 수 없음을 기억해야 한다.  
+
+만약 `retries` dhqtus rkqtdl `0` 으로 설정 돼 있다면, 
+`Producer` 는 메시지를 재전송 하지 않고 `dead-letter` 메시지로 전송하게 된다. (애플리케이션의 에러처리 로직에 따라 다를 순 있음)
+하지만 이러한 처리는 다른 방안으로 해결 가능한 문제를 해결 불가능하도록 하고, 별도로 `dead-letter` 메시지를 처리해야 하므로 권장되지 않는 방식이다. 
+위 상황에서 `Producer` 가 처음 전송한 메시지는 `Topic Partition` 에 쓰여 졌지만, `Kafka Broker` 의 `ack` 만 유실 된 상활 일 수도 있다.  
+
+[Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-01-13-kafka-practice-kafka-duplication-patterns.md %})
+를 구현할 때는 코드 레벨적인 부분이 많았다면, 
+`Idempotent Producer` 는 구현 관련해서 코드 레벨적인 내용은없고, 옵션과 설정 값만 잘 구성해 주면 된다.  
