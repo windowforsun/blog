@@ -66,3 +66,17 @@ use_math: true
 [Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-01-13-kafka-practice-kafka-duplication-patterns.md %})
 를 구현할 때는 코드 레벨적인 부분이 많았다면, 
 `Idempotent Producer` 는 구현 관련해서 코드 레벨적인 내용은없고, 옵션과 설정 값만 잘 구성해 주면 된다.  
+
+### Delivery timeouts
+`Producer` 의 `retries` 최대 정수 값으로(Kafka 2.1 의 기본 값) 설정해서 횟수는 무제한으로 두고, 
+`Producer` 의 다른 옵션인 `delivery.timeout.ms`(기본 값 2m) 값을 사용해서 시간의 값으로 재시도에 대한 제한을 두는 것이 좋다. 
+즉 시도 횟수는 무한정 가능하지만 `delivery.timeout.ms` 시간 내에서만 재시도를 수행하게 되는 방식이다. 
+`Kafka Prodoucer` 의 동작이 `Inbound Topic` 으로 부터 메시지를 컨슘하고 
+`Outbound Topic` 으로 메시지를 다시 발생 할 때, 
+`delivery.timeout.ms` 로 인해 `poll` 동작에 대한 타임아웃이 발생하지 않도록 해야 한다.  
+
+만약 소비한 메시지를 발생하는데 계속 실패해서 `poll` 타임아웃이 발생하게 되면, 
+`Kafka Broker` 는 `Rebalancing` 을 트리거해서 해당 `Consumer` 를 `Consumer Group` 에서 제외하고 새로운 `Consumer` 를 사용중인 `Partition` 에 할당하게 된다. 
+이 상황에서 기존 `Consumer` 가 `Outbound Topic` 에 메시지 발생을 성공 할 수도 있고 실패할 수도 있는데, 
+새로 할당된 `Consumer` 도 동일한 결과 메시지를 `Outbound Topic` 으로 발생하게 된다. 
+이렇게 되면 `Outbound Topic` 을 구독하는 서비스는 같은 결과이지만 서로 다른 메시지 2개를 받는 상황이 발생 할 수 있게 된다.  
