@@ -80,3 +80,35 @@ use_math: true
 이 상황에서 기존 `Consumer` 가 `Outbound Topic` 에 메시지 발생을 성공 할 수도 있고 실패할 수도 있는데, 
 새로 할당된 `Consumer` 도 동일한 결과 메시지를 `Outbound Topic` 으로 발생하게 된다. 
 이렇게 되면 `Outbound Topic` 을 구독하는 서비스는 같은 결과이지만 서로 다른 메시지 2개를 받는 상황이 발생 할 수 있게 된다.  
+
+### Guaranteed ordering
+`Producer` 의 옵션 중 `max.in.flight.request.per.connection` 의 값을 늘리면 `Kafka Broker` 에게 여러 메시지를 `ack` 없이 전송하는 방식으로 전체 처리량을 늘릴 수 있다. 
+하지만 이는 `Idempotent Producer` 가 아니면서 해당 값이 1보다 큰 경우 일시적인 오류등으로 재시도가 이뤄 졌을 때 메시지 순서가 맞지 않을 수 있다. 
+만약 `Idempotent Producer` 인 경우 `max.in.flight.request.per.connection` 값이 최대 5까지 설정하더라더 `Kafka` 의 재시도 과정에 메시지 순서는 보장되면서, 
+`Producer` 의 처리량은 늘릴 수 있게 된다.  
+
+`Idempotent Producer` 이지만 `max.in.flight.request.per.connection` 옵션이 5보다 큰 값으로 설정 됐거나, 
+`Idempotent Producer` 가 아니면서 해당 옵션이 1보다 큰 경우 메시지 순서가 맞지 않을 수 있는데 그 원인은 다음과 같다. 
+후자인 상황에서 2개의 메시지가 `Kafka Broker` 에게 전달 되고, 
+2번 메시지는 정상적으로 받고 `ack` 까지 잘 잔달 됐지만 1번 메시지는 일시적인 문제로 `ack` 전달이 되지 않았다. 
+이 경우 `Producer` 는 다시 1번 메시지를 전송하게 되는데 이때 앞서 2번 메시지가 먼저 `Kafka Topic` 에 쓰여진 후인 지금 1번 메시지가 쓰여지기 때문에 순서가 맞지 않게 된다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/idempotent-producer-3.png)
+
+### Summary
+앞서 설명한 내용들을 정리해 `Idempotent Producer` 구성에 필요한 `Producer` 옵션들은 아래와 같다.  
+
+Producer option|value
+---|---
+enable.idempotence|true
+acks|all
+retires|2147483647
+max.in.flight.request.per.connection|<= 5
+
+
+
+
+---  
+## Reference
+[Kafka Idempotent Producer](https://www.lydtechconsulting.com/blog-kafka-idempotent-producer.html)  
+
