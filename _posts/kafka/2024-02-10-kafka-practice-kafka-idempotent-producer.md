@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Idempotent Producer"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Producer 를 개발할 떄 증복 이벤트를 방지할 수 있는 Idempotent Producer 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,11 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Producer
+    - Kafka Producer
+    - Idempotent Producer
+    - Duplication Message
+    - Acks
 toc: true
 use_math: true
 ---  
