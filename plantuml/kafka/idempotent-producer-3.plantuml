@@ -1,0 +1,30 @@
+@startuml
+
+participant pro as "Producer"
+participant topic as "Kafka Topic"
+
+title retries > 0 & enable.idempotence = false
+
+pro -> topic : message 1
+activate topic
+pro -[hidden]-> topic
+destroy topic
+deactivate topic
+pro -> topic : message 2
+activate topic
+note over topic : message 2 successfully
+pro -[hidden]-> topic
+topic --> pro : ack
+deactivate topic
+
+note over pro : message 1 request timetout, retry
+
+pro -> topic : message 1
+activate topic
+note over topic : message 1 successfully
+pro -[hidden]-> topic
+topic --> pro : ack
+deactivate topic
+
+
+@enduml
