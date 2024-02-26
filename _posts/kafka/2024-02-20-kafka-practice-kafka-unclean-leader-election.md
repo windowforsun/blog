@@ -28,3 +28,33 @@ use_math: true
 
 해당 옵션을 설정여부에 따라 `Kafka Cluster` 가 보장하는 범위나 장단점에 확실한 차이가 있으므로 
 옵셜 설정에 따른 결과를 이해하는 것이 중요하다.  
+
+### Availability and Durability
+`Kafka Cluster` 가 3개의 브로커 노드로 구성돼 있다고 가정하자. 
+`Node 1` 의 브로커가 `Leader` 이고 나머지 `Node 2` 와 `Node 3` 의 `Follower` 인 상태이다. 
+그리고 `Leader` 에 위치하는 `Partition` 에 쓰여진 메시지들은 `Follower` 의 복제 `Partition` 에 동기화 돤다.  
+
+각 `Partition` 은 `ISR` 이라는 `in-sync replicas` 목록을 가지고 있다. 
+일반적으로 `Leader` 는 `ISR` 를 가지고 있는 `Broker` 중에 선정된다. 
+만약 `ISR` 을 가진 `Broker` 가 없다면 `OSR(out-of-sync replica)` 중에서 `Leader` 를 선정할지
+`unclean.leader.election.enable` 옵션 값을 통해 판단하게 된다. 
+
+아래 그림은 위 상황을 도식화 한 것이다.  
+`message 1`, `message 2`, `message 3` 의 3개의 메시지가 있을 때 `Node 2` 에는 모든 메시지가 정상적으로 동기화 됐지만 
+`Node 3` 에는 아직 `meesage 3` 이 동기화되지 않은 상태이다.  
+
+.. 사진 ..
+
+`unclean.leader.election.enable` 이 활성화 된 상태에서 아래 시나리오로 인해 메시지 손실이 발생 할 수 있다.  
+
+1. `Node 2` 는 `Leader` 의 모든 메시지가 동기화된 상태이다. 
+2. 하지만 `Node 3` 은 `Lag` 발생으로 인해 아직 모든 메시지가 동기화 되지 않았다. 
+3. `Node 1`, `Node 2` 가 일련의 이슈로 가용 불가 상태이다. `Kafka Cluster` 에서 가용가능한 것은 `Node 3` 뿐이다. 
+4. `Node 3` 이 `Leader` 로 선정되고, `Node 3` 에 동기화 되지 않은 `message 3` 은 손실된다.  
+
+`unclean.leader.election.enable` 을 활성호 했기 때문에 위 상황에서도 `Kafka Cluster` 는 가용 상태이므로 읽기/쓰기 동작은 가능하다. 
+하지만 메시지 일부 손실이 발생할 수 있으므로 `Availability` 는 높아지고 `Durability` 를 일부 희생하게 된다.  
+
+만약 위 시나리오에서 `unclean.leader.election.enable` 이 비활성화 된 상태라면 `Kafka Cluster` 가 일정시간 가용불가 상태로 읽기/쓰기 동작이 불가능 할 수 있다. 
+`Kafka Cluster` 는 해당 `Partition` 의 데이터가 완전한 복제본이 활성화 될때까지 대가히기 때문이다. 
+즉 `unclean.leader.election.enable` 옵션은 활성화하지 않은 것은 `Availability` 보다는 `Durability` 를 더 강조하는 설정이다.  
