@@ -16,6 +16,9 @@ tags:
     - Kafka Broker
     - Availability
     - Durability
+    - Replicas
+    - Leader Replicas
+    - Follower Replicas
 toc: true
 use_math: true
 ---  
