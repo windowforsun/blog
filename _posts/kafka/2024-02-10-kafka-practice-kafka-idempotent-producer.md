@@ -26,7 +26,7 @@ use_math: true
 발생 할 수 있는 오류 시나리오 중 하나가 바로 중복 이벤트 발생이다. 
 만약 중복 이벤트가 발행된다면 이후 프로세스의 중복 처리 뿐만아니라, 
 메시지의 순서도 꼬일 수 있다.
-[Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-01-13-kafka-practice-kafka-duplication-patterns.md %}) 에서는 중복 이벤트를 소비하지 않는 방법에 대해 알아 봤다면,
+[Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-02-01-kafka-practice-kafka-duplication-patterns.md %}) 에서는 중복 이벤트를 소비하지 않는 방법에 대해 알아 봤다면,
 본 포스팅에서는 어떤 상황에서 중복 이벤트가 발생 횔 수 있고, 
 중복 이벤트를 방지 할 수 있는 `Idempotent Producer` 에 대해 알아본다.  
 
@@ -68,7 +68,7 @@ use_math: true
 하지만 이러한 처리는 다른 방안으로 해결 가능한 문제를 해결 불가능하도록 하고, 별도로 `dead-letter` 메시지를 처리해야 하므로 권장되지 않는 방식이다. 
 위 상황에서 `Producer` 가 처음 전송한 메시지는 `Topic Partition` 에 쓰여 졌지만, `Kafka Broker` 의 `ack` 만 유실 된 상활 일 수도 있다.  
 
-[Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-01-13-kafka-practice-kafka-duplication-patterns.md %})
+[Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-02-01-kafka-practice-kafka-duplication-patterns.md %})
 를 구현할 때는 코드 레벨적인 부분이 많았다면, 
 `Idempotent Producer` 는 구현 관련해서 코드 레벨적인 내용은없고, 옵션과 설정 값만 잘 구성해 주면 된다.  
 
