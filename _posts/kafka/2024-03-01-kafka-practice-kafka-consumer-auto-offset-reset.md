@@ -33,3 +33,30 @@ use_math: true
 그리고 `Consumer` 가 메시지 폴링 시작전 `Partition` 의 어느 위치에서 부터 폴링을 할지 초기 시작 지점을 결정해야 한다. 
 `Consumer` 에게 특정 위치의 `offset` 부터 시작해라는 설정이 없는 한 `Partition` 의 시작 부분부터 메시지를 읽는 것과 
 `Consumer` 가 `Partition` 을 구독한 시점부터 메시지를 읽는 2가지 옵션이 있다.  
+
+### How to config
+우리는 위에서 설명한 `Conumer` 가 구독한 이후 메시지 폴링을 `Partition` 의 어느 곳부터 할지에 대해서는 
+`auto.offset.reset` 에 아래와 같은 설정값을 지정해서 가능하다.  
+
+value|desc
+---|---
+earliest|`offset` 을 가장 앞선 `offset` 인 `Partition` 의 시작 부분부터 사용하도록 재설정한다. 
+latest|`offset` 을 가장 최신 `offset` 인 `Partition` 의 끝 부분부터 사용하도록 재설정한다. (기본값)
+none|`Consumer Group` 에 대한 `offset` 이 없다면 예외가 발생한다. 
+
+`Consumer Group` 의 `offset` 이 이미 주어진 있는 상황에서 위 설정 값들은 사용되지 않는다. 
+위 설정 값들은 `Consumer Group` 중 특정 `Consumer` 가 멈추고 재시작 됐을 때, 
+해당 `Consumer` 가 어느 부분부터 메시지를 소비해야할지 결정할 때 사용된다.  
+
+### Earliest
+
+.. 그림 ..
+
+`auto.offset.resest: earliest` 로 설정한 경우 새롭게 시작된 `Consumer` 는 
+자신에게 할당된 `Partition` 에 있는 모든 메시지를 처음부터 차례대로 소비하게 된다. 
+위 그림을 보면 `Consumer` 가  `Partition` 의 시작부분에 있는 `message 1` 부터 소비하는 것을 알 수 있다.  
+
+만약 `Partition` 에 수백만 개의 메시지가 있다면 전체 시스템에 큰 부하를 초래할 수 있으므로 `Partition` 의 볼륨을 잘 이해하고 해당 값을 설정해야 한다. 
+`Partition` 의 데이터는 보존 용량/기간에 따라 오래된 메시지도 보관이 돼있을 수 있어 시스템을 특정 시점으로 되돌리거나 하는 상황에서 유용하게 사용될 수 있다. 
+하지만 `retention.ms : -1` 철럼 설정된 경우에는 시스템 시작 시점부터 생성된 모든 메시지가 새로운 `Consumer` 가 구독을 시작 할때마다 소비 될 수 있음을 의미한다.  
+
