@@ -70,3 +70,18 @@ none|`Consumer Group` 에 대한 `offset` 이 없다면 예외가 발생한다.
 `offset 3` 부터 메시지를 소비하게 된다.  
 
 즉 `latest` 는 기존 메시지는 소비하지 않고 스킵하는 설정인데 이는 애플리케이션의 요구사항을 잘 고려한 후 설정해야 한다.  
+
+### Data loss
+새로운 `Consumer` 가 `Consumer Group` 에 참여하는 과정에서 기존 `Consumer` 가 메시지 처리 완료전 종료되어 `offset` 커밋이 되지 않은 상황을 가정해보자. 
+위와 같은 상황에서 만약 `auto.offset.reset: latest` 설저이라면 기존 `Consumer` 가 처리 중에 종료된 메시지는 새로운 `Consumer` 에게 다시 전덜되지 않고 
+메시지 자체가 유실될 수 있다. 
+
+1. `auto.offset.reset: latest` 설정으로 `Consumer Group` 은 `A`, `B` 라는 `Consumer` 로 구성돼 있다. 
+2. `A Consumer` 가 `Partition` 을 할당 받고 메시지를 `poll()` 한다. 
+3. `A Consumer` 는 `poll()` 한 메시지를 완전히 처리하기 전에 예외 발생으로 종료된다. (`offset` 커밋도 수행되지 않았다.)
+4. `Rebalancing` 이 수행되며 `B Consumer` 가 `A Consumer` 가 할당 받았던 `Partition` 을 할당 받는다. 
+5. `B Consumer` 의 `auto.offset.reset` 은 `latest` 이므로 할당 받은 이후 메시지부터 사용 할 수 있으므로 `A Consumer` 에서 비정상적으로 종료된 메시지는 받지 못하고 유실된다. 
+
+정리하면 `A Consumer` 가 `Partition` 을 부터 메시지를 읽었지만, 해당 메시지에 대한 `offset commit` 이 이뤄지지 않았기 때문에 
+오류 시나리오에서 새로운 `B Consumer` 가 동일한 `Partition` 을 할당 받았을 때 처리가 완료되지 못한 메시지가 전달될 것 같지만 실제로는 그렇지 않은 상황이 발생하는 것이다.  
+
