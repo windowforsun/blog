@@ -85,3 +85,29 @@ none|`Consumer Group` 에 대한 `offset` 이 없다면 예외가 발생한다.
 정리하면 `A Consumer` 가 `Partition` 을 부터 메시지를 읽었지만, 해당 메시지에 대한 `offset commit` 이 이뤄지지 않았기 때문에 
 오류 시나리오에서 새로운 `B Consumer` 가 동일한 `Partition` 을 할당 받았을 때 처리가 완료되지 못한 메시지가 전달될 것 같지만 실제로는 그렇지 않은 상황이 발생하는 것이다.  
 
+
+### Checking offset
+`Topic partition` 을 구독하는 모든 `Consumer Group` 은 자신이 사용하는 `Topic partition` 의 `offset` 을 `Kafka Broker` 의 `__consumer_offsets` 라는 `Topic` 에 저장한다. 
+`Kafka` 가 기본으로 제공하는 여러 관리 스크립트 중 `kafka-consumer-groups` 스크립트를 사용하면 데이터 손실 상황이라던가 `Kafka` 운영 중 데이터관련 이슈가 있을 때 `offset` 상태를 확인함으로써 
+현재 상황을 좀 더 이해할 수 있다. 
+아래 명령어와 같이 `--group` 을 통해 확인하고자 하는 `Consumer Group` 을 지정하고, `--describe` 옵션을 추가하면 해당 `Consumer Group` 에 대한 정보가 출력된다. 
+`test-topic` 에는 `message 1`, `message 2` 와 같은 2개의 메시지가 포함된 상태이다.  
+
+```bash
+$ kafka-topics --bootstrap-server localhost:9092 --topic test-topic --create --partitions 1
+Created topic test-topic.
+
+
+$ kafka-console-producer --bootstrap-server localhost:9092 --topic test-topic 
+>message 1
+>message 2
+
+
+$ kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --group test-consumer-group
+
+
+$ kafka-consumer-groups.sh --botstrap-server localhost:9092 --group test-consumer-group --describe
+
+GROUP               TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                         HOST            CLIENT-ID
+test-consumer-group test-topic      0          -               2               -               consumer-test-consumer-group-1-925d2211-0d76-404b-bd8e-adfd954abfd5 /               consumer-test-consumer-group-1
+```  
