@@ -111,3 +111,39 @@ $ kafka-consumer-groups.sh --botstrap-server localhost:9092 --group test-consume
 GROUP               TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                         HOST            CLIENT-ID
 test-consumer-group test-topic      0          -               2               -               consumer-test-consumer-group-1-925d2211-0d76-404b-bd8e-adfd954abfd5 /               consumer-test-consumer-group-1
 ```  
+
+`LOG-END-OFFSETS` 은 현재 파티션의 `offset` 수인 메시지 수를 의미한다. 
+그리고 `CURRENT-OFFSET` 은 현재 해당 `Consumer Group` 에서 `Consumer` 가 소비한 `offset` 을 의미한다. 
+지금 현재는 `aotu.offset.reset : latest` 로 돼 있으므로 `0` 값을 조회되는 것이다. 
+`LAG` 해당 `Consumer` 가 `Partition` 의 맨끝 `offset` 에서 얼만큼 뒤쳐져 있는지를 의미한다. 
+위 처럼 현재 소비한 `offset` 이 없는 경우에도 `LAG` 은 발생하지 않은 것으로 나온다.   
+
+위에서 살펴본 `Data Loss` 시나리오를 `CURRENT-OFFSET` 이 설정되지 않은 상태에서 가정한다면 새로운 메시지가 `Partition` 에 추가돼서 `Consumer` 가 처리를 수행하지만 에러가 발생했을 때, 
+`LOG-END-OFFSET` 은 3으로 이동하고 `CURRENT-OFFSET` 은 설정되지 않은 상태 그대로 유지된다. 
+그 이후 새로운 `Consumer` 가 동일한 `Partition` 을 할당 받더라도 `auto.offset.reset: latest` 옵션 값으로 실패한 새 메시지는 여전히 소비되지 않고, 
+그 다음 메시지를 대기하게 된다.  
+
+`Conumser Group` 의 `CURRENT-OFFSET` 은 각 `Consumer` 가 최초 메시지 하나를 성공적으로 소비 완료하면 실제 값이 설정된다. 
+만약 `CURRENT-OFFSET` 이 정상적으로 설정된 `Consumer` 가 재시작된다면 `auto.offset.reset` 의 설정 값과는 관게 없이 소비하던 다음 `offset` 을 이어서 소비하게 된다. 
+위 출력 결과에서 `Consumer` 가 1개의 메시지를 소비하면 `CURRENT-OFFSET` 은 1이 되고 `LAG` 은 1이 될 것이다. 
+그리고 이어서 다음 메시지까지 소비하면 `CURRENT-OFFSET` 은 2가 되고 `LAG` 은 0이 된다.  
+
+```bash
+$ kafka-consumer-groups.sh --botstrap-server localhost:9092 --group test-consumer-group --describe
+
+GROUP               TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                         HOST            CLIENT-ID
+test-consumer-group test-topic      0          1               2               1               consumer-test-consumer-group-1-925d2211-0d76-404b-bd8e-adfd954abfd5 /               consumer-test-consumer-group-1
+
+$ kafka-consumer-groups.sh --botstrap-server localhost:9092 --group test-consumer-group --describe
+
+GROUP               TOPIC           PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                         HOST            CLIENT-ID
+test-consumer-group test-topic      0          2               2               0               consumer-test-consumer-group-1-925d2211-0d76-404b-bd8e-adfd954abfd5 /               consumer-test-consumer-group-1
+```  
+
+`CURRENT-OFFSET` 이 1인 상황에서 2번째 메시지를 소비하던 중 해당 `Consumer` 가 비정성 종료되고, 
+새로운 `Consumer` 가 동일한 `Partition` 을 할당 받는다면 `CURRENT-OFFSET` 이 있이므로 2번째 메시지는 다시 소비되어 진다.  
+
+
+---  
+## Reference
+[Kafka Consumer Auto Offset Reset](https://www.lydtechconsulting.com/blog-kafka-auto-offset-reset.html)  
