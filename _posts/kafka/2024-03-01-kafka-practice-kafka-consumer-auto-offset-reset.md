@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Auto offset Reset"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Consumer 가 토픽을 구독 할때 읽기를 시작할 위치를 컨트롤 할 수 있는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,9 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Consumer
+    - Offset
+    - Auto Offset Reset
 toc: true
 use_math: true
 ---  
@@ -50,7 +53,8 @@ none|`Consumer Group` 에 대한 `offset` 이 없다면 예외가 발생한다.
 
 ### Earliest
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/consumer-auto-offset-reset-1.drawio.png)
+
 
 `auto.offset.resest: earliest` 로 설정한 경우 새롭게 시작된 `Consumer` 는 
 자신에게 할당된 `Partition` 에 있는 모든 메시지를 처음부터 차례대로 소비하게 된다. 
@@ -63,7 +67,8 @@ none|`Consumer Group` 에 대한 `offset` 이 없다면 예외가 발생한다.
 
 ### Latest
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/consumer-auto-offset-reset-2.drawio.png)
+
 
 `auto.offset.reset: latest` 로 설정 됐다면 새로운 `Consumer` 가 `Partition` 을 구독 한 이후 메시지부터 소비한다. 
 위 그름을 보면 `offset` 이 3인 시점 부터 새로운 `Consumer` 가 `Partition` 구독을 시작 했으므로 `offset` 이 1과 2의 메시지는 무시하고, 
