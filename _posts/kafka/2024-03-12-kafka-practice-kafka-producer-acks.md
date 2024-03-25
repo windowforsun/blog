@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Producer Acks"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Producer 의 성능과 지속성에 영향을 미치는 설정인 Akcs 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,11 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka
+    - Kafka Producer
+    - Producer
+    - Acks
+    - Producer Acks
 toc: true
 use_math: true
 ---  
@@ -54,7 +59,8 @@ all| Performance < Durability  |발송한 메시지에 대해서 `Partition Foll
 그리고 `Outbound Topic` 에 성공적으로 메시가 발송됐으면 `Inbound Topic` 의 `offset` 을 `commit` 한다. 
 이를 도식화하면 아래와 같다. 
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/producer-acks-1.drawio.png)
 
 가장 먼저 알아볼 옵션은 `acks = 0` 이다. 
 해당 옵션을 `Partition` 의 쓰기 결과 여부를 대기하지 않기 때문에 가장 좋은 성능을 보여주지만 메시지 유실 위험은 가장 높다. 
@@ -62,13 +68,13 @@ all| Performance < Durability  |발송한 메시지에 대해서 `Partition Foll
 하지만 `Producer` 는 메시지 발송 후 곧 바로 `Inbound Topic` 의 `offset` 을 `commit` 하기 때문에 
 해당 메시지는 유실된다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/producer-acks-2.png)
 
 동일한 시나리오에서 `acks = 1` 의 동작은 `Partition Leader` 동작만 확인 한후 `ack` 를 받는 식으로 최소한의 성능 비용으로 메시지 손실 가능성을 줄인다. 
 여기서 발생할 수 있는 메시지 손실 위험은 `Partition Leader` 에서 다른 복제본으로의 복제 수행전에 중단될 수 있다는 점이다. 
 이럴 경우 `Producer` 는 손실된 메시지를 다시 발송하지 않기 때문에 복제본에서 해당 메시지의 손실은 발생한다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/producer-acks-3.png)
 
 `ack = all` 인 설정에서 동일 시나리오를 살펴본다면, 
 `Partiton Leader` 는 `Producer` 로 부터 메시지를 받은 뒤 `ISR(In-Sync Replica)` 인 `Partition Follower` 를 대상으로 복제 동작을 수행하기 때문에 바로 `ack` 를 전송하지 않는다. 
@@ -76,13 +82,13 @@ all| Performance < Durability  |발송한 메시지에 대해서 `Partition Foll
 하지만 여기서 일시적인 이슈로 복제 동작이 실패하거나 오래 걸린다면, 
 `Producer` 측에서는 타임아웃이 발생하고 `ack` 수신에 실패한 메시지를 다시 처리 후 전송하게 되므로 메시지 손실은 발생하지 않는다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/producer-acks-4.png)
 
 아래와 같이 `ack = all` 일 때 모든 `ISR` 에 대한 복제까지 타임아웃내 완료하고 `ack` 를 `Producer` 에게 보닌다면, 
 `Producer` 는 `offset` 을 `commit` 하고 이후 메시지 처리르 재개한다. 
 이 시점 이후 부터는 `Partition Leader` 일시적으로 종료되는 현상이 있더라도 복제까지 완료한 메시지에 대해서는 손실되지 않는다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/producer-acks-5.png)
 
 
 각 설정에 대한 동작을 살펴보았을 떄, 
