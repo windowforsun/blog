@@ -1,0 +1,27 @@
+@startuml
+
+participant offset as "Kafka Consumer Offsets Topic"
+participant inbound as "Kafka Inbound Topic"
+participant service as "Service"
+participant leader as "Kafka Leader Replica"
+participant follower as "Kafka Follower Replica"
+
+title acks = 1, message loss
+
+inbound -> service : consume message
+activate service
+offset -[hidden]-> service
+service -> leader : produce message
+activate leader
+leader --> service : ack
+leader -[hidden]-> service
+leader -[hidden]-> service
+leader -[hidden]-> service
+destroy leader
+note over leader : leader die before replication
+deactivate leader
+service -> offset : commit offsets
+deactivate service
+
+note over service : lost consumed message
+@enduml
