@@ -23,7 +23,7 @@ use_math: true
 
 ## Producer Message Batching
 `Kafka Producer` 에서 메시지를 `Batch`(일괄) 처리를 적용하면 `Producer` 의 `Throughput` 를 늘릴 수 있다. 
-이는 `Producer` 에서 발생하는 네티워트 요청 수르 줄이는 방법이다. 
+이는 `Producer` 에서 발생하는 네트워크 요청 수르 줄이는 방법이다. 
 하지만 이런 방식으로 `Throughput` 를 늘리면 요청에 대한 응답시간인 `Latency` 도 늘어 날 수 있으므로, 
 해당 옵션을 변경하고자 할때 처리량과 응답시간 등이 적절한 균형과 최적화가 필요하다.  
 
@@ -33,7 +33,7 @@ use_math: true
 
 `Producer` 에서는 메시지르 `Batch` 처리하기 위해서 `batch.size` 까지 메시지가 채워지길 기다리거나, `linger.ms` 시간값이 만료될 때까지 기다려야 할 것이다. 
 이러한 대기 시간은 처리량과 비례해서 증가할 수 있음을 기억해야 한다. 
-또한 `Consumer` 는 자신이 구독하는 `Partition` 을 일괄 `poll()` 하게 되는데 이러한 `Consumer` 의 `Batch` 관련 처리 내용도 전에 서비스의 `Throughput` 큰 영향을 준다. 
+또한 `Consumer` 는 자신이 구독하는 `Partition` 을 일괄 `poll()` 하게 되는데 이러한 `Consumer` 의 `Batch` 관련 처리 내용도 전체 서비스 `Throughput` 큰 영향을 준다. 
 하지만 본 포스트 내용은 `Producer` 에 대한 것만 보고 `Consumer` 에 대한 내용은 이후 포스팅에서 다루도록 한다.  
 
 
@@ -62,7 +62,7 @@ linger.ms|batch.size 에 도달할 때까지 기다리는 최대 시간|0ms
 이러한 사전 파악은 `batch.size` 를 설정하는데 주요한 요소로 적용되기 때문이다. 
 그리고 `Partition` 의 수와 메시지에 키가 포함돼 있는지도 설정값 결정에 있어 함께 고려해야 한다. 
 만약 `Producer` 가 `Round-robin` 방식으로 다수의 `Partition` 에 메시지를 발송하는 경우라면, 
-`batch.size` 에 도달하는 시간은 단일 `Partition` 에 메시지를 발송하는 경우보다 더 긴 시간이 요도 쇨 수 있기 때문이다.  
+`batch.size` 에 도달하는 시간이 단일 `Partition` 에 메시지를 발송하는 경우보다 더 긴 시간이 소요 될 수 있기 때문이다.  
 
 만약 메시지를 키를 사용해서 동일한 `Partition` 에 메시지를 발송하도록 돼 있는 상태라면, 
 `linger.ms` 시간 내에 발송되는 메시지는 일괄로 처리될 수 있다. 
