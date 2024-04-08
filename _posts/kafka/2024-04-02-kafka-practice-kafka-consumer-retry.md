@@ -64,3 +64,39 @@ use_math: true
 이 때 기존 `Consumer` 메시지 결과를 정상적으로 처리한 상태라면 메시지의 중복 처리가 발생하게 되는 것이다. 
 계속적인 `poll.timeout` 으로 2번째 `Consumer` 도 `Consumer Group` 에서 제외되면 현상은 계속 반복 될 수 있다.  
 
+
+### Stateless Retry
+`Java Kafka Client` 는 `Stateless Retry` 를 지원하는데 관련 내용은 아래와 같다.  
+
+- 재시도 동작은 `Batch` 처리의 `poll` 동작에서 발생한다. 
+- `Consumer` 의 `poll` 동작은 `poll.timeout` 이내 수행 완료돼야 한다. 이는 `batch` 처리에서 포함되는 모든 재시도, 총 처리 시간(REST API, DB, .. 호출), 재시도의 `delay`, `backoff` 시간 등이 포함된다.  
+- `poll.timeout` 의 기본 값은 5분 이고, `batch` 처리 레코드 수의 기본 값은 500개 이다. 이를 단 위 레코드 당 처리 소요시간으로 계산하면 600ms 이내 하나의 메시지 처리를 완료해야 한다는 의미이다. 
+- 만약 `poll.timeout` 안에 메시지 처리가 완료되지 못하면, 메시지는 중복 될 수 있다. 
+
+아래 도식화한 플로우를 보면 `Consumer` 가 `Inbound Topic` 로 부터 메시지를 소비한 후 결과에 대한 이벤트를 `Outbound Topic` 으로 보내기전, 
+`Third party` 서비스에 `REST API` 를 호출하고 있다.  
+
+.. 그림 ..
+
+1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다. 
+1-2. 첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다. 
+1-3. 첫 번째 `Consumer` 는 재시도 설정에 따라 `Thrid party` 서비스에세 `REST API` 호출을 재시도 한다.
+
+첫 번째 `Consumer` 가 재시도를 수행하는 과정에서 `poll.timeout` 이 발생 했고, 
+`Kafka Broker` 는 `Rebalancing` 을 트리거해 첫 번째 `Consumer` 를 `Consumer Group` 에서 제거하고 
+두 번째 `Consumer` 를 동일한 `Partition` 에 할당한다.  
+
+2-1. 두 번째 `Consumer` 는 동일한 메시지를 `Inbound Topic` 으로부터 소비한다. 
+2-2. 두 번째 `Consumer` 가 `Third party` 에 `REST API` 요청을 보내는 시점 부터는 `200` 으로 성공한다. 
+1-4. 첫 번째 `Consumer` 도 `Third party` 요청에 성공하고, 처리 결과를 `Outbound Topic` 에 게시한다. 
+2-3. 두 번째 `Consumer` 또한 처리 결과를 `Outbound Topic` 에 게시한다. 
+
+`Outbound Topic` 을 사용해서 이후 `downstream` 서비스는 결과에 따른 처리를 이어서 수행한다. 
+위와 같은 처리 흐름으로 `Outbound Topic` 에서 결과 이벤트가 구분될 수 있더라도, 
+`downstream` 에서 이런 중복 수행에 대한 내용을 처리하는 것은 권장되지 않는다.  
+
+`Third party` 서비스가 몇 시간에 걸쳐 가용 불가능 상태에 빠진 상황을 가정해보자. 
+재시도 횟수 값 등을 올려 몇 시간 동안 재시도를 수행 할 수는 있다. 
+하지만 `Consumer` 에 설정된 `poll.timeout` 이 발생 할 수 있으므로 무한한 재시도는 사실살 불가능하다. 
+그러므로 적절한 수치의 재시도에도 실패하는 경우에는 `Dead letter topic` 과 같은 별도의 토픽으로 메시지를 보내 이후 다시 처리가 될 수 있도록 해야한다.  
+
