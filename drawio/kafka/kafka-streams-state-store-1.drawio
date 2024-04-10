@@ -1,9 +1,59 @@
-<mxfile host="app.diagrams.net" modified="2024-04-10T07:26:19.787Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" version="24.2.2" etag="yX9a1KYFMfy4Ket5bPCz" type="github">
+<mxfile host="app.diagrams.net" modified="2024-04-10T07:35:27.597Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" etag="xjh82nICDO_bs2HG7L8b" version="24.2.2" type="github">
   <diagram name="페이지-1" id="UfT5mkc2yS1BYfTib45v">
-    <mxGraphModel>
+    <mxGraphModel dx="524" dy="997" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-1" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="119" y="170" width="170" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-2" value="&lt;b&gt;Kafka Broker&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="159" y="170" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-3" value="Changelog Topics" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="144" y="210" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-4" value="" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="130" width="370" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-5" value="&lt;b&gt;Kafka Streams Application&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="495" y="130" width="160" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="AOtX1eQyf6H5xs8ZpiQd-6" target="AOtX1eQyf6H5xs8ZpiQd-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-6" value="Kafka Streams&lt;div&gt;Instance&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="380" y="210" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-9" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="570" y="170" width="150" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-7" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;Checkpoint File&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="585" y="210" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-8" value="&lt;span style=&quot;font-weight: 400;&quot;&gt;State File&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="585" y="270" width="120" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-10" value="&lt;b&gt;State Store&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="610" y="170" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="AOtX1eQyf6H5xs8ZpiQd-6" target="AOtX1eQyf6H5xs8ZpiQd-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1" source="AOtX1eQyf6H5xs8ZpiQd-6" target="AOtX1eQyf6H5xs8ZpiQd-8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="510" y="240" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-14" value="1. get offset" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="500" y="200" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-15" value="3. write state" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="480" y="260" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="AOtX1eQyf6H5xs8ZpiQd-16" value="2. consume state by offset" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="290" y="200" width="80" height="30" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
