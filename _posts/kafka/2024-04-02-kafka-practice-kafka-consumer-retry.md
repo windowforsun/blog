@@ -128,3 +128,39 @@ use_math: true
 하지만 재시도 횟수를 제한 할 수 없어 `Poison pill` 메시지가 발생할 수 있고, 
 `back-off` 설정이라던가 재시도에 대한 구체적인 옵션을 지정할 수 없다는 점이 있다.  
 
+
+### Stateful Retry
+위에서 먼저 알아본 `Stateless retry` 는 메시지 처리 실패에 따른 재시도 방법 제시는 해주었자만, 많은 이슈를 야기할 수 있었다. 
+`Stateful retry` 를 사용하면 `Stateless retry` 에서 발생 할 수 있었던 이슈를 해결하며 메시지 처리 실페애 따른 재시도 동작을 안정적으로 수행 할 수 있다. 
+메시지 재시도가 필요할 때, 메시지는 소비된 것으로 `commit` 되지 않고 다음 `poll()` 동작에서 다시 소비된다. 
+이러한 재시도 메시지는 계속해서 동일한 `Consumer` 가 받게되고, `Spring Kafka Consumer` 는 이 재시도 메시지에 대한 추적을 할 수 있으므로 
+횟수 등과 같은 검사가 가능하다. (메모리 상태 저장)
+설정된 재시도 시간과 횟수안에 재시도가 성공하지 못하는 경우에만 이를 `Dead letter topic` 으로 보내 이후 처리를 수행 할 수 있다.  
+
+이러한 방식은 `Stateless retry` 에서 야기 됐던 `Rebalancing`, 메시지 중복, 순서 등과 같은 이슈를 발생시키지 않는 다는 장점이 있다. 
+한가지 주의할 점은 재시도 사이의 소요 시간(`back-off` 포함)이 `poll.timeout` 을 초과하면 안된다는 점이다. 
+이를 초과하면 동일하게 메시지 중복이 발생 될 수 있기 때문이다. 
+하지만 이는 소비한 모든 배치 아이템들의 재시도에 대한 시간을 `poll.timeout` 안에 마쳐하는 것이 아닌, 단일 아이템에 대한 이야기이므로 예측과 관리가 더 용이하다.  
+
+#### Spring Kafka 를 통한 Stateful Retry
+`Stateful retry` 를 구현하기 위해서는 `Apache Kafka Client` 만을 사용해서는 불가능하고 `Spring Kafka` 의 `SeekToCurrentErrorHandler` 를 사용해야 한다. 
+간단한 예시는 아래와 같다.  
+
+```java
+@Override
+public ConcurrentKafkaListenerContainerFactory kafkaStatefulRetryListenerContainerFactory(final ConsumerFactory consumerFactory) {
+    final SeekToCurrentErrorHandler errorHandler = new SeekToCurrentErrorHandler((record, exception) -> {
+            // do something ..
+        }, new FixedBackOff(10000L, 10L));
+        
+    final ConcurrentKafkaListenerContainerFactory factory = new ConcurrentKafkaListenerContainerFactory();
+    factory.setConsumerFactory(consumerFactory);
+    factory.setErrorHandler(errorHandler);
+    
+    return factory;
+}
+
+```  
+
+`SeekToCurrentErrorHandler` 의 추가적인 기능은 `Consumer` 가 배치 아이템들을 처리하던 과정에 `RetryableException` 이 발생 한 경우, 
+`RetryableException` 이 발생한 메시지의 앞의 메시지들은 소비된 것으로 `commit` 되므로 이후 `poll()` 과정에 다시 전달되지 않는 다는 점이다.  
