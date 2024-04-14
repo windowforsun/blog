@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Retry"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Consumer 처리 중 오류가 발생했을 떄 복구 할 수 있는 재시도 동작에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,12 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Consumer
+    - Kafka Consumer
+    - Retry
+    - Consumer Retry
+    - Stateless Retry
+    - Stateful Retry
 toc: true
 use_math: true
 ---  
@@ -76,7 +82,9 @@ use_math: true
 아래 도식화한 플로우를 보면 `Consumer` 가 `Inbound Topic` 로 부터 메시지를 소비한 후 결과에 대한 이벤트를 `Outbound Topic` 으로 보내기전, 
 `Third party` 서비스에 `REST API` 를 호출하고 있다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-retry-1.drawio.png)
+
 
 1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다. 
 1-2. 첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다. 
@@ -164,3 +172,43 @@ public ConcurrentKafkaListenerContainerFactory kafkaStatefulRetryListenerContain
 
 `SeekToCurrentErrorHandler` 의 추가적인 기능은 `Consumer` 가 배치 아이템들을 처리하던 과정에 `RetryableException` 이 발생 한 경우, 
 `RetryableException` 이 발생한 메시지의 앞의 메시지들은 소비된 것으로 `commit` 되므로 이후 `poll()` 과정에 다시 전달되지 않는 다는 점이다.  
+
+#### Stateful retry flow
+`Stateless retry` 와 동일한 처리를 수행하는 과정에서 `Stateful retry` 를 적용한 플로우는 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-retry-1.drawio.png)
+
+1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다.
+1-2첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다.
+1-3. 첫 번째 `Consumer` 는 재시도 해야할 메시지를 `Inbound Topic` 에서 다시 소비한다. 
+1-4. 첫 번째 `Consumer` 의 `REST API` 호출은 재시도 과정에서 최종적으로 성공하고, 이후 이벤트가 `Outbound Topic` 으로 전달된다. 
+
+최종적으로 `Rebalancing` 이 일어나지 않기 때문에 `Stateless retry` 와는 다르게 두 번째 `Consumer` 는 사용되지 않는다.  
+
+
+#### Rebalancing impact
+앞서 살펴본 `Stateful retry` 과정에서 `Rebalancing` 이 일어나는 상황을 살펴볼 필요가 있다. 
+`Stateful retry` 를 마침 수행하고 있는 `Consumer` 가 있을 때, `Consumer Group` 에 새로운 `Consumer` 가 가입해 `Rebalancing` 이 이뤄진다. 
+그리고 마친 `Stateful retry` 를 수행하고 있는 `Consumer` 의 `Topic Partition` 에 대한 `Re-assignment` 이 이뤄지는 상황을 가정해 본다. 
+이렇게 된다면 `Topic Partition` 을 새로 할당 받은 새로운 `Consumer` 는 재시도를 수행 중이던 메시지를 `poll` 하지만 해당 메시지를 재시도한 이력은 모두 초기화된 상태이므로, 
+다시 처음부터 재시도를 수행하게 될 것이다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/consumer-retry-3.png)  
+
+
+이러한 문제는 빈번한 `Rebalancing` 과 빈번한 재시도가 발생하는 상황에서 재시도를 수행하는 메시지가 있는 `Partition` 이 재할당 될떄 발생한다. 
+이는 최악의 경우 재시도를 수행하던 메시지가 유실될 수 있는데, 계속적인 `Rebalancing` 으로 무한정 재시도가 수행되면 `Topic` 에 설정된 만료 시간에 따라 메시지가 만료될 수 있기 때문이다. 
+`Rebalancing` 이 자주 발생하는 상황이더라도 `Rebalancing` 직후 바로 기존 `Consumer` 가 `Partition` 에서 할당 해제가 되는 것이 아닌, 
+기존 `Consumer` 가 죽거나 새로운 `Consumer` 가 새로 할당 받았을 때 해제되므로 그 시간안에 재시도 성공 및 `Dead Letter Topic` 에 메시지를 보낼 수 있다면 문제는 발생하지 않는다.  
+
+
+### Conclusion
+우리는 `Consumer` 구현에 있어 필요할 수 있는 재시도 동작을 `Stateless Retry` 와 `Stateful Retry` 라는 2가지 방식에 대해 알아보았다. 
+`Stateless Retry` 는 별다른 추가구성 없이 구현 할 수 있는 간단한 재시도 구현치이지만, 
+메시지 중복과 충분한 재시도 수행 시간을 보장받을 수 없다느 단점이 있었다. 
+여기서 `Stateful Retry` 를 위 언급한 문제점들이 해결됨을 알아보았다.  
+
+
+---  
+## Reference
+[Kafka Consumer Retry](https://www.lydtechconsulting.com/blog-kafka-consumer-retry.html)   
