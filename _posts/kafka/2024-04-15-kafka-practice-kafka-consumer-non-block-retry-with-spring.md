@@ -46,3 +46,20 @@ use_math: true
 메시지의 순서 보장된다는 장점이 있다. 
 그러므로 메시지 순서가 보다 중요한 서비스에서는 `Blocking retry` 가 적합한 경우도 있기 때문에 요구사항에 맞는 전략을 선택해야 한다.  
 
+
+### Non-Blocking retry
+`Non-Blocking retry` 는 메시지에 재시도 수행이 있더라도 동일 `Topic Partition` 의 이후 메시지들이 계속해서 처리 될 수 있음을 보장한다. 
+이러한 특성을 잘 보여주는 예로 `DB` 에 `INSERT` 와 `UPDATE` 를 수행하는 애플리케이션을 예로 들 수 있다. 
+특정 레코드의 `UPDATE` 메시지를 수신 했지만, 아직 `DB` 에 해당 레코드가 없는 경우 메시지 처리는 실패하게 된다. 
+이 상황에서 `UPDATE` 메시지는 `Non-Blocking retry` 로 계속해서 재시도를 수행하고, 
+메시지는 계속해서 소비하게 될 떄 특정 시점 이후 `INSERT` 메시지가 수신되면 재시도를 수행하던 `UPDATE` 까지 모두 성공적인 처리를 완료 할 수 있다.  
+
+.. 그림 ..
+
+위 시나리오에서 `Non-Blocking retry` 는 기존 `Topic Partition` 에서 소비되는 메시지 중 `UPDATE` 메시지는 계속해서 처리되지만, 
+재시도가 필요한 `INSERT` 메시지는 다른 `Topic Partition` 에서 처리된다. 
+그러므로 기존 `Topic Partition` 의 메시지 처리는 중단없이 계속해서 처리될 수 있지만, 
+재시도 수행이 필요로하는 `INSERT` 메시지는 별도의 `Topic Partition` 에서 수행되므로 기존 `Topic Partition` 의 
+메시지 순서는 보장될 수 없음을 기억해야 한다.
+
+
