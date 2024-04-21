@@ -106,3 +106,79 @@ numPartitions|재동 생성된 토픽에 적용 할 `partitions` 수
 다시 한번 언급하지만 이러한 `Non-Blocking retry` 는 기존 `upstream` 의 메시지 순서가 보장되지 않는 다는 점을 꼭 기억해야 한다.
 
 
+
+### Spring Kafka Retryable Topics Demo
+함께 진행해볼 데모는 `Spring Boot` 을 기반으로 `Spring Kafka` 를 사용해
+`Retryable topics` 를 사용하는 방법에 대해서 알아볼 것이다. 
+앞선 시나리오와 동일하게 `UPDATE` 메시지가 먼저 수신되고, `INSERT` 메시지닥 다음에 수신되어
+`UPDATE` 메시지가 `INSERT` 메시지가 처리 완료 되기 전까지 재시도를 수행하도록 구성한다.  
+
+데모 애플리케이션의 상세 코드는 []()
+여기를 통해 확인 가능하다.  
+
+.. 그림 ..
+
+도식화된 위 그림은 여러 개의 `Retryable topics` 를 사용하고 있음을 보여준다.  
+`1 ~ 6` 까지 걸쳐 `UPDATE` 메시지는 여러번 재시도를 수행한다. 
+그리고 `8` 에서 `INSERT` 메시지를 소비하고 생성한다. 
+최종적으로 `10` 에서 `UPDATE` 메시지는 성공을 한다. 
+위와 같은 시나리오는 `UPATE` 가 여러번 재시도는 수행 하였지만, 
+정상 반영 되었기 때문에 `Dead letter` 에는 쓰여지지 않는다.  
+
+하단 `UpdateItemConsumer` 클래스는 위 시나리오를 구현한 코드이 예이다.  
+`@KafkaListener` 어노테이션에 해당 `Consumer` 가 사용할 토픽을 설한다.
+그리고 `@Retryable` 어노테이션에는 재시도 동작에 대한 설정 값들을 기제한다. 
+마지막으로 `@DltHandler` 어노테이션을 사용해서 `Dead letter` 에 대한 처리를 수행하는데, 
+현재 코드에서는 로깅만 수행한다.  
+
+```java
+    @RetryableTopic(
+            attempts = "#{'${demo.retry.maxRetryAttempts}'}",
+            autoCreateTopics = "#{'${demo.retry.autoCreateRetryTopics}'}",
+            backoff = @Backoff(delayExpression = "#{'${demo.retry.retryIntervalMilliseconds}'}",
+                    multiplierExpression = "#{'${demo.retry.retryBackoffMultiplier}'}"),
+            fixedDelayTopicStrategy = FixedDelayStrategy.MULTIPLE_TOPICS,
+            include = {RetryableMessagingException.class},
+            timeout = "#{'${demo.retry.maxRetryDurationMilliseconds}'}",
+            topicSuffixingStrategy = TopicSuffixingStrategy.SUFFIX_WITH_INDEX_VALUE)
+    @KafkaListener(topics = "#{'${demo.topics.itemUpdateTopic}'}", containerFactory = "kafkaListenerContainerFactory")
+    public void listen(@Payload final String payload) {
+        log.info("Update Item Consumer: Received message with payload: " + payload);
+
+        try {
+            UpdateItem event = JsonMapper.readFromJson(payload, UpdateItem.class);
+            this.itemService.updateItem(event);
+        } catch (RetryableMessagingException e) {
+            // Ensure the message is retried.
+            log.error("Retrying message : {}", payload);
+            throw e;
+        } catch (Exception e) {
+            log.error("Update item - error processing message: " + e.getMessage());
+        }
+    }
+
+    @DltHandler
+    public void dlt(String data, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        log.error("Event from topic "+topic+" is dead lettered - event:" + data);
+    }
+```  
+
+`@Retryable` 어노테이션에는 다수의 `Retryable topics` 를 지정해서 다수의 재시도 수행을 비동기로 수행시킬 수 있다. 
+이러한 설정 값들은 코드 예시와는 다르게 `application.yaml` 의 프로피터를 참고하는 방식으로 개선해 환경별 분리나, 
+코드 변경, 재 빌드 없이 관련 옵션값을 수정하는 식으로도 구성할 수 있다.  
+
+`Spring Kafka Retry Topics` 를 사용하면 기존 `Consumer` 코드에 추가적으로, 
+`@Retryable` 이라는 어노테이션 정의만으로 간단한 `Non-Blocking Retry` 를 적용할 수 있다. 
+우리는 요구사항에 맞는 재시도 관련 설정 값만 적절하게 튜닝해주면 되는 것이다. 
+재시도 처리를 위해 별도의 토픽을 사용하기 때문에 원본 토픽에서 재시도로 인한 지연은 발생하지 않지만, 
+원본 토픽의 기존 순서를 보장할 수 없음을 인지해야 한다.  
+
+
+---  
+## Reference
+[Kafka Consumer Non-Blocking Retry: Spring Retry Topics](https://www.lydtechconsulting.com/blog-kafka-spring-retry-topics.html#a)   
+
+
+
+
+
