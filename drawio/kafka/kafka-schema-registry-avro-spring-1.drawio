@@ -1,9 +1,51 @@
-<mxfile host="app.diagrams.net" modified="2024-04-22T18:34:43.136Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" version="24.2.5" etag="1EJ7uzdbppdL2V2RiJBR" type="github">
+<mxfile host="app.diagrams.net" modified="2024-04-22T18:39:34.789Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" etag="ZN5B7CFNyUbbJnSXSlNE" version="24.2.5" type="github">
   <diagram name="페이지-1" id="xiopHtyxnY5Z53Ou9KPh">
-    <mxGraphModel>
+    <mxGraphModel dx="1106" dy="712" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="440" y="210" width="120" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-12" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;startArrow=classic;startFill=1;endArrow=none;endFill=0;" edge="1" parent="1" source="J2KpkQIWPgxfGZ2WPi6B-1" target="J2KpkQIWPgxfGZ2WPi6B-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-1" value="Schema Registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="440" y="100" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="J2KpkQIWPgxfGZ2WPi6B-2" target="J2KpkQIWPgxfGZ2WPi6B-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-11" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;" edge="1" parent="1" source="J2KpkQIWPgxfGZ2WPi6B-2" target="J2KpkQIWPgxfGZ2WPi6B-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-2" value="Producer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="240" y="225" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-3" value="Consumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="640" y="225" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="J2KpkQIWPgxfGZ2WPi6B-6" target="J2KpkQIWPgxfGZ2WPi6B-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-6" value="Topic" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="455" y="240" width="90" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-8" value="Kafka" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="470" y="210" width="60" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-13" value="1. get schema id" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="280" y="140" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-14" value="4. get schema" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="620" y="140" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-15" value="2. produce" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="350" y="230" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="J2KpkQIWPgxfGZ2WPi6B-16" value="3. consume" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="549" y="230" width="100" height="30" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
