@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Non-Blocking Spring Retry Topics"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Consumer 의 Retry 동작을 구현하는 방법 중 Spring Retry Topics 를 사용하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,12 +12,16 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Consumer
+    - Retry
+    - Non Blocking
+    - Spring Kafka
 toc: true
 use_math: true
 ---
 
 ## Consumer Non-Blocking Retry
-앞선 포스트에서 [Consumer Retry]()
+앞선 포스트에서 [Consumer Retry]({{site.baseurl}}{% link _posts/kafka/2024-04-02-kafka-practice-kafka-consumer-retry.md %})
 에 대한 내용을 살펴보았다. 
 이는 `Blocking retry` 방식으로 재시도를 수행해야하는 메시지가 있는 `Topic Partition` 은 
 재시도가 수행되는 시간동안 `Blocking` 된다. (이후 메시지가 소비되지 못한다.)
@@ -34,7 +38,7 @@ use_math: true
 즉 위와 같은 상황에서는 `Non-blocking retry` 를 적용하는 것은 큰 이미가 없고 `Blocking retry` 가 적합한 방식이다. 
 가장 처음 실패한 메시지를 재시도 수행하던 중 재시도가 성공하면 이후 메시지들도 모두 실패 없이 처리 될 수 있는 상황이기 때문이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-with-spring-1.drawio.png)
 
 위 그림을 보면 `Consumer` 가 `m1` 메시지를 소비하고
 처리 과정 중 `Third-party` 서비스에서 `POST` 요청을 보내지만 해당 서비스의 일시적인 이슈로 요청은 실패한다. 
@@ -54,7 +58,7 @@ use_math: true
 이 상황에서 `UPDATE` 메시지는 `Non-Blocking retry` 로 계속해서 재시도를 수행하고, 
 메시지는 계속해서 소비하게 될 떄 특정 시점 이후 `INSERT` 메시지가 수신되면 재시도를 수행하던 `UPDATE` 까지 모두 성공적인 처리를 완료 할 수 있다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-with-spring-2.png)
 
 위 시나리오에서 `Non-Blocking retry` 는 기존 `Topic Partition` 에서 소비되는 메시지 중 `UPDATE` 메시지는 계속해서 처리되지만, 
 재시도가 필요한 `INSERT` 메시지는 다른 `Topic Partition` 에서 처리된다. 
@@ -113,10 +117,10 @@ numPartitions|재동 생성된 토픽에 적용 할 `partitions` 수
 앞선 시나리오와 동일하게 `UPDATE` 메시지가 먼저 수신되고, `INSERT` 메시지닥 다음에 수신되어
 `UPDATE` 메시지가 `INSERT` 메시지가 처리 완료 되기 전까지 재시도를 수행하도록 구성한다.  
 
-데모 애플리케이션의 상세 코드는 []()
-여기를 통해 확인 가능하다.  
+데모 애플리케이션의 상세 코드는 [여기](https://github.com/windowforsun/kafka-spring-retry-topics)
+를 통해 확인 가능하다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-with-spring-3.drawio.png)
 
 도식화된 위 그림은 여러 개의 `Retryable topics` 를 사용하고 있음을 보여준다.  
 `1 ~ 6` 까지 걸쳐 `UPDATE` 메시지는 여러번 재시도를 수행한다. 
