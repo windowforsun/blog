@@ -1,0 +1,50 @@
+@startuml
+
+participant createTopic as "Create Event Inbound Topic"
+participant updateTopic as "Update Event Inbound Topic"
+participant updateRetryTopic as "Update Retry Topic"
+participant consumer as "Consumer"
+participant db as "DB"
+
+'skinparam sequenceMessageAlign center
+
+createTopic -> consumer : create-event-1
+activate consumer
+consumer -> db : insert 1
+deactivate consumer
+
+updateTopic -> consumer : update-event-2
+activate consumer
+consumer -> db : update 2
+activate db
+db --> consumer : fail update 2
+deactivate db
+consumer -> updateRetryTopic : update-event-2
+deactivate consumer
+
+updateTopic -> consumer : update-event-1
+activate consumer
+consumer -> db : update 1
+activate db
+db --> consumer : success
+deactivate db
+deactivate consumer
+
+createTopic -> consumer : create-event-2
+activate consumer
+consumer -> db : insert 2
+deactivate consumer
+
+updateRetryTopic -> consumer : update-event-2
+activate consumer
+consumer -> db : update 2
+activate db
+db --> consumer : success
+deactivate db
+deactivate consumer
+
+
+
+
+
+@enduml
