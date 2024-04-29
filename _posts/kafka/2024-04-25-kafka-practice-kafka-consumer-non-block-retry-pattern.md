@@ -33,3 +33,5 @@ use_math: true
 
 예제의 내용은 [Kafka Consumer Retry]() 
 동일하므로 관련 내용을 참고 할 수 있다.  
+
+### Non-Blocking Retry Pattern
