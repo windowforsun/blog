@@ -65,3 +65,64 @@ use_math: true
 이 패턴의 핵심은 이벤트가 재시도 자격을 충복하면 원본 토픽으로 전송해서, 다시 주어진 처리가 수행될 수 있도록 한다. 
 그리고 처리 수행 도중 재시도가 필요하다고 판단되면 다시 재시도 토픽으로 전달돼 재시도 여부 판별 부터 
 `maxRetryDuration` 로 만료 될 떄까지 수행되는 것이다. 
+
+
+## Demo
+`Non-Blocking Retry Pattern` 의 개념을 바탕으로 구현한 예제 애플리케이션은 아래와 같이 재시도 상황을 테스트 한다. 
+
+구현된 데모의 상세한 코드는 [여기](https://github.com/windowforsun/kafka-consumer-non-blocking-retry-pattern)
+를 통해 확인 가능하다.  
+
+- `CreateEvent` 가 발생하지 않는 아이템에 대해 `UpdateEvent` 가 발생한다. 
+- `UpdateEvent` 는 생성된 아이템이 없으므로 처리에 실패한다. 
+- `UpdateEvent` 는 `CreateEvent` 가 수신되고 처리되기 전까지 재시도한다. 
+- 이후 `CreateEvent` 가 수신되고 아이템이 생성된다. 
+- `UpdateEvent` 도 성공한다. 
+
+아래 그림은 위와 같은 상황을 도식화해 표현한 그림이다.  
+
+.. 그림 ..
+
+1. `Update Event Inbound Topic` 으로 부터 `UpdateEvent` 가 소비된다. 
+2. `DB` 상 아직 `UpdateEvent` 수행에 해당하는 아이템이 생성되기 전이므로 처리작업은 실패한다. 
+3. 실패한 `UpdateEvent` 이벤트 재시도를 위해 `RetryTopic` 으로 보내진다. 
+4. `RetryTopic` 으로부터 `UpdateEvent` 가 소비된다. 
+5. 수신한 재시도 이벤트가 재시도시간이 만료됐는지, 재시도를 수행할 시점인지, 이후 다시 폴링해야 하는지 검증한다. 재시도 수행 시점으로 판별된다면 이벤트는 다시 원본 토픽(`Update Event Inbound Topic`)에 쓰여진다. 
+6. `Create Event Inbound Topic` 으로 부터 실패한 `UpdateEvent` 에 필요한 `CreateEvent` 가 소비된다. 
+7. `CreateEvent` 에 해당하는 아이템이 `DB` 에 저장된다. 
+8. `Update Event Inbound Topic` 으로 부터 재시도로 추가된 `UpdateEvent` 가 다시 소비된다. 
+9. 이 시점에는 `UpdateEvent` 에 해당하는 아이템이 `DB` 에 존재하므로 이벤트는 성공적으로 처리된다. 
+
+아래 코드는 `RetryTopic` 으로 부터 재시도 이벤트가 소비된 후 실제 재시도 여부를 판별하고 처리하는 코드의 일부이다.  
+
+```java
+    public void retry(final String payload, final MessageHeaders headers) {
+        final Long verifiedOriginalReceivedTimestamp = (Long) headers.getOrDefault(RetryableHeaders.ORIGINAL_RECEIVED_TIMESTAMP, (Long) headers.get(KafkaHeaders.RECEIVED_TIMESTAMP));
+        this.retryableKafkaClient.sendMessage(retryTopic, payload,
+                Map.of(RetryableHeaders.ORIGINAL_RECEIVED_TIMESTAMP, verifiedOriginalReceivedTimestamp,
+                        RetryableHeaders.ORIGINAL_RECEIVED_TOPIC, headers.get(KafkaHeaders.RECEIVED_TOPIC)));
+    }
+
+    public void handle(final String payload, final Long receivedTimestamp, final Long originalReceivedTimestamp, final String originalTopic) {
+        if(this.shouldDiscard(originalReceivedTimestamp)) {
+            log.debug("Item {} has exceeded total retry duration - item discarded.", payload);
+        } else if(this.shouldRetry(receivedTimestamp)) {
+            log.debug("Item {} is ready to retry - sending to update-item topic.", payload);
+            this.retryableKafkaClient.sendMessage(originalTopic, payload, Map.of(RetryableHeaders.ORIGINAL_RECEIVED_TIMESTAMP, originalReceivedTimestamp));
+        } else {
+            log.debug("Item {} is not yet ready to retry on the update-item topic - delaying.", payload);
+            throw new RetryableMessagingException("Delaying attempt to retry item " + payload);
+        }
+    }
+
+    private boolean shouldDiscard(final Long originalReceivedTimestamp) {
+        long cutOffTime = originalReceivedTimestamp + (this.maxRetryDurationSeconds * 1000);
+        return Instant.now().toEpochMilli() > cutOffTime;
+    }
+
+    private boolean shouldRetry(final Long receivedTimestamp) {
+        long timeForNextRetry = receivedTimestamp + (this.retryIntervalSeconds * 1000);
+        log.debug("retryIntervalSeconds: {} - receivedTimestamp: {} - timeForNextRetry: {} - now: {} - (now > timeForNextRetry): {}", retryIntervalSeconds, receivedTimestamp, timeForNextRetry, Instant.now().toEpochMilli(), Instant.now().toEpochMilli() > timeForNextRetry);
+        return Instant.now().toEpochMilli() > timeForNextRetry;
+    }
+```  
