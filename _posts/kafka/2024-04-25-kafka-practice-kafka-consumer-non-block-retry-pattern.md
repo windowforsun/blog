@@ -126,3 +126,50 @@ use_math: true
         return Instant.now().toEpochMilli() > timeForNextRetry;
     }
 ```  
+
+`RetryConsumer` 에서 소비된 재시도 이벤트는 `handle()` 를 호출한다. 
+그리고 해당 메소드에서는 최초 이벤트 수신시간인 `ORIGINAL_RECIVED_TIMESTAMP` 를 통해 해당 이벤트가 재시도 처리 만료시간이 지났는지 판별해서, 
+지났으면 해당 재시도 이벤트는 폐기된다. 
+재시도 처리 만료시간이 지나지 않은 이벤트를 대상으로 해당 재시도 이벤트가 `RetryTopic` 에 전달된 시간값인 `KafkaHeaders.RECEIVED_TIMESTAMP` 를 통해 
+재시도 처리 시간 주기를 만족하는지 보고 만족한다면, 
+원본 토픽으로 이벤트를 다시 전송한다. 
+그리고 재시도 처리 시간 주기를 만족하지 않는다면 예외와 함께 다시 폴링될 수 있도록 한다.  
+
+
+```java
+    public void updateItem(final UpdateItem event, final MessageHeaders headers) {
+        final Optional<Item> item = this.itemRepository.findById(event.getId());
+
+        if(item.isPresent()) {
+            item.get().setStatus(event.getStatus());
+            this.itemRepository.save(item.get());
+            log.debug("Item updated in database with Id: {}", event.getId());
+        } else {
+            this.retryableService.retry(JsonMapper.writeToJson(event), headers);
+            log.debug("Item sent to retry with Id: {}", event.getId());
+        }
+    }
+```  
+
+`Update Event Inbound Topic` 으로 소비된 이벤트는 `updateItem` 을 통해 `UpdateEvent` 처리가 수행된다. 
+업데이트하고자 하는 아이템이 `DB` 에 존재하는지 검증 후 존재한다면 업데이트를 수행하고, 
+존재하지 않는 경우 `retry()` 를 통해 처리 될 수 없는 이벤트를 `RetryTopic` 으로 전송한다.  
+
+
+이번 포스팅에서 소개한 `Non-Blocking Retry Pattern` 은 일반적인 구현법을 소개한 내용이다. 
+데모 또한 `Java + Spring` 기반을 통해 구현했지만, 동일한 환경이라면 특별한 기능이 필요하지 않은 한
+[Spring Kafka Retry Topics]()
+사용하는 것을 권장한다. 
+재시도 구현을 위한 코드 작업이 적고 단순하다는 점과 다양한 설정으로 원하는 재시도 스펙을 적용할 수 있기 때문이다.  
+`Spring Kafka Retry Topics` 또한 `Non-Blocking Retry` 과정에서 원본 토픽의 메시지 순서는 보장되지 않는 다는 점을 기억해야 한다.  
+
+
+
+
+
+
+
+
+---  
+## Reference
+[Kafka Consumer Non-Blocking Retry Pattern](https://www.lydtechconsulting.com/blog-kafka-non-blocking-retry.html)   
