@@ -1,0 +1,26 @@
+@startuml
+
+:retry topic;
+repeat :event consume;
+
+    if (discard?) then
+        -> yes;
+        : event discarded;
+        stop
+    else
+      -> no;
+      : event not discarded;
+    endif
+
+repeat while (retry?) is (no) not (yes)
+:write to origin topic;
+
+
+
+
+
+
+
+
+
+@enduml

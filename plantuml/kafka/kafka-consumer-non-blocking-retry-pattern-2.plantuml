@@ -1,0 +1,41 @@
+@startuml
+
+participant in as "Inbound Topic"
+participant con as "Update Consumer"
+participant retry as "Retry Topic"
+participant retrycon as "Retry Conumser"
+participant db as "DB"
+
+'skinparam sequenceMessageAlign center
+
+in -> con : UpdateEvent
+activate con
+
+alt Can be Update
+    con -> db : update item
+else Cannot be Update
+    con -> retry : write event
+end
+
+con --> in : marking consumed
+deactivate con
+
+retry -> retrycon : retry UpdateEvent
+activate retrycon
+
+alt retry discarded
+    retrycon -> retrycon : discard
+
+else do retry
+    retrycon -> in : write event
+
+else re-polling event
+    retrycon -> retrycon : throw RetryableException
+
+end
+deactivate retrycon
+
+
+
+
+@enduml

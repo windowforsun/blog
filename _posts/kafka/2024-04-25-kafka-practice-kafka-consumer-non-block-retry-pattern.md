@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Consumer Non-Blocking Retry Pattern"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Consumer 에서 사용할 수 있는 Non-Blocking Retry 패턴에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,9 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Retry
+    - Non Blocking
+    - Consumer
 toc: true
 use_math: true
 ---
@@ -25,13 +28,13 @@ use_math: true
 `Non-Blocking Retry` 는 기존 `Topic Parition` 메시지 소비를 중단 없이 할 수 있지만, 
 기존 메시지 순서는 보자될 수 없을 기억해야 한다. 
 
-[Non-Blocking Retry Spring Topics]()
+[Non-Blocking Retry Spring Topics]({{site.baseurl}}{% link _posts/kafka/2024-04-15-kafka-practice-kafka-consumer-non-block-retry-with-spring.md %})
 에서도 `Non-Blocking Retry` 에 대한 내용과 간단한 구현 방법에 대해 알아보았다. 
 하지만 위 예제는 `Spring Kafka` 를 사용하는 환경에서만 간단한 `Annotation` 정으를 통해서 적용 가능하다. 
 이번 포스팅에서는 `Spring` 이나 `Kafka` 가 아닌 다른 메시지 미들웨어를 사용하더라도 도입할 수 있는 
 `Non-Blocking Retry Pattern` 에 대해 알아볼 것이다.  
 
-예제의 내용은 [Kafka Consumer Retry]() 
+예제의 내용은 [Kafka Consumer Retry](({{site.baseurl}}{% link _posts/kafka/2024-04-02-kafka-practice-kafka-consumer-retry.md %})
 동일하므로 관련 내용을 참고 할 수 있다.  
 
 ### Non-Blocking Retry Pattern
@@ -45,7 +48,8 @@ use_math: true
 이를 다시 소비해서 재시도 여부 판별 후 재시도 수행이 필요하다면 다시 원본 토픽으로 이벤트를 전송하게 된다. 
 아래는 이러한 과정을 도식화한 내용이다.
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-pattern-1.png)
 
 - 현재 시간과 `원본 이벤트 수신 시간` 차이가 `maxRetryDuration` 을 넘어가면 해당 이벤트는 버린다. 
 - 위에서 버려지지 않은 이벤트는 현재 시간과 `재시도 수신 시간` 차이가 `retryInterval` 보다 크면 재시도를 수행한다. 
@@ -54,7 +58,7 @@ use_math: true
 아래 그림은 `UpdateEvent` 가 수신 됐을 때 처리되는 전체 괴정을 보여준다.   
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-pattern-2.png)
 
 
 소개한 `Non-Blocking Retry` 패턴은 원본 토픽에서 처음 수신된 시간을 사용해서 
@@ -81,7 +85,7 @@ use_math: true
 
 아래 그림은 위와 같은 상황을 도식화해 표현한 그림이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-non-blocking-retry-pattern-3.drawio.png)
 
 1. `Update Event Inbound Topic` 으로 부터 `UpdateEvent` 가 소비된다. 
 2. `DB` 상 아직 `UpdateEvent` 수행에 해당하는 아이템이 생성되기 전이므로 처리작업은 실패한다. 
@@ -158,7 +162,7 @@ use_math: true
 
 이번 포스팅에서 소개한 `Non-Blocking Retry Pattern` 은 일반적인 구현법을 소개한 내용이다. 
 데모 또한 `Java + Spring` 기반을 통해 구현했지만, 동일한 환경이라면 특별한 기능이 필요하지 않은 한
-[Spring Kafka Retry Topics]()
+[Spring Kafka Retry Topics]({{site.baseurl}}{% link _posts/kafka/2024-04-15-kafka-practice-kafka-consumer-non-block-retry-with-spring.md %})
 사용하는 것을 권장한다. 
 재시도 구현을 위한 코드 작업이 적고 단순하다는 점과 다양한 설정으로 원하는 재시도 스펙을 적용할 수 있기 때문이다.  
 `Spring Kafka Retry Topics` 또한 `Non-Blocking Retry` 과정에서 원본 토픽의 메시지 순서는 보장되지 않는 다는 점을 기억해야 한다.  
