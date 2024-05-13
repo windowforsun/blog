@@ -52,3 +52,29 @@ use_math: true
 
 .. 그림 ..
 
+
+### Failure Case
+`Kafka` 는 메시징 스트림상 실패 시나리오에서도 `exactly-once` 를 보장하기 위해 `Transactional API` 를 제공한다. 
+`Transactional API` 는 메시지 소비와 생산을 하나의 `Transaction` 으로 묶어 소비한 메시지의 결과가 `Outbound Topic` 에 정상적으로 
+쓰여지기 전까지 `Transaction` 의 `commit` 을 하지 않고 이를 통해 `Transaction` 내 메시지 처리는 원자적으로 수행된다. 
+`Inbound Topic` 의 메시지 소비와 `Outbound Topic` 의 결과 메시지 쓰기는 함께 성공/실패하기 때문에, 
+실패한다면 `Transaction` 은 `Commit` 을 수행하지 않아 타임아웃을 통해 롤백되거나, 메시지 재전송, 트랜잭션 재개를 통한 성공의 상황으로 처리 될 수 있다.  
+
+
+### Enable Kafka Transaction
+`Kafka Transaction` 의 활성화는 `Producer` 에 활성화 설정을 구성해야 하는데, 
+`Producer` 에 `Transaction ID` 를 설정함으로써 설정 가능하다. 
+위 설정이 완료되면 `Producer` 는 `Transaction` 기반 메시지를 작성하게되는데, 
+이는 [Idempotent Producer]()
+의 특성을 가지게 된다. 
+간단히 설명하면 메시지 생성 중 발생하는 일시적 에러가 중복 메시지로 이어지지 않음을 의미한다. 
+`Producer` 에 `Transaction` 을 활성화하면 아래와 같은 흐름으로 동작한다.  
+
+1. `begin Trnasaction` 호출
+2. `Producer` 에서 메시지 발행
+3. `Consumer` 의 `Offset` 도 `Producer` 에게 전송되어 `Transaction` 에 포함
+4. `commitTrnasaciton` 호출을 통해 `Transaction` 완료
+
+`Spring Kafka` 환경이라면 위와 같은 보일러플레이트 코드는 어노테이션을 통해 처리된다. 
+`Outbound Topic` 에 메시지를 작성하는 메소드에 `@Transactional` 을 명시적으로 선언하면 된다. 
+그리고 `KafkaTransactionManager` 를 `Spring Context` 와 연결하면 `Transaction` 관리를 프레임워크에게 위임할 수 있다.   
