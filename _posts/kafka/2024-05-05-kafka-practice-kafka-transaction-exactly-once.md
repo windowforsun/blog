@@ -78,3 +78,29 @@ use_math: true
 `Spring Kafka` 환경이라면 위와 같은 보일러플레이트 코드는 어노테이션을 통해 처리된다. 
 `Outbound Topic` 에 메시지를 작성하는 메소드에 `@Transactional` 을 명시적으로 선언하면 된다. 
 그리고 `KafkaTransactionManager` 를 `Spring Context` 와 연결하면 `Transaction` 관리를 프레임워크에게 위임할 수 있다.   
+
+
+### About DB, REST API
+`Transactional API` 를 사용한 `Exactly-Once` 는 `Outbound Topic` 의 메시지 쓰기에 대해서만 정확하 한번을 보장한다는 것을 기억해야 한다. 
+`Inbound Topic` 에서 메시지를 소비하고, 가공하고, `DB INSERT`, `REST API` 와 결과를 `Outbound Topic` 에 쓰는 애플리케이션을 가정해보자. 
+만약 일시적인 에러로 메시지 재전송이 발생한다면 `DB INSERT`, `REST API` 은 여러번 수행될 수 있고, 
+`Outbound Topic` 을 소비하는 `downstream` 에서만 중복 메시지 처리를 할 필요가 없는 것이다. 
+바로 이러한 이유 때문에 이러한 패턴이 실제 애플리케이션 요구사항을 충족하기에 적합하지 않을 수 있다.  
+
+이러한 외부 시스템과의 연동성에서도 중복 처리를 피하기위해서는 `Kafka Trnsaction` 과 [Idempotent Consumer]() 
+를 함께 사용하는 방법이 있다. 
+이는 소비한 메시지의 유니크한 아이디를 기반으로 중복 관리가 되는 `DB` 테이블을 사용하는 방법으로, 
+`DB Transaction` 을 사용해 메시지 처리를 원자적으로 묶는 방식이다. 
+하지만 `Kafka Transaction` 과 `DB Transaction` 은 별개이기 때문에, 
+이를 원자적으로 묶기 위해서는 `Spring` 의 `ChainedTransactionManager` 를 통해 분산 트랜잭션을 수행해야 한다. 
+분산 트랜잭션은 성능 저하, 코드 복잡성 증가 등의 많은 단점이 있기 때문에 피하는 것이 좋다.  
+
+
+### Consumer Isolation Level
+`Consumer` 는 `Exactly-Once` 를 보장하기 위해 읽기에 대한 `isolation.level` 을 `READ_COMMITTED` 로 설정해야 한다. 
+이는 `Kafka Transaction` 을 통해 `Topic` 에 쓰여진 메시지가 `Commit` 으로 표시될 때까지 읽지 않도록 보장하는 설정이다.
+(하지만 `Non-Transactional` 메시지는 커밋과는 상관없이 소비 할 수 있다.) 
+`Topic Partition` 은 `Commit` 이 수행 될 떄까지 해당 `Consumer Group` 의 `Consumer Instance` 가 추가적인 읽기 수행을 막게된다.  
+
+읽기에 대한 `isolation.level` 은 기본적으로 `READ_UNCOMMITTED` 설정이다. 
+그러므로 `Kafka Transaction` 기반 메시지가 쓰여지더라도 `Commit` 과는 상관없이 바로 소비함을 기억하자. 
