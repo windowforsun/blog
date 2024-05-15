@@ -104,3 +104,54 @@ use_math: true
 
 읽기에 대한 `isolation.level` 은 기본적으로 `READ_UNCOMMITTED` 설정이다. 
 그러므로 `Kafka Transaction` 기반 메시지가 쓰여지더라도 `Commit` 과는 상관없이 바로 소비함을 기억하자. 
+
+
+### Using Kafka Transaction
+아래 그림은 `Kafka Transaction` 을 기반으로 메시지가 쓰여지는 과정을 보여준다. 
+`Inbound Topic` 에서 메시지를 소비하고, 처리 후, `Outbound Topic` 에 결과를 작성하는 흐름으로 
+결과를 발생하는 `Outbound Topic` 은 2개를 사용한다.  
+
+.. 그림 .. 
+
+`Kafka Transaction` 이 사용될 때 `Kafka` 구성으로는 `Outbound Topic` 이 작성되는 `Topic Partition` 과 
+`Transaction Coordinator` 가 있다. 
+`Transaction Coordinator` 는 `Transaciton Log`를 통해 진행 상황을 추적하며 트랜잭션 수행을 전체적으로 조정하는 역할을 수행한다. 
+`Transaction Log` 는 `Kafka` 에서 제공하는 별도의 내부 토픽으로, 
+일관성을 보장하기 위해 최소 세 개의 `Kafka Broker` 인스턴스가 구성되어야 한다.  
+
+그리고 `Consumer Coordinator` 는 `Consumer` 들이 소비한 메시지의 `offset` 을 관리한다. 
+이런 `offset` 또한 메시지 처리의 원자성을 보장하기 위해 트랜잭션 내에 `offset` 갱신이 이뤄져야 한다. 
+일반적인 상황에서 `Consumer Coorindator` 에게 `offset` 갱신 요청은 `Consumer` 의 책임이지만, 
+`Kafka Transaction` 가 활성화된 상태에서는 동일 트랜잭션 내에 이를 포함시키기 위해 `Producer` 가 직접 `Consumer Coorindator` 에게 
+요청을 수행한다.  
+
+아래 그림은 위 다이어그램이 수행하는 동일 처리를 각 컴포넌트로 도식화 한것이다. 
+
+.. 그림 ..  
+
+위 그림은 `Producer` 가 두 `Topic Partition` 에 `m1`, `m2` 이라는 2개의 메시지를 작성하는 상황이다. 
+
+아래는 `Producer` 가 수행하는 동작을 표현한 것이다. 
+
+P-1. `Producer` 는 트랜잭션 초기화를 위해 `Transaction Coordinator` 에게 초기화 요청을 보낸다. 
+이 요청에 `producerId` 와 `transactionId` 가 함께 전달되고, 요청을 받은 `Transaction Coordinator` 는
+트랜잭션이 초가화 됐다는 것을 `Transaction Log` 에 작성한다.  
+
+P-2. `Prodocuer` 는 두 결과 메시지 `m1`, `m2` 를 각 `Topic Partition` 인 `tp1`, `tp2` 에 작성한다. 
+그리고 `Consumer Coordinator` 에게 `Consumer` 의 `offset` 갱신을 요청하면 이를 `tp1-offset-m1`, `tp2-offset-m2` 와 같이 표시한다.
+
+> `Producer` 와 `Transaction Coordinator` 와의 트랜잭션 상태 추적에 대한 추가 호출이 수행되지만, 그림은 이는 표현하지 않았다. 
+
+P-3. `Producer` 는 트랜잭션 커밋을 수행하기 위해 `Transaction Coordinator` 에게 관련 요청을 수행한다. 
+
+아래는 `Transaction Coordinator` 가 커밋 요청 단계부터 수행하는 동작을 표현하 것이다. 
+
+TC-1. `Transaction Coordinator` 는 트랜잭션 커밋 준비를 위해 `Prepare` 이라는 로그를 작성한다. 
+이 시점 부터 트랜잭션은 커밋된다.  
+
+TC-2. `Transaction Coordinator` 는 메시지를 작성한 `tp1`, `tp2` 에 `commit marker` 를 작성하고, 
+`Consumer Offset` 에도 `commit marker` 를 작성해 해당 메시지들이 포함된 트랜잭션이 커밋 됐음을 마킹한다.  
+
+TC-3. `Transaction Coordinator` 는 트랜잭션 커밋 로그를 남긴다. 
+
+최종적으로 트랜잭션이 커밋되어 완료 됐고, `READ_COMMITTED` 로 `isolation.level` 이 설정된 `downstream` 은 메시지를 소비할 수 있는 상태가 된다.  
