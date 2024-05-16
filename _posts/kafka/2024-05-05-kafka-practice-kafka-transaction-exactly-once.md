@@ -155,3 +155,25 @@ TC-2. `Transaction Coordinator` 는 메시지를 작성한 `tp1`, `tp2` 에 `com
 TC-3. `Transaction Coordinator` 는 트랜잭션 커밋 로그를 남긴다. 
 
 최종적으로 트랜잭션이 커밋되어 완료 됐고, `READ_COMMITTED` 로 `isolation.level` 이 설정된 `downstream` 은 메시지를 소비할 수 있는 상태가 된다.  
+
+
+### Retry
+트랜잭션이 `Transaction Coordinator` 에 의해 초기화되고 진행 중인 상황에서 애플리케이션이 실패한다면, 
+다음 폴링떄 동일한 메시지를 다시 소비하게 된다. 
+그리고 `Producer` 는 다시 트랜잭션을 초기화를 하려하는데, `Transaction Coordinator` 는 
+`producerId` 와 `transactionId` 를 사용하여 일치하는 트랜잭션을 찾고 해당 트랜잭션이 아직 커밋/중단 되지 않음을 알 수 있다. 
+그러므로 해당 트랜잭션을 다시 재개하는 방식으로 `exactly-once` 메시지가 커밋/중담 됨을 보장한다.  
+
+.. 그림 ..
+
+### Transaction Timeout
+트랜잭션이 초기화되고 처리 중 실패된 상태가 `transaction.max.timeout.ms` 시간 이상 동안 유지된다면, 
+`Transaction Log` 에 `committed` 대신 `aborted` 를 남기게 된다. 
+그리고 트랜잭션에 해당하는 메시지의 `Topic Partition` 에도 `abort marker` 를 남긴다.  
+
+
+---  
+## Reference
+[Kafka Transactions: Part 1 - Exactly-Once Messaging](https://www.lydtechconsulting.com/blog-kafka-transactions-part1.html)     
+
+
