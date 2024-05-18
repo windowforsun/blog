@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Transaction Exactly Once"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 에서 Transaction 과 Exactly-Once 의 의미와 동작에 대해 알아보자 '
 author: "window_for_sun"
 header-style: text
 categories :
@@ -41,7 +41,7 @@ use_math: true
 `Kafka Broker` 에서 메시지를 소비하는 `Consumer` 는 `at-least-once` 특성으로 메시지를 소비하기 때문에 최소 한번 메시지 소비를 보장 받을 수 있다. 
 일시적인 실패 시나리오에서 메시지는 재전송되어 손실이 발생하지 않기 때문이다. 
 하지만 이는 최소 한번은 메시지를 소비할 수 있지만 재전송 과정에서 중복 메시지가 발생할 수 있는 상황이 있다. 
-이러한 중복 메시지에 대한 처리는 [Idempotent Consumer]()
+이러한 중복 메시지에 대한 처리는 [Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-02-01-kafka-practice-kafka-duplication-patterns.md %})
 를 통해 처리가 필요하다. (하지만 이는 추가적인 오버헤드가 있다.)  
 
 `Kafka` 에서 `exactly-once` 는 여러 단계의 처리 과정이 정확히 한번 수행된다는 것을 의미한다. 
@@ -50,7 +50,7 @@ use_math: true
 메시지 처리 과정에서 재전송 등의 동작은 발생 할 수 있어 `Inbound Topic` 에서 메시지가 여러번 소비 될 수는 있지만, 
 결과가 쓰여지는 `Outbound Topic` 에 정확히 한번 결과가 쓰여지고 중복 이벤트가 발생하는 결과를 방지 할 수 있다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-1.drawio.png)  
 
 
 ### Failure Case
@@ -65,7 +65,7 @@ use_math: true
 `Kafka Transaction` 의 활성화는 `Producer` 에 활성화 설정을 구성해야 하는데, 
 `Producer` 에 `Transaction ID` 를 설정함으로써 설정 가능하다. 
 위 설정이 완료되면 `Producer` 는 `Transaction` 기반 메시지를 작성하게되는데, 
-이는 [Idempotent Producer]()
+이는 [Idempotent Producer]({{site.baseurl}}{% link _posts/kafka/2024-02-10-kafka-practice-kafka-idempotent-producer.md %})
 의 특성을 가지게 된다. 
 간단히 설명하면 메시지 생성 중 발생하는 일시적 에러가 중복 메시지로 이어지지 않음을 의미한다. 
 `Producer` 에 `Transaction` 을 활성화하면 아래와 같은 흐름으로 동작한다.  
@@ -87,7 +87,7 @@ use_math: true
 `Outbound Topic` 을 소비하는 `downstream` 에서만 중복 메시지 처리를 할 필요가 없는 것이다. 
 바로 이러한 이유 때문에 이러한 패턴이 실제 애플리케이션 요구사항을 충족하기에 적합하지 않을 수 있다.  
 
-이러한 외부 시스템과의 연동성에서도 중복 처리를 피하기위해서는 `Kafka Trnsaction` 과 [Idempotent Consumer]() 
+이러한 외부 시스템과의 연동성에서도 중복 처리를 피하기위해서는 `Kafka Trnsaction` 과 [Idempotent Consumer]({{site.baseurl}}{% link _posts/kafka/2024-02-01-kafka-practice-kafka-duplication-patterns.md %})
 를 함께 사용하는 방법이 있다. 
 이는 소비한 메시지의 유니크한 아이디를 기반으로 중복 관리가 되는 `DB` 테이블을 사용하는 방법으로, 
 `DB Transaction` 을 사용해 메시지 처리를 원자적으로 묶는 방식이다. 
@@ -111,7 +111,7 @@ use_math: true
 `Inbound Topic` 에서 메시지를 소비하고, 처리 후, `Outbound Topic` 에 결과를 작성하는 흐름으로 
 결과를 발생하는 `Outbound Topic` 은 2개를 사용한다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-2.png)
 
 `Kafka Transaction` 이 사용될 때 `Kafka` 구성으로는 `Outbound Topic` 이 작성되는 `Topic Partition` 과 
 `Transaction Coordinator` 가 있다. 
@@ -127,7 +127,7 @@ use_math: true
 
 아래 그림은 위 다이어그램이 수행하는 동일 처리를 각 컴포넌트로 도식화 한것이다. 
 
-.. 그림 ..  
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-3.drawio.png)
 
 위 그림은 `Producer` 가 두 `Topic Partition` 에 `m1`, `m2` 이라는 2개의 메시지를 작성하는 상황이다. 
 
@@ -164,16 +164,19 @@ TC-3. `Transaction Coordinator` 는 트랜잭션 커밋 로그를 남긴다.
 `producerId` 와 `transactionId` 를 사용하여 일치하는 트랜잭션을 찾고 해당 트랜잭션이 아직 커밋/중단 되지 않음을 알 수 있다. 
 그러므로 해당 트랜잭션을 다시 재개하는 방식으로 `exactly-once` 메시지가 커밋/중담 됨을 보장한다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-4.png)
 
 ### Transaction Timeout
 트랜잭션이 초기화되고 처리 중 실패된 상태가 `transaction.max.timeout.ms` 시간 이상 동안 유지된다면, 
 `Transaction Log` 에 `committed` 대신 `aborted` 를 남기게 된다. 
 그리고 트랜잭션에 해당하는 메시지의 `Topic Partition` 에도 `abort marker` 를 남긴다.  
 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-5.png)
+
 
 ---  
 ## Reference
 [Kafka Transactions: Part 1 - Exactly-Once Messaging](https://www.lydtechconsulting.com/blog-kafka-transactions-part1.html)     
+[KIP-98 - Exactly Once Delivery and Transactional Messaging](https://cwiki.apache.org/confluence/display/KAFKA/KIP-98+-+Exactly+Once+Delivery+and+Transactional+Messaging)     
 
 
