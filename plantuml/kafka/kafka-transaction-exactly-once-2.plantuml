@@ -1,0 +1,38 @@
+@startuml
+
+participant in as "Inbound Topic"
+participant app as "Application"
+participant tc as "Transaction\n Coordinator"
+participant tl as "Transaction\n Log"
+participant out1 as "Outbound Topic 1"
+participant out2 as "Outbound Topic 2"
+participant cc as "Consumer\n Coordinator"
+participant co as "Consumer\n Offsets"
+
+title Kafka Transaction Flow
+
+in -> app : consume
+activate app
+app -> tc : init
+activate tc
+note over tc : Begin Transaction
+tc -> tl : write init
+deactivate tc
+app -> out1 : produce
+app -> out2 : produce
+app -> cc : send offsets
+activate cc
+cc -> co : write offsets
+deactivate cc
+app -> tc : commit
+activate tc
+note over tc : Commit Transaction
+tc -> tl : write prepare
+tc -> out1 : write commit marker
+tc -> out2 : write commit marker
+tc -> cc : write commit marker
+tc -> tl : write commited
+deactivate tc
+
+
+@enduml

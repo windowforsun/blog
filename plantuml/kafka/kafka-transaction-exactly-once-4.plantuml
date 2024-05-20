@@ -1,0 +1,32 @@
+@startuml
+
+participant in as "Inbound Topic"
+participant app as "Application"
+participant tc as "Transaction\n Coordinator"
+participant tl as "Transaction\n Log"
+participant out1 as "Outbound Topic 1"
+
+title Kafka Transaction Application Retry
+
+in -> app : consume
+activate app
+app -> tc : init
+activate tc
+note over tc : Begin Transaction
+tc -> tl : write init
+deactivate tc
+app -> out1 : produce
+destroy app
+
+note over app : error
+
+in -> app : consume(re-polled)
+activate app
+app -> tc : init
+note over tc : transaction resumes
+note over app : resumes transaction flow
+
+
+
+
+@enduml
