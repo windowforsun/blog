@@ -47,3 +47,59 @@ use_math: true
 각 `Partition` 의 `Leader Replica` 는 `Follower Replica` 의 `Lag` 상태를 추적한다. 
 그리고 `Leader Replica` 가 `replica.lag.time.max.ms` 내 `Follower Replica` 에게 최신 데이터 `Fetch` 요청을 받지 못하거나, 
 해딩 시간내에 `Leader Replica` 의 가장 최신 데이터까지 동기화를 못한 경우에는 동기화 되지 않은 걸로 간주해 `ISR` 에서 제거된다.  
+
+### Under Replicated Partition
+`Topic Partition` 에 `replication.factor` 만큼 존재하지만, 
+`Follower Replica` 가 `Leader Replica` 와 비교해서 `Lag` 이 크게 발생한 경우 이를 `Under Replicated Partition` 이라고 한다. 
+운영중 모니터링에 중요한 항목이기 때문에 `Topic Partition` 중 `Under Replicated Partition` 이 존재하는지 확인이 필요하다.  
+
+### HWM(High Watermark) Offset
+`High Watermark Offset` 은 `ISR Topic Partition` 에 작성된 최신 `Offset` 을 의미하고, 
+이는 `Replica` 에 `Commit` 되었고 `Durability` 를 보장하는 가장 최신 데이터이다. 
+`Producer` 는 `Topic Partition` 중 `Leader Replica` 에게만 데이터르 작성하고, 
+`Consumer` 는 `Leader, Follower Replica` 모두에게 메시지를 읽을 수 있다. (별도 설정 필요)
+그리고 `Consumer` 가 소비할 수 있는 최신 메시지의 위치가 `High Watermark Offset` 이므로 해당 위치까지만 읽을 수 있다. 
+`Follower Replica` 는 `Leader Replica` 로 부터 `High Watermark Offset` 을 전달 받는데 그 시점은 아래와 같다. 
+`Leader Replica` 에게 쓰여진 데이터가 `ISR` 의 모든 `Follower Replica` 에게 작성되고 확인되면, 
+`Leader Replica` 는 최신화된 `High Watermark Offset` 을 `Follower Replica` 들에게 `Fetch` 요청의 응답으로 알린다.    
+
+
+### Replication Config
+아래표는 `Kafka` 에서 `Topic Partition` 의 `Replication` 과 연관된 주요한 설정들을 정리한 것이다.  
+
+Properties|Type|Desc|Default
+---|---|---|---
+acks|Producer|`Producer` 가 `Broker` 에게 메시지 작성을 요청했을 때 얼만큼의 `Replication` 의 `acks` 를 받을지|all
+default.replication.factor|Broker|자동생성되는 `Topic` 의 `Replication Factor` 적용 값|1
+min.insync.replicas|Broker/Topic|유지할 `ISR` 의 최소값으로, `acks=all` 일떄 해당 수 만큼의 `Replication` 의 작성이 완료돼야 한다. `Topic` 에 설정되지 않은 경우 `Broker` 의 설정 값을 사용한다. 
+replica.lag.time.max.ms|Broker|`ISR` 에 제거되기까지 `Replication` 의 `lag` 복구를 기다리는 최대 지연 시간|3000
+
+자동으로 생성되는 `Topic` 의 경우 `default.replication.factor` 에 의해 복제본 수가 정해지고, 
+이후 조정이 필요하다면 `Kafka Admin` 을 사용해서 `--replication-factor` 를 사용해 지정해야 한다.  
+
+### Example
+`Replication` 의 예시를 보기위해 3개로 구성된 `Kafka Broker` 와 아래 설정 값을 사용한다고 가정한다.  
+
+Properties|Value
+---|---
+acks|all
+default.replication.factor|3
+min.insync.replica|2
+
+아래 도식화된 그림을 보면 `T1` 이라는 `Topic` 은 `default.replication.factor` 의해 3개의 `Replication` 을 갖고 이는 각 노드에 존재한다. 
+`M1`, `M2` 메시지가 쓰여진 상태로 이 두 메시지는 모든 `Replication` 에 복제가 성공했으므로 `High Watermark Offset` 은 2인 상황이다.  
+
+이어서 `M3` 가 `Producer` 로 부터 `Leader Replica` 에게 전달되고 `offset` 3으로 저장된다. 
+그리고 2번 노드 `Follower Replica` 까지는 복제가 성공했지만, 
+3번 노드 `Follower Replica` 는 아직 복제가 되지 않은 상태이다.  
+
+.. 그림 ..
+
+위와 같이 3번 노드의 `Follower Replica` 가 동기화 상태가 아닌 경우라도, 
+`ISR` 인 1번/2번 노드가 있기 때문에 메시지 쓰기는 성공으로 간주된다. 
+그리고 `Leader Replica` 는 `Producer` 에게 `ack` 를 보내 메시지 쓰기 성공을 응답하게 된다.  
+
+만약 3번 노드의 `Follower Replica` 도 동기화 상태인 `ISR` 이라고 가정하더라도, 
+`min.insync.replicas=2` 이기 때문에 3번 노드의 쓰기까지 `Leader Follower` 가 쓰기 성공 여부 응답을 기다리거나 검사하지는 않는다. 
+즉 이는 `min.insync.replicas` 가 클수록 `Leader Follower` 는 많은 `Follower Replica` 가 `ISR` 상태인지 확인 해야 해서 추가적인 대기시간이 발생할 수 있고, 
+값이 적을 수록 더 적은 수의 확인만 수행하면 돼서 더 적은 대기시간이 발생한다.  
