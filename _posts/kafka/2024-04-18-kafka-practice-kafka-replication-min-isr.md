@@ -103,3 +103,58 @@ min.insync.replica|2
 `min.insync.replicas=2` 이기 때문에 3번 노드의 쓰기까지 `Leader Follower` 가 쓰기 성공 여부 응답을 기다리거나 검사하지는 않는다. 
 즉 이는 `min.insync.replicas` 가 클수록 `Leader Follower` 는 많은 `Follower Replica` 가 `ISR` 상태인지 확인 해야 해서 추가적인 대기시간이 발생할 수 있고, 
 값이 적을 수록 더 적은 수의 확인만 수행하면 돼서 더 적은 대기시간이 발생한다.  
+
+### Producer Acks
+[Producer Acks]()
+에서 더 자세한 설명을 확인 할 수 있다. 
+`acks=all` 이 아닌 경우에는 `min.insync.replica` 설정은 중요하지 않다. 
+`acsks=1` 이라면 `Leader Replica` 만 메시지를 쓰면 성공으로 간주하고 `ack` 를 전송한다. 
+그리고 이후 혹은 동시에 나머지 `Follower Replica` 에 복제가 수행될 텐데, 
+복제가 성공하기 전에 `Leader Replica` 가 가용 불가능 상태가 된다면 `Producer` 는 해당 메시지를 쓴 것으로 인지하지만 실제로는 유실된 상황이 발생할 수 있다. 
+만약 `acks=0` 인 경우에는, `Producer` 는 메시지 쓰기 요청을 보낸 후 어떠한 응답도 기다리지 않는 `fire and forget` 으로 동작한다.  
+
+
+### Producer Retry
+`Producer` 가 `Leader Replica` 에게 메시지 쓰기 요청을 해 수행하던 중 
+`min in-sync replicas` 수를 충족할 수 없는 복제본 상태가 발생하면 예외가 발생하고 `Producer` 는 재시도를 수행한다. 
+이는 `min.insync-replicas=3` 인 설정에서 3번 노드가 가용 불가상태라고 가정한다면, 
+2번 노드가 복제 쓰기를 승인하기 전에 실패가 발생한다. 
+이후 복제본 중 하나를 `ISR` 로 승격시키고 재시도 요청을 통해 복제가 성곡하게 되어 최종적으로 쓰기도 성공하게 된다.  
+
+`Producer Retry` 동작은 중복 메시지를 생성할 수 있는데 이는
+[Idempotent Producer]()
+에서 확인 할 수 있다.  
+
+
+### Replication Flow
+아래 그림은 복제흐름을 도식화한 것이다. 
+`replication.reactor=2`, `min.insync.replicas=2`, `acks=all` 일 때 
+`Leader Replica` 로 부터 쓰여진 메시지가 `Follower Replica` 에게 복제되는 흐름을 보여준다. 
+설정된 내용으로 메시지 쓰기는 2개의 `Replication` 모두 쓰기가 완료됨을 확인해야 하고, 
+현재 `High Watermark Offset` 은 2인 상태에서 새로운 메시지가 쓰여지는 시나리오이다.  
+
+.. 그림 ..
+
+`Follower Replica` 는 `Consumer` 와 동일한 방식(poll())으로 `Leader Replica` 로 부터 최신 메시지를 가져오는데, 
+해당 요청을 통해 `Leader Replica` 에세 자신의 현재 `offset` 정보를 알린다. 
+`Leader Follower` 는 `Follower Replica` 의 `offset` 을 통해 `lag` 이 얼마나 발생하는지, 
+어떤 레코드를 필요로하는지 판단한다. 
+그리고 `Leader Replica` 는 `Follower Replica` 에게 필요한 메시지와 최신 `High Watermark Offset` 도 함께 응답한다. 
+위 시나리오에서 최신 메시지는 `offset` 이 3인 메시지이고, `High Watermark Offset` 은 2인 값이 된다. 
+`Follower Replica` 는 해당 응답 값을 통해 메시지 쓰기를 수행하고 다시 최신 메시지를 가져오는 동작을 반복한다. 
+그리고 `Leader Replica` 는 `Follower Replica` 의 동기화가 완료 됐음을 인지하고, 
+`ISR` 에 있는 모든 복제본들의 동기화가 완료 됐기 때문에 `High Watermark Offset` 을 3으로 업데이트하고 다음 `Follower Replica` 요청에 응답으로 보내게 된다. 
+최종적으로 `Leader Replica` 는 `Producer` 에게 쓰기 요청에 대한 `ack` 를 응답하고, 
+이어서 `Follower Replica` 는 `High Watermark Offset` 을 업데이트하게 된다.  
+
+
+이제 `Replication` 이 한개 더 추가된 좀 더 복잡한 시나리오이다. 
+총 3개의 복제본이 있고 모두 `ISR` 에 속해 있으며, `Producer` 쓰기가 성공하기 위해서는 모든 복제본에 쓰기가 성공해야 한다.  
+
+.. 그림 .. 
+
+위 시나리오에서는 `Leader Replica` 가 2개의 `Follower Replica` 로 부터 쓰기 확인을 각각 받은 후에 `High Watermark Offset` 을 갱신할 수 있다. 
+해당 시점에 `Producer` 는 쓰기 요청 성공을 확인 하고, `Follower Replica` 는 다음 요청 `Leader Replica` 의 응답을 통해 자신들의 `High Watermark Offset` 을 갱신할 수 있다. 
+이러한 시나리오를 통해 `ISR`(`min in-sync replicas`) 의 수가 늘어날 수록 `Leader/Follower Replica` 에서 데이터를 읽는 `Consumer` 들의 지연시간이 늘어 날 수 있음을 의미한다. 
+`Consumer` 가 읽을 수 있는 가장 최신 데이터는 `High Watermark Offset` 이기 때문에 해당 값이 업데이트 되기 전까지는 메시지를 얻을 수 없다. 
+만약 직접 `Follower Replica` 로 부터 메시지를 읽는 `Consumer` 라면 이러한 지연 시간은 좀더 증가 할 수 있다.  
