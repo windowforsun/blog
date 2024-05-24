@@ -158,3 +158,56 @@ min.insync.replica|2
 이러한 시나리오를 통해 `ISR`(`min in-sync replicas`) 의 수가 늘어날 수록 `Leader/Follower Replica` 에서 데이터를 읽는 `Consumer` 들의 지연시간이 늘어 날 수 있음을 의미한다. 
 `Consumer` 가 읽을 수 있는 가장 최신 데이터는 `High Watermark Offset` 이기 때문에 해당 값이 업데이트 되기 전까지는 메시지를 얻을 수 없다. 
 만약 직접 `Follower Replica` 로 부터 메시지를 읽는 `Consumer` 라면 이러한 지연 시간은 좀더 증가 할 수 있다.  
+
+
+### Durability, Availability and Latency
+`min.insync.replicas` 의 값을 늘리게 되면 해당 `Topic Partition` 의 `Durability` 는 증가하는데, 
+이는 메시지가 다수의 노드/브로커에 걸쳐 복제 됐음을 보장하기 때문이다. 
+그리고 특정 노드/브로커가 가용 불가상태가 되더라도 신규 `Leader Replica` 를 선출하거나 `Follower Replica` 에서 메시지를 읽는 등으로 
+더 높은 `Availibility` 를 보장 할 수 있다. 
+하지만 이는 앞서 설명한 것처럼 지연시간을 늘릴 수 있다. 
+`Producer` 로 부터 전달된 메시지 쓰기가 완전히 쓰여진걸로 확인 되기 까지, 
+혹은 `Consumer` 가 `Producer` 로 부터 전달된 메시지를 읽기까지 `ISR` 구성이 모두 동기화 된 상태(리더로 부터 동기화 확인)를 확인해야 하기 때문이다. 
+
+
+### Unclean Leader Election
+`Kafka Cluster` 를 구성하는 여러 노드 중 하나의 노드가 실패하면, 
+해당 노드에 있는 복제본, `Leader Replica` 들은 재할당이 필요하다. 
+`unclean.leader.election.enable=false` 라면, 
+`Leader Replica` 의 노드가 죽기전 동기화가 완료된 `Follower Replica` 중에서만 새로운 `Leader Replica` 가 선출 될 수 있다. 
+`unclean.leader.election.enable=true` 일 때는, 
+`Leader Replica` 의 노드가 죽기전 동기화가 완료되지 않은 `Follower Replica` 도 `Leader Replica` 로 선출 될 수 있다. 
+이는 복제되지 않은 메시지들로 인해 메시지 유실이 발생 할 수 있고, 
+데이터의 일관성과 가용성간의 상관관계를 의미한다.  
+
+
+### Consumer Offsets
+`__consumer_offsets` 는 `Kafka Consumer` 가 메시지를 성공적으로 소비한 `offset` 을 관리하는 내부 토픽이다. 
+이는 `Kafka Broker` 설정 값인 `min.insync.replicas` 를 통해 `offset` 쓰기 요청에 대한 요구사항을 검증하고, 
+`offsets.topic.replication.factor` 값을 통해 복제본을 얼만큼 유지할지 결정한다. 
+그리고 `offsets.commit.required.acks` 는 `Producer` 의 `acks` 설정과 동일한 역할로, 
+기본값은 -1(`all`)로 이는 `offset` 쓰기가 `ISR` 로 복제되고 `min.insync.replicas` 설정을 만족할 때까지는 성공으로 간주하지 않는다는 것을 의미한다.  
+
+Properties|Type|Desc|Default
+---|---|---|---
+offset.topic.replicaiton.factor|Broker|`__consumer_offsets` 토픽의 복제본 수|3
+offset.commit.required.acks|Broker|`offset` 쓰기 요청을 성공으로 판별하기 위해 `ISR` 의 최소 수|-1(all)
+
+
+### Transaction State Log
+`Kafka` 는 `__transaction_state` 라는 내부 토픽을 사용해서 트랜잭션 상태 로그를 추적하고 관리한다. 
+해당 토픽의 `ISR` 요구사항은 브로커의 `transaction.state.log.min.isr` 설정값으로 결졍된다. 
+그리고 `transaction.state.log.replication.factor` 설정값을 통해 얼만큼의 복제본을 유지할지 결정한다.  
+
+Properties|Type| Desc      |Default
+---|---|-----------|---
+transaciton.state.log.replication.factor|Broker| 유지할 복제본 수 |3
+transaction.state.log.min.isr|`ISR` 의 최소 수| 2         
+
+
+
+---  
+## Reference
+[Kafka Replication & Min In-Sync Replicas](https://www.lydtechconsulting.com/blog-kafka-replication.html)  
+
+
