@@ -103,7 +103,7 @@ min.insync.replica|2
 그리고 2번 노드 `Follower Replica` 까지는 복제가 성공했지만, 
 3번 노드 `Follower Replica` 는 아직 복제가 되지 않은 상태이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/replication-min-in-sync-replicas-1.drawio.png)  
 
 위와 같이 3번 노드의 `Follower Replica` 가 동기화 상태가 아닌 경우라도, 
 `ISR` 인 1번/2번 노드가 있기 때문에 메시지 쓰기는 성공으로 간주된다. 
@@ -115,7 +115,7 @@ min.insync.replica|2
 값이 적을 수록 더 적은 수의 확인만 수행하면 돼서 더 적은 대기시간이 발생한다.  
 
 ### Producer Acks
-[Producer Acks]()
+[Producer Acks]({{site.baseurl}}{% link _posts/kafka/2024-03-12-kafka-practice-kafka-producer-acks.md %})
 에서 더 자세한 설명을 확인 할 수 있다. 
 `acks=all` 이 아닌 경우에는 `min.insync.replica` 설정은 중요하지 않다. 
 `acsks=1` 이라면 `Leader Replica` 만 메시지를 쓰면 성공으로 간주하고 `ack` 를 전송한다. 
@@ -132,7 +132,7 @@ min.insync.replica|2
 이후 복제본 중 하나를 `ISR` 로 승격시키고 재시도 요청을 통해 복제가 성곡하게 되어 최종적으로 쓰기도 성공하게 된다.  
 
 `Producer Retry` 동작은 중복 메시지를 생성할 수 있는데 이는
-[Idempotent Producer]()
+[Idempotent Producer]({{site.baseurl}}{% link _posts/kafka/2024-02-10-kafka-practice-kafka-idempotent-producer.md %})
 에서 확인 할 수 있다.  
 
 
@@ -143,7 +143,7 @@ min.insync.replica|2
 설정된 내용으로 메시지 쓰기는 2개의 `Replication` 모두 쓰기가 완료됨을 확인해야 하고, 
 현재 `High Watermark Offset` 은 2인 상태에서 새로운 메시지가 쓰여지는 시나리오이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/replication-min-in-sync-replicas-2.png)
 
 `Follower Replica` 는 `Consumer` 와 동일한 방식(poll())으로 `Leader Replica` 로 부터 최신 메시지를 가져오는데, 
 해당 요청을 통해 `Leader Replica` 에세 자신의 현재 `offset` 정보를 알린다. 
@@ -161,7 +161,7 @@ min.insync.replica|2
 이제 `Replication` 이 한개 더 추가된 좀 더 복잡한 시나리오이다. 
 총 3개의 복제본이 있고 모두 `ISR` 에 속해 있으며, `Producer` 쓰기가 성공하기 위해서는 모든 복제본에 쓰기가 성공해야 한다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/replication-min-in-sync-replicas-3.png)
 
 위 시나리오에서는 `Leader Replica` 가 2개의 `Follower Replica` 로 부터 쓰기 확인을 각각 받은 후에 `High Watermark Offset` 을 갱신할 수 있다. 
 해당 시점에 `Producer` 는 쓰기 요청 성공을 확인 하고, `Follower Replica` 는 다음 요청 `Leader Replica` 의 응답을 통해 자신들의 `High Watermark Offset` 을 갱신할 수 있다. 
