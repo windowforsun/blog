@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Replication Min ISR"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 분산 메시징 시스템의 고가용성과 내구성 그리고 메시징 성능과 관련있는 Replication 과 Min In-Sync Replicas 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,16 @@ categories :
 tags:
     - Practice
     - Kafka
+    - ISR
+    - Replication
+    - HWM
+    - Producer Acks
+    - Producer Retry
+    - Consumer Offsets
+    - Transaction
+    - Min In Sync Replicas
+    - Producer
+    - Consumer
 toc: true
 use_math: true
 ---
