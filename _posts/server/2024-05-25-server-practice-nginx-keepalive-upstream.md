@@ -337,3 +337,276 @@ $ tcpdump -r dump | grep 40096
 이제 이후 예제에서 주요한 설정이 호환되지 않을 경우 발생하는 문제점에 대해 알아본다.  
 
 
+
+
+### Invalid Keepalive Timeout
+
+| 구분     | 설정 필드             | 설정값
+|--------|-------------------|------
+|  Nginx | keepalive         | 1    
+| | keepalive_requests | 3    
+| | keepalive_time    | 10s   
+| | keepalive_timeout | 9s   
+| | worker_processes  | 2    
+| | worker_connections | 1024 
+|Spring Boot Web|server.tomcat.max-connections| 8 
+| |server.tomcat.threads.max| 4   
+| |server.tomcat.threads.min-spare| 2
+| |server.tomcat.keep-alive-timeout| 1s 
+| |server.tomcat.max-keep-alive-requests| 20
+| |server.tomcat.accept-count| 1  
+
+
+다른 부분들은 모두 상단 `allok` 의 예제와 동일하다. 
+차이점은 `server.tomcat.keep-alive-timeout` 값을 `20s -> 1s` 변경해 
+`Nginx` 의 `keepalive_time` 의 `10s` 보다 더 작은 값으로 설정했다.  
+
+
+```
+# nginx-keepalive-invalidkeepalivetimeout.conf
+
+user  nginx;
+worker_processes  2;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    log_format main '$remote_addr [$time_local] "$request" $status $body_bytes_sent $request_time $connection $connection_requests';
+
+    keepalive_timeout  0;
+
+    upstream app {
+        server springapp:8080;
+        keepalive 1;
+        keepalive_time 10s;
+        keepalive_timeout 9s;
+        keepalive_requests 3;
+    }
+
+    server {
+      listen 80;
+
+      access_log /dev/stdout main;
+      error_log /logs/error.log warn;
+
+      location / {
+          proxy_connect_timeout 1s;
+          proxy_send_timeout 1s;
+          proxy_read_timeout 2s;
+          proxy_pass http://app;
+          proxy_http_version 1.1;
+          proxy_set_header Connection "";
+      }
+
+      location = /server-status {
+          stub_status on;
+          access_log off;
+      }
+    }
+}
+```
+
+```properties
+# application-invalidkeepalivetimeout.yaml
+
+server:
+  http2:
+    enabled: true
+  tomcat:
+    threads:
+      max: 4
+      min-spare: 1
+    connection-timeout: 1s
+    # 20s -> 1s 로 수정
+    keep-alive-timeout: 1s
+    max-keep-alive-requests: 20
+    max-connections: 8
+    accept-count: 1
+```  
+
+총 7개의 커넥션이 맺어지고 해제되었는데 
+각 커넥션이 어떻게 사용됐는지 살펴보자. 
+
+
+```bash
+$ tcpdump -r dump | grep 48844
+
+... 1번째 Keepalive Connection 연결 ...
+10:06:26.434309 IP nginx.48844 > springapp.docker_test-net.8080: Flags [S], seq 3287234526, win 64240, options [mss 1460,sackOK,TS val 2146966469 ecr 0,nop,wscale 7], length 0
+10:06:26.434418 IP springapp.docker_test-net.8080 > nginx.48844: Flags [S.], seq 3224910527, ack 3287234527, win 65160, options [mss 1460,sackOK,TS val 3471979884 ecr 2146966469,nop,wscale 7], length 0
+10:06:26.434430 IP nginx.48844 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146966470 ecr 3471979884], length 0
+
+... 1번째 요청 ...
+10:06:26.434497 IP nginx.48844 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146966470 ecr 3471979884], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:26.434506 IP springapp.docker_test-net.8080 > nginx.48844: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471979884 ecr 2146966470], length 0
+10:06:27.467721 IP springapp.docker_test-net.8080 > nginx.48844: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471980917 ecr 2146966470], length 120: HTTP: HTTP/1.1 200 
+10:06:27.467764 IP nginx.48844 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146967503 ecr 3471980917], length 0
+
+... 1번째 Keepalive Connection 해제 ...
+10:06:28.473024 IP springapp.docker_test-net.8080 > nginx.48844: Flags [F.], seq 121, ack 78, win 509, options [nop,nop,TS val 3471981922 ecr 2146967503], length 0
+10:06:28.473266 IP nginx.48844 > springapp.docker_test-net.8080: Flags [F.], seq 78, ack 122, win 502, options [nop,nop,TS val 2146968508 ecr 3471981922], length 0
+10:06:28.473303 IP springapp.docker_test-net.8080 > nginx.48844: Flags [.], ack 79, win 509, options [nop,nop,TS val 3471981922 ecr 2146968508], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 48852
+
+... 2번째 Keepalive Connection 연결 ...
+10:06:27.445404 IP nginx.48852 > springapp.docker_test-net.8080: Flags [S], seq 1130452829, win 64240, options [mss 1460,sackOK,TS val 2146967481 ecr 0,nop,wscale 7], length 0
+10:06:27.445450 IP springapp.docker_test-net.8080 > nginx.48852: Flags [S.], seq 499543328, ack 1130452830, win 65160, options [mss 1460,sackOK,TS val 3471980895 ecr 2146967481,nop,wscale 7], length 0
+10:06:27.445459 IP nginx.48852 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146967481 ecr 3471980895], length 0
+
+... 2번째 요청 ...
+10:06:27.445507 IP nginx.48852 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146967481 ecr 3471980895], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:27.445516 IP springapp.docker_test-net.8080 > nginx.48852: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471980895 ecr 2146967481], length 0
+10:06:28.475116 IP springapp.docker_test-net.8080 > nginx.48852: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471981924 ecr 2146967481], length 120: HTTP: HTTP/1.1 200 
+10:06:28.475152 IP nginx.48852 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146968510 ecr 3471981924], length 0
+
+... 3번째 요청 ...
+10:06:29.469904 IP nginx.48852 > springapp.docker_test-net.8080: Flags [P.], seq 78:155, ack 121, win 502, options [nop,nop,TS val 2146969505 ecr 3471981924], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:29.469949 IP springapp.docker_test-net.8080 > nginx.48852: Flags [.], ack 155, win 509, options [nop,nop,TS val 3471982919 ecr 2146969505], length 0
+10:06:30.478039 IP springapp.docker_test-net.8080 > nginx.48852: Flags [P.], seq 121:241, ack 155, win 509, options [nop,nop,TS val 3471983927 ecr 2146969505], length 120: HTTP: HTTP/1.1 200 
+10:06:30.478117 IP nginx.48852 > springapp.docker_test-net.8080: Flags [.], ack 241, win 502, options [nop,nop,TS val 2146970513 ecr 3471983927], length 0
+
+... 4번째 요청 ...
+10:06:30.490141 IP nginx.48852 > springapp.docker_test-net.8080: Flags [P.], seq 155:232, ack 241, win 502, options [nop,nop,TS val 2146970525 ecr 3471983927], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:30.490184 IP springapp.docker_test-net.8080 > nginx.48852: Flags [.], ack 232, win 509, options [nop,nop,TS val 3471983939 ecr 2146970525], length 0
+10:06:31.499574 IP springapp.docker_test-net.8080 > nginx.48852: Flags [P.], seq 241:361, ack 232, win 509, options [nop,nop,TS val 3471984948 ecr 2146970525], length 120: HTTP: HTTP/1.1 200 
+
+... 2번째 Keepalive Connection 해제 ...
+10:06:31.501013 IP nginx.48852 > springapp.docker_test-net.8080: Flags [F.], seq 232, ack 361, win 502, options [nop,nop,TS val 2146971536 ecr 3471984948], length 0
+10:06:31.503547 IP springapp.docker_test-net.8080 > nginx.48852: Flags [F.], seq 361, ack 233, win 509, options [nop,nop,TS val 3471984953 ecr 2146971536], length 0
+10:06:31.503574 IP nginx.48852 > springapp.docker_test-net.8080: Flags [.], ack 362, win 502, options [nop,nop,TS val 2146971539 ecr 3471984953], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 48854
+
+... 3번째 Keepalive Connection 연결 ...
+10:06:28.471007 IP nginx.48854 > springapp.docker_test-net.8080: Flags [S], seq 228758932, win 64240, options [mss 1460,sackOK,TS val 2146968506 ecr 0,nop,wscale 7], length 0
+10:06:28.471098 IP springapp.docker_test-net.8080 > nginx.48854: Flags [S.], seq 1047666222, ack 228758933, win 65160, options [mss 1460,sackOK,TS val 3471981920 ecr 2146968506,nop,wscale 7], length 0
+10:06:28.471117 IP nginx.48854 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146968506 ecr 3471981920], length 0
+
+... 5번째 요청 ...
+10:06:28.471340 IP nginx.48854 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146968506 ecr 3471981920], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:28.471362 IP springapp.docker_test-net.8080 > nginx.48854: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471981920 ecr 2146968506], length 0
+10:06:29.479653 IP springapp.docker_test-net.8080 > nginx.48854: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471982929 ecr 2146968506], length 120: HTTP: HTTP/1.1 200 
+10:06:29.479719 IP nginx.48854 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146969515 ecr 3471982929], length 0
+
+... 3번째 Keepalive Connection 해제 ...
+10:06:30.479458 IP nginx.48854 > springapp.docker_test-net.8080: Flags [F.], seq 78, ack 121, win 502, options [nop,nop,TS val 2146970515 ecr 3471982929], length 0
+10:06:30.482761 IP springapp.docker_test-net.8080 > nginx.48854: Flags [F.], seq 121, ack 79, win 509, options [nop,nop,TS val 3471983932 ecr 2146970515], length 0
+10:06:30.482779 IP nginx.48854 > springapp.docker_test-net.8080: Flags [.], ack 122, win 502, options [nop,nop,TS val 2146970518 ecr 3471983932], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 50752
+
+... 4번째 Keepalive Connection 연결 ...
+10:06:31.515657 IP nginx.50752 > springapp.docker_test-net.8080: Flags [S], seq 676558160, win 64240, options [mss 1460,sackOK,TS val 2146971551 ecr 0,nop,wscale 7], length 0
+10:06:31.515703 IP springapp.docker_test-net.8080 > nginx.50752: Flags [S.], seq 476368873, ack 676558161, win 65160, options [mss 1460,sackOK,TS val 3471984965 ecr 2146971551,nop,wscale 7], length 0
+10:06:31.515708 IP nginx.50752 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146971551 ecr 3471984965], length 0
+
+... 6번째 요청 ...
+10:06:31.515754 IP nginx.50752 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146971551 ecr 3471984965], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:31.515759 IP springapp.docker_test-net.8080 > nginx.50752: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471984965 ecr 2146971551], length 0
+10:06:32.522330 IP springapp.docker_test-net.8080 > nginx.50752: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471985971 ecr 2146971551], length 120: HTTP: HTTP/1.1 200 
+10:06:32.522416 IP nginx.50752 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146972558 ecr 3471985971], length 0
+
+... 7번째 요청 ...
+10:06:32.532043 IP nginx.50752 > springapp.docker_test-net.8080: Flags [P.], seq 78:155, ack 121, win 502, options [nop,nop,TS val 2146972567 ecr 3471985971], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:32.532091 IP springapp.docker_test-net.8080 > nginx.50752: Flags [.], ack 155, win 509, options [nop,nop,TS val 3471985981 ecr 2146972567], length 0
+10:06:33.544727 IP springapp.docker_test-net.8080 > nginx.50752: Flags [P.], seq 121:241, ack 155, win 509, options [nop,nop,TS val 3471986994 ecr 2146972567], length 120: HTTP: HTTP/1.1 200 
+10:06:33.593857 IP nginx.50752 > springapp.docker_test-net.8080: Flags [.], ack 241, win 502, options [nop,nop,TS val 2146973629 ecr 3471986994], length 0
+
+... 8번째 요청 응답 전 커넥션이 끊겨 실패 ...
+10:06:34.552353 IP nginx.50752 > springapp.docker_test-net.8080: Flags [P.], seq 155:232, ack 241, win 502, options [nop,nop,TS val 2146974587 ecr 3471986994], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+
+... 4번째 Keepalive Connection 해제 ...
+10:06:34.552367 IP springapp.docker_test-net.8080 > nginx.50752: Flags [F.], seq 241, ack 155, win 509, options [nop,nop,TS val 3471988001 ecr 2146973629], length 0
+10:06:34.552394 IP springapp.docker_test-net.8080 > nginx.50752: Flags [.], ack 232, win 509, options [nop,nop,TS val 3471988002 ecr 2146974587], length 0
+10:06:34.552554 IP nginx.50752 > springapp.docker_test-net.8080: Flags [F.], seq 232, ack 242, win 502, options [nop,nop,TS val 2146974588 ecr 3471988001], length 0
+10:06:34.552580 IP springapp.docker_test-net.8080 > nginx.50752: Flags [.], ack 233, win 509, options [nop,nop,TS val 3471988002 ecr 2146974588], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 50758
+
+... 5번째 Keepalive Connection 연결 ...
+10:06:33.542625 IP nginx.50758 > springapp.docker_test-net.8080: Flags [S], seq 573566322, win 64240, options [mss 1460,sackOK,TS val 2146973578 ecr 0,nop,wscale 7], length 0
+10:06:33.542734 IP springapp.docker_test-net.8080 > nginx.50758: Flags [S.], seq 2169468269, ack 573566323, win 65160, options [mss 1460,sackOK,TS val 3471986992 ecr 2146973578,nop,wscale 7], length 0
+10:06:33.542753 IP nginx.50758 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146973578 ecr 3471986992], length 0
+
+... 9번째 요청 ...
+10:06:33.542838 IP nginx.50758 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146973578 ecr 3471986992], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:33.542849 IP springapp.docker_test-net.8080 > nginx.50758: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471986992 ecr 2146973578], length 0
+10:06:34.554867 IP springapp.docker_test-net.8080 > nginx.50758: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471988004 ecr 2146973578], length 120: HTTP: HTTP/1.1 200 
+10:06:34.554945 IP nginx.50758 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146974590 ecr 3471988004], length 0
+
+... 5번째 Keepalive Connection 해제 ...
+10:06:35.566180 IP springapp.docker_test-net.8080 > nginx.50758: Flags [F.], seq 121, ack 78, win 509, options [nop,nop,TS val 3471989015 ecr 2146974590], length 0
+10:06:35.584484 IP nginx.50758 > springapp.docker_test-net.8080: Flags [F.], seq 78, ack 122, win 502, options [nop,nop,TS val 2146975620 ecr 3471989015], length 0
+10:06:35.584537 IP springapp.docker_test-net.8080 > nginx.50758: Flags [.], ack 79, win 509, options [nop,nop,TS val 3471989034 ecr 2146975620], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 50766
+
+... 6번째 Keepalive Connection 연결 ...
+10:06:34.552668 IP nginx.50766 > springapp.docker_test-net.8080: Flags [S], seq 226606064, win 64240, options [mss 1460,sackOK,TS val 2146974588 ecr 0,nop,wscale 7], length 0
+10:06:34.552710 IP springapp.docker_test-net.8080 > nginx.50766: Flags [S.], seq 139710190, ack 226606065, win 65160, options [mss 1460,sackOK,TS val 3471988002 ecr 2146974588,nop,wscale 7], length 0
+10:06:34.552721 IP nginx.50766 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146974588 ecr 3471988002], length 0
+
+... 8번째 요청 재시도 성공 ...
+10:06:34.552782 IP nginx.50766 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146974588 ecr 3471988002], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:34.552796 IP springapp.docker_test-net.8080 > nginx.50766: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471988002 ecr 2146974588], length 0
+10:06:35.571215 IP springapp.docker_test-net.8080 > nginx.50766: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471989020 ecr 2146974588], length 120: HTTP: HTTP/1.1 200 
+10:06:35.571256 IP nginx.50766 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146975606 ecr 3471989020], length 0
+
+... 6번째 Keepalive Connection 해제 ...
+10:06:36.592991 IP springapp.docker_test-net.8080 > nginx.50766: Flags [F.], seq 121, ack 78, win 509, options [nop,nop,TS val 3471990042 ecr 2146975606], length 0
+10:06:36.593947 IP nginx.50766 > springapp.docker_test-net.8080: Flags [F.], seq 78, ack 122, win 502, options [nop,nop,TS val 2146976629 ecr 3471990042], length 0
+10:06:36.594026 IP springapp.docker_test-net.8080 > nginx.50766: Flags [.], ack 79, win 509, options [nop,nop,TS val 3471990043 ecr 2146976629], length 0
+```
+
+```bash
+$ tcpdump -r dump | grep 50780
+
+... 7번째 Keepalive Connection 연결 ...
+10:06:35.585913 IP nginx.50780 > springapp.docker_test-net.8080: Flags [S], seq 2897084479, win 64240, options [mss 1460,sackOK,TS val 2146975621 ecr 0,nop,wscale 7], length 0
+10:06:35.585964 IP springapp.docker_test-net.8080 > nginx.50780: Flags [S.], seq 1666003227, ack 2897084480, win 65160, options [mss 1460,sackOK,TS val 3471989035 ecr 2146975621,nop,wscale 7], length 0
+10:06:35.585974 IP nginx.50780 > springapp.docker_test-net.8080: Flags [.], ack 1, win 502, options [nop,nop,TS val 2146975621 ecr 3471989035], length 0
+
+... 10번째 요청 ...
+10:06:35.586026 IP nginx.50780 > springapp.docker_test-net.8080: Flags [P.], seq 1:78, ack 1, win 502, options [nop,nop,TS val 2146975621 ecr 3471989035], length 77: HTTP: GET /test/1000/1 HTTP/1.1
+10:06:35.586032 IP springapp.docker_test-net.8080 > nginx.50780: Flags [.], ack 78, win 509, options [nop,nop,TS val 3471989035 ecr 2146975621], length 0
+10:06:36.601586 IP springapp.docker_test-net.8080 > nginx.50780: Flags [P.], seq 1:121, ack 78, win 509, options [nop,nop,TS val 3471990051 ecr 2146975621], length 120: HTTP: HTTP/1.1 200 
+10:06:36.601676 IP nginx.50780 > springapp.docker_test-net.8080: Flags [.], ack 121, win 502, options [nop,nop,TS val 2146976637 ecr 3471990051], length 0
+
+... 7번째 Keepalive Connection 해제 ...
+10:06:37.607576 IP springapp.docker_test-net.8080 > nginx.50780: Flags [F.], seq 121, ack 78, win 509, options [nop,nop,TS val 3471991057 ecr 2146976637], length 0
+10:06:37.609732 IP nginx.50780 > springapp.docker_test-net.8080: Flags [F.], seq 78, ack 122, win 502, options [nop,nop,TS val 2146977645 ecr 3471991057], length 0
+10:06:37.609774 IP springapp.docker_test-net.8080 > nginx.50780: Flags [.], ack 79, win 509, options [nop,nop,TS val 3471991059 ecr 2146977645], length 0
+```  
+
+
+```bash
+$ cat logs/error.log 
+2024/04/28 10:06:34 [error] 29#29: *16 upstream prematurely closed connection while reading response header from upstream, client: 172.22.0.1, server: , request: "GET /test/1000/1 HTTP/1.1", upstream: "http://172.22.0.2:8080/test/1000/1", host: "localhost"
+```  
+
+1, 4, 5, 6, 7번째 요청에서 `Spring Boot` 에서 먼저 `Nginx` 와의 커넥션을 끊는 증상이 있었다. 
+하지만 비정상적인 커넥션 해제이지만 처리 중인 요청은 있지 않아 별다른 에러는 발생하지 않았다. 
+하지만 이러한 연결 해제가 있다는 것은 추후 에러를 유발시킬 수 있다는 것을 기억해야 한다.  
+
+`Spring Boot` 에서 먼저 커넥션을 해제한 것 중 4번째 커넥션이 처리할 요청 중 8번째 요청을 보면 
+`Nginx` 가 `Spring Boot` 로 요청을 하고 연결이 끊긴 것을 볼 수 있다. 
+주의가 필요한 경우가 바로 이런 경우이다. 
+`Nginx` 는 아직 연결이 끊길 시간이 아니므로 `Spring Boot` 로 요청을 수행하지만, 
+`Spring Boot` 입장에서는 지금 연결을 끊어야 하는 시점이므로 `Nginx` 의 요청과 상관없이 연결을 끊어버리는 것이다. 
+그래서 `Nginx` 의 `error.log` 에서도 관련 에러가 남겨진 것을 확인 할 수 있다. 
+하지만 `Nginx` 에서는 이러한 경우 자동으로 요청을 재시도하는 매커니즘이 있으므로 실제 사용자는 정상응답을 받게된다. 
+실제로 6번째 연결에서 8번째 요청을 재시도하는 것을 확인 할 수 있다.  
+
