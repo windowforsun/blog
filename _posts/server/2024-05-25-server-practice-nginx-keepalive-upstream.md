@@ -628,7 +628,7 @@ $ cat logs/error.log
 | |server.tomcat.max-keep-alive-requests| 2
 | |server.tomcat.accept-count| 1  
 
-`server.tomcat.max-keep-alive-requests` 를 `20 ->23` 으로 대폭 낮추었다. 
+`server.tomcat.max-keep-alive-requests` 를 `20 -> 2` 으로 대폭 낮추었다. 
 그외의 설정 값들은 모두 `allok` 와 동일하다.  
 
 
@@ -1148,4 +1148,5 @@ $ cat logs/error.log
 
 ---
 ## Reference
-[]()  
+[ngx_http_upstream_module](https://nginx.org/en/docs/http/ngx_http_upstream_module.html)  
+[Spring Boot Server Properties](https://docs.spring.io/spring-boot/docs/2.5.0/reference/html/application-properties.html#application-properties.server)  
