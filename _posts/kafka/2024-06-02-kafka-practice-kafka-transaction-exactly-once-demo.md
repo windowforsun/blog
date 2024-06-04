@@ -48,3 +48,37 @@ use_math: true
 성공과 실패 과정 그리고 `Kafka Transaction` 적용 여부 및 `READ_COMMITTED`, `READ_UNCOMMITTED` 소비 방식에 따른 결과를 살펴볼 것이다.  
 
 
+### Kafka Transaction Enabled Producer Config
+데모에서 `Kafka Transaction` 이 활성화된 `Producer` 의 설정은 아래와 같이, 
+`Transaction Id` 설정과 `Idempotence` 설정을 활성화 시켜 `ProducerFactory` 를 설정한다. 
+
+```java
+config.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, "transaction-id");
+config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+```  
+
+그리고 `Kafka Transaction` 이 활성화 된 `ProducerFactory` 통해 `KafkaTransactionManager` 와 `KafkaTemplate` 를 생성한다. 
+
+```java
+@Bean
+public KafkaTransactionManager kafkaTransactionManager(final ProducerFactory<String, String> producerFactoryTransactional) {
+    return new KafkaTransactionManager<>(producerFactoryTransactional);
+}
+
+@Bean
+public KafkaTemplate<String, String> kafkaTemplateTransactional(final ProducerFactory<String, String> producerFactoryTransactional) {
+    return new KafkaTemplate<>(producerFactoryTransactional);
+}
+```  
+
+최종적으로 `KafkaTransaction` 가 활성화된 `Producer` 를 사용해서 메시지를 `Outbound Topic 1, 2` 에 발생하는데, 
+코드는 아래와 같이 `@Transactional` 어노테이션과 함께 사용한다.  
+
+```java
+@Transactional
+public void processWithTransaction(String key, DemoInboundEvent event) {
+    this.kafkaClient.sendMessageWithTransaction(key, event.getData(), this.properties.getOutboundTopic1());
+    this.callThirdparty(key);
+    this.kafkaClient.sendMessageWithTransaction(key, event.getData(), this.properties.getOutboundTopic2());
+}
+```  
