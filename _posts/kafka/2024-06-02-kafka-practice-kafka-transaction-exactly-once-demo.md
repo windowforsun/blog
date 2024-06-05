@@ -82,3 +82,43 @@ public void processWithTransaction(String key, DemoInboundEvent event) {
     this.kafkaClient.sendMessageWithTransaction(key, event.getData(), this.properties.getOutboundTopic2());
 }
 ```  
+
+### Kafka Transaction Enabled Consumer Config
+`Kafka Transaction` 이 활성화된 `Consumer` 설정은 아래와 같이, 
+`Auto Commit` 을 비활성화로 설정한다.  
+
+```java
+config.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+```  
+
+그리고 위 설정을 사용해서 `KafkaListenerContainerFactory` 를 생성한다. 
+
+```java
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(final ConsumerFactory<String, String> consumerFactory) {
+    final SeekToCurrentErrorHandler errorHandler = new SeekToCurrentErrorHandler((record, e) -> {
+
+    }, new FixedBackOff(4000L, 4L));
+    final ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(consumerFactory);
+    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.RECORD);
+    factory.setErrorHandler(errorHandler);
+
+    return factory;
+}
+```  
+
+최종적으로 `Inbound Topic` 메시지는 `@KafkaListener` 어노케이션에 토픽과 `KafkaListenerContainerFactory` 를 지정해서 가능하다.  
+
+```java
+@KafkaListener(topics = "demo-transactional-inbound-topic", 
+        groupId = "kafkaConsumerGroup", 
+        containerFactory = "kafkaListenerContainerFactory")
+public void listen(@Header(KafkaClient.EVENT_ID_HEADER_KEY) String eventId, 
+    @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key, @Payload final String payload)
+```  
+
+애플리케이션은 `Consume - Process - Produce` 과정을 거치게 된다. 
+여기서 `Kafka Transaction` 이 활성화된 흐름과 비활성화 된 상태를 비교하기 위해 
+`KafkaTransactionConsumer`, `KafkaNonTransactionConsumer` 2개를 사용해 차이점을 알아 볼 것이다.  
+
