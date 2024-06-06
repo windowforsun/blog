@@ -122,3 +122,23 @@ public void listen(@Header(KafkaClient.EVENT_ID_HEADER_KEY) String eventId,
 여기서 `Kafka Transaction` 이 활성화된 흐름과 비활성화 된 상태를 비교하기 위해 
 `KafkaTransactionConsumer`, `KafkaNonTransactionConsumer` 2개를 사용해 차이점을 알아 볼 것이다.  
 
+
+### Wiremock
+앞서 소개한 것과 같이 애플리케이션에 소비된 메시지는 `Outbound Topic 1` 에 메시지를 발생하고, `REST` 호출 수행, `Outbound Topic 2` 에 메시지를 발생한다. 
+여기서 `REST` 호출은 `Kafka Transaction` 에 원자적으로 포함될 수 없다. 
+하지만 이런 특징을 활용해서 강제적인 `RetryableException` 을 발생시켜 재시도를 수행할 수 있다는 점과 [Wiremock](https://wiremock.org/)
+을 사용해서 `REST` 의 결과를 제어하는 방식을 통해 시나리오에 맞는 테스트를 진행하고자 한다. 
+`Wiremock` 을 사용하면 첫 번째 `REST` 요청은 500 에러로 실패 했지만, 그 다음 요청은 200 으로 성공하도록 제어가 가능하다.  
+
+```java
+stubWiremock("/api/kafkatransactionsdemo/" + key, 500, "Unavailable", "failOnce", STARTED, "succeedNextTime");
+stubWiremock("/api/kafkatransactionsdemo/" + key, 200, "success", "failOnce", "succeedNextTime", "succeedNextTime");
+```  
+
+메시지 폴링 후 `Outbound Topic 1` 으로 메시지를 전송하고 `REST` 요청이 500 으로 실패하면 해당 메시지 폴링은 실패한다. 
+그리고 다음 폴링에서 동일한 메시지가 다시 소비되는데, 
+다시 `Outbound Topic 1` 으로 메시지를 전송하고 이번 `REST` 요청은 200 으로 성공하게 된다. 
+그러면 `Outbound Topic 2` 에도 메시지가 전송된다. 
+그리고 `Producer` 는 `Consumer Coordinator` 로 `Consumer` 의 `offsets` 를 전송해 해당 메시지가 성공적으로 소비 됐음을 알린다. 
+최종적으로 `Transaction` 이 완료되면, `Spring` 에서는 `Transaction Coordinator` 를 통해 두 `Outbound Topic` 과 `Consumer Offset` 에 
+`Commit Marker` 를 기록함으로써 트랜잭션 커밋이 완료 된다.  
