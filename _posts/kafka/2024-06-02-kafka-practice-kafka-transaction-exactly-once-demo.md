@@ -142,3 +142,20 @@ stubWiremock("/api/kafkatransactionsdemo/" + key, 200, "success", "failOnce", "s
 그리고 `Producer` 는 `Consumer Coordinator` 로 `Consumer` 의 `offsets` 를 전송해 해당 메시지가 성공적으로 소비 됐음을 알린다. 
 최종적으로 `Transaction` 이 완료되면, `Spring` 에서는 `Transaction Coordinator` 를 통해 두 `Outbound Topic` 과 `Consumer Offset` 에 
 `Commit Marker` 를 기록함으로써 트랜잭션 커밋이 완료 된다.  
+
+### Embedded Kafka
+`Spring Boot` 에서는 `Embedded Kafka` 를 사용해서 `Kafka` 구현 코드에 대한 통합 테스트를 지원한다. 
+`Embedded Kafka` 는 `in-memory` 방식으로 동작하는 `Kafka Broker` 로 아래 의존성 추가와 테스트 코드상 어노케이션을 선언하는 방식으로 
+손 쉽게 사용할 수 있다.  
+
+```groovy
+testImplementation 'org.springframework.kafka:spring-kafka-test'
+```
+
+```java
+@EmbeddedKafka(controlledShutdown = true, 
+        count = 3, 
+        topics = {"demo-transactional-inbound-topic", "demo-non-transactional-inbound-topic"})
+```  
+
+위와 같은 설정으로 테스트를 실행하면 3개의 `Kafka Broker` 와 2개의 토픽을 사용해서 테스트를 수행 할 수 있는 카프카 환경이 구성된다.  
