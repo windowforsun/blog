@@ -159,3 +159,44 @@ testImplementation 'org.springframework.kafka:spring-kafka-test'
 ```  
 
 위와 같은 설정으로 테스트를 실행하면 3개의 `Kafka Broker` 와 2개의 토픽을 사용해서 테스트를 수행 할 수 있는 카프카 환경이 구성된다.  
+
+### Test Consumer
+데모 구성을 통해 최종적으로 보고자하는 것은 구현한 애플리케이션이 발생하는 `Outbound Topic` 을 구독하는 `Consumer` 에게 
+메시지가 어떤 식으로 전달되는지 이다. 
+그러므로 테스트 코드에서는 총 4개의 별도로 구성한 `Consumer` 를 사용한다. 
+애플리케이션에서 발행하는 토픽이 `Outbound Topic 1, 2` 로 2개이기 때문에 토픽 한개당 2개의 `Consumer` 씩 둔다. 
+그리고 한 토픽에서 각 `Consumer` 서로다른 `Consumer Group` 을 사용하고 아래와 같이 서로다른 `ISOLATION_LEVEL` 로 
+`READ_COMMITTED` 와 `READ_UNCOMMITTED` 로 설정한다. 
+
+```java
+config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_COMMITTED.toString().toLowerCase(Locale.ROOT));
+// or
+config.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, IsolationLevel.READ_UNCOMMITTED.toString().toLowerCase(Locale.ROOT));
+```  
+
+애플리케이션에서 생산한 메시지는 각 `Consumer` 에게 전달되고, 
+해당 `Test Consumer` 들은 메시지가 몇번 자신에게 전달 됐는지 카운트 하여 `Exactly-Once` 에 대한 결과를 확인 한다.  
+
+### Test Result
+최종적으로 애플리케이션에서 발행하는 메시지를 소비하는 `Consumer` 중 `ISOLATION_LEVEL` 이 `READ_COMMITTED` 인 `Consumer` 만 
+애플리케이션 처리가 중간에 실패해 재시도 과는 과정에서도 `Exactly-Once` 특성에 맞게 메시지를 단 한번만 소비한다.  
+
+`Outbound Topic 1` 을 구독하는 `Consumer` 중 `READ_COMMITTED` 는 한번 만 메시지를 소비하지만, 
+`READ_UNCOMMITTED` 는 2번 메시지를 소비하게 된다. 
+이는 재시도 과정에서 `Kafka Transaction` 이 정상적으로 커밋하지 않은 메시지도 소비하여 중복 메시지가 소비된 것이다.  
+
+그리고 `Outbound Topic 2` 구독하는 `Consumer` 는 `ISOLATION` 레벨에 관계없이 모두 한번의 메시지 소비만 발생한다.  
+
+이로써 `Kafka` 를 사용하는 애플리케이션에서 메시지를 주고 받을 때 `Exactly-Once` 를 보장 받기 위해서는 메시지를 생산하는 애플리케이션에서 
+`Kafka Transaction` 스펙에 맞는 `Consumer` 와 `Producer` 설정이 필요하고, 
+해당 애플리케이션에서 생산하는 토픽을 구독하는 `Consumer` 또한 `READ_COMMITTED` 로 구성 돼야 중복 메시지에 대한 대응이 가능하다는 것을 알 수 있다.  
+
+
+---  
+## Reference
+[Kafka Transactions: Part 2 - Spring Boot Demo](https://www.lydtechconsulting.com/blog-kafka-transactions-part2.html)     
+
+
+
+
+
