@@ -23,7 +23,7 @@ use_math: true
 ---
 
 ## Kafka Transaction Demo
-[]()
+[Kafka Transaction Exactly Once]({{site.baseurl}}{% link _posts/kafka/2024-05-05-kafka-practice-kafka-transaction-exactly-once.md %})
 에서 `Kafka Transaction` 과 `Exactly-Once` 에 대해 개념적으로 알아 보았다.
 이번 포스팅에서는 이를 검증해볼 수 있는 애플리케이션을 통해 구현 방식을 바탕으로 좀 더 알아보고자한다. 
 
@@ -33,12 +33,12 @@ use_math: true
 해당 메시지는 애플리케이션 처리를 수행한 후 결과를 `Kafka Transaction` 을 사용하는 방식과 사용하지 않는 방식으로 각 `Outbound Topic` 에 보내진다. 
 그리고 최종적으로 `Outbound Topic` 을 구독하는 `Consumer` 가 이를 소비해 메시지가 어떤식으로 전달 됐는지 살펴본다.  
 
-데모 애플리케이션의 전체 코드는 []()
+데모 애플리케이션의 전체 코드는 [kafka-transaction-exactly-once-demo](https://github.com/windowforsun/kafka-transaction-exactly-once)
 에서 확인 할 수 있다.  
 
 아래 그림은 데모의 구성 요소와 애플리케이션의 동작 과정을 보여준다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-demo-1.drawio.png)
 
 1. `Inbound Topic` 으로 수신된 메시지는 처리 후 `Outbound Topic 1` 로 메시지를 전송한다. 
 2. `Third party service` 의 `REST` 호출을 수행한다. 
