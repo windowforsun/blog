@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Transaction Exactly Once Demo"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 에서 Transaction 과 Exactly-Once 의 의미와 동작을 데모를 통해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
