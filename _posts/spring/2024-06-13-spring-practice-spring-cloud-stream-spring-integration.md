@@ -124,3 +124,89 @@ jib {
 }
 ```
 
+
+### Source Application
+
+- `ExamSourceApplication`
+
+```java
+@SpringBootApplication
+public class ExamSourceApplication {
+    public static void main(String... args) {
+        SpringApplication.run(ExamSourceApplication.class, args);
+    }
+}
+```  
+
+- `ExamSource`
+
+```java
+@Slf4j
+@Configuration
+public class ExamSource {
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+    
+    @Bean
+    public IntegrationFlow sourceFlow(StreamBridge streamBridge) {
+        return IntegrationFlows.fromSupplier(
+                        // 메시지 생성
+                        () -> "test message " + COUNTER.incrementAndGet(),
+                        // 1초 마다 생성
+                        e -> e.poller(Pollers.fixedRate(1000))
+                )
+                .handle(String.class, (payload, headers) -> {
+                    // sourceOutput 은 이후 application.yaml 설정과 매칭 필요
+                    // 1초마다 생성되는 메시지를 sourceOutput 이라는 OutputBinding 으로 전송
+                    streamBridge.send("sourceOutput", MessageBuilder.withPayload(payload).build());
+                    return null;
+                })
+                .get();
+    }
+}
+```  
+
+- `application.yaml`
+
+```yaml
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          # kafka 브로커 주소
+          brokers: localhost:9092
+      # 바인딩 정의
+      bindings:
+        # 출력 바인딩 정의
+        sourceOutput:
+          # 목적지는 연결되는 Processor/Sink 애플리케이션의 input 과 매칭
+          destination: input
+```  
+
+- `ExamSourceTest`
+
+```java
+@SpringBootTest
+@Import(TestChannelBinderConfiguration.class)
+public class ExamSourceTest {
+    @Autowired
+    private OutputDestination outputDestination;
+    @Autowired
+    private CompositeMessageConverter converter;
+
+    @Test
+    public void test() {
+        // sourceFlow -> sourceOutput -> input (대략적으로 표현한다면..)
+        // 생성되는 메시지 수신
+        Message<byte[]> message = this.outputDestination.receive(5000, "input");
+        String strMessage = (String) this.converter.fromMessage(message, String.class);
+
+        assertThat(strMessage, is("test message 1"));
+
+        message = this.outputDestination.receive(5000, "input");
+        strMessage = (String) this.converter.fromMessage(message, String.class);
+
+        assertThat(strMessage, is("test message 2"));
+    }
+}
+```  
