@@ -210,3 +210,108 @@ public class ExamSourceTest {
     }
 }
 ```  
+
+### Processor Application
+
+- `ExamProcessorApplication`
+
+```java
+@SpringBootApplication
+public class ExamProcessorApplication {
+    public static void main(String... args) {
+        SpringApplication.run(ExamProcessorApplication.class, args);
+    }
+}
+```  
+
+- `ExamProcessor`
+
+```java
+@Configuration
+public class ExamProcessor {
+
+    @Bean
+    public IntegrationFlow processorFlow(StreamBridge streamBridge) {
+        return IntegrationFlows.from(
+                        // 메시지 input ServiceInterface 타입 지정
+                        MessageConsumer.class,
+                        // myProcessor 는 이후 application.yaml 의 설정과 매칭 필요
+                        // input gateway 로 사용할 빈 이름 지정
+                        gatewayProxySpec -> gatewayProxySpec.beanName("myProcessor")
+                )
+                // 메시지 변환 처리
+                .transform(String.class, payload -> payload + ":integration")
+                .handle(String.class, (payload, headers) -> {
+                    // processorOutput 은 이후 application.yaml 설정과 매칭 필요
+                    // 수신 -> 처리한 메시지를 processorOutput 이라는 OutputBinding 으로 전송
+                    streamBridge.send("processorOutput", MessageBuilder.withPayload(payload).build());
+                    return null;
+                })
+                .get();
+    }
+
+    // Consumer<Message<?>> 타입의 인터페이스 추상화
+    private interface MessageConsumer extends Consumer<Message<?>> {
+
+    }
+}
+```  
+
+- `application.yaml`
+
+```yaml
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+      function:
+        bindings:
+          # input gateway 바인딩
+          # myProcessor 라는 input gateway 는 processorInput 과 바인딩됨
+          myProcessor-in-0: processorInput
+      # 바인딩 정의
+      bindings:
+        # 입력 바인딩 정의
+        processorInput:
+          # 목적지는 연결되는 Source 애플리케이션의 output 과 매칭
+          destination: output
+        # 출력 바인딩 정의
+        processorOutput:
+          # 목적지는 연결되는 Sink/Processor 애플리케이션의 input 과 매칭
+          destination: input
+```  
+
+- `ExamProcessorTest`
+
+```java
+@SpringBootTest
+@Import(TestChannelBinderConfiguration.class)
+public class ExamProcessTest {
+    @Autowired
+    private InputDestination inputDestination;
+    @Autowired
+    private OutputDestination outputDestination;
+    @Autowired
+    private CompositeMessageConverter converter;
+
+    @Test
+    public void test() {
+        this.inputDestination.send(MessageBuilder.withPayload("test message 1").build(), "output");
+
+        Message<byte[]> message = this.outputDestination.receive(5000, "input");
+        String strMessage = (String) this.converter.fromMessage(message, String.class);
+
+        assertThat(strMessage, is("test message 1:integration"));
+
+
+        this.inputDestination.send(MessageBuilder.withPayload("test message 2").build(), "output");
+
+        message = this.outputDestination.receive(5000, "input");
+        strMessage = (String) this.converter.fromMessage(message, String.class);
+
+        assertThat(strMessage, is("test message 2:integration"));
+    }
+}
+```  
