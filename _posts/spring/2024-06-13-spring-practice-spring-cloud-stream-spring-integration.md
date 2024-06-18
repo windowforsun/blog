@@ -315,3 +315,97 @@ public class ExamProcessTest {
     }
 }
 ```  
+
+### Sink Application
+
+- `ExamSinkApplication`
+
+```java
+@SpringBootApplication
+public class ExamSinkApplication {
+    public static void main(String... args) {
+        SpringApplication.run(ExamSinkApplication.class, args);
+    }
+}
+```  
+
+- `ExamSink`
+
+```java
+@Slf4j
+@Configuration
+public class ExamSink {
+
+    @Bean
+    public IntegrationFlow sinkFlow() {
+        return IntegrationFlows.from(
+                        // 메시지 input ServiceInterface 타입 지정
+                        MessageConsumer.class,
+                        // myProcessor 는 이후 application.yaml 의 설정과 매칭 필요
+                        // input gateway 로 사용할 빈 이름 지정
+                        gatewayProxySpec -> gatewayProxySpec.beanName("mySink"))
+                .handle(String.class, (payload, headers) -> {
+                    log.info("sink message : {}", payload);
+                    return null;
+                })
+                .get();
+    }
+
+    // Consumer<Message<?>> 타입의 인터페이스 추상화
+    private interface MessageConsumer extends Consumer<Message<?>> {
+    }
+}
+```  
+
+- `application.yaml`
+
+```yaml
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers:
+      function:
+        bindings:
+          # input gateway 바인딩
+          # mySink 라는 input gateway 는 sinkInput 과 바인딩됨
+          mySink-in-0: sinkInput
+      bindings:
+        # 입력 바인딩 정의
+        sinkInput:
+          # 목적지는 연결되는 Source 애플리케이션의 output 과 매칭
+          destination: output
+```  
+
+- `ExamSinkTest`
+
+```java
+@SpringBootTest
+@Import(TestChannelBinderConfiguration.class)
+public class ExamSinkTest {
+    @Autowired
+    private InputDestination inputDestination;
+
+    @Test
+    public void test() {
+        this.inputDestination.send(MessageBuilder.withPayload("test message 1").build(), "output");
+        this.inputDestination.send(MessageBuilder.withPayload("test message 2").build(), "output");
+    }
+    /*
+     * INFO 81693 --- [           main] com.windowforsun.scswithsi.ExamSink      : sink message : test message 1
+     * INFO 81693 --- [           main] com.windowforsun.scswithsi.ExamSink      : sink message : test message 2
+     */
+}
+```  
+
+
+
+
+
+
+
+
+---  
+## Reference
+[Building Streaming Data Pipeline using Functional applications](https://dataflow.spring.io/docs/recipes/functional-apps/scst-function-bindings/)   
