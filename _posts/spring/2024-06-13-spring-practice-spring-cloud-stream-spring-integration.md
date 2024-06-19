@@ -4,7 +4,7 @@ classes: wide
 title: "[Spring 실습] Spring Cloud Stream with Spring Integration"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: 'Spring 에서 발생하는 로그를 Logback 을 사용해 Logstash 에 전송해보자'
+excerpt: 'Spring Cloud Stream 에서 좀 더 상세한 스트림 처리가 가능한 Spring Integration 을 기반으로 스트림 처리 구현법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,8 @@ tags:
     - Practice
     - Spring
     - Spring Boot
+    - Spring Cloud Stream
+    - Spring Integration
 toc: true
 use_math: true
 ---  
@@ -398,10 +400,6 @@ public class ExamSinkTest {
      */
 }
 ```  
-
-
-
-
 
 
 
