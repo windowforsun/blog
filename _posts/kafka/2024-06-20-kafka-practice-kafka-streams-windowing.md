@@ -126,3 +126,36 @@ A 이벤트는 `t29`, B 이벤트는 `t40`, C 이벤트는 `t67` 정도에 발�
 `Sliding Window` 를 이해할 때 중요한 점은 윈도우는 크기 `t30`과 슬라이딩 간격 `t10` 으로 계속해서 이동한다. 
 하지만 실질적으로 처리되는 윈도우는 이벤트가 처음으로 윈도우에 포함되고 제거되는 시점의 윈도우임을 기억해야 한다.  
 
+
+### Session Window
+`Session Window` 는 앞서 살펴본 `Sliding Window` 보다 좀 더 이벤트을 기반으로 하는 윈도우라고 할 수 있다. 
+이벤트 간의 활동 시간과 무활동 시간을 기반으로 `Window` 가 생성되고, 
+연속적인 이벤트 활동을 하나의 세션으로 간주하여 그룹화하기 때문에 동적으로 윈도우 크기가 결정된다고 할 수 있다.  
+
+윈도우를 생성할 때 `inactivityGap` 이라는 무활돈 시간을 설정하게 되는데, 
+첫 이벤트가 발생된 이후 발생하는 이벤트들이 직전 발생한 이벤트 시간을 기준으로 `inactivityGap` 시간 안에만 발생하면 
+윈도우는 계속해서 유지되기 때문에 윈도우 크기는 동적이게 된다. 
+그리고 `inactivtyGap` 시간 동안이상 아무런 이벤트가 없으면 이전 윈도우는 닫히게 되고, 
+이후 발생하는 이벤트 부터는 새로운 윈도우에 포함되게 된다.  
+
+.. 그림 ..
+
+위 그림은 무활동 시간이 `5t` 일때 이벤트 발생에 따른 윈도우 처리르 보여준다. 
+A 이벤트는 `t10`, B 이벤트는 `t14`, C 이벤트는 `t21`, D 이벤트는 `t30` 에 발생한다고 하면 
+생성되는 윈도우와 포함하는 이벤트는 아래와 같다. 
+
+- `w1[t10 ~ t19)` - A(t10), B(t14) : A이벤트 발생 시점 부터 B이벤트 발생 후 무활동 시간이 포함된 시간까지 윈도우가 생성된다. 
+- `w2[t21 ~ t26)` - C(t21) : C이벤트 발생 시점 부터 무활동 시간이 포함된 시간까지 윈도우가 생성된다. 
+- `w3[t30 ~ t35)` - D(t30) : D이벤트 발생 시점 부터 무활동 시간이 포함된 시간까지 윈도우가 생성된다. 
+
+
+
+---  
+## Reference
+[Kafka Streams Windowing - Overview](https://www.lydtechconsulting.com/blog-kafka-streams-windows-overview.html)  
+[Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
+[Apache Kafka Sliding Windows](https://kafka.apache.org/30/javadoc/org/apache/kafka/streams/kstream/SlidingWindows.html)  
+[Apache Kafka Session Windows](https://kafka.apache.org/21/javadoc/org/apache/kafka/streams/kstream/SessionWindows.html)  
+
+
+
