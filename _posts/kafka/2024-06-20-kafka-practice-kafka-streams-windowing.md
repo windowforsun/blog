@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Windwoing"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에서 특정 범위의 데이터를 모아 처리하는 Windowing 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Window
+    - Windowing
+    - Tumbling Window
+    - Hopping Window
+    - Sliding Window
+    - Session Window
 toc: true
 use_math: true
 ---  
@@ -22,8 +29,7 @@ use_math: true
 그리고 윈도우 처리에 대상이 되는 데이터는 시간 범위에 해당하는 데이터라는 점을 기억해야 한다. 
 아래는 이러한 시간과 이벤트 그리고 윈도우의 관계를 도식화 해서 보여주는 그림이다.  
 
-
-.. 그림 .. 
+![kafka-stream-windowing-1.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-stream-windowing-1.drawio.png)
 
 `t0 ~ t60` 까지 시간이 있을 때, `A-E` 이벤트가 발생했다. 
 여기서 윈도우범위가 `t10 ~ t40` 이라면 해당 윈도우에 포함되는 이벤트는 `B, C, D, E` 가 된다.  
@@ -51,7 +57,7 @@ Session| Session-based |- 동적인 윈도우 크기<br>- 윈도우간 겹치지
 `Tumbling Window` 는 윈도우간 겹침 없이 고정된 윈도우 크기와 연속적인 순서를 갖으며, 
 윈도우를 대표하는 특성을 지닌 윈도우이다. 
 
-.. 그림 ..
+![kafka-stream-windowing-2.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-stream-windowing-2.drawio.png)
 
 시간 프레임에서 윈도우간 겹침이 없기 때문에, 이벤트는 1개의 윈도우에만 포함된다. 
 위 그림은 `Window size` 가 `20t` 일 떄, 
@@ -76,7 +82,7 @@ Session| Session-based |- 동적인 윈도우 크기<br>- 윈도우간 겹치지
 `Window size` 와 `Advance period` 를 설정할 때 `Window size` 보다 큰 `Advance period`
 와 같은 이벤트 누락이 발생 할 수 있는 설정은 `API` 적으로 막아주고 있다.  
 
-.. 그림 ..
+![kafka-stream-windowing-3.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-stream-windowing-3.drawio.png)
 
 위 그림은 `Window size` 는 `20t` 이고, `Advance period` 는 `10t` 로 설정된 예시이다. 
 `t8` 에 `A` 이벤트, `t12` 에 `B` 이벤트, `t18` 에 `C` 이벤트, `t25` 에 `D` 이벤트, `t34` 에 `E` 이벤트로 총 5개의 이벤트가 발생한다. 
@@ -111,7 +117,7 @@ Session| Session-based |- 동적인 윈도우 크기<br>- 윈도우간 겹치지
 이벤트 발생에 따라 윈도우가 생성되기 때문에 적절한 상황에 잘 사용하면 
 다른 방식보다 더 효율성을 기대 할 수 있다.  
 
-.. 그림 ..
+![kafka-stream-windowing-4.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-stream-windowing-4.drawio.png)
 
 위 그림은 `Window size` 가 `30t` 인 상황에서 예시를 보여주고 있다. 
 A 이벤트는 `t29`, B 이벤트는 `t40`, C 이벤트는 `t67` 정도에 발생한다고 해보자. 
@@ -138,7 +144,7 @@ A 이벤트는 `t29`, B 이벤트는 `t40`, C 이벤트는 `t67` 정도에 발�
 그리고 `inactivtyGap` 시간 동안이상 아무런 이벤트가 없으면 이전 윈도우는 닫히게 되고, 
 이후 발생하는 이벤트 부터는 새로운 윈도우에 포함되게 된다.  
 
-.. 그림 ..
+![kafka-stream-windowing-5.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-stream-windowing-5.drawio.png)
 
 위 그림은 무활동 시간이 `5t` 일때 이벤트 발생에 따른 윈도우 처리르 보여준다. 
 A 이벤트는 `t10`, B 이벤트는 `t14`, C 이벤트는 `t21`, D 이벤트는 `t30` 에 발생한다고 하면 
