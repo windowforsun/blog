@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] Kafka Streams Windwoing"
+title: "[Kafka] Kafka Streams Windowing"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: 'Kafka Streams 에서 특정 범위의 데이터를 모아 처리하는 Windowing 에 대해 알아보자'
+excerpt: 'Kafka Streams 에서 특정 범위의 데이터를 모아 처리하는 Window 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
