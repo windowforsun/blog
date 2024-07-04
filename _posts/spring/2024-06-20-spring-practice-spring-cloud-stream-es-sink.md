@@ -79,3 +79,32 @@ public class ElasticsearchSinkProperties {
 
 `Spring Cloud Data Flow` 에서 애플리케이션을 실행하거나, 
 그렇지 않더라도 `Properties` 를 사용해서 소비하는 메시지에 맞춰 `Elasticsearch` 에 문서로 저장 할 수 있다.  
+
+### Sink Process
+애플리케이션에서 `Sink Process` 의 내용은 `ElasticsearchSink` 클래스에 있다. 
+메시지가 소비되면 `elasticsearchConsumerFlow` 빈이 수행되는데 `IntegrationFlow` 을 통해, 
+`elasticsearchConsumer` 빈의 채널을 사용한다. 
+그리고 `batchSize` 의 값을 통해 1보다 작은 경우에는 개별 메시지로 `Elasticsearch` 문서 생성 및 저장을 수행하고,  
+큰 경우는 `batch` 처리를 위해 `aggregator` 를 통해 메시지 그룹화 수행 후 문서 생성 및 저장을 수행하게 된다.  
+
+```java
+@Bean
+public IntegrationFlow elasticsearchConsumerFlow(AggregatingMessageHandler aggregator,
+                                                 ElasticsearchSinkProperties elasticsearchSinkProperties,
+                                                 MessageHandler bulkRequestHandler,
+                                                 MessageHandler indexRequestHandler) {
+    final IntegrationFlowBuilder builder = IntegrationFlows
+            .from(Consumer.class, gateway -> gateway.beanName("elasticsearchConsumer"));
+
+    int batchSize = elasticsearchSinkProperties.getBatchSize();
+
+    if (batchSize > 1) {
+        builder.handle(aggregator)
+                .handle(bulkRequestHandler);
+    } else {
+        builder.handle(indexRequestHandler);
+    }
+
+    return builder.get();
+}
+```  
