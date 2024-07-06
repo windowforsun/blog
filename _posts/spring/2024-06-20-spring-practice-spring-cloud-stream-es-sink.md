@@ -108,3 +108,108 @@ public IntegrationFlow elasticsearchConsumerFlow(AggregatingMessageHandler aggre
     return builder.get();
 }
 ```  
+
+#### Single Message Sink
+
+`batch` 방식을 사용하지 않는 경우에는 `indexRequestHandler` 를 호출하여 `createIndexRequest()` 를 사용해서 
+메시지를 `Elasticsearch Document` 로 변환한다. 
+
+```java
+@Bean
+public MessageHandler indexRequestHandler(RestHighLevelClient restHighLevelClient, ElasticsearchSinkProperties elasticsearchSinkProperties) {
+    return message -> this.index(restHighLevelClient, createIndexRequest(message, elasticsearchSinkProperties), elasticsearchSinkProperties.isAsync());
+}
+
+private IndexRequest createIndexRequest(Message<?> message,
+                                        ElasticsearchSinkProperties elasticsearchSinkProperties) {
+    IndexRequest indexRequest = new IndexRequest();
+    final String INDEX_ID = "INDEX_ID";
+    final String INDEX_NAME = "INDEX_NAME";
+
+    String index = (String) message.getHeaders().getOrDefault(INDEX_NAME, elasticsearchSinkProperties.getIndex());
+
+    String dateTimeRollingFormat = elasticsearchSinkProperties.getDateTimeRollingFormat();
+    if (StringUtils.isNotEmpty(dateTimeRollingFormat)) {
+        try {
+            String format = LocalDateTime.now().format(DateTimeFormatter.ofPattern(dateTimeRollingFormat));
+            index += "-" + format;
+        } catch (Exception ignore) {
+
+        }
+    }
+
+    indexRequest.index(index);
+
+    String id = (String) message.getHeaders().getOrDefault(INDEX_ID, StringUtils.EMPTY);
+
+    if (elasticsearchSinkProperties.getId() != null) {
+        id = elasticsearchSinkProperties.getId().getValue(message, String.class);
+    }
+
+    indexRequest.id(id);
+
+    Object messagePayload = message.getPayload();
+
+    if (messagePayload instanceof String) {
+        indexRequest.source((String) messagePayload, XContentType.JSON);
+    } else if (messagePayload instanceof Map) {
+        indexRequest.source((Map<String, ?>) messagePayload, XContentType.JSON);
+    } else if (messagePayload instanceof XContentBuilder) {
+        indexRequest.source((XContentBuilder) messagePayload);
+    }
+
+    String routing = elasticsearchSinkProperties.getRouting();
+    if (StringUtils.isNotEmpty(routing)) {
+        indexRequest.routing(routing);
+    }
+
+    long timeout = elasticsearchSinkProperties.getTimeoutSeconds();
+    if (timeout > 0) {
+        indexRequest.timeout(TimeValue.timeValueSeconds(timeout));
+    }
+
+    log.info("createIndexRequest index : {}, payload : {}", index, messagePayload);
+    return indexRequest;
+}
+```  
+
+`createIndexRequest()` 에서는 `Properties` 에 지정된 인덱스 이름과 문서 아이디, 그리고 인덱스 롤링에 대한 값을 바탕으로 
+`IndexRequest` 객체를 생성한다.  
+
+그리고 최종적으로 `IndexRequest` 를 파라미터로 받는 `index()` 메소드 호출을 통해 `Elasticsearch` 에 문서를 저장한다. 
+문서를 저장할 때는 `Properties` 의 `async` 값을 바탕으로 동기/비동기로 저장을 수행한다.  
+
+```java
+private void index(RestHighLevelClient restHighLevelClient,
+                   IndexRequest request,
+                   boolean isAsync) {
+    Consumer<IndexResponse> handleResponse = response ->
+            log.debug(String.format("Index operation [index=%s] succeeded: document [id=%s, version=%d] was written on shard %s.",
+                    response.getIndex(), response.getId(), response.getVersion(), response.getShardId())
+            );
+
+    if (isAsync) {
+        log.info("indexRequest async document desc : {}", request.getDescription());
+        restHighLevelClient.indexAsync(request, RequestOptions.DEFAULT, new ActionListener<IndexResponse>() {
+            @Override
+            public void onResponse(IndexResponse indexResponse) {
+                handleResponse.accept(indexResponse);
+            }
+
+            @Override
+            public void onFailure(Exception e) {
+                throw new IllegalStateException("Error occurred while indexing document: " + e.getMessage(), e);
+            }
+        });
+    } else {
+        try {
+            log.info("indexRequest document desc : {}", request.getDescription());
+            IndexResponse response = restHighLevelClient.index(request, RequestOptions.DEFAULT);
+            handleResponse.accept(response);
+        } catch (IOException e) {
+            throw new IllegalStateException("Error occurred while indexing document: " + e.getMessage(), e);
+        }
+    }
+}
+```  
+
