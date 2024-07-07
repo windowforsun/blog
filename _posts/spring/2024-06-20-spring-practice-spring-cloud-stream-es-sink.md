@@ -213,3 +213,110 @@ private void index(RestHighLevelClient restHighLevelClient,
 }
 ```  
 
+
+#### Bulk Message Sink
+`batch` 방식을 사용해서 문서를 저장하는 경우 우선 `aggregator()` 로 개별 메시지를 `batchSize` 와 `groupTimeout` 시간을 바탕으로 
+내부 `MessageGroupStore` 를 사용하여 `BulkRquest` 객체에 쌓아둔다.   
+
+```java
+@Bean
+public AggregatingMessageHandler aggregator(MessageGroupStore messageGroupStore,
+                                            ElasticsearchSinkProperties elasticsearchSinkProperties) {
+    AggregatingMessageHandler handler = new AggregatingMessageHandler(
+            group -> group.getMessages()
+                    .stream()
+                    .map(m -> createIndexRequest(m, elasticsearchSinkProperties))
+                    .reduce(new BulkRequest(),
+                            (bulk, indexRequest) -> {
+                                bulk.add(indexRequest);
+                                return bulk;
+                            },
+                            (bulk1, bulk2) -> {
+                                bulk1.add(bulk2.requests());
+
+                                return bulk1;
+                            })
+    );
+
+    handler.setCorrelationStrategy(message -> "");
+    handler.setReleaseStrategy(new MessageCountReleaseStrategy(elasticsearchSinkProperties.getBatchSize()));
+    long groupTimeout = elasticsearchSinkProperties.getGroupTimeout();
+    if (groupTimeout >= 0) {
+        handler.setGroupTimeoutExpression(new ValueExpression<>(groupTimeout));
+    }
+    handler.setMessageStore(messageGroupStore);
+    handler.setExpireGroupsUponCompletion(true);
+    handler.setSendPartialResultOnExpiry(true);
+
+    return handler;
+}
+
+@Bean
+public MessageGroupStore messageGroupStore() {
+    SimpleMessageStore messageGroups = new SimpleMessageStore();
+    messageGroups.setTimeoutOnIdle(true);
+    messageGroups.setCopyOnGet(false);
+
+    return messageGroups;
+}
+```  
+
+`batchSize` 를 만족하거나, `groupTimeout` 이 만료된 경우 `BulkRequest` 를 파라미터로 받는 `bulkRequestHandler` 로 
+전달되고 이는 다시 `BulkRequest` 를 `Elasticsearch` 문서로 저장하는 `index()` 를 호출한다. 
+해단 `index()` 도 동일하게 `async` 값을 바탕으로 동기/비동기 방식으로 문서 저장방식을 결정한다.  
+
+```java
+@Bean
+public MessageHandler bulkRequestHandler(RestHighLevelClient restHighLevelClient,
+                                         ElasticsearchSinkProperties elasticsearchSinkProperties) {
+    return message -> this.index(restHighLevelClient, (BulkRequest) message.getPayload(), elasticsearchSinkProperties.isAsync());
+}
+
+private void index(RestHighLevelClient restHighLevelClient,
+	BulkRequest request,
+	boolean isAsync) {
+	Consumer<BulkResponse> handleResponse = responses -> {
+		if (log.isDebugEnabled() || responses.hasFailures()) {
+			for (BulkItemResponse itemResponse : responses) {
+				if (itemResponse.isFailed()) {
+					log.error(String.format("Index operation [i=%d, id=%s, index=%s] failed: %s",
+						itemResponse.getItemId(), itemResponse.getId(), itemResponse.getIndex(), itemResponse.getFailureMessage())
+					);
+				} else {
+					DocWriteResponse r = itemResponse.getResponse();
+					log.debug(String.format("Index operation [i=%d, id=%s, index=%s] succeeded: document [id=%s, version=%d] was written on shard %s.",
+						itemResponse.getItemId(), itemResponse.getId(), itemResponse.getIndex(), r.getId(), r.getVersion(), r.getShardId())
+					);
+				}
+			}
+		}
+
+		if (responses.hasFailures()) {
+			throw new IllegalStateException("Bulk indexing operation completed with failures: " + responses.buildFailureMessage());
+		}
+	};
+
+	if (isAsync) {
+		log.info("bulkRequest async document desc : {}", request.getDescription());
+		restHighLevelClient.bulkAsync(request, RequestOptions.DEFAULT, new ActionListener<BulkResponse>() {
+			@Override
+			public void onResponse(BulkResponse bulkItemResponses) {
+				handleResponse.accept(bulkItemResponses);
+			}
+
+			@Override
+			public void onFailure(Exception e) {
+				throw new IllegalStateException("Error occurred while performing bulk index operation: " + e.getMessage(), e);
+			}
+		});
+	} else {
+		try {
+			log.info("bulkRequest document desc : {}", request.getDescription());
+			BulkResponse bulkResponse = restHighLevelClient.bulk(request, RequestOptions.DEFAULT);
+			handleResponse.accept(bulkResponse);
+		} catch (Exception e) {
+			throw new IllegalStateException("Error occurred while performing bulk index operation: " + e.getMessage(), e);
+		}
+	}
+}
+```  
