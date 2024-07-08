@@ -320,3 +320,68 @@ private void index(RestHighLevelClient restHighLevelClient,
 	}
 }
 ```  
+
+### Test
+테스트는 `Spring Cloud Stream` 을 간단하게 테스트 할 수 있는 `TestChannelBinderConfiguration` 의 `InputDestionation` 을 사용해서
+채널로 부터 메시지를 소비한다. 
+그리고 로컬의 `Docker` 환경을 사용하는 `TestContainers` 를 통해 `Elasticsearch` 환경을 구성해 `Elasticsearch` 로 문서가 저장될 수 있도록 구성했다.  
+
+테스트는 크게 아래오 같이 구성해 진행했다.  
+
+- 배치를 사용하지 않고, 인덱스 롤링을 사용하지 않는 경우
+- 배치를 사용하고, 인덱스 롤링을 사용하는 경우
+- 배치를 사용하고, 인덱스 롤링을 사용하지 않는 경우
+- 비동기 저장, 배치를 사용하고, 인덱스 롤링을 사용하는 경우 
+
+아래는 테스트 클래스 구성의 예시이다.  
+
+```java
+@ExtendWith(SpringExtension.class)
+@Import(TestChannelBinderConfiguration.class)
+@Testcontainers
+@SpringBootTest(
+        properties = {
+                "elasticsearch.sink.index=test",
+                "elasticsearch.sink.batch-size=3",
+                "elasticsearch.sink.group-timeout=2",
+                "elasticsearch.sink.date-time-rolling-format=yyyy-MM-dd",
+                "elasticsearch.sink.async=true"
+        }
+)
+@ActiveProfiles("test")
+public class AsyncBatchTimeBasedIndexTest {
+	private static String INDEX = "test";
+	@Autowired
+	private InputDestination inputDestination;
+	@Autowired
+	private RestHighLevelClient restHighLevelClient;
+	@Autowired
+	private ElasticsearchSinkProperties properties;
+	@Container
+	public static ElasticsearchContainer container = new ElasticsearchContainer(
+		"docker.elastic.co/elasticsearch/elasticsearch:7.10.0");
+
+	@DynamicPropertySource
+	static void elasticsearchProperties(DynamicPropertyRegistry registry) {
+		registry.add("spring.elasticsearch.rest.uris", () -> container.getHttpHostAddress());
+	}
+
+	@BeforeEach
+	public void setUp() throws IOException {
+		INDEX +=
+			"-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern(this.properties.getDateTimeRollingFormat()));
+	}
+
+	@Test
+	public void json_string_message_ok() throws Exception {
+        // ...
+	}
+}
+```  
+
+
+---  
+## Reference
+[Elasticsearch Sink](https://github.com/spring-cloud/stream-applications/blob/main/applications/sink/elasticsearch-sink/README.adoc)  
+
+
