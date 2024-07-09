@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Spring 실습] "
+title: "[Spring 실습] Spring Cloud Stream Elasticsearch Sink"
 header:
   overlay_image: /img/spring-bg.jpg
-excerpt: ''
+excerpt: 'Spring Cloud Stream 에서 Elasticsearch 에 데이터를 추가하는 Sink Application 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,9 @@ tags:
     - Practice
     - Spring
     - Spring Boot
+    - Spring Cloud Stream
+    - Elasticsearch
+    - Sink
 toc: true
 use_math: true
 ---  
