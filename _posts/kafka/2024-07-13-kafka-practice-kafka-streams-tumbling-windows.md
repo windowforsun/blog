@@ -43,3 +43,52 @@ my-event -> TumblingWindows process -> tumbling-result
 
 이후 예시코드의 전체내용은 [여기]()
 에서 확인 할 수 있다.  
+
+### Topology
+`Processor` 에 정의된 `Tumbling Windows` 를 바탕으로 처리하는 내용은 아래와 같다.  
+
+```java
+public void processMyEvent(StreamsBuilder streamsBuilder) {
+    Serde<String> stringSerde = new Serdes.StringSerde();
+    Serde<MyEvent> myEventSerde = new MyEventSerde();
+    Serde<MyEventAgg> myEventAggSerde = new MyEventAggSerde();
+
+    streamsBuilder.stream("my-event", Consumed.with(stringSerde, myEventSerde))
+            .peek((k, v) -> log.info("tumbling input {} : {}", k, v))
+            .groupByKey()
+            .windowedBy(TimeWindows.ofSizeAndGrace(Duration.ofMillis(this.windowDuration), Duration.ofMillis(this.windowGrace)))
+            .aggregate(() -> new MyEventAgg(),
+                    ProcessorUtil::aggregateMyEvent,
+                    Materialized.<String, MyEventAgg, WindowStore<Bytes, byte[]>>as("tumbling-window-store")
+                            .withKeySerde(stringSerde)
+                            .withValueSerde(myEventAggSerde)
+            )
+            .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+            .toStream()
+            .map((k, v) -> KeyValue.pair(k.key(), v))
+            .peek((k, v) -> log.info("tumbling output {} : {}", k, v))
+            .to("tumbling-result", Produced.with(stringSerde, myEventAggSerde));
+
+}
+```
+
+이벤트 데이터가 토픽을 오고가는 과정을 표현하면 아래와 같다.  
+
+```
+my-event -> MyEvent -> process -> MyEventAgg -> tumbling-result
+```  
+
+- `stream()` : `Topology` 의 소스 토픽을 설정한다. 그리고 해당 토픽에서 인입되는 키와 값에 대한 직렬화/역직렬화에 필요한 설정도 포함한다. 
+- `groupByKey()` : 이벤트 집계를 위해 우선 이벤트의 키별로 그룹화 한다. `groupBy` 와 다르게 키별 파티셔닝이 발생한다. 
+- `windowedBy()` : `Tumbling Windows` 를 구성할 수 있는 `windowSize` 와 윈도우 업데이트 유효시간(`windowGrace`) 시간값을 설정한다.  
+- `aggregate()` : 윈도우 크기 시간 동안 이벤트에 대한 처리를 한다. 
+`reduce` 는 입력된 여러 값을 동일한 타입의 단일 값으로 결합하는 반면, 
+`aggregate` 는 입력된 여러 값을 다른 타입의 단일 값으로 반환한다. 이러한 집계연산을 위해 아래와 같은 파라미터가 필요하다. 
+  - 집계연산의 결과로 리턴할 값을 초기화한다. (`MyEventAgg`)
+  - 실제 집계 연산을 수행하는 메서드(`aggregateMyEvent`)
+  - 집계를 수행하는 동안 저장할 저장소와 저장시 사용할 직렬화/역직렬화, 윈도우 저장소로는 `RocksDB` 를 사용한다. (`Materialized`)
+- `suppress()` : 억제를 통해 윈도우의 최종결과만 받는다. 사용하지 않을 윈도우 크기 동안 업데이트 될때 마다 결과를 받게 된다. 
+- `toStream()` : `aggregate()`, `suppress()` 는 `KTable` 을 사용하기 때문에 이를 다시 `KStream` 으로 변환해 준다. 
+- `map()` : 최종 이벤트에 대한 키와 값을 매칭해 `KeyValue` 타입으로 변환한다. 
+- `to()` : 최종 이벤트를 전송할 토픽을 명시하고, 사용할 직렬화/역직렬화를 설정한다. 
+- `peek()` : 스트림 처리에서 중간에 아이템을 확인해 볼 수 있는 메소드이다. 
