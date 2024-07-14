@@ -86,18 +86,18 @@ use_math: true
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-retry-1.drawio.png)
 
 
-1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다. 
-1-2. 첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다. 
-1-3. 첫 번째 `Consumer` 는 재시도 설정에 따라 `Thrid party` 서비스에세 `REST API` 호출을 재시도 한다.
+1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다.  
+1-2. 첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다.  
+1-3. 첫 번째 `Consumer` 는 재시도 설정에 따라 `Thrid party` 서비스에세 `REST API` 호출을 재시도 한다.  
 
 첫 번째 `Consumer` 가 재시도를 수행하는 과정에서 `poll.timeout` 이 발생 했고, 
 `Kafka Broker` 는 `Rebalancing` 을 트리거해 첫 번째 `Consumer` 를 `Consumer Group` 에서 제거하고 
 두 번째 `Consumer` 를 동일한 `Partition` 에 할당한다.  
 
-2-1. 두 번째 `Consumer` 는 동일한 메시지를 `Inbound Topic` 으로부터 소비한다. 
-2-2. 두 번째 `Consumer` 가 `Third party` 에 `REST API` 요청을 보내는 시점 부터는 `200` 으로 성공한다. 
-1-4. 첫 번째 `Consumer` 도 `Third party` 요청에 성공하고, 처리 결과를 `Outbound Topic` 에 게시한다. 
-2-3. 두 번째 `Consumer` 또한 처리 결과를 `Outbound Topic` 에 게시한다. 
+2-1. 두 번째 `Consumer` 는 동일한 메시지를 `Inbound Topic` 으로부터 소비한다.  
+2-2. 두 번째 `Consumer` 가 `Third party` 에 `REST API` 요청을 보내는 시점 부터는 `200` 으로 성공한다.  
+1-4. 첫 번째 `Consumer` 도 `Third party` 요청에 성공하고, 처리 결과를 `Outbound Topic` 에 게시한다.  
+2-3. 두 번째 `Consumer` 또한 처리 결과를 `Outbound Topic` 에 게시한다.  
 
 `Outbound Topic` 을 사용해서 이후 `downstream` 서비스는 결과에 따른 처리를 이어서 수행한다. 
 위와 같은 처리 흐름으로 `Outbound Topic` 에서 결과 이벤트가 구분될 수 있더라도, 
@@ -178,10 +178,10 @@ public ConcurrentKafkaListenerContainerFactory kafkaStatefulRetryListenerContain
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-consumer-retry-1.drawio.png)
 
-1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다.
-1-2첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다.
-1-3. 첫 번째 `Consumer` 는 재시도 해야할 메시지를 `Inbound Topic` 에서 다시 소비한다. 
-1-4. 첫 번째 `Consumer` 의 `REST API` 호출은 재시도 과정에서 최종적으로 성공하고, 이후 이벤트가 `Outbound Topic` 으로 전달된다. 
+1-1. 첫 번쨰 `Consumer` 는 `Inbound Topic` 으로부터 메시지를 소비한다.  
+1-2첫 번째 `Consumer` 는 `Third party` 서비스에게 `REST API` 호출을 수행하지만 `503` 에러로 호출은 실패한다.  
+1-3. 첫 번째 `Consumer` 는 재시도 해야할 메시지를 `Inbound Topic` 에서 다시 소비한다.  
+1-4. 첫 번째 `Consumer` 의 `REST API` 호출은 재시도 과정에서 최종적으로 성공하고, 이후 이벤트가 `Outbound Topic` 으로 전달된다.  
 
 최종적으로 `Rebalancing` 이 일어나지 않기 때문에 `Stateless retry` 와는 다르게 두 번째 `Consumer` 는 사용되지 않는다.  
 
