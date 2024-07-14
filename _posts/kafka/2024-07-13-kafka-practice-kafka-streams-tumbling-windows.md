@@ -92,3 +92,39 @@ my-event -> MyEvent -> process -> MyEventAgg -> tumbling-result
 - `map()` : 최종 이벤트에 대한 키와 값을 매칭해 `KeyValue` 타입으로 변환한다. 
 - `to()` : 최종 이벤트를 전송할 토픽을 명시하고, 사용할 직렬화/역직렬화를 설정한다. 
 - `peek()` : 스트림 처리에서 중간에 아이템을 확인해 볼 수 있는 메소드이다. 
+
+
+### Aggregate
+여러 `MyEvent` 를 받아 `MyEventAgg` 로 집계하는 동작은 아래와 같다.
+
+- `firstSeq` : 집계에 사용한 이벤트 중 최소 시퀀스 값
+- `lastSeq` : 집계에 사용한 이벤트 중 최대 시퀀스 값
+- `count` : 집계에 사용한 이벤트의 수
+- `str` : 집계에 사용한 문자열을 연결한 값
+
+```java
+public static MyEventAgg aggregateMyEvent(String key, MyEvent myEvent, MyEventAgg aggregateMyEvent) {
+    Long firstSeq = aggregateMyEvent.getFirstSeq();
+    Long lastSeq = aggregateMyEvent.getLastSeq();
+    Long count = aggregateMyEvent.getCount();
+    String str = aggregateMyEvent.getStr();
+
+    if(count == null || count <= 0) {
+        firstSeq = myEvent.getSeq();
+        str = "";
+        count = 0L;
+        lastSeq = Long.MIN_VALUE;
+    }
+
+    lastSeq = Long.max(lastSeq, myEvent.getSeq());
+    str = str.concat(myEvent.getStr());
+    count++;
+
+    return MyEventAgg.builder()
+            .firstSeq(firstSeq)
+            .lastSeq(lastSeq)
+            .count(count)
+            .str(str)
+            .build();
+}
+```  
