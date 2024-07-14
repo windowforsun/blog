@@ -1,0 +1,61 @@
+@startuml
+
+participant inbound as "Kafka Inbound Topic"
+participant first as "First Consumer"
+participant second as "Second Consumer"
+participant dead as "Dead Letter Topic"
+
+first -> inbound : poll()
+activate inbound
+activate first
+inbound --> first : message
+deactivate inbound
+
+first -> first : throw RetryableException
+note over first : Retry
+
+first -> inbound : poll()
+activate inbound
+inbound --> first : message
+deactivate inbound
+first -> first : throw RetryableException
+inbound -[hidden]-> first
+deactivate first
+destroy first
+
+note over inbound, dead : Rebalance
+
+second -> inbound : poll()
+activate inbound
+activate second
+inbound --> second : message
+deactivate inbound
+second -> second : throw RetryableException
+note over second : Retry
+
+
+
+second -> inbound : poll()
+activate inbound
+inbound --> second : message
+deactivate inbound
+
+second -> second : throw RetryableException
+note over second : Retry
+
+
+second -> inbound : poll()
+activate inbound
+inbound --> second : message
+deactivate inbound
+
+second -> second : throw RetryableException
+note over second : Retry Exhausted
+
+second -> dead : send
+deactivate second
+
+
+
+
+@enduml
