@@ -128,3 +128,82 @@ public static MyEventAgg aggregateMyEvent(String key, MyEvent myEvent, MyEventAg
             .build();
 }
 ```  
+
+### Tumbling Windows Test
+`KafkaStreams` 의 테스를 위해선 우선 사전 작업이 필요하다.
+먼저 어떠한 사전 작업이 필요한지 알아보고,
+이후 실제 테스트 결과에 대해서 알아본다.
+
+전체 테스트 코드는 [여기]()
+에서 확인 할 수 있다.
+
+#### Setup
+
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE, classes = KafkaConfig.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@EmbeddedKafka(controlledShutdown = true, topics = {"my-event", "tumbling-result"})
+@ActiveProfiles("test")
+public class MyEventTumblingWindowTest {
+    private StreamsBuilder streamsBuilder;
+    private Serde<String> stringSerde = new Serdes.StringSerde();
+    private TopologyTestDriver topologyTestDriver;
+    private Serde<MyEvent> myEventSerde = new MyEventSerde();
+    private Serde<MyEventAgg> myEventAggSerde = new MyEventAggSerde();
+    private TestInputTopic<String, MyEvent> myEventInput;
+    private TestOutputTopic<String, MyEventAgg> tumblingResultOutput;
+    @Autowired
+    private EmbeddedKafkaBroker embeddedKafkaBroker;
+    @Autowired
+    private KafkaListenerEndpointRegistry registry;
+
+    @BeforeEach
+    public void setUp() {
+        this.registry.getListenerContainers()
+                .stream()
+                .forEach(container -> ContainerTestUtils.waitForAssignment(container, this.embeddedKafkaBroker.getPartitionsPerTopic()));
+
+        this.streamsBuilder = new StreamsBuilder();
+        TumblingWindow tumblingWindow = new TumblingWindow(10L, 0L);
+        tumblingWindow.processMyEvent(this.streamsBuilder);
+        final Topology topology = this.streamsBuilder.build();
+
+        this.topologyTestDriver = new TopologyTestDriver(topology);
+        this.myEventInput = this.topologyTestDriver.createInputTopic("my-event",
+                this.stringSerde.serializer(),
+                this.myEventSerde.serializer());
+        this.tumblingResultOutput = this.topologyTestDriver.createOutputTopic("tumbling-result",
+                this.stringSerde.deserializer(),
+                this.myEventAggSerde.deserializer());
+    }
+
+    @AfterEach
+    public void tearDown() {
+        if (this.topologyTestDriver != null) {
+            this.topologyTestDriver.close();
+        }
+    }
+    
+    // .. TC ..
+}
+
+```  
+
+- `@DirtiesContext()` : 각 테스트마다 리소스 정리와 최적화를 위해 종료후 애플리케이션 컨텍스트를 모두 폐기하고, 새로운 컨텍스트를 생성한다.
+- `@EmbeddedKafka()` : `KafkaStreams` 테스트를 위해 별도의 외부 의존성 없이 `EmbeddedKafka` 를 사용한다.
+- `this.registry.getListenerContainers()` : `EmbeddedKafka` 에서 토픽생성이 왼료될 떄까지 대기한다.
+- `new TumblingWindow(10L, 0L)` : `windowSize` 가 10이고, 윈도우 업데이트 유예시간이 0인 `TumblingWindows` 를 사용한다.
+- `topology` : `TumblingWindow` 의 처리 내용은 전달 받은 `StreamBuilder` 를 통해 구성된다.
+  그리고 모든 처리내용이 `StreamsBuilder` 에 등록되면 이를 통해 `Topology` 를 생성한다.
+- `topologyTestDriver` : `topology` 를 통해 `TopolofyTestDriver` 인스턴스를 생성한다.
+  그리고 이를 사용해서 테스트에서 사용할 `Inbound Topic` 과 `Outbound Topic` 에 대한 토픽명 직렬화/역직렬화를 설정한다.
+
+이후 우리는 `TopologyTestDriver` 로 생성한 `TestInputTopic` 객체를 사용해서
+윈도우 처리의 `Inbound Topic` 에 메시지를 전송할 수 있다.
+그리고 메시지 전송 뿐만 아니라, 해당 메시지의 타임스탬프를 임의로 아래와 같이 지정 할 수도 있다.
+
+```java
+this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 2L);
+this.myEventInput.pipeInput("key1", Util.createMyEvent(2L, "b"), 6L);
+this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 10L);
+```  
