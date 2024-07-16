@@ -207,3 +207,64 @@ this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 2L);
 this.myEventInput.pipeInput("key1", Util.createMyEvent(2L, "b"), 6L);
 this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 10L);
 ```  
+
+#### Single Key
+`TumblingWindows` 의 크기가 `10` 일때,
+단일키로 구성된 7개 이벤트가 아래 코드와 같은 시간에 발생한다고 하자.
+그렇다면 몇개의 윈도우가 생성되고 각 윈도우는 어떤 이벤트를 포함할지 살펴보면 아래와 같다.
+
+```java
+@Test
+public void singleKey_eachWindow_twoEvents() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 2L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(2L, "b"), 6L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 10L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(4L, "d"), 16L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "e"), 32L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(6L, "f"), 36L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(7L, "z"), 40L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.tumblingResultOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(3));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(2L));
+    assertThat(list.get(0).value.getStr(), is("ab"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(3L));
+    assertThat(list.get(1).value.getLastSeq(), is(4L));
+    assertThat(list.get(1).value.getStr(), is("cd"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(5L));
+    assertThat(list.get(2).value.getLastSeq(), is(6L));
+    assertThat(list.get(2).value.getStr(), is("ef"));
+}
+```  
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
+
+.. 그림 ..
+
+윈도우 범위|이벤트
+---|---
+w1(t0 ~ t10]|a(t2), b(t6)
+w2(t10 ~ t20]|c(t10), d(t16)
+w3(t30 ~ t40]|e(t32), f(t36)
+
+결과를 보면 `z` 이벤트는 어떠한 윈도우에도 결과에도 포함되지 않음을 확인 할 수 있다.
+이는 테스트 구성에서 윈도우의 최종 결과만을 보기위해 `suppress()` 를 사용해 윈도우가 닫힐때까지
+윈도우 결과 전달을 억제하기 때문이다.
+이러한 동작으로 닫힌 윈도우의 결과를 받기(`flush`) 위해서는 이후 발생되는 새 이벤트를 보내야 하는 것이다.
+즉 `z` 이벤트가 포함된 윈도우를 확인하기 위해서는 `z` 이벤트가 포함되는 윈도우의 다음 윈도우에 해당하는 이벤트가 들어와야한다는 의미이다.
+
+그런데 만약 윈도우 업데이트 유예시간(`windowGrace`) 가 설정된 `0` 이 아니라 `1` 로 되면 어떻게 될까 ?
+2개의 윈도우만 리턴하게 되므로 테스트는 실패하게 된다.
+이는 `suppress()` 와 `windowGrace` 에 따른 특성이 모두 적용됐기 때문이다.
+`suppress()` 로 윈도우가 닫힐 때까지 윈도우 반환을 늦추게 된다.
+그런데 `windowGrace` 가 `1` 이기 때문에 윈도우는 닫혔지만 `1` 를 추가로 대기한다.
+여기서 추가 대기 시간 중 마지막 이벤트인 `z` 가 발생하고, 플러시 되기 전에 테스트는 종료되므로 윈도우 2개만 최종적으로 받아 볼 수 있는 것이다.
+
+이러한 마지막 이벤트(`z`) 와 `windowGrace` 의 각 특성에 대해서는 시간값을 수정해보며 이해해두면 좋다.
+
+
