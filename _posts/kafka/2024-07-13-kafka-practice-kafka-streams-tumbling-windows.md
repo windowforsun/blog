@@ -268,3 +268,67 @@ w3(t30 ~ t40]|e(t32), f(t36)
 이러한 마지막 이벤트(`z`) 와 `windowGrace` 의 각 특성에 대해서는 시간값을 수정해보며 이해해두면 좋다.
 
 
+
+#### Multiple Key
+이번에는 1개 이상의 키를 가지는 이벤트가 생성되는 상황을 살펴본다.
+
+```java
+@Test
+public void multipleKey_eachWindow_twoEvents() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 2L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(2L, "b"), 4L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 6L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(4L, "d"), 8L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "e"), 13L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(6L, "g"), 18L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(7L, "f"), 22L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(8L, "h"), 28L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(9L, "z"), 30L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.tumblingResultOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(4));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(3L));
+    assertThat(list.get(0).value.getStr(), is("ac"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(2L));
+    assertThat(list.get(1).value.getLastSeq(), is(4L));
+    assertThat(list.get(1).value.getStr(), is("bd"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(5L));
+    assertThat(list.get(2).value.getLastSeq(), is(6L));
+    assertThat(list.get(2).value.getStr(), is("eg"));
+
+    assertThat(list.get(3).value.getFirstSeq(), is(7L));
+    assertThat(list.get(3).value.getLastSeq(), is(8L));
+    assertThat(list.get(3).value.getStr(), is("fh"));
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
+
+.. 그림 ..
+
+키| 윈도우 범위        |이벤트
+---|---------------|---
+key1| w1(t0 ~ t10]  |a(t2), c(t6)
+key2| w2(t0 ~ t10]  |b(t4), d(t8)         
+key1| w3(t10 ~ t20] | e(t13), g(t18) 
+key2| w4(t20 ~ t30] | e(t22), g(t28)      
+
+결과적으로 집계연산을 수행하기 전 `groupByKey()` 를 사용하고 있으므로 키가 다르다면 별도의 윈도우에 포함되는 것을 확인 할 수 있다.
+
+
+
+
+
+---  
+## Reference
+[Kafka Streams Windowing - Tumbling Windows](https://www.lydtechconsulting.com/blog-kafka-streams-windows-tumbling.html)  
+[Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
+[Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+
+
+
