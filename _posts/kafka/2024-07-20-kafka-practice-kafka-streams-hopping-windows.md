@@ -80,3 +80,24 @@ my-event -> MyEvent -> process -> MyEventAgg -> hopping-result
 - `windowedBy()` : `Hopping Windows` 를 구성할 수 있는 `windowSize`(윈도우 크기) 와 `windowAdvance`(윈도우 진행 간격)을 설정한다. 
   - 윈도우 진행 간격이란 윈도우가 생성되는 주기를 의미한다. 
 
+
+### Aggregate
+여러 `MyEvent` 를 받아 `MyEventAgg` 로 집계하는 동작은 아래와 같다. 
+
+- `firstSeq` : 집계에 사용한 이벤트 중 최소 시퀀스 값
+- `lastSeq` : 집계에 사용한 이벤트 중 최대 시퀀스 값
+- `count` : 집계에 사용한 이벤트의 수
+- `str` : 집계에 사용한 문자열을 연결한 값
+
+[TumblingWindows]()
+의 내용과 동일하다.  
+
+### Hopping Windows Test
+`KafkaStreams` 의 테스를 위해선 우선 사전 작업이 필요한데, 
+자세한 내용은 [TumblingWindows Test Setup]()
+에서 확인 할 수 있다. 
+
+전체 테스트 코드는 [여기]()
+에서 확인 할 수 있고, 
+테스트에서 윈도우 크기는 `10`, 윈도우 진행 간격은 `5` 로 설정해서 수행한다. 
+
