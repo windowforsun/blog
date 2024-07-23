@@ -101,3 +101,125 @@ my-event -> MyEvent -> process -> MyEventAgg -> hopping-result
 에서 확인 할 수 있고, 
 테스트에서 윈도우 크기는 `10`, 윈도우 진행 간격은 `5` 로 설정해서 수행한다. 
 
+
+#### Single Key
+단일키를 사용하는 총 4개의 이벤트가 아래 코드와 같이 발생될 때 윈도우의 구성과 
+각 윈도우에 포함되는 이벤트를 살펴보면 아래와 같다.   
+
+```java
+@Test
+public void singleKey_eachWindow_twoEvents() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 0L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(2L, "b"), 7L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 10L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(4L, "d"), 15L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "z"), 30L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.hoppingResultOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(4));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(2L));
+    assertThat(list.get(0).value.getStr(), is("ab"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(2L));
+    assertThat(list.get(1).value.getLastSeq(), is(3L));
+    assertThat(list.get(1).value.getStr(), is("bc"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(3L));
+    assertThat(list.get(2).value.getLastSeq(), is(4L));
+    assertThat(list.get(2).value.getStr(), is("cd"));
+
+    assertThat(list.get(3).value.getFirstSeq(), is(4L));
+    assertThat(list.get(3).value.getLastSeq(), is(4L));
+    assertThat(list.get(3).value.getStr(), is("d"));
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.  
+
+.. 그림 .. 
+
+윈도우 범위|이벤트
+---|---
+w1(t0 ~ t10]|a(t0), b(t7)
+w2(t5 ~ t15]|b(t7), c(t10)
+w3(t10 ~ t20]|c(t10), d(t15)
+w4(t15 ~ t25]|d(t15)
+
+#### Multiple Key
+이번에는 1개 이상의 키를 가지는 이벤트가 생성되는 상황을 살펴본다. 
+
+```java
+@Test
+public void multipleKey_eachWindow_oneEvents_duplicated2() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 7L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(2L, "b"), 10L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(3L, "c"), 16L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(4L, "d"), 19L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "z"), 30L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.hoppingResultOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(7));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(1L));
+    assertThat(list.get(0).value.getStr(), is("a"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(1L));
+    assertThat(list.get(1).value.getLastSeq(), is(1L));
+    assertThat(list.get(1).value.getStr(), is("a"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(2L));
+    assertThat(list.get(2).value.getLastSeq(), is(2L));
+    assertThat(list.get(2).value.getStr(), is("b"));
+
+    assertThat(list.get(3).value.getFirstSeq(), is(4L));
+    assertThat(list.get(3).value.getLastSeq(), is(4L));
+    assertThat(list.get(3).value.getStr(), is("d"));
+
+    assertThat(list.get(4).value.getFirstSeq(), is(2L));
+    assertThat(list.get(4).value.getLastSeq(), is(3L));
+    assertThat(list.get(4).value.getStr(), is("bc"));
+
+    assertThat(list.get(5).value.getFirstSeq(), is(4L));
+    assertThat(list.get(5).value.getLastSeq(), is(4L));
+    assertThat(list.get(5).value.getStr(), is("d"));
+
+    assertThat(list.get(6).value.getFirstSeq(), is(3L));
+    assertThat(list.get(6).value.getLastSeq(), is(3L));
+    assertThat(list.get(6).value.getStr(), is("c"));
+
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
+
+.. 그림 ..
+
+키| 윈도우 범위        |이벤트
+---|---------------|---
+key1| w1(t0 ~ t10]  |a(t7)
+key1| w2(t5 ~ t15]  |a(t7)         
+key2| w3(t5 ~ t15]  | b(t10) 
+key1| w4(t10 ~ t20] | d(t19)           
+key2| w5(t10 ~ t20] | b(t10), c(t16)   
+key1| w6(t15 ~ t25] | d(t19)           
+key2| w7(t15 ~ t25] | c(t16)       
+
+결과적으로 집계연산을 수행하기 전 `groupByKey()` 를 사용하고 있으므로 키가 다르다면 별도의 윈도우에 포함되는 것을 확인 할 수 있다. 
+
+
+
+
+
+---  
+## Reference
+[Kafka Streams Windowing - Hopping Windows](https://www.lydtechconsulting.com/blog-kafka-streams-windows-hopping.html)  
+[Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
+[Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+
+
+
