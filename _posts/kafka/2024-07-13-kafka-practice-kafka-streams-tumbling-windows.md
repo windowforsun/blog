@@ -21,7 +21,7 @@ use_math: true
 ---  
 
 ## Tumbling Windows
-[Kafka Streams Windowing](2024-06-20-kafka-practice-kafka-streams-windowing.md)
+[Kafka Streams Windowing]({{site.baseurl}}{% link _posts/kafka/2024-06-20-kafka-practice-kafka-streams-windowing.md %})
 에서 `Tumbling Windows` 가 무엇이고 어떻게 윈도우를 구성하는지에 대해서는 알아보았다. 
 이번 포스팅에서는 실제 `KafkaStreams` 를 사용해서 `Tubmling Windows` 를 구성하고 실제로 윈도우가 어떻게 구성되는지 보다 상세히 살펴볼 것이다.  
 
@@ -248,7 +248,7 @@ public void singleKey_eachWindow_twoEvents() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
 
-![kafka-streams-tumbling-windows-1.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-tumbling-windows-1.drawio.png).. 그림 ..
+![kafka-streams-tumbling-windows-1.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-tumbling-windows-1.drawio.png)
 
 윈도우 범위|이벤트
 ---|---
@@ -313,7 +313,7 @@ public void multipleKey_eachWindow_twoEvents() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
 
-![kafka-streams-tumbling-windows-2.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-tumbling-windows-2.drawio.png).. 그림 ..
+![kafka-streams-tumbling-windows-2.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-tumbling-windows-2.drawio.png)
 
 키| 윈도우 범위        |이벤트
 ---|---------------|---
