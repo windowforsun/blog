@@ -43,4 +43,45 @@ my-event -> SlidingWindows process -> sliding-result
 그러므로 포스팅에서 설정되지 않은 내용들은 `TumblingWindows` 포스팅에서 확인할 수 있다.   
 
 
+### Topology
+`process` 에 정의된 `SlidingWindows` 를 바탕으로 처리하는 내용은 아래와 같다.  
+
+```java
+public void processMyEvent(StreamsBuilder streamsBuilder) {
+    Serde<String> stringSerde = new Serdes.StringSerde();
+    Serde<MyEvent> myEventSerde = new MyEventSerde();
+    Serde<MyEventAgg> myEventAggSerde = new MyEventAggSerde();
+
+    streamsBuilder.stream("my-event", Consumed.with(stringSerde, myEventSerde))
+            .peek((k, v) -> log.info("sliding input {} : {}", k, v))
+            .groupByKey()
+            .windowedBy(SlidingWindows.ofTimeDifferenceAndGrace(Duration.ofMillis(this.windowDuration), Duration.ofMillis(this.windowGrace)))
+            .aggregate(() -> new MyEventAgg(),
+                    ProcessorUtil::aggregateMyEvent,
+                    Materialized.<String, MyEventAgg, WindowStore<Bytes, byte[]>>as("sliding-window-store")
+                            .withKeySerde(stringSerde)
+                            .withValueSerde(myEventAggSerde)
+            )
+            .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+            .toStream()
+            .map((k, v) -> KeyValue.pair(k.key(), v))
+            .peek((k, v) -> log.info("sliding output {} : {}", k, v))
+            .to("sliding-result", Produced.with(stringSerde, myEventAggSerde));
+}
+```
+
+이벤트 데이터가 토픽을 오고가는 과정을 표현하면 아래와 같다.  
+
+```
+my-event -> MyEvent -> process -> MyEventAgg -> sliding-result
+```  
+
+- `windowedBy()` : `Sliding Windows` 를 구성할 수 있는 `windowSize`(윈도우 크기) 와 `windowGrace`(윈도우 업데이트 유효시간)을 설정한다. 
+
+여기서 `SlidingWindows` 를 설정한 방법인 `SlidingWindows.ofTimeDifferenceAndGrace()` 은
+첫번째 인자인 `windowSize` 가 윈도우의 크기이자 무활동 시간을 의미한다. 
+이는 `windowSize=10s` 일 경우 이전 이벤트 이후에 `10s` 이내에 발생하는 모든 이벤트는 동일한 윈도우에 포함될 수 있다는 의미이다. 
+그러므로 위 방식은 고정된 슬라이딩 간격이 존재하지 않고, 
+각 윈도우는 이벤트의 발생과 관련해 동적으로 생성된다. 
+이벤트가 불규칙하게 발생하고 윈도우의 크기를 이벤트 간의 시간 차이에 기반해서 조정하고 싶을 경우 유용한 방법이다.  
 
