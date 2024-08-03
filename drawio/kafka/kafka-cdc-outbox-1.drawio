@@ -1,31 +1,31 @@
-<mxfile host="app.diagrams.net" modified="2024-08-03T08:40:38.806Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" etag="HTi1xJR5LWP25aUqTozJ" version="24.7.1" type="github">
+<mxfile host="app.diagrams.net" modified="2024-08-03T08:41:32.819Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Whale/3.24.223.18 Safari/537.36" etag="ohSki_rIZ_dHFhBOnViZ" version="24.7.1" type="github">
   <diagram name="페이지-1" id="2WWq3FoiBIygSgmrf8-9">
     <mxGraphModel dx="552" dy="1049" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="S1trCb6gt40h2ikqqsKd-2" value="Order&amp;nbsp;&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-2" value="Order&amp;nbsp;&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="40" y="160" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-3" value="Shipment&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-3" value="Shipment&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="230" y="160" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-4" value="Customer&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-4" value="Customer&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="680" y="240" width="120" height="40" as="geometry" />
         </mxCell>
         <mxCell id="S1trCb6gt40h2ikqqsKd-34" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="S1trCb6gt40h2ikqqsKd-5" target="S1trCb6gt40h2ikqqsKd-6">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-5" value="MySQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-5" value="MySQL" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
           <mxGeometry x="170" y="320" width="60" height="80" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-6" value="Kafka Connect&lt;div&gt;Debezium CDC&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-6" value="Kafka Connect&lt;div&gt;Debezium CDC&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="140" y="480" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-29" value="" style="group" vertex="1" connectable="0" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-29" value="" style="group;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" connectable="0" parent="1">
           <mxGeometry x="320" y="280" width="240" height="170" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-7" value="" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="S1trCb6gt40h2ikqqsKd-29">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-7" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="S1trCb6gt40h2ikqqsKd-29">
           <mxGeometry width="240" height="170" as="geometry" />
         </mxCell>
         <mxCell id="S1trCb6gt40h2ikqqsKd-8" value="Apache Kafka" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="S1trCb6gt40h2ikqqsKd-29">
@@ -85,10 +85,10 @@
         <mxCell id="S1trCb6gt40h2ikqqsKd-28" value="Shipment Events" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="S1trCb6gt40h2ikqqsKd-29">
           <mxGeometry x="15" y="90" width="95" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-30" value="Order&amp;nbsp;&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-30" value="Order&amp;nbsp;&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="680" y="480" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="S1trCb6gt40h2ikqqsKd-31" value="Shipment&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+        <mxCell id="S1trCb6gt40h2ikqqsKd-31" value="Shipment&lt;div&gt;Service&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="680" y="360" width="120" height="40" as="geometry" />
         </mxCell>
         <mxCell id="S1trCb6gt40h2ikqqsKd-32" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" edge="1" parent="1" source="S1trCb6gt40h2ikqqsKd-2" target="S1trCb6gt40h2ikqqsKd-5">
