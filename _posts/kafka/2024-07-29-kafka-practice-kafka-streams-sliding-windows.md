@@ -85,3 +85,15 @@ my-event -> MyEvent -> process -> MyEventAgg -> sliding-result
 각 윈도우는 이벤트의 발생과 관련해 동적으로 생성된다. 
 이벤트가 불규칙하게 발생하고 윈도우의 크기를 이벤트 간의 시간 차이에 기반해서 조정하고 싶을 경우 유용한 방법이다.  
 
+
+
+### Aggregate
+여러 `MyEvent` 를 받아 `MyEventAgg` 로 집계하는 동작은 아래와 같다. 
+
+- `firstSeq` : 집계에 사용한 이벤트 중 최소 시퀀스 값
+- `lastSeq` : 집계에 사용한 이벤트 중 최대 시퀀스 값
+- `count` : 집계에 사용한 이벤트의 수
+- `str` : 집계에 사용한 문자열을 연결한 값
+
+[TumblingWindows]()
+의 내용과 동일하다.  
