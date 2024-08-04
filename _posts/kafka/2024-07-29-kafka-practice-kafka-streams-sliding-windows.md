@@ -97,3 +97,13 @@ my-event -> MyEvent -> process -> MyEventAgg -> sliding-result
 
 [TumblingWindows]()
 의 내용과 동일하다.  
+
+### Sliding Windows Test
+`KafkaStreams` 의 테스를 위해선 우선 사전 작업이 필요한데, 
+자세한 내용은 [TumblingWindows Test Setup]()
+에서 확인 할 수 있다. 
+
+전체 테스트 코드는 [여기]()
+에서 확인 할 수 있고, 
+테스트에서 윈도우 크기는 `30`, 윈도우 업데이트 유효시간은 `1` 로 설정해 진행한다.  
+
