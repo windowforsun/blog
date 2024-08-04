@@ -143,7 +143,8 @@ public void singleKey_eachWindow_twoEvents() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.  
 
-![kafka-streams-hopping-windows-1.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-%08hopping-windows-1.drawio.png)
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-hopping-windows-1.drawio.png)
+
 
 윈도우 범위|이벤트
 ---|---
@@ -201,7 +202,7 @@ public void multipleKey_eachWindow_oneEvents_duplicated2() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
 
-![kafka-streams-hopping-windows-2.drawio.png](..%2F..%2Fimg%2Fkafka%2Fkafka-streams-%08hopping-windows-2.drawio.png)
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-hopping-windows-2.drawio.png)
 
 키| 윈도우 범위        |이벤트
 ---|---------------|---
