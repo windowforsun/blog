@@ -174,3 +174,86 @@ w5(t41 ~ t71]|c(t55)
 w6(t71 ~ t101]|d(t100)
 w7(t81 ~ t111]|d(t100), e(t110)
 w8(t101 ~ t131]|e(t110)
+
+#### Multiple Key
+이번에는 1개 이상의 키를 가지는 이벤트가 생성되는 상황을 살펴본다. 
+
+```java
+@Test
+public void multipleKey_eachWindow_maxTwoEvents() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 15L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(2L, "b"), 25L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 35L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(4L, "d"), 45L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "e"), 55L);
+
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(99999L, "z"), 9999L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.slidingOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(8));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(1L));
+    assertThat(list.get(0).value.getStr(), is("a"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(2L));
+    assertThat(list.get(1).value.getLastSeq(), is(2L));
+    assertThat(list.get(1).value.getStr(), is("b"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(1L));
+    assertThat(list.get(2).value.getLastSeq(), is(3L));
+    assertThat(list.get(2).value.getStr(), is("ac"));
+
+    assertThat(list.get(3).value.getFirstSeq(), is(2L));
+    assertThat(list.get(3).value.getLastSeq(), is(4L));
+    assertThat(list.get(3).value.getStr(), is("bd"));
+
+    assertThat(list.get(4).value.getFirstSeq(), is(3L));
+    assertThat(list.get(4).value.getLastSeq(), is(3L));
+    assertThat(list.get(4).value.getStr(), is("c"));
+
+    assertThat(list.get(5).value.getFirstSeq(), is(3L));
+    assertThat(list.get(5).value.getLastSeq(), is(5L));
+    assertThat(list.get(5).value.getStr(), is("ce"));
+
+    assertThat(list.get(6).value.getFirstSeq(), is(4L));
+    assertThat(list.get(6).value.getLastSeq(), is(4L));
+    assertThat(list.get(6).value.getStr(), is("d"));
+
+    assertThat(list.get(7).value.getFirstSeq(), is(5L));
+    assertThat(list.get(7).value.getLastSeq(), is(5L));
+    assertThat(list.get(7).value.getStr(), is("e"));
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
+
+.. 그림 ..
+
+키| 윈도우 범위        |이벤트
+---|---------------|---
+key1| w1(t0 ~ t16]  |a(t15)
+key2| w2(t0 ~ t26]  |b(t25)         
+key1| w3(t6 ~ t36]  | a(t15), c(t35) 
+key2| w4(t16 ~ t46] | b(t25), d(t45)   
+key1| w5(t16 ~ t46] | c(t35)           
+key1| w6(t25 ~ t56] | c(t35), e(t55)          
+key2| w7(t26 ~ t56] | d(t145) 
+key1| w8(t36 ~ t66] | e(t55)       
+
+결과적으로 집계연산을 수행하기 전 `groupByKey()` 를 사용하고 있으므로 키가 다르다면 별도의 윈도우에 포함되는 것을 확인 할 수 있다. 
+
+
+
+
+
+---  
+## Reference
+[Kafka Streams Windowing - Sliding Windows](https://www.lydtechconsulting.com/blog-kafka-streams-windows-sliding.html)  
+[Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
+[Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+[SlidingWindows](https://kafka.apache.org/27/javadoc/org/apache/kafka/streams/kstream/SlidingWindows.html)  
+
+
+
