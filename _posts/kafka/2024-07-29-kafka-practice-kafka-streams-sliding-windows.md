@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Sliding Window"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams Window 방식 중 Sliding Window 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,12 +12,16 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Sliding Window
+    - Window
+    - Windowing
 toc: true
 use_math: true
 ---  
 
 ## Sliding Windows
-[Kafka Streams Windowing]()
+[Kafka Streams Windowing]({{site.baseurl}}{% link _posts/kafka/2024-06-20-kafka-practice-kafka-streams-windowing.md %})
 에서 `Sliding Windows` 가 무엇이고 어떻게 윈도우를 구성하는지에 대해서는 알아보았다. 
 이번 포스팅에서는 실제 `KafkaStreams` 를 사용해서 `Sliding Windows` 를 구성하고 실제로 윈도우가 어떻게 구성되는지 보다 상세히 살펴볼 것이다.  
 
@@ -35,10 +39,10 @@ my-event -> SlidingWindows process -> sliding-result
 이벤트는 `my-event` 라는 `Inbound Topic` 으로 인입되고, 
 `Processor` 에서 `Sliding Windows` 를 사용해서 이벤트를 집계 시킨뒤 그 결과를 `sliding-result` 라는 `OutBound Topic` 로 전송한다.  
 
-이후 예시코드의 전체내용은 [여기]()
+이후 예시코드의 전체내용은 [여기](https://github.com/windowforsun/kafka-streams-windowing-demo)
 에서 확인 할 수 있다.  
 
-이전 포스팅인 [TumblingWindows]()
+이전 포스팅인 [TumblingWindows]({{site.baseurl}}{% link _posts/kafka/2024-07-13-kafka-practice-kafka-streams-tumbling-windows.md %})
 에서 테스트 코드의 기본적인 설정과 공통 내용들이 포함돼 있다. 
 그러므로 포스팅에서 설정되지 않은 내용들은 `TumblingWindows` 포스팅에서 확인할 수 있다.   
 
@@ -95,15 +99,15 @@ my-event -> MyEvent -> process -> MyEventAgg -> sliding-result
 - `count` : 집계에 사용한 이벤트의 수
 - `str` : 집계에 사용한 문자열을 연결한 값
 
-[TumblingWindows]()
+[TumblingWindows](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-streams-tumbling-windows/#aggregate)
 의 내용과 동일하다.  
 
 ### Sliding Windows Test
 `KafkaStreams` 의 테스를 위해선 우선 사전 작업이 필요한데, 
-자세한 내용은 [TumblingWindows Test Setup]()
+자세한 내용은 [TumblingWindows Test Setup](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-streams-tumbling-windows/#setup)
 에서 확인 할 수 있다. 
 
-전체 테스트 코드는 [여기]()
+전체 테스트 코드는 [여기](https://github.com/windowforsun/kafka-streams-windowing-demo/blob/master/src/test/java/com/windowforsun/kafka/streams/windowing/processor/MyEventSlidingWindowTest.java)
 에서 확인 할 수 있고, 
 테스트에서 윈도우 크기는 `30`, 윈도우 업데이트 유효시간은 `1` 로 설정해 진행한다.  
 
@@ -162,7 +166,8 @@ public void singleKey_eachWindow_maxThreeEvents() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-sliding-windows-1.drawio.png)
+
 
 윈도우 범위|이벤트
 ---|---
@@ -229,7 +234,8 @@ public void multipleKey_eachWindow_maxTwoEvents() {
 
 위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-sliding-windows-2.drawio.png)
+
 
 키| 윈도우 범위        |이벤트
 ---|---------------|---
