@@ -45,3 +45,52 @@ my-event -> SessionWinow process -> session-result
 이전 포스팅인 [TumblingWindows]()
 에서 테스트 코드의 기본적인 설정과 공통 내용들이 포함돼 있다. 
 그러므로 포스팅에서 설정되지 않은 내용들은 `TumblingWindows` 포스팅에서 확인할 수 있다.   
+
+
+### Topology
+`process` 에 정의된 `SessionWindows` 를 바탕으로 처리하는 내용은 아래와 같다.  
+
+```java
+public void processMyEvent(StreamsBuilder streamsBuilder) {
+    Serde<String> stringSerde = new Serdes.StringSerde();
+    Serde<MyEvent> myEventSerde = new MyEventSerde();
+    Serde<MyEventAgg> myEventAggSerde = new MyEventAggSerde();
+
+    Merger<String, MyEventAgg> sessionMerger = (aggKey, aggOne, aggTwo) -> MyEventAgg.builder()
+            .firstSeq(Long.min(aggOne.getFirstSeq(), aggTwo.getFirstSeq()))
+            .lastSeq(Long.max(aggOne.getLastSeq(), aggTwo.getLastSeq()))
+            .count(aggOne.getCount() + aggTwo.getCount())
+            .str(aggOne.getStr().concat(aggTwo.getStr()))
+            .build();
+
+    streamsBuilder.stream("my-event", Consumed.with(stringSerde, myEventSerde))
+            .peek((k, v) -> log.info("session input event {} : {}", k, v))
+            .groupByKey()
+            .windowedBy(SessionWindows.ofInactivityGapAndGrace(Duration.ofMillis(this.inactivityGap), Duration.ofMillis(this.windowGrade)))
+            .aggregate(() -> new MyEventAgg(),
+                    ProcessorUtil::aggregateMyEvent,
+                    sessionMerger,
+                    Materialized.<String, MyEventAgg, SessionStore<Bytes, byte[]>>as("session-window-store")
+                            .withKeySerde(stringSerde)
+                            .withValueSerde(myEventAggSerde)
+            )
+            .suppress(Suppressed.untilWindowCloses(Suppressed.BufferConfig.unbounded()))
+            .toStream()
+            .map((k, v) -> KeyValue.pair(k.key(), v))
+            .peek((k, v) -> log.info("session output {} : {}", k, v))
+            .to("session-result", Produced.with(stringSerde, myEventAggSerde));
+}
+```
+
+이벤트 데이터가 토픽을 오고가는 과정을 표현하면 아래와 같다.  
+
+```
+my-event -> MyEvent -> process -> MyEventAgg -> session-result
+```  
+
+- `windowedBy()` : `Session Windows` 를 구성할 수 있는 `inactivityGap`(무활동 시간) 와 `windowGrace`(윈도우 업데이트 유효시간)을 설정한다. 
+
+이전 시간 베이스 윈도우들은 `aggregate()` 에서 이벤트를 하나로 집계하는 집계 함수인 `aggregator` 만 필요했다. 
+`SessionWindows` 의 경우 `inactivityGap` 에 따라 윈도우간 `Merge` 동작도 필수는 아니지만 정의할 수 있다. 
+`sessionMerger` 의 구현체를 보면 `aggregator` 를 통해 집계된 두 집계 결과를 다시 하나의 결과로 머지하는 동작을 수행하고 있음을 확인 할 수 있다.  
+
