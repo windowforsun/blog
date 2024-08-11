@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Session Window"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams Window 방식 중 Session Window 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,10 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Session Window
+    - Window
+    - Windowing
 toc: true
 use_math: true
 ---  
