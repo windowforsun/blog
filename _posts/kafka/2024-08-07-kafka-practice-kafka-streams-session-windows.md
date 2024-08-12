@@ -94,3 +94,14 @@ my-event -> MyEvent -> process -> MyEventAgg -> session-result
 `SessionWindows` 의 경우 `inactivityGap` 에 따라 윈도우간 `Merge` 동작도 필수는 아니지만 정의할 수 있다. 
 `sessionMerger` 의 구현체를 보면 `aggregator` 를 통해 집계된 두 집계 결과를 다시 하나의 결과로 머지하는 동작을 수행하고 있음을 확인 할 수 있다.  
 
+
+### Aggregate
+여러 `MyEvent` 를 받아 `MyEventAgg` 로 집계하는 동작은 아래와 같다. 
+
+- `firstSeq` : 집계에 사용한 이벤트 중 최소 시퀀스 값
+- `lastSeq` : 집계에 사용한 이벤트 중 최대 시퀀스 값
+- `count` : 집계에 사용한 이벤트의 수
+- `str` : 집계에 사용한 문자열을 연결한 값
+
+[TumblingWindows]()
+의 내용과 동일하다.  
