@@ -115,3 +115,49 @@ my-event -> MyEvent -> process -> MyEventAgg -> session-result
 에서 확인 할 수 있고, 
 테스트에서 무활동 시간은 `10`, 윈도우 업데이트 유효시간은 `0` 로 설정해 진행한다.  
 
+
+#### Single Key
+단일키를 사용하는 총 5개의 이벤트가 아래 코드와 같이 발생될 때 윈도우의 구성과 
+각 윈도우에 포함되는 이벤트를 살펴보면 아래와 같다.   
+
+```java
+@Test
+public void singleKey() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 11L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(2L, "b"), 15L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 20L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(4L, "d"), 25L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "e"), 37L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(6L, "f"), 50L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(7L, "g"), 59L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(9999L, "z"), 9999L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.sessionOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(3));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(4L));
+    assertThat(list.get(0).value.getStr(), is("abcd"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(5L));
+    assertThat(list.get(1).value.getLastSeq(), is(5L));
+    assertThat(list.get(1).value.getStr(), is("e"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(6L));
+    assertThat(list.get(2).value.getLastSeq(), is(7L));
+    assertThat(list.get(2).value.getStr(), is("fg"));
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.  
+
+.. 그림 .. 
+
+윈도우 범위|이벤트
+---|---
+w1(t11 ~ t35]|a(t11), b(t15), c(t20), d(t25)
+w2(t37 ~ t37]|e(t37)
+w3(t50 ~ t69]|f(t50), g(t69)
+
+
