@@ -161,3 +161,71 @@ w2(t37 ~ t37]|e(t37)
 w3(t50 ~ t69]|f(t50), g(t69)
 
 
+
+#### Multiple Key
+이번에는 1개 이상의 키를 가지는 이벤트가 생성되는 상황을 살펴본다. 
+
+```java
+@Test
+public void multipleKey() {
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(1L, "a"), 11L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(2L, "b"), 15L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(3L, "c"), 20L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(4L, "d"), 25L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(5L, "e"), 37L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(6L, "f"), 50L);
+    this.myEventInput.pipeInput("key2", Util.createMyEvent(7L, "g"), 59L);
+    this.myEventInput.pipeInput("key1", Util.createMyEvent(9999L, "z"), 9999L);
+
+    List<KeyValue<String, MyEventAgg>> list = this.sessionOutput.readKeyValuesToList();
+
+    assertThat(list, hasSize(5));
+
+    assertThat(list.get(0).value.getFirstSeq(), is(1L));
+    assertThat(list.get(0).value.getLastSeq(), is(3L));
+    assertThat(list.get(0).value.getStr(), is("ac"));
+
+    assertThat(list.get(1).value.getFirstSeq(), is(2L));
+    assertThat(list.get(1).value.getLastSeq(), is(4L));
+    assertThat(list.get(1).value.getStr(), is("bd"));
+
+    assertThat(list.get(2).value.getFirstSeq(), is(5L));
+    assertThat(list.get(2).value.getLastSeq(), is(5L));
+    assertThat(list.get(2).value.getStr(), is("e"));
+
+    assertThat(list.get(3).value.getFirstSeq(), is(6L));
+    assertThat(list.get(3).value.getLastSeq(), is(6L));
+    assertThat(list.get(3).value.getStr(), is("f"));
+
+    assertThat(list.get(4).value.getFirstSeq(), is(7L));
+    assertThat(list.get(4).value.getLastSeq(), is(7L));
+    assertThat(list.get(4).value.getStr(), is("g"));
+}
+```
+
+위 테스트 코드에서 발생하는 이벤트와 이를 통해 생성되는 윈도우를 도식화 하면 아래와 같다.
+
+.. 그림 ..
+
+키| 윈도우 범위        |이벤트
+---|---------------|---
+key1| w1(t11 ~ t30] | a(t11), c(t20) 
+key2| w2(t15 ~ t35] | b(t15), d(t25) 
+key1| w3(t37 ~ t47] | e(t37)        
+key1| w4(t50 ~ t60] | f(t57)        
+key2| w5(t59 ~ t69] | g(t59)        
+
+결과적으로 집계연산을 수행하기 전 `groupByKey()` 를 사용하고 있으므로 키가 다르다면 별도의 윈도우에 포함되는 것을 확인 할 수 있다. 
+
+
+
+
+
+---  
+## Reference
+[SessionWindows](https://kafka.apache.org/21/javadoc/index.html?org/apache/kafka/streams/kstream/SessionWindows.html)  
+[Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
+[Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+
+
+
