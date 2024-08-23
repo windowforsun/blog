@@ -40,3 +40,27 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-1.drawio.png)
 
+
+
+### 특징
+
+#### Processor Topology
+`Kafka Streams` 는 `Processor Topology` 라는
+하나의 스트림을 구성하는 프로세서들의 집합 개념을 통해 메시지를 처리한다.
+`Processor` 에는 크게 `Source`, `Stream`, `Sink` 라는 3가지 타입의 종류가 있다.
+
+- `Source Processor` : 토픽에서 메시지를 소비하는 역할을 하고, 소비한 데이터는 하나 이상의 `Stream` 혹은 `Sink` 프로세서에게 전달된다.
+- `Stream Prcessor` : 실제 메시지를 처리하는 역할을 한다. 메시지 변환, 집계, 필터링을 수행하는데 이는 여러 단계로 구성된 `Stream Processor Chain` 을 메시지가 통과하며 수행된다. 최종 메시지는 `Sink` 프로세서에게 전달 된다.
+- `Sink Processor` : `Processor Topology` 의 최종 결과를 다른 토픽에 쓰는 역할을 한다.
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-2.drawio.png)
+
+
+`Stateful Processor` 라고 불리는 상태를 가진 프로세서는 다른 `Streams` 혹은 `Tables` 데이터와 결합하거나,
+`Windowing` 을 바탕으로 데이터 그룹화를 통한 집계를 수행하는 프로세서를 의미한다.
+이러한 프로세서는 추가적인 저장소를 사용해서 상태를 유지하는 특성을 가지고 있다.
+
+그리고 하나의 `Processor Topology` 를 기준으로 각 메시지는 순차적으로 처리되는 특성을 갖는다.
+이는 앞선 메시지가 처리 완료되기 전까지 다음 메시지 처리는 수행되지 않음을 의미한다.
+`Topology` 는 `Sub-Topology` 를 포함 할 수 있는데,
+`Sub-Topology` 와 다른 `Sub-Topology` 는 병렬로 메시지를 처리한다.
