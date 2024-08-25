@@ -64,3 +64,16 @@ use_math: true
 이는 앞선 메시지가 처리 완료되기 전까지 다음 메시지 처리는 수행되지 않음을 의미한다.
 `Topology` 는 `Sub-Topology` 를 포함 할 수 있는데,
 `Sub-Topology` 와 다른 `Sub-Topology` 는 병렬로 메시지를 처리한다.
+
+
+#### Tasks 와 Threads
+`Kafka Streams` 에서 `Task` 와 `Threads` 는 메시지 처리의 `Throughput` 과 관련있다.
+각 `Source Topic Partition` 은 각 `Task` 에 1:1 관계로 매핑된다.
+그리고 각 `Task` 는 자신만의 `Topology` 을 복사본을 통해 메시지를 처리한다. (10개의 파티션이라면 10개 Task)
+그리고 `Thread` 는 이러한 `Task` 를 실제로 실행하는 역할을 담당한다.
+하나의 `Thread` 는 1개 이상의 `Task` 수행을 담당할 수 있고,
+이러한 `Thread` 의 수는 `num.streams.threads` 설정을 통해 구성된다.
+다만 `Thread` 의 수는 `Task` 의 수를 초과 할 수 없음을 기억해야 한다.
+
+만약 `num.streams.threads=5` 이고, 10개의 파티션을 가지는 경우를 가정해보자.
+그럼 `Task` 도 10개가 생성되고, 1개의 `Thread` 는 2개의 `Task` 실행을 담당하게 되는 형식이다.
