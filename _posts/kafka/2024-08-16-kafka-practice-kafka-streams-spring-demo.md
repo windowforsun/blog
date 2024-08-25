@@ -77,3 +77,25 @@ use_math: true
 
 만약 `num.streams.threads=5` 이고, 10개의 파티션을 가지는 경우를 가정해보자.
 그럼 `Task` 도 10개가 생성되고, 1개의 `Thread` 는 2개의 `Task` 실행을 담당하게 되는 형식이다.
+
+#### Streams 와 Tables
+`Kafka Streams Topology` 에서 메시지의 모델링은 `Stateless`(상태 비저장) 와 `Statful`(상태 저장) 로 나눠 질 수 있다.
+여기서 `Stateless` 는 `Streams` 가 갖는 특성으로 각 메시지는 독립적으로 처리되는 것을 의미한다.
+연속적인 데이터 플로우를 처리하지만, 특정 시점에서의 상태를 유지하지는 않는다.
+대신 모든 이벤트는 개별적으로 관찰되고 처리된다.
+
+그리고 `Statful` 는 `Tables` 가 갖는 특성으로 메시지의 최신 상태를 저징하는 것을 의마한다.
+시간이 지남에 따라 발생하는 메시지를 기반으로 현재 상태를 유지한다.
+`Kafka Streams` 에서 `Tables` 는 기본적으로 로컬 상태 저장소인 `RocksDB` 에 상태가 저장되고 추적된다.
+
+
+#### Streams DSL 과 Processor API
+`Kafka Streams` 는 2가지 `API` 인 `Streams DSL` 과 `Processor API` 를 사용해 애플리케이션을 개발 할 수 있도록 제공한다.
+먼저 `Processor API` 는 저수준 `API` 로 스트림 처리를 위한 더 세밀한 제어가 필요할 떄 사용한다.
+이를 사용하면 레코드 단위로 직접 작업하고 스트림의 각 메시지를 개별로 처리 할 수 있다.
+좀 더 정교한 제어를 할 수 있지만, `Streams DSL` 보다 복잡성을 요구한다.
+
+다음으로 `Streams DSL` 은 고수준의 추상화를 제공하며, 함수형 프로그래밍 스타일(map, join. filter)를 사용한다.
+`Streams DSL` 은 앞서 살펴본 `Streams` 와 `Tables` 개념을 사용해서 데이터를 모델링한다.
+`KStreams` 는 레코드 스트림을 나타내고, `KTable` 은 변경 가능한 데이터 집합의 최신 상태를 나타내고,
+`GlobalKTable` 은 전체 데이의 집합 뷰를 나타낸다.
