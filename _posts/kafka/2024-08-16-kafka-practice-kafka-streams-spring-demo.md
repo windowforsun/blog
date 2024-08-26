@@ -99,3 +99,23 @@ use_math: true
 `Streams DSL` 은 앞서 살펴본 `Streams` 와 `Tables` 개념을 사용해서 데이터를 모델링한다.
 `KStreams` 는 레코드 스트림을 나타내고, `KTable` 은 변경 가능한 데이터 집합의 최신 상태를 나타내고,
 `GlobalKTable` 은 전체 데이의 집합 뷰를 나타낸다.
+
+#### Scalability
+`Kafka Streams` 는 `Kafka` 가 제공하는 확장성의 이점을 그대로 누릴 수 있다. 
+작업 단위(`Task`)는 소스 토픽 파티션으로 각 작업은 분산된 애플리케이션 인스턴스 별로 분산된다. 
+더 높은 확장성이 필요하다면 소스 토픽 파티션 수를 늘리는 방식으로 쉽게 적용 할 수 있다. 
+`Kafka Streams` 에서 토픽의 데이터를 가져오는 것은 `Kafka Consumer` 를 사용하기 때문에, 
+소스 토픽 파티션이 늘어나면 그 만큼 `Consumer Group` 을 구성하는 `Kafka Consumer` 즉 `Task` 가 늘어나게 된다.  
+
+아래 그림을 보면 소스 토픽 파티션이 4개이고, 2개의 애플리케이션 인스턴스로 구성된다면 
+각 애플리케이션 인스턴스당 2개의 `Kafka Consumer`(`Task`)로 확장되는 것이다. 
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-3.drawio.png)
+
+
+
+#### Reliability
+`Kafka Streams` 는 신뢰성 측면에서도 `Kafka` 가 제공하는 신뢰성을 그대로 누릴 수 있다. 
+처리되는 메시지들은 모두 `Kafka Cluster` 에 의해 복제되기 때문에 장애에 대한 강한 내성을 가지고 있다. 
+만약 `Consumer` 가 실패한다면 `Consumer Group` 내 다른 `Consumer` 에게 할당되어 지속적인 메시지 소비가 가능하다. 
+또한 `Kafka Cluster` 중 특정 노드의 장애상황에서도 `Kafka` 의 `failover` 를 통해 메시지 손실 위험을 최소화 할 수 있다.  
