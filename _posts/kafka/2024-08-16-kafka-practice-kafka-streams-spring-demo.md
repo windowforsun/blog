@@ -119,3 +119,30 @@ use_math: true
 처리되는 메시지들은 모두 `Kafka Cluster` 에 의해 복제되기 때문에 장애에 대한 강한 내성을 가지고 있다. 
 만약 `Consumer` 가 실패한다면 `Consumer Group` 내 다른 `Consumer` 에게 할당되어 지속적인 메시지 소비가 가능하다. 
 또한 `Kafka Cluster` 중 특정 노드의 장애상황에서도 `Kafka` 의 `failover` 를 통해 메시지 손실 위험을 최소화 할 수 있다.  
+
+
+#### Maintainability
+`Kafka Streams` 를 사용해서 메시지를 처리하는 것은 직관적인 `Java Library` 를 통해 구현된다. 
+그러므로 `Kafka` 와 `Java` 에 대한 기반지식이 있다면 큰 러닝커브 없이 메시지 처리 스트림을 구현 할 수 있다.  
+
+
+
+### Spring Boot Demo
+앞서 우리는 `Kafka Streams API` 와 구조와 장점 등에 대해서 알아보았다. 
+이번에는 `Kafka Streams API` 를 사용해서 `Stateless`, `Stateful` 메시지 처리를 구현하는 
+`Spring Boot Application` 을 통해 그 방법에 대해 알아보고자 한다.  
+
+`Spring Boot Application` 에서는 `Kafka` 에서 매출 이벤트를 수신하고, 
+이를 처리하는 과정을 담고 있는데 크게 3가지로 분류 할 수 있다. 
+
+- `Statless` 처리 : 카드 매출의 경우 카드 수수료를 계산을 수행한다. 
+- `Stateful` 처리 : `RocksDB` 를 사용해서 매출 금액을 집계한다. 
+- `emit event` : 최종적으로 매출 이벤트는 지정된 저장소로 보내기 위해 `Outbound` 토픽으로 전송된다.  
+
+관련 전체 코드는 [여기]()
+에서 확인 할 수 있다.  
+
+애플리케이션에 구현한 `Kafka Streams Topology` 를 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-4.drawio.png)
+
