@@ -146,3 +146,65 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-4.drawio.png)
 
+
+#### Kafka Streams Configuration
+아래 코드는`Kafka Streams` 의 구성요소를 설정하는 코드이다. 
+아래 설정을 바탕으로 `Spring` 은 `Kafka Streams` 의 구성요소와 관련 설정을 연결하는 역할을 수행한다.  
+
+
+```java
+@Slf4j
+@Configuration
+@ComponentScan(basePackages = "com.windowforsun.kafka.streams")
+@EnableKafkaStreams
+public class KafkaConfig {
+    @Value("${kafka.bootstrap-servers}")
+    private String bootstrapServers;
+
+    @Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+    public KafkaStreamsConfiguration kafkaStreamsConfig() {
+        Map<String, Object> props = new HashMap<>();
+
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "demo-app");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.Long().getClass().getName());
+
+        return new KafkaStreamsConfiguration(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(final ConsumerFactory<String, String> consumerFactory) {
+        final ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+
+        return factory;
+    }
+
+    @Bean
+    public KafkaTemplate<String, String> kafkaTemplate(final ProducerFactory<String, String> producerFactory) {
+        return new KafkaTemplate<>(producerFactory);
+    }
+
+    @Bean
+    public ConsumerFactory<String, String> consumerFactory() {
+        final Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "demo-consumer");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ProducerFactory<String, String> producerFactory() {
+        final Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+}
+```  
