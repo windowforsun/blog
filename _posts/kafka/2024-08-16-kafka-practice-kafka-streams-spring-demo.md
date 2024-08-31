@@ -25,8 +25,7 @@ use_math: true
 ---  
 
 ## Kafka Streams
-기존 스트림 링크 건뒤 Spring 기반 데모를 위해 한번 더 정리한다고 하면서 또 설명하기
-[여기]() 
+[여기]({{site.baseurl}}{% link _posts/kafka/2022-11-26-kafka-practice-kafka-streams.md %})
 에서 `Kafka Streams` 에 대한 기본적인 개념에 대해서 알아보았다. 
 `Kafka Streams Spring Boot Demo` 를 구성하기 앞서 한번 더 추가적인 내용을 집고 넘어가고자 한다.  
 
@@ -139,7 +138,7 @@ use_math: true
 - `Stateful` 처리 : `RocksDB` 를 사용해서 매출 금액을 집계한다. 
 - `emit event` : 최종적으로 매출 이벤트는 지정된 저장소로 보내기 위해 `Outbound` 토픽으로 전송된다.  
 
-관련 전체 코드는 [여기]()
+관련 전체 코드는 [여기](https://github.com/windowforsun/kafka-streams-demo)
 에서 확인 할 수 있다.  
 
 애플리케이션에 구현한 `Kafka Streams Topology` 를 도식화 하면 아래와 같다.  
