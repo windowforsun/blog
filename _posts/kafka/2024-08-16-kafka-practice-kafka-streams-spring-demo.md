@@ -208,3 +208,155 @@ public class KafkaConfig {
     }
 }
 ```  
+
+#### Processor
+앞서 도식화한 `Topology` 를 구현하는 코드이다. 
+토폴로지를 구성하고 `Inbound Topic` 으로 부터 메시지를 받아 처리 후 지정된 `Outbound Topic` 으로 전송한다.  
+
+```java
+@Autowired
+public void buildPipeline(StreamsBuilder streamsBuilder) {
+    KStream<String, SalesEvent> messageStreams = streamsBuilder
+            // subscribe inbound topic
+            .stream(this.properties.getSalesInboundTopic(), Consumed.with(STRING_SERDE, SalesSerdes.serdes()))
+            .peek((k, sales) -> log.info("salesInbound {} : {}", k, sales))
+            // filtering unsupported data store
+            .filter((k, sales) -> SUPPORTED_DATA_STORE.contains(sales.getDataStore()))
+            .peek((k, sales) -> log.info("salesInbound filtered {} : {}", k, sales));
+
+    // branching by sales type cash or card
+    Map<String, KStream<String, SalesEvent>> salesTypeBranches = messageStreams.split(Named.as("sales-type-"))
+            .branch((k, sales) -> sales.getSalesType().toUpperCase().equals(SalesType.CASH.name()), Branched.as("cash"))
+            .branch((k, sales) -> sales.getSalesType().toUpperCase().equals(SalesType.CARD.name()), Branched.as("card"))
+            .noDefaultBranch();
+
+    // card type charging card fee
+    KStream<String, SalesEvent> feeStreams = salesTypeBranches.get("sales-type-card")
+            .mapValues(sales -> SalesEvent.builder()
+                    .eventId(sales.getEventId())
+                    // calculate charging card fee
+                    .salesAmount(sales.transformCardFee())
+                    .salesType(sales.getSalesType())
+                    .dataStore(sales.getDataStore())
+                    .build());
+
+    // merging card and cash branched streams
+    KStream<String, SalesEvent> mergedStreams = salesTypeBranches.get("sales-type-cash")
+            .merge(feeStreams)
+            .peek((k, sales) -> log.info("merged sales {} : {}", k, sales));
+
+    // aggregating total sales amounts by sales type in state store(rocksdb)
+    mergedStreams
+            .map((k, sales) -> new KeyValue<>(sales.getSalesType(), sales.getSalesAmount()))
+            .groupByKey(Grouped.with(STRING_SERDE, LONG_SERDE))
+            .aggregate(() -> 0L,
+                    (k, v, agg) -> agg + v,
+                    Materialized.<String, Long, KeyValueStore< Bytes, byte[]>>as("totalAmount")
+                            .withKeySerde(STRING_SERDE)
+                            .withValueSerde(LONG_SERDE)
+            );
+    
+    // branching by data store db or es
+    Map<String, KStream<String, SalesEvent>> dataStoreBranches = mergedStreams
+            .split(Named.as("data-store-"))
+            .branch((k, sales) -> sales.getDataStore().equals(DataStore.DB.name()), Branched.as("db"))
+            .branch((k, sales) -> sales.getDataStore().equals(DataStore.ES.name()), Branched.as("es"))
+            .noDefaultBranch();
+
+    // send to db store outbound topic
+    dataStoreBranches.get("data-store-db").to(this.properties.getDbStoreOutboundTopic(), Produced.with(STRING_SERDE, SalesSerdes.serdes()));
+    // send to es store outbound topic
+    dataStoreBranches.get("data-store-es").to(this.properties.getEsStoreOutboundTopic(), Produced.with(STRING_SERDE, SalesSerdes.serdes()));
+    }
+```  
+
+#### Describe Topology
+[Kafka Streams Topology Visualizer](https://zz85.github.io/kafka-streams-viz/)
+를 사용하면 구성한 `Topology` 를 시각화해서 확인해 볼 수 있다.  
+
+먼저 아래 코드로 구성된 `Topology` 정보를 출력한다. 
+
+```java
+@Autowired
+StreamsBuilderFactoryBean factoryBean;
+
+String topologyInfo = this.factoryBean.getTopology().describe().toString();
+
+System.out.println(topologyInfo);
+```   
+
+```
+Topologies:
+   Sub-topology: 0
+    Source: KSTREAM-SOURCE-0000000000 (topics: [sales-topic])
+      --> KSTREAM-PEEK-0000000001
+    Processor: KSTREAM-PEEK-0000000001 (stores: [])
+      --> KSTREAM-FILTER-0000000002
+      <-- KSTREAM-SOURCE-0000000000
+    Processor: KSTREAM-FILTER-0000000002 (stores: [])
+      --> KSTREAM-PEEK-0000000003
+      <-- KSTREAM-PEEK-0000000001
+    Processor: KSTREAM-PEEK-0000000003 (stores: [])
+      --> sales-type-
+      <-- KSTREAM-FILTER-0000000002
+    Processor: sales-type- (stores: [])
+      --> sales-type-card, sales-type-cash
+      <-- KSTREAM-PEEK-0000000003
+    Processor: sales-type-card (stores: [])
+      --> KSTREAM-MAPVALUES-0000000007
+      <-- sales-type-
+    Processor: KSTREAM-MAPVALUES-0000000007 (stores: [])
+      --> KSTREAM-MERGE-0000000008
+      <-- sales-type-card
+    Processor: sales-type-cash (stores: [])
+      --> KSTREAM-MERGE-0000000008
+      <-- sales-type-
+    Processor: KSTREAM-MERGE-0000000008 (stores: [])
+      --> KSTREAM-PEEK-0000000009
+      <-- sales-type-cash, KSTREAM-MAPVALUES-0000000007
+    Processor: KSTREAM-PEEK-0000000009 (stores: [])
+      --> KSTREAM-MAP-0000000010, data-store-
+      <-- KSTREAM-MERGE-0000000008
+    Processor: data-store- (stores: [])
+      --> data-store-db, data-store-es
+      <-- KSTREAM-PEEK-0000000009
+    Processor: KSTREAM-MAP-0000000010 (stores: [])
+      --> totalAmount-repartition-filter
+      <-- KSTREAM-PEEK-0000000009
+    Processor: data-store-db (stores: [])
+      --> KSTREAM-SINK-0000000018
+      <-- data-store-
+    Processor: data-store-es (stores: [])
+      --> KSTREAM-SINK-0000000019
+      <-- data-store-
+    Processor: totalAmount-repartition-filter (stores: [])
+      --> totalAmount-repartition-sink
+      <-- KSTREAM-MAP-0000000010
+    Sink: KSTREAM-SINK-0000000018 (topic: db-store-topic)
+      <-- data-store-db
+    Sink: KSTREAM-SINK-0000000019 (topic: es-store-topic)
+      <-- data-store-es
+    Sink: totalAmount-repartition-sink (topic: totalAmount-repartition)
+      <-- totalAmount-repartition-filter
+
+  Sub-topology: 1
+    Source: totalAmount-repartition-source (topics: [totalAmount-repartition])
+      --> KSTREAM-AGGREGATE-0000000011
+    Processor: KSTREAM-AGGREGATE-0000000011 (stores: [totalAmount])
+      --> none
+      <-- totalAmount-repartition-source
+```  
+
+
+그리고 출력된 결과를 위 링크에 입력하면 아래와 같은 시각화된 결과를 확인할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-spring-boot-5.png)
+
+
+---  
+## Reference
+[Kafka Streams: Introduction](https://www.lydtechconsulting.com/blog-kafka-streams-intro.html)  
+[Kafka Streams: Spring Boot Demo](https://www.lydtechconsulting.com/blog-kafka-streams-demo.html)  
+
+
+
