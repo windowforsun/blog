@@ -45,3 +45,41 @@ use_math: true
 - 스냅샷과 체크포인트 : 정기적으로 스냅샷을 생성하고, 체크포인트를 통해 현재 상태의 일관된 뷰를 유지한다. 이를 통해 복구 과정에서 데이터 일관성을 보장하는데 도움이 된다.  
 
 
+
+### Changelog Topics
+`Changelog Topics` 는 상태 저장소에 발생하는 모든 변경 사항을 추적하는 중요한 메커니즘이다. 
+이를 통해 `Kafka Streams State Store` 의 고장 내성(`fault tolerance`) 와 데이터 복구 능력(`recovery`)을 강화 할 수 있다. 
+`State Store` 의 기본 저장소인 `RocksDB` 는 비동기적으로 디스크에 `flush` 해 상태 파일을 작성한다. 
+`flush` 가 발생하기 전에 상태 저장소의 데이터가 메모리에만 존재하는 시간이 잠깐 존재하지만, 
+이러한 시간 범위의 실패 시나리오에서도 해당 데이터는 `Changelog Topics` 를 통해 손실 되지 않는다.  
+
+아래 도식화된 그림은 비트랜잭션 처리인 상황을 가정한 것이다. 
+`Kafka Streams Application` 이 처음 구동되면 가장 먼저 `Checkpoint File` 을 찾게 된다. 
+해당 파일에는 상태를 캡쳐한 마지막 오프셋이 있기 때문이다. 
+파일이 존재한다면 `Changelog Topics Consumer` 를 통해 해당 오프셋을 사용해서 `Changelog Topics` 에서 상태를 읽어 복원한다. 
+위 상황에서 `Changelog Topics` 의 상태는 앞서 언급한 메모리에만 존재하는 경우도 포함된다. 
+파일이 없다면 `Changelog Topics` 의 모든 이벤트를 재생하는 방식으로 상태를 복원하게 된다.
+
+.. 그림 ..
+
+.. 그림 ..
+
+앞선 상황에 이어 서비스가 시작 후 상태 복원이 완료되면 스트림을 처리할 준비가 완료된 것이다. 
+`Source Processor` 는 `Inbound Topic` 에서 배치로 메시지를 소비하고 이를 `Processor Topology` 를 통해 전달해서 스트림 처리를 수행한다. 
+`State Store Processor` 는 변경 사항을 상태 저장소(e.g. `RocksDB`)에 쓰고, 
+백업으로 `Changelog Topic` 에도 작성한다. 
+그리고 배치단위 처리가 완료되면 `Consumer Offsets Topic` 에 처리한 마지막 오프셋을 작성하고, `Checkpoint File` 에도 오프셋을 작성한다.  
+
+
+.. 그림 ..
+
+.. 그림 ..
+
+`Changelog Topics` 는 압축이 활성화 돼있다. 
+여기서 압축이란 토픽내에서 같은 키를 가진 메시지 중 오래된 것을 정리하고, 각 키에 대한 최신 값만 유지하는 것을 의미한다. 
+이를 통해 저장 공간을 효율적으로 사용하고, 복구과정에서 필요한 데이터 양을 최소화한다. 
+추가로 `Changelog Topics` 를 가능한 작게 유지하기 위한 방법으로는 `Tombstone` 이 있다. 
+`Tombstone` 메시지는 키에 대한 값이 상제되었음을 나타내는 메커니즘으로, 
+키는 있지만 값이 `null` 인 메시지로 특정 키의 이전 값들을 모두 무효화하고 해당 키를 삭제하려는 의도로 사용된다. 
+다른 방법으로는 짧은 시간 범위를 갖는 `Window Store` 를 활용하는 방안도 있다.  
+
