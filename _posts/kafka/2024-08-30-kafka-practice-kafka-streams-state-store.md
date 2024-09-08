@@ -99,3 +99,22 @@ use_math: true
 만약 주 상태 저장소에 장애가 발생한다면 스탠바이 복제본은 즉시 주된 역할을 수행 할 수 있도록 준비한다. 
 `Kafka Streams` 클라이언트는 자동으로 장애를 감지하고 스탠바이 복제본을 활성화해 처리를 계속 할 수 있다.  
 
+
+### Consumer Group Rebalance
+`Kafka Streams State Store` 와 `Consumer Group Rebalance` 는 중요한 관계를 가지고 있다. 
+`Rebalance` 가 발생하면 `Topic Partition` 할당이 취소되고 동일 `Consumer Group` 의 `Consumer` 에게 다시 할당된다. 
+이로 인해 `stop-the-world` 가 발생하고, `Realance` 가 완료 되기 전까지는 메시지 소비는 중단된다. 
+그리고 `Rebalance` 가 완료되면 소비자는 `State Store` 와 `Changelog Topics` 를 사용해 로컬 상태 복원해야 한다. 
+이러한 작업까지 완료된 이후에 메시지 스트림 처리가 가능하기 때문에 비용이 적지 않은 작업일 수 있다.  
+
+이런 `Rebalance` 에 따른 추가적인 비용을 방지하기 위해 `Kafka Streams` 는 [StickyAssignor](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-partition-assignment-strategy/#stickyassignor)
+를 사용하는 `StreamParitionAssignor` 를 사용한다. 
+`Incremental Rebalancing` 방식으로 점진적으로 파티션 할당을 유지하고 수행하는 방식으로, 
+실제 재할당이 필요한 파티션에 대해서만 메시지 소비가 중단되기 때문에 비교적 중단 영향을 적게 받을 수 있다.  
+
+그리고 관련 비용을 줄이는 방법으로 또다른 옵션은 [Static Membership](https://windowforsun.github.io/blog/kafka/kafka-practice-kafka-consumer-group-membership/#static-membership)
+을 사용하는 것이다. 
+이는 정적으로 `group.instance.id` 를 지정해 두면 자신이 할당 받았던 `Topic Partition` 을 그대로 사용할 수 있으므로 복원시간에 큰 효과를 볼 수 있다.  
+
+추가로 `Kafka Streams` 의 `Standby Replicas` 를 사용하면 `Rebalance` 시에 상태 저장소 복구 시간을 최소화 할 수 있다.  
+
