@@ -118,3 +118,26 @@ use_math: true
 
 추가로 `Kafka Streams` 의 `Standby Replicas` 를 사용하면 `Rebalance` 시에 상태 저장소 복구 시간을 최소화 할 수 있다.  
 
+
+### Persistent vs In-Memory State Store
+`KafkaStreams` 에서 사용할 수 있는 `State Store` 는 `Persistent Stat Store` 와 `In-Memory State Store` 가 있다. 
+이 두가지는 서로 `Trade-off` 되는 특성이 있기 때문에 구현하고자 하는 애플리케이션의 니즈에 맞춰 알맞은 선택이 필요하다.  
+
+먼저 `Persistent State Store` 는 디스크에 저장하므로, 프로세스가 재시작되거나 장애가 발생해도 상태 데이터가 유지된다. 
+이는 `Kafka Streams` 애플리케이션이 다운되는 상황에서도 상태 정보는 디스크에 있기 때문에 복구가 가능하다. (`Changelog Topics` 없이 복구가 가능하다는 의미)
+그리고 메모리 제한에 구애받지 않기 때문에 큰 데이터 처리에도 활용될 수 있다.  
+하지만 `Persistent State Store` 는 디스크 `I/O` 를 사용하기 때문에 메모리 방식과 비교했을 때 성능이 떨어질 수 있다.  
+
+다음으로 `In-Memory State Store` 는 메모리 데이터를 관리하기 때문에 빠른 성능이 장점이다. 
+하지만 애플리케이션이 종료되면 모든 상태 정보가 손실되어, 
+항상 `Changelog Topics` 를 사용해 상태를 복구해야 하므로 더 많은 시간이 소요 될 수 있다. 
+그리고 처리할 수 있는 데이터의 양이 시스템 메모리 크기에 제한되기 때문에, 큰 데이터 처리에 어려움이 있을 수 있다.  
+
+
+
+---  
+## Reference
+[Kafka Streams: State Store](https://www.lydtechconsulting.com/blog-kafka-streams-state-store.html)  
+
+
+
