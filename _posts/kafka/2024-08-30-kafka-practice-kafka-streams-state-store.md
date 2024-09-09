@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Streams Spring Boot"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에서 상태를 저장하고 관리할 수 있는 State Store 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,10 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - State Store
+    - RocksDB
+    - Changelog Topics
 toc: true
 use_math: true
 ---  
@@ -60,9 +64,10 @@ use_math: true
 위 상황에서 `Changelog Topics` 의 상태는 앞서 언급한 메모리에만 존재하는 경우도 포함된다. 
 파일이 없다면 `Changelog Topics` 의 모든 이벤트를 재생하는 방식으로 상태를 복원하게 된다.
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-1.drawio.png)
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-2.png)
+
 
 앞선 상황에 이어 서비스가 시작 후 상태 복원이 완료되면 스트림을 처리할 준비가 완료된 것이다. 
 `Source Processor` 는 `Inbound Topic` 에서 배치로 메시지를 소비하고 이를 `Processor Topology` 를 통해 전달해서 스트림 처리를 수행한다. 
@@ -71,9 +76,9 @@ use_math: true
 그리고 배치단위 처리가 완료되면 `Consumer Offsets Topic` 에 처리한 마지막 오프셋을 작성하고, `Checkpoint File` 에도 오프셋을 작성한다.  
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-3.drawio.png)
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-4.png)
 
 `Changelog Topics` 는 압축이 활성화 돼있다. 
 여기서 압축이란 토픽내에서 같은 키를 가진 메시지 중 오래된 것을 정리하고, 각 키에 대한 최신 값만 유지하는 것을 의미한다. 
