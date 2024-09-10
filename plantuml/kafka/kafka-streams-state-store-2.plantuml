@@ -1,0 +1,39 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant checkpoint as "Checkpoint File\n(State Store)"
+participant changelog as "Changelog Topic\n(Broker)"
+participant statefile as "State File\n(State Store)"
+
+title kafka streams start and recover state
+
+note over kstreams : start
+activate kstreams
+alt checkpoint file exists
+
+kstreams -> checkpoint : 1. getoffset
+activate checkpoint
+checkpoint --> kstreams : offset
+deactivate checkpoint
+
+kstreams -> changelog : 2. consume state from offset
+activate changelog
+changelog --> kstreams : state
+deactivate changelog
+
+else checkpoint file not exists
+
+kstreams -> changelog : 2. consume state from beginning
+activate changelog
+changelog --> kstreams : states
+deactivate changelog
+
+end
+
+kstreams -> statefile : 3. write state
+
+note over kstreams : kafka streams ready
+kstreams -[hidden]-> statefile
+deactivate kstreams
+
+@enduml
