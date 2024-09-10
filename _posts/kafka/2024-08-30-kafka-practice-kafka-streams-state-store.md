@@ -143,6 +143,7 @@ use_math: true
 ---  
 ## Reference
 [Kafka Streams: State Store](https://www.lydtechconsulting.com/blog-kafka-streams-state-store.html)  
+[Kafka Streams Architecture State](https://docs.confluent.io/platform/current/streams/architecture.html#state)  
 
 
 
