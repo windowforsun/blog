@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] Kafka Streams Spring Boot"
+title: "[Kafka] Kafka Streams State Store"
 header:
   overlay_image: /img/kafka-bg.jpg
 excerpt: 'Kafka Streams 에서 상태를 저장하고 관리할 수 있는 State Store 에 대해 알아보자'
