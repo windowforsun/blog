@@ -81,3 +81,15 @@ use_math: true
 
 
 .. 그림 .. 
+
+
+### Changelog Topics(State Store)
+`Kafka Streams State Store` 에서 `Changelog Topic` 은 `State Store` 의 변경사항을 기록해 
+이후 복원력을 제공한다. 
+`Kafka Streams` 는 메시지 처리가 완료되면 모든 변경 사항인 `State Store` 변경을 포함해서 
+`Changelog Topic`, `Outbound tOpic`, `Consumer Offset Topic`
+에 대해 트랜잭션을 커밋한다. 이 과정에서 나열한 모든 변경사항이 원자적으로 반영되기 때문에 이런 토픽 쓰기 작업은 모두 성공하거나 실패함을 보장 한다.  
+
+위 설명과 같이 `Kafka Streams` 에서 `Changelog Topic` 은 기존 `Kafka Transaction` 의 `exactly-once` 와 
+원자성을 보장해주기 때문에 이후 애플리케이션 재시작과 같은 상황에서 `Changelog Topic` 을 통해 `exactly-once` 특성이 적용된 상태 저장소를 복원 할 수 있게 된다.  
+
