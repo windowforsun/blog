@@ -93,3 +93,20 @@ use_math: true
 위 설명과 같이 `Kafka Streams` 에서 `Changelog Topic` 은 기존 `Kafka Transaction` 의 `exactly-once` 와 
 원자성을 보장해주기 때문에 이후 애플리케이션 재시작과 같은 상황에서 `Changelog Topic` 을 통해 `exactly-once` 특성이 적용된 상태 저장소를 복원 할 수 있게 된다.  
 
+
+
+### Checkpoint File(State Store)
+`Kafka Streams State Store` 에서 `Checkpoint File` 은 상태 저장소의 복구 시점 정보를(`offset`) 제공하는 역할을 한다. 
+`Kafka Transaction` 을 사용하지 않는 경우 `Checkpoint File` 은 로컬 상태 정보의 오프셋을 추적하고,
+애플리케이션이 재구동 됐을 때 상태 정보 재구축이 필요하다면 
+`Checkpoint File` 의 오프셋의 정보를 활용해 `Changelog Topic` 에서 상태정보를 조회 할 수 있다.  
+
+하지만 `Kafka Transaction` 을 사용한다면 `Checkpoint File` 의 활용의 방식이 달라진다. 
+먼저 `Checkpoint File` 은 매번 로컬 상태 정보의 오프셋을 추적하지 않고, 
+상태 정보를 안정적으로 관리하기 위해 `Rebalancing`, `Streams Task Shutdown` 의 시점에 업데이트 된다. 
+즉 트랜잭션이 커밋되는 시점에는 `Changelog Topic` 에만 기록되고 `Checkpoint File` 에는 기록되지 않는다. 
+이렇게 트랜잭션과 별도로 `Checkpoint File` 을 관리하는 이유는 `Checkpoint File` 은 로컬 상태 저장소의 복구 포인트(`offset`)을 저장하는 목적이기 때문이다. 
+그러므로 `Rebalancing`, `Streams Task Shutdown` 과 같은 명시적인 로컬 상태 저장소 복구가 필요한 시점에만 저장해 옳바른 복구가 가능하도록 하는 것이다.  
+
+
+.. 그림 ..
