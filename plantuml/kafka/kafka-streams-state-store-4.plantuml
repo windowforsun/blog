@@ -1,0 +1,33 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant inbound as "Inbound Topic"
+participant statefile as "State File\n(State Store)"
+participant changelog as "Changelog Topic\n(Broker)"
+participant offset as "Consumer Offsets\nTopic"
+participant checkpoint as "Checkpoint File\n(State Store)"
+
+title kafka streams storing state
+
+note over kstreams : streams running
+activate kstreams
+kstreams -> inbound : 1. poll
+activate inbound
+inbound --> kstreams : events
+deactivate inbound
+
+loop 2. processing each event
+
+kstreams -> statefile : 3. write state changelog
+kstreams -> changelog : 4. write state change event
+
+end
+kstreams -> offset : 5. write offsets
+kstreams -> checkpoint : 6. write offsets
+
+
+note over kstreams : ready for poll
+kstreams -[hidden]-> statefile
+deactivate kstreams
+
+@enduml
