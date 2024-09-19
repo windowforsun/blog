@@ -162,6 +162,7 @@ A 이벤트는 `t10`, B 이벤트는 `t14`, C 이벤트는 `t21`, D 이벤트는
 [Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
 [Apache Kafka Sliding Windows](https://kafka.apache.org/30/javadoc/org/apache/kafka/streams/kstream/SlidingWindows.html)  
 [Apache Kafka Session Windows](https://kafka.apache.org/21/javadoc/org/apache/kafka/streams/kstream/SessionWindows.html)  
+[Kafka Streams Windowing](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#windowing)  
 
 
 

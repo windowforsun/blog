@@ -333,6 +333,8 @@ key2| w4(t20 ~ t30] | e(t22), g(t28)
 [Kafka Streams Windowing - Tumbling Windows](https://www.lydtechconsulting.com/blog-kafka-streams-windows-tumbling.html)  
 [Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
 [Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+[Kafka Streams Windowing](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#windowing)  
+
 
 
 

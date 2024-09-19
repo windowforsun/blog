@@ -225,6 +225,8 @@ key2| w7(t15 ~ t25] | c(t16)
 [Kafka Streams Windowing - Hopping Windows](https://www.lydtechconsulting.com/blog-kafka-streams-windows-hopping.html)  
 [Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
 [Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
+[Kafka Streams Windowing](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#windowing)  
+
 
 
 

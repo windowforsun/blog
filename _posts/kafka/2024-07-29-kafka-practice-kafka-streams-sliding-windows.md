@@ -260,6 +260,8 @@ key1| w8(t36 ~ t66] | e(t55)
 [Apache Kafka Beyond the Basics: Windowing](https://www.confluent.io/ko-kr/blog/windowing-in-kafka-streams/)  
 [Suppressed Event Aggregator](https://developer.confluent.io/patterns/stream-processing/suppressed-event-aggregator/)  
 [SlidingWindows](https://kafka.apache.org/27/javadoc/org/apache/kafka/streams/kstream/SlidingWindows.html)  
+[Kafka Streams Windowing](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#windowing)  
+
 
 
 
