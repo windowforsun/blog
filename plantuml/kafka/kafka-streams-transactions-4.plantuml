@@ -1,0 +1,36 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant tlogtopic as "Transaction\nLog Topic"
+participant changetopic as "Changelog Topic"
+participant store as "State Store"
+
+title Transactional Kafka Streams, Rebuild State Store
+
+activate kstreams
+note over kstreams : app start
+
+alt checkpoint file not exists
+    kstreams -> store : delete store
+    kstreams -> changetopic : poll messages
+    activate changetopic
+    changetopic --> kstreams : messages
+    deactivate changetopic
+
+    loop each message
+    kstreams -> store : populate
+    end
+    kstreams -> kstreams : streams task assigned
+
+else checkpoint file exists
+    kstreams -> kstreams : streams task assigned
+    kstreams -> kstreams : delete checkpoint file
+
+end
+
+note over kstreams : ready
+
+
+
+
+@enduml

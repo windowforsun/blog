@@ -1,0 +1,53 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant tcoordinator as "Transaction\nCoordinator"
+participant tlogtopic as "Transaction\nLog Topic"
+participant intopic as "Inbound Topic"
+participant outtopic as "Outbound Topic"
+participant changetopic as "Changelog Topic"
+participant offsettopic as "Consumer\nOffsets Topic"
+participant store as "State Store"
+
+title Transactional Kafka Streams
+
+activate kstreams
+alt streams start up
+    kstreams -> tcoordinator : init transactions
+    activate tcoordinator
+    tcoordinator -> tlogtopic : write assigned producer id
+    tcoordinator --> kstreams
+    deactivate tcoordinator
+end
+
+kstreams -> intopic : consume events
+kstreams -> store : write state
+
+kstreams -> tcoordinator : add\noutbound & changelog\npartitions
+activate tcoordinator
+tcoordinator -> tlogtopic : add partitions
+tcoordinator --> kstreams
+deactivate tcoordinator
+
+kstreams -> outtopic : write events
+kstreams -> changetopic : write state
+
+kstreams -> tcoordinator : add offset partitions
+activate tcoordinator
+tcoordinator -> tlogtopic : add offset partitions
+tcoordinator --> kstreams
+deactivate tcoordinator
+
+kstreams -> offsettopic : write offsets
+
+kstreams -> tcoordinator : commit transaction
+activate tcoordinator
+tcoordinator -> tlogtopic : write prepare
+tcoordinator -> outtopic : write commit marker
+tcoordinator -> changetopic : write commit marker
+tcoordinator -> offsettopic : write commit marker
+tcoordinator -> tlogtopic : write commit
+tcoordinator --> kstreams
+deactivate tcoordinator
+
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant tcoordinator as "Transaction\nCoordinator"
+participant tlogtopic as "Transaction\nLog Topic"
+participant intopic as "Inbound Topic"
+participant outtopic as "Outbound Topic"
+participant changetopic as "Changelog Topic"
+participant offsettopic as "Consumer\nOffsets Topic"
+
+title Transactional Kafka Streams, Abort commit
+
+activate kstreams
+kstreams -> tcoordinator : abort transaction
+activate tcoordinator
+tcoordinator -> tlogtopic : write prepare abort
+tcoordinator -> outtopic : write abort marker
+tcoordinator -> changetopic : write abort marker
+tcoordinator -> offsettopic : write abort marker
+tcoordinator -> tlogtopic : write abort complete
+tcoordinator --> kstreams
+deactivate tcoordinator
+deactivate kstreams
+
+@enduml

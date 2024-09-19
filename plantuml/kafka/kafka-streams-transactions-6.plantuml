@@ -1,0 +1,32 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant tcoordinator as "Transaction\nCoordinator"
+participant tlogtopic as "Transaction\nLog Topic"
+participant intopic as "Inbound Topic"
+participant outtopic as "Outbound Topic"
+participant changetopic as "Changelog Topic"
+participant offsettopic as "Consumer\nOffsets Topic"
+
+title Transactional Kafka Streams, Recovery Transaction Coordinator Failure
+
+activate kstreams
+kstreams -> tcoordinator : commit transaction
+activate tcoordinator
+tcoordinator -> tlogtopic : write prepare
+note over tcoordinator : Failure, Restart
+tcoordinator -> tlogtopic : read log
+activate tlogtopic
+tlogtopic --> tcoordinator : transaction log events
+deactivate tlogtopic
+
+note over tcoordinator : Complete Transaction
+tcoordinator -> outtopic : write commit marker
+tcoordinator -> changetopic : write commit marker
+tcoordinator -> offsettopic : write commit marker
+tcoordinator -> tlogtopic : tlogtopic
+deactivate tcoordinator
+
+deactivate kstreams
+
+@enduml

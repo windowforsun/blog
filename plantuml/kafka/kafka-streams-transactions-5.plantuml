@@ -1,0 +1,51 @@
+@startuml
+
+participant kstreams as "Kafka Streams"
+participant tcoordinator as "Transaction\nCoordinator"
+participant tlogtopic as "Transaction\nLog Topic"
+participant intopic as "Inbound Topic"
+participant outtopic as "Outbound Topic"
+participant changetopic as "Changelog Topic"
+participant offsettopic as "Consumer\nOffsets Topic"
+participant store as "State Store"
+
+title Transactional Kafka Streams, Recovery Streams Failure
+
+activate kstreams
+kstreams -> tcoordinator : begin transaction
+kstreams -> intopic : consume events
+kstreams -> store : write state
+kstreams -> outtopic : write events
+kstreams -> changetopic : write state
+
+note over kstreams : Streams failure,\nRebalance triggered,\nTask Resume
+
+kstreams -> tcoordinator : init transactions(txId)
+activate tcoordinator
+tcoordinator -> tlogtopic : write abort prepare
+tcoordinator -> outtopic : write abort marker
+tcoordinator -> changetopic : write abort marker
+tcoordinator -> offsettopic : write abort marker
+tcoordinator -> tlogtopic : write abort
+tcoordinator --> kstreams
+deactivate tcoordinator
+
+kstreams -> changetopic : retrieve state
+activate changetopic
+changetopic --> kstreams : state
+deactivate changetopic
+
+kstreams -> store : rebuild state
+kstreams -> tcoordinator : begin transaction
+kstreams -> intopic : consume events(last committed offsets)
+
+note over kstreams : Streams processing
+kstreams -[hidden]-> kstreams
+
+
+deactivate kstreams
+
+
+
+
+@enduml
