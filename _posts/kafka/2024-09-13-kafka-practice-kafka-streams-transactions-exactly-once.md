@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] Kafka Streams Spring Boot"
+title: "[Kafka] Kafka Streams Transaction & Exactly-Once"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 이 Transaction 과 Exactly-Once 를 통해 스트림 처리의 내구성과 일관성을 보장하는 방식에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,12 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Transaction
+    - Kafka Transaction
+    - Exactly-Once
+    - State Store
+    - Changelog
 toc: true
 use_math: true
 ---  
@@ -20,13 +26,13 @@ use_math: true
 ## Kafka Streams Transactions
 `Kafka Transactions` 는 메시지의 흐름 `Consume-Process-Produce` 인 3단계 과정이 한 번만 발생하는 것을 보장한다. 
 이것을 `Kafka` 에서는 `Exactly-Once Messaging` 이라고 표현한다. 
-[Kafka Transactions]()
+[Kafka Transactions]({{site.baseurl}}{% link _posts/kafka/2024-05-05-kafka-practice-kafka-transaction-exactly-once.md %})
 에서 알아본 일반적인 `Kafka Consumer, Producer` 를 사용하는 애플리케이션 뿐만 아니라, 
 `Kafka Streams API` 를 사용하는 `Kafka Streams Application` 에서도 
 `Kafka Transactions` 를 활성화해 각 메시지의 처음부터 끝까지의 흐름이 정확히 한 번 처리되고, 
 상태가 내구성 있고 일관되도록 할 수 있다.  
 
-[Kafka Streams Spring Demo]()
+[Kafka Streams Spring Demo]({{site.baseurl}}{% link _posts/kafka/2024-08-16-kafka-practice-kafka-streams-spring-demo.md %})
 에서 알아본 것과 같이 `Kafka Streams Application` 은 
 `Kafka Consumer/Producer` 를 바탕으로 구현되기 때문에 
 `Kafka Transactions` 를 기존 방식화 동일하게 활성화 해준다면 동일한 효과를 얻을 수 있다. 
@@ -41,7 +47,8 @@ use_math: true
 이는 `Kafka Transaction` 처리를 수행해주는 `Kafka Broker` 에 위치하는 `Transaction Coordinator` 를 바탕으로 처리됨을 볼 수 있다.   
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-transaction-exactly-once-1.drawio.png)
+
 
 1. `Kafka Streams` 는 트랜잭션 시작을 알리기 위해 `Transaction Coordinator` 에게 `begin transaction` 요청을 전송한다. 
 2. `Inbound Topic` 에서 `Source Processor` 는 메시지를 소비하고 처리한다.  
@@ -68,7 +75,7 @@ use_math: true
 아래는 다이어그램은 위 내용까지 포함해 `Kafka Streams` 가 `Kafka Transaction` 을 수행하는 전체 흐름을 보여준다.  
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-transactions-2.png)
 
 
 `Kafka Streams` 처리 중 오류가 발생하게 되면, 
@@ -80,7 +87,7 @@ use_math: true
 실패 처리를 마무리한다.  
 
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-transactions-3.png)
 
 
 ### Changelog Topics(State Store)
@@ -109,4 +116,59 @@ use_math: true
 그러므로 `Rebalancing`, `Streams Task Shutdown` 과 같은 명시적인 로컬 상태 저장소 복구가 필요한 시점에만 저장해 옳바른 복구가 가능하도록 하는 것이다.  
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-transactions-4.png)
+
+### Failure Scenarios
+`Kafka Streams` 에서 `Kafka Transaction` 을 사용하면 장애 상황에서도 `exactly-once` 메시징을 보장한다. 
+`Kafka Transaction` 을 사용하지 않는경우 `Kafka Streams` 는 `at-least-once` 메시징을 보장해서 메시지 손실을 막는다. 
+하지만 이는 `Outobund Topic` 및 `State Store` 에서 중복 처리가 발생 할 수 있다. 
+만약 `State Store` 에 쓰고 `Outbound Topic` 에 메시지를 발송했지만 `Consumer Offset Topic` 작성전 장애가 발생하면, 
+`State Store` 와 `Outbound Topic` 에는 동일한 메시지 처리가 수행 될 것이다.  
+
+`Kafka Transaction` 을 사용한다면 데이터 손실 방지뿐만 아니라, `State Store`, `Outbound Topic` 의 중복쓰기 까지 방지 할 수 있다. 
+아래 다이러그림은 `State Store`, `Outbound Topic` 에 메시지를 쓰고 `Consumer Offset Topic` 작성 전 실패가 발생하는 상황을 보여주고 있다. 
+각 `Task` 는 `Producer` 에 설정된 `Transaction Id` 를 갖고 처리된다. 
+실패 후 `Task` 가 재사작 되면 위 `Transaction Id` 를 `Transaction Coordinator` 에게 전달해 `init transaction` 요청을 수행한다. 
+`Transaction Coorindator` 는 `Transaction Id` 와 관련된 모든 미완료 트랜잭션을 중단하고, 이전에 해당 트랜잭션으로 작성된 토픽 메시지에 `abort marker` 를 기록한다. 
+이 상태가 되면 `Changelog Topic` 과 `Outbound Topic` 은 일관된 상태가 되며 상태 저장소 복구르 진행 할 수 있다. 
+그 후 `Kafka Streams` 는 `Consumer Offset Topic` 에서 마지막으로 커밋된 오프셋부터 다음 배치 이벤트를 진행하는 방식으로 `exactly-onec` 메시징을 보장한다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-transactions-5.png)
+
+
+앞서 언급했던 것과 같이 `Transaction Coordinator` 가 `Transaction Log` 에 `prepare commit` 을 기록한 시점 부터는, 
+어떤 실패 시나리오에서도 트랜잭션은 완료된다. 
+아래 다이어그램은 해당 시나리오의 과정을 보여준다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-transactions-6.png)
+
+
+### Performance
+`Kafka Streams` 에서 `Kafka Transaction` 을 적용해 `exactly-once` 메시징을 보장받는 것은 성능과 절충이 필요하다. 
+앞선 설명과 다이어그램에서 보았던 것과 같이 `Kafka Transaction` 적용을 위해서는 추가적인 로그 쓰기 등과 같은 처리가 수반되기 때문이다. 
+메시지 생산 입장에서 성능을 끌어 올리기 위해서는 많은 수의 작은 트랜잭션 보다는 적은 수의 큰 트랜잭션이 성능적으로 유리하다.  
+
+하지만 `Kafka Application` 을 개발할 때는 메시지 생산에 대한 성능만 고민해서는 안되고, 
+`downstream consumer` 측면도 고민이 필요하다. 
+그 이유는 `READ_COMMITTED` 로 설정된 `downstream cosnumer` 는 커밋이 완료된 메시지만 소비할 수 있기 때문이다. 
+메시지 생산과 반대로 메시지 소비 입장에서는 `commit.interval.ms` 값을 낮춰 더 자주 작은 트랜잭션을 발생시키는 것으로 소비 지연시간 개선이 가능하다. 
+하지만 이는 앞서 언급한 것과 같이 메시지 생산 입장에서 처리량에 영향이 가기 때문에 절충안으로 튜닝작업이 필요하다.  
+
+추가적으로 `exactly-once` 메시징을 보장하는 방식과 보장하지 않는 방식의 성능 차이는 3% 정도로 간주된다고 알려져 있다.  
+
+
+### Configuration
+`Kafka Streams` 에서 `Kafka Transaction` 을 활성화해 `exactly-once` 메시징은 보장 받는 설정은 
+`processing.guarantee` 옵션을 `exactly_once` 로 설정하는 것이다. 
+`Kafka Streams 3.x` 버전의 경우 성능과 파티션/작업의 확장성을 보다 향상시킨 `exactly_once_v2` 도 도입되어 사용 할 수 있다. 
+참고로 해당 옵션의 기본 값은 `at_least_once` 이다. 
+또한 `Kafka Transaction` 과 마찬가지로 정확한 `exactly-once` 를 보장받기 위해서는 최소 3개의 `Kafka Broker` 로 클러스터가 구성돼야 한다.  
+
+
+---  
+## Reference
+[Kafka Streams: Transactions & Exactly-Once Messaging](https://www.lydtechconsulting.com/blog-kafka-streams-transactions.html)  
+
+
+
