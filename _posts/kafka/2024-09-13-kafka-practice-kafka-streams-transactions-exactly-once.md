@@ -169,6 +169,8 @@ use_math: true
 ---  
 ## Reference
 [Kafka Streams: Transactions & Exactly-Once Messaging](https://www.lydtechconsulting.com/blog-kafka-streams-transactions.html)  
+[Exactly Once Semantics](https://docs.confluent.io/platform/current/streams/architecture.html#exactly-once-semantics-eos)  
+[exactly_once processing guarantee deprecated](https://docs.confluent.io/platform/current/streams/upgrade-guide.html#improved-exactly-once-processing)  
 
 
 
