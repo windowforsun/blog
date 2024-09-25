@@ -1,0 +1,40 @@
+@startuml
+'scale 1 as 30 pixels
+mode compact
+
+concise window
+concise event
+'robust bit2
+
+'bit2 has HIGH,LOW
+
+@0
+
+'@30
+'event is A
+'
+'@40
+event is {hidden}
+'event is B
+
+'@window
+'0 is 18_start
+'6 is s_dPause
+'8 is 10_data
+'14 is {hidden}
+'
+@event
+30 is A
+40 is B
+50 is {hidden}
+
+
+
+'@bit2
+'0 is HIGH
+'2 is LOW
+'4 is {hidden}
+'8 is HIGH
+'10 is LOW
+'12 is {hidden}
+@enduml
