@@ -106,3 +106,72 @@ use_math: true
 `Confluent Schema Registry` 는 데이터 저장소로 `Kafka` 를 사용하는 만큼 `Kafka` 에서 제공하는 모든 장점을 얻을 수 있다. 
 단편적인 예시로 특정 `Broker` 가 실패하더라도, 복제 파티션을 통해 `Scahme Registry` 의 사용은 지속적으로 가능하다. 
 또한 `Schema Registry` 가 실패해 재시작 되는 경우에는 `_schemas` 토픽 구독을 통해 등록된 기존 스키마를 로컬 캐시에 재구축하게 된다.  
+
+### Serialization/Deserialization
+`Kafka Avro` 라이브러리는 메시지 키, 메시지 값을 직렬화/역직렬화하는 
+`KafkaAvroSerilizer` 과 `KafkaAvroDeseializer` 라는 클래스를 제공한다. 
+직렬화가 필요한 `Producer` 는 `KafkaAvroSerilizer` 를 역직렬화가 필요한 `Consumer` 는 `KafkaAvroDeserializer` 를 등록하기만 하면 된다. 
+이후 실제 직렬화/역직렬화 처리와 `Schema Registry` 와의 상호작용은 `Kafka Avro` 에서 수행해주기 때문에 추가적인 구현은 필요하지 않다. 
+아래 그림은 `Kafka Avro` 를 사용하는 `Producer` 와 `Consumer` 그리고 `Schema Registry` 가 가지는 일반적인 흐름을 도식화 한 것이다.  
+
+
+.. 그림 ..
+
+1. 메시지가 만들어지면 `Producer` 의 `Avro Serializer` 는 메시지의 스키마가 가지는 스키마 `ID` 를 `Schema Registry` 로 부터 조회한다. 
+2. 메시지는 `Avro` 로 직렬화 되고, 검증된다. 
+3. 메시지는 `Kafka Topic` 으로 전송된다. 
+4. 메시지는 `Kafka Topic` 을 구독하는 `Consumer` 에게 소비된다. 
+5. `Consumer` 의 `Avro Deserializer` 는 메시지에 있는 스키마 `ID` 를 통해 `Schema Registry` 에서 스키마를 조회한다. 
+6. 메시지는 조회된 스키마를 통해 역직렬화되고 검증된다.  
+
+아래 다이어그램은 `Producer` 측면의 상세한 흐름을 표현한 것이다. 
+`KafkaAvroSerilizer` 는 먼저 `Reflection` 을 통해 메시지 클래스에서 스키마를 획득한다. 
+그리고 `kafka-schema-registry-client` 라이브러리에서 제공되는 
+`CachedSchemaRegistryClient` 를 사용해 스키마 `ID` 를 조회한다. 
+스키마 `ID` 가 캐싱돼있지 않았다면, 클라이언트는 `REST API` 를 호출해 스키마 `ID` 를 얻고 캐싱해둔다. 
+`REST API` 가 필요한 시점은 스키마 `ID` 를 얻어오는 과정과 같은 초기 작업뿐이다. 
+이제 `KafkaAvroSerializer` 는 메시지를 바이트 배열로 직렬화하는데, 
+`magic byte` 라 불리는 직렬화 포맷 버전 번호로 시작한다. 
+그리고 이어 스키마 ID가 위치하고 그 다음으로 `Avro` 의 이진 인코딩으로 처리된 데이터가 위치한다. 
+최종적으로 해당 데이터가 `Kafka Topic` 으로 전송된다.  
+
+
+.. 그림 ..
+
+아래는 `Consumer` 측면의 상세한 흐름을 표현한 것이다. 
+`Kafka Topic` 의 메시지가 `Consumer` 에게 전달되면 
+`Consumer` 는 역직렬화 처리를 `KafkaAvroDeserilizer` 에게 위임한다. 
+먼저 메시지의 1~4번 바이트에 위치하는 스키마 `ID` 를 추출한다. 
+그리고 `CachedSchemaRegistryClient` 를 사용해서 로컬 캐시에 해당하는 스키마가 있는지 확인한다. 
+만약 존재하지 않다면 클라이언트는 `REST API` 를 사용해 스키마를 조회한다. 
+조회된 스키마는 로컬 캐시에 저장되어 이후 역직렬화에서도 사용된다. 
+이제 `KafkaAvroDeserializer` 는 바이트 배열의 메시지를 `Avro` 클래스로 역직렬화 가능하다. 
+그리고 역직렬화된 메시지는 `Consumer` 가 처리할 수 있도록 전달된다.   
+
+
+## Spring Boot Demo
+구현하는 `Spring Boot Demo` 는 간단한 이벤트 처리를 구현한 내용이다. 
+자세한 코드 내용은 [여기]()
+에서 확인 할 수 있다. 
+`send-event` 라는 `Inbound Topic` 에서 메시지를 받아 메시지 관련 처리를 수행하도록 트리거한다. 
+이러한 트리거 동작은 `REST API` 를 통해 가능하도록 구현돼 있다. 
+그리고 처리된 메시지는 `my-event` 라는 `Outbound Topic` 에 이벤트를 생성하고, 
+해당 이벤트 발생이 성공하면 메시지 처리의 전과정이 모두 성공적으로 처리되었다고 판단한다.  
+
+`Avro Schem` 로 정의된 이벤트는 `MyEvent` 와 `SendEvent` 두 가지가 있다. 
+데모 애플리케이션은 `Schema Registry` 를 사용해서 위 2개 `Avro` 메시지를 직렬화/역직렬화하기 위해 스키마를 등록하고 조회하게 된다.  
+
+아래 그림은 `SendEvent` 메시지가 소비되는 시점부터 시작해서 
+`MyEvent` 가 최종적으로 발송되는 전체 처리 흐름을 보여주고 있다.  
+
+
+.. 그림 .. 
+
+1. `Inbound Topic` 에서 `SendEvent` 가 소비된다. 
+2. 소비된 메시지 바이트 배열 시작 부분에 위치하는 `Schema Id` 를 추출한 후, `Schema Registry` 에서 스키마를 조회하고, 결과 스키마를 캐시한다. 
+3. 조회한 스키마를 바탕으로 메시지를 역직렬화한다. 
+4. 이후 메시지 처리에 필요한 동작을 수행해준다. (`Third party call`, ..)
+5. `Outbound Topic` 에 결과 메시지인 `MyEvent` 를 발송하기 전, `Schema Registry` 에 스키마 등록/ID조회를 한다. 그리고 `Schema ID` 는 캐시 후, 메시지 클래스를 통해 스키마를 획득한다. 
+6. 메시지가 직렬화되고, `Schema Id` 는 메시지 시작 부분에 포함된다. 
+7. 최종적으로 `Outbound Topic` 에 `MyEvent` 의 직렬화 데이터가 발행된다. 
+
