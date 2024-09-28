@@ -175,3 +175,133 @@ use_math: true
 6. 메시지가 직렬화되고, `Schema Id` 는 메시지 시작 부분에 포함된다. 
 7. 최종적으로 `Outbound Topic` 에 `MyEvent` 의 직렬화 데이터가 발행된다. 
 
+
+### Avro Schema & Generating
+데모 프로젝트는 `Gradle` 빌드 툴을 사용한다. 
+그러므로 공식적인 `Avro` 관련 플러그인은 지원되지 않아 
+[Gradle Avro Plugin](https://github.com/davidmc24/gradle-avro-plugin)
+을 사용해서 빌드 과정에 `Avro Schema` 를 통해 `Java Class` 파일이 생성될 수 있도록 구성한다. 
+관련해서 보다 상세한 내용은 [Kafka Avro Gradle]({{site.baseurl}}{% link _posts/kafka/2023-03-04-kafka-practice-kafka-schema-registry-avro-gradle.md %})
+에서 확인 할 수 있다.  
+
+`Avro Schema` 파일은 `scr/main/avro` 디렉토리 하위에 `send-event.avsc`, `my-event.avsc` 와 같이 2개가 존재한다. 
+
+```json
+{
+     "type": "record",
+     "namespace": "com.windowforsun.avro",
+     "name": "MyEvent",
+     "version": "1",
+     "fields": [
+        { "name": "eventId", "type": "string" },
+        { "name": "number", "type": "long" }
+     ]
+}
+```  
+
+```json
+{
+     "type": "record",
+     "namespace": "com.windowforsun.avro",
+     "name": "SendEvent",
+     "version": "1",
+     "fields": [
+        { "name": "eventId", "type": "string" },
+        { "name": "number", "type": "long" }
+     ]
+}
+```  
+
+스키마 정의 후 `Gradle` 의 `build` 명령을 수행해주면 `Java Class` 가 생성된다.  
+
+
+### Registering Avro Schema
+`Avro Schema` 와 `Confluent Schema Registry` 를 사용 할 때 스키마를 등록하는 것은 여러 방법이 있고, 
+사용하는 빌드 툴 및 라이브러리에 따라 달라질 수 있다. 
+먼저 `Maven` 을 사용하는 경우는 `kafka-schema-registry-maven-plugin` 을 사용하면 빌드 프로세스 중 `Avro Schema` 를 
+`Schema Registry` 에 자동으로 등록할 수 있다.  
+
+```xml
+<plugin>
+  <groupId>io.confluent</groupId>
+  <artifactId>kafka-schema-registry-maven-plugin</artifactId>
+  <version>${confluent.version}</version>
+  <configuration>
+     <schemaRegistryUrls>
+        <param>http://localhost:8081</param>
+     </schemaRegistryUrls>
+     <subjects>
+        <send-event-value>${project.basedir}/src/main/resources/avro/send-event.avsc</send-event-value>
+        <my-event-value>${project.basedir}/src/main/resources/avro/myeent.avsc</my-event-value>
+     </subjects>
+  </configuration>
+  <goals>
+     <goal>register</goal>
+  </goals>
+</plugin>
+```  
+
+`schemaRegistryUrls` 에 사용 중인 `Schema Registry` 의 `URL` 을 지정한다. 
+그리고 `subjects` 에 등록할 스키마 파일과 해당 스키마가 등록될 `subject` 를 지정한다. 
+여기서 `subject` 는 `Schema Registry` 에서 스키마를 식별하는데 사용되며, 여러 버전의 스키마를 관리할 수 있다. 
+`Maven` 의 `install` 혹은 `deploy` 명령과 함께 실행 할 수 있고, `maven schema-registry:register` 과 같이 등록 동작만 별도로 수행할 수 있다.  
+
+다음은 `Gradle` 인 경우를 알아본다. 
+`Gradle` 의 경우 `Maven` 과 같이 `Schema Registry` 등록을 지원해주는 플러그인이 존재하지 않는다. 
+그러므로 필요하다면 직접 커스텀 태스크를 작성해서 빌드과정에 수행될 수 있도록 구성해줘야 한다. 
+
+```groovy
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+task registerAllAvroSchemas {
+    doLast {
+        file('src/main/avro').eachFileMatch(~/.+\.avsc$/) { File schemaFile ->
+            def schemaText = schemaFile.text
+            def subject = schemaFile.name - '.avsc'  // 파일 이름에서 .avsc 제거
+            def url = "http://localhost:8081/subjects/${subject}/versions"
+            def json = JsonOutput.toJson(["schema": JsonOutput.toJson(schemaText)])
+
+            def conn = new URL(url).openConnection() as HttpURLConnection
+            conn.requestMethod = 'POST'
+            conn.doOutput = true
+            conn.setRequestProperty('Content-Type', 'application/vnd.schemaregistry.v1+json')
+            conn.outputStream.withWriter('UTF-8') { it.write(json) }
+            conn.connect()
+
+            if (conn.responseCode == HttpURLConnection.HTTP_OK || conn.responseCode == HttpURLConnection.HTTP_CREATED) {
+                println "Schema ${subject} successfully registered."
+                def responseParsed = new JsonSlurper().parseText(conn.inputStream.text)
+                println "ID of registered schema for ${subject}: ${responseParsed.id}"
+            } else {
+                println "Failed to register schema ${subject}. Server responded with status code: ${conn.responseCode}"
+                println conn.errorStream.text
+            }
+            conn.disconnect()
+        }
+    }
+}
+
+// Optionally, ensure this task runs after Avro classes are generated
+registerAllAvroSchemas.dependsOn 'generateAvroJava'
+```  
+
+그리고 빌드 프로세스의 일부로 자동적으로 시행되도록 설정하고 싶다면 아래 설정을 추가해주면 된다.  
+
+```groovy
+build.dependsOn registerAllAvroSchemas
+```  
+
+마지막으로 프로젝트에서 `kafka-avro-serializer` 의존성을 사용한다면 아래와 같이 `Producer` 및 `Consumer` 설정에 `Schema Registry` 
+설정값을 추가해주면 스키마 등록 과 같은 `Schema Registry` 와의 상호동작을 자동으로 수행해준다.  
+
+```java
+Properties props = new Properties();
+props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class.getName());
+props.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, "http://localhost:8081");
+props.put(KafkaAvroSerializerConfig.AUTO_REGISTER_SCHEMAS, "true");
+
+KafkaProducer<String, GenericRecord> producer = new KafkaProducer<>(props);
+```  
