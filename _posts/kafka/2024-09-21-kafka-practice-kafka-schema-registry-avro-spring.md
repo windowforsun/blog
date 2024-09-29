@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Schema Registry Avro with Spring"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka 에서 메시지의 호환성을 높일 수 있는 Schema Registry 와 Avro 형식의 Spring 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,10 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Schema Registry
+    - Avro
+    - Kafka Consumer
+    - Kafka Producer
 toc: true
 use_math: true
 ---  
@@ -59,7 +63,8 @@ use_math: true
 `Schema Registry` 는 앞서 나열한 구성들과 독립적으로 구성되어 네트워크 통신을 통해 메시지의 스키마를 관리하고 정보를 조회할 수 있다.  
 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-schema-registry-avro-spring-1.drawio.png)
+
 
 `Kafka` 진영에서 가장 보편적인 `Schema Registry` 는 `Confluent Schema Registry` 이다. 
 스키마를 등록하고 조회하기 위한 `REST API` 를 제공한다. 
@@ -93,8 +98,7 @@ use_math: true
 최종적으로 `Schema Registry` 에 등록된 스키마는 `_schemas` 토픽에 쓰여지고, 
 `Shcema Registry` 는 내부 `Consumer` 를 통해 이를 소비해서 로컬 캐시에 저장한다.  
 
-
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-schema-registry-avro-spring-2.drawio.png)
 
 
 1. `Avro Schema` 는 `REST POST` 를 통해 `Schema Registry` 에 등록된다. 
@@ -114,8 +118,8 @@ use_math: true
 이후 실제 직렬화/역직렬화 처리와 `Schema Registry` 와의 상호작용은 `Kafka Avro` 에서 수행해주기 때문에 추가적인 구현은 필요하지 않다. 
 아래 그림은 `Kafka Avro` 를 사용하는 `Producer` 와 `Consumer` 그리고 `Schema Registry` 가 가지는 일반적인 흐름을 도식화 한 것이다.  
 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-schema-registry-avro-spring-3.drawio.png)
 
-.. 그림 ..
 
 1. 메시지가 만들어지면 `Producer` 의 `Avro Serializer` 는 메시지의 스키마가 가지는 스키마 `ID` 를 `Schema Registry` 로 부터 조회한다. 
 2. 메시지는 `Avro` 로 직렬화 되고, 검증된다. 
@@ -135,8 +139,7 @@ use_math: true
 그리고 이어 스키마 ID가 위치하고 그 다음으로 `Avro` 의 이진 인코딩으로 처리된 데이터가 위치한다. 
 최종적으로 해당 데이터가 `Kafka Topic` 으로 전송된다.  
 
-
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-schema-registry-avro-spring-4.png)
 
 아래는 `Consumer` 측면의 상세한 흐름을 표현한 것이다. 
 `Kafka Topic` 의 메시지가 `Consumer` 에게 전달되면 
@@ -151,7 +154,7 @@ use_math: true
 
 ## Spring Boot Demo
 구현하는 `Spring Boot Demo` 는 간단한 이벤트 처리를 구현한 내용이다. 
-자세한 코드 내용은 [여기]()
+자세한 코드 내용은 [여기](https://github.com/windowforsun/kafka-schema-registry-avro-spring-exam)
 에서 확인 할 수 있다. 
 `send-event` 라는 `Inbound Topic` 에서 메시지를 받아 메시지 관련 처리를 수행하도록 트리거한다. 
 이러한 트리거 동작은 `REST API` 를 통해 가능하도록 구현돼 있다. 
@@ -164,8 +167,7 @@ use_math: true
 아래 그림은 `SendEvent` 메시지가 소비되는 시점부터 시작해서 
 `MyEvent` 가 최종적으로 발송되는 전체 처리 흐름을 보여주고 있다.  
 
-
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-schema-registry-avro-spring-5.png)
 
 1. `Inbound Topic` 에서 `SendEvent` 가 소비된다. 
 2. 소비된 메시지 바이트 배열 시작 부분에 위치하는 `Schema Id` 를 추출한 후, `Schema Registry` 에서 스키마를 조회하고, 결과 스키마를 캐시한다. 
@@ -383,3 +385,81 @@ SPECIFIC_AVRO_READER_CONFIG|true|`GenericRcord` 타입을 사용하지 않고 `A
 우선 스키마의 변경 관리는 철저한 프로세르르 바탕으로 통제된 과정으로 수행되는 것이 좋다. 
 이는  스키마의 변경 관리가 엄격하지 않을 경우 자동으로 등록된 스키마가 기존 데이터와 호환되지 않는 상태를 포함할 수 있기 때문이다.  
 
+
+### Producer Config
+`Consumer` 와 마찬가지로 `Avro` 와 `Schema Registry` 가 추가적인 구성으로 포함됐더라도, 
+실질적으로 `Producer` 구현에 차이점은 발생하지 않는다.  
+
+```java
+public SendResult<String, PaymentSent> sendMessage(String key, PaymentSent paymentSent) {
+    try {
+        final ProducerRecord<String, PaymentSent> record = new ProducerRecord<>(this.properties.getOutboundTopic(),
+                key,
+                paymentSent);
+        final SendResult<String, PaymentSent> result = (SendResult<String, PaymentSent>) this.kafkaTemplate.send(record).get();
+        final RecordMetadata metadata = result.getRecordMetadata();
+        log.debug(String.format("Sent record(key=%s value=%s) meta(topic=%s, partition=%d, offset=%d)",
+                record.key(), record.value(), metadata.topic(), metadata.partition(), metadata.offset()));
+
+        return result;
+    } catch (Exception e) {
+        String message = "Error sending message to topic " + this.properties.getOutboundTopic();
+        log.error(message);
+        throw new RuntimeException(message, e);
+    }
+}
+
+public SendResult<String, MyEvent> sendMessage(String key, MyEvent event) {
+    try {
+        final ProducerRecord<String, MyEvent> record = new ProducerRecord<>(this.properties.getOutboundTopic(),
+                key,
+                event);
+        final SendResult<String, MyEvent> result = (SendResult<String, MyEvent>) this.kafkaTemplate.send(record).get();
+        final RecordMetadata metadata = result.getRecordMetadata();
+        log.debug(String.format("Sent record(key=%s value=%s) meta(topic=%s, partition=%d, offset=%d)",
+                record.key(), record.value(), metadata.topic(), metadata.partition(), metadata.offset()));
+
+        return result;
+    } catch (Exception e) {
+        String message = "Error sending message to topic " + this.properties.getOutboundTopic();
+        log.error(message);
+        throw new RuntimeException(message, e);
+    }
+}
+```  
+
+`Producer` 의 변경점은 모두 `ProducerFactory` 의 구성에서 발생한다. 
+그 설정과 설명은 아래와 같다.  
+
+```java
+@Bean
+public ProducerFactory producerFactory() {
+    final Map<String, Object> config = new HashMap<>();
+    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
+    config.put(KafkaAvroSerializerConfig.SCHEMA_REGISTRY_URL_CONFIG, this.schemaRegistryUrl);
+    config.put(KafkaAvroSerializerConfig.AUTO_REGISTER_SCHEMAS, false);
+    
+    return new DefaultKafkaProducerFactory<>(config);
+}
+```  
+
+properties|value|desc
+---|--|---
+KEY_SERIALIZER_CLASS|StringSerializer.class|메시지의 키는 `String` 타입으로 직렬화 한다.
+VALUE_SERIALIZER_CLASS|KafkaAvroSerializer.class|메시지의 값은 `Avro` 타입으로 직렬화 한다.
+SCHEMA_REGISTRY_URL_CONFIG|e.g. http://localhost:8081|`Confluentd Schema Registry` 의 URL
+AUTO_REGISTER_SCHEMAS|false|`Schema Registry` 에 존재하지 않는 스키마를 자동으로 등록할지 여부 설정
+
+
+
+
+
+
+---  
+## Reference
+[kafka consumer configuration](https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html#value-deserializer)   
+[Kafka Schema Registry & Avro: Introduction](https://www.lydtechconsulting.com/blog-kafka-schema-registry-intro.html)   
+[Kafka Schema Registry & Avro: Spring Boot Demo (1 of 2)](https://www.lydtechconsulting.com/blog-kafka-schema-registry-demo-part1.html)   
+[Kafka Schema Registry & Avro: Spring Boot Demo (2 of 2)](https://www.lydtechconsulting.com/blog-kafka-schema-registry-demo-part2.html)   
