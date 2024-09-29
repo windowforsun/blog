@@ -305,3 +305,81 @@ props.put(KafkaAvroSerializerConfig.AUTO_REGISTER_SCHEMAS, "true");
 
 KafkaProducer<String, GenericRecord> producer = new KafkaProducer<>(props);
 ```  
+
+### Schema Registry REST API
+`Schema Registry` 에서 관리되는 모든 스키마는 `REST API` 로 조회하거나 등록/삭제를 수행 할 수 있다. 
+관련 자세한 내용은
+[Confluent Schema Registry]({{site.baseurl}}{% link _posts/kafka/2023-02-25-kafka-practice-kafka-schema-registry.md %})
+에서 확인 가능하다.  
+
+
+### Consumer Config
+데모 애플리케이션에서 구현된 `Consumer` 는 아래와 같이 일반적인 `Kafka Consumer` 로 `Avro` 및 `Schema Registry` 를 추가로 사용한다고 해서, 
+달라지는 부분은 없다.  
+
+```java
+@KafkaListener(topics = "send-event", 
+        groupId = "demo-consumer-group", 
+        containerFactory = "kafkaListenerContainerFactory")
+public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key, @Payload final SendEvent sendEvent) {
+    this.counter.getAndIncrement();
+    log.debug("Received message [{}] - key : {}", this.counter.get(), key);
+
+    try {
+        this.myEventService.process(key, sendEvent);
+    } catch (Exception e) {
+        log.error("Error processing message : {}", e.getMessage());
+    }
+
+}
+```  
+
+이는 `Avro` 및 `Schema Registry` 가 `Consumer` 의 구성과는 `Decoupling` 관계로 직접적인 영향은 주지 않는다. 
+`Consumer` 설정에서 `containerFactory` 를 명시적으로 사용하고 있는데, 
+일반적인 `Consumer` 에서 추가로 필요하는 `Avro` 와 `Schema Registry` 의 설정은 `Kafka Consumer Bean` 설정 내용에 포함된다. 
+
+```java
+@Bean
+public ConcurrentKafkaListenerContainerFactory kafkaListenerContainerFactory(final ConsumerFactory consumerFactory) {
+    final ConcurrentKafkaListenerContainerFactory factory = new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(consumerFactory);
+
+    return factory;
+}
+
+@Bean
+public ConsumerFactory consumerFactory() {
+    final Map<String, Object> config = new HashMap<>();
+    config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    config.put(ConsumerConfig.GROUP_ID_CONFIG, "demo-consumer-group");
+    config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, StringDeserializer.class);
+    config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, KafkaAvroDeserializer.class);
+    config.put(KafkaAvroDeserializerConfig.SCHEMA_REGISTRY_URL_CONFIG, this.schemaRegistryUrl);
+    config.put(KafkaAvroDeserializerConfig.AUTO_REGISTER_SCHEMAS, false);
+    config.put(KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG, true);
+
+    return new DefaultKafkaConsumerFactory<>(config);
+}
+```  
+
+`Kafka Consumer` 의 메시지 역직렬화와 관련된 설정과 설명을 정리하면 아래와 같다.  
+
+properties|value|desc
+---|--|---
+VALUE_DESERIALIZER_CLASS_CONFIG|ErrorHandlingDeserializer.class|역직렬화 과정에서 발생할 수 있는 예외를 잡아내 처리하는 `Deserializer Wrapper`
+KEY_DESERIALIZER_CLASS_CONFIG|ErrorHandlingDeserializer.class|역직렬화 과정에서 발생할 수 있는 예외를 잡아내 처리하는 `Deserializer Wrapper`
+KEY_DESERIALIZER_CLASS|StringDeserializer.class|메시지의 키는 `String` 타입으로 역직렬화 한다. 
+VALUE_DESERIALIZER_CLASS|KafkaAvroDeserializer.class|메시지의 값은 `Avro` 타입으로 역직렬화 한다. 
+SCHEMA_REGISTRY_URL_CONFIG|e.g. http://localhost:8081|`Confluentd Schema Registry` 의 URL
+AUTO_REGISTER_SCHEMAS|false|`Schema Registry` 에 존지하지 않는 스키마를 자동으로 등록할지 여부 설정
+SPECIFIC_AVRO_READER_CONFIG|true|`GenericRcord` 타입을 사용하지 않고 `Avro` 스키마로 생성된 클래스로 역직렬화 할지에 대한 여부 설정
+
+데모 애플리케이션의 설정에서는 메시지의 값만 `Avro` 스키마를 사용한다. 
+하지만 메시지의 키 또한 필요하다면 `Avro` 를 사용해서 직렬화/역직렬화를 해서 사용할 수 있다.  
+
+그리고 `AUTO_REGISTER_SCHEMAS` 는 실제 리얼 환경보다는 개발/테스트 환경에서 편의성을 위해 사용하는 것이 좋다. 
+우선 스키마의 변경 관리는 철저한 프로세르르 바탕으로 통제된 과정으로 수행되는 것이 좋다. 
+이는  스키마의 변경 관리가 엄격하지 않을 경우 자동으로 등록된 스키마가 기존 데이터와 호환되지 않는 상태를 포함할 수 있기 때문이다.  
+
