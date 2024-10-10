@@ -205,3 +205,122 @@ enable.idempotence = true
 max.in.flight.requests.per.connection <= 5
 ```  
 
+
+### Spring Boot Demo
+[Spring Boot Demo](https://github.com/windowforsun/kafka-keys-message-ordering-demo)
+는 `Inboud Topic` 에 기록되는 `key-value` 메시지를 
+데모 애플리케이션이 소비하고 이를 `Outbound Topic` 으로 다시 전송하는 간단한 예제이다. 
+특징점이라면 `Topic` 에 기록되는 메시지들이 `key-value` 를 것과 
+그 `key` 들이 N개의 종류를 갖는다는 것이다. 
+그리고 `value` 에는 메시지를 발송할 때 순서인 `sequence` 를 갖게 된다. 
+우리는 이를 통해 동일한 `key` 를 갖는 메시지들이 순서 보장이 되는지 알아 볼 것이다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-keys-message-ordering-4.drawio.png)
+
+
+#### Consumer
+`key-value` 를 사용하는 메시지를 소비하기 위해서는 `ConsumerFactory` 에서 아래와 같이 `key-value` 에 대한 역직렬화 설정이 필요하다.  
+
+```java
+@Bean
+public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(final ConsumerFactory<Object, Object> consumerFactory) {
+    final ConcurrentKafkaListenerContainerFactory<Object, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(consumerFactory);
+    factory.setConcurrency(3);
+
+    return factory;
+}
+
+@Bean
+public ConsumerFactory<Object, Object> consumerFactory() {
+    final Map<String, Object> config = new HashMap<>();
+    config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    config.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, JsonDeserializer.class);
+    config.put(JsonDeserializer.KEY_DEFAULT_TYPE, DemoInboundKey.class.getCanonicalName());
+    config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    config.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
+    config.put(JsonDeserializer.VALUE_DEFAULT_TYPE, DemoInboundPayload.class.getCanonicalName());
+
+    return new DefaultKafkaConsumerFactory<>(config);
+}
+```  
+
+그리고 `ConsumerFactory` 를 바탕으로 생성된 `KafkaListenerContainerFactory` 를 사용해 아래와 같이 
+`@KafkaListener` 를 사용해 `Inbound Topic` 을 구독하는 `Consumer` 를 정의할 수 있다.  
+
+```java
+@KafkaListener(
+        topics = "demo-inbound-topic",
+        groupId = "demo-consumer-group",
+        containerFactory = "kafkaListenerContainerFactory"
+)
+public void listen(@Header(KafkaHeaders.RECEIVED_PARTITION_ID) Integer partitionId,
+                   @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY)DemoInboundKey key,
+                   @Payload final DemoInboundPayload payload) {
+    // ...
+}
+```  
+
+`@Header` 어노테이션을 사용해서 현재 `Consumer` 인스턴스가 구독 중인 `Partition` 의 아이디와 
+메시지의 `key` 값을 전달 받을 수 있도록 했다. 
+
+
+#### Producer
+`Inbound Topic` 으로 소비된 메시지는 `Producer` 를 통해 다시 `Outobund Topic` 으로 전달된다. 
+`key` 와 함께 메시지를 전송하는 설정은 먼저 `ProducerFactory` 를 설정할 때 아래와 같이 `key` 값에 대한 직렬화 설정이 필요하다.  
+
+```java
+@Bean
+public KafkaTemplate<Object, Object> kafkaTemplate(final ProducerFactory<Object, Object> producerFactory) {
+    return new KafkaTemplate<>(producerFactory);
+}
+
+@Bean
+public ProducerFactory<Object, Object> producerFactory() {
+    final Map<String, Object> config = new HashMap<>();
+    config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    config.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+    config.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+    config.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+
+    return new DefaultKafkaProducerFactory<>(config);
+}
+```  
+
+그리고 `ProducerFactory` 를 바탕으로 생성된 `KafkaTemplate` 을 사용해 오버로딩된 `send()` 메시지 중 
+`key` 값을 사용하는 메소드를 아래와 같이 사용해주면 된다.  
+
+```java
+this.kafkaTemplate.send(this.properties.getOutboundTopic(), key, payload);
+```  
+
+#### Test
+`EmbeddedKafkaBroker` 를 사용한 `IntegrationTest` 는 
+6개 범위를 갖는 키와 증가하는 순서값을 갖는 메시지를 `Inbound Topic` 으로 전송하는 방식으로 진행된다. 
+그리고 `Inbound Topic` 을 구독하는 `Consumer` 는 해당 메시지를 `Producer` 를 통해 그대로 
+`Outbound Topic` 으로 전송한다. 
+`Inbound Topic` 과 `Outbound Topic` 이 10개의 `Partition` 으로 구성 됐을 때, 
+`Outbound Topic` 을 테스트용 `Consumer` 가 구독해 검증용 데이터를 생성한다. 
+각 `Partition` 에 기록되는 메시지의 키가 어떻게 구성되는 지와
+키별로 메시지를 `List` 에 담아 순서대로 순회 했을 때 `sequence` 값이 증가하는지 등 검증한다. 
+이러한 흐름을 도식화 하면 아래와 같다.  
+
+### Conclusion
+
+토픽의 파티션 수가 변경되면, 주어진 키를 가진 새로운 메시지에 대한 순서 보장이 변경 이전에 같은 키로 작성된 기존 메시지와 비교하여 손실된다. 
+주어진 키에 대해 선택되는 파티션은 현재 파티션 수에 기반하는데, 
+따라서 그 수가 증가하거나 감소함에 따라, 특정 키를 가진 새로운 메시지가 같은 키를 가진 기존 메시지와 동일한 파티션에 작성될 것이라는 보장이 없으며, 
+따라서 보장된 순서가 손실된다. 
+물론 파티션 수 변경 후에 작성된 모든 새로운 키가 있는 메시지는 다른 새로운 키가 있는 메시지와 순서가 보장되지만 기존 메시지와는 그렇지 않다. 
+그리고 파티션 수가 감소하면 제거된 파티션에 있던 모든 메시지는 손실된다.
+
+
+
+
+
+---  
+## Reference
+[Kafka Keys, Partitions and Message Ordering](https://www.lydtechconsulting.com/blog-kafka-message-keys.html)   
