@@ -38,3 +38,24 @@ use_math: true
 그리고 관련해서 혼동이 있을 수 있는데, 포스팅에서 다루는 내용은 `Kafka Consumer` 의 `max.poll.records` 와 연관된 `batch` 방식과 관련있다. 
 `Spring Kafka` 를 사용해서 `Kafka Consumer` 관련 빈을 구성 할 때, `ConcurrentKafkaListenerContainerFactory` 에서 설정하는 `setBatchListener(true)` 와는 시나리오 별 차이가 있다는 점도 기억해야 한다.  
 
+
+### Successfully consumed
+첫 번째 시나리오는 단일 `Topic`, 단일 `Partition` 가 할당된 `Kafka Consumer` 가 
+`Batch` 로 전달된 메시지들을 모두 정상적으로 소비하고 처리하는 경우이다.  
+
+`Kafka Client` 는 `Inbound Topic` 으로 부터 3개의 메시지를 `poll` 하고, 
+각 메시지를 연결된 `@KafkaListener` 에게 전달한다. 
+그리고 리스너는 메시지를 하나씩 순서대로 처리하게 된다. 
+`poll` 을 수행한 메시지들의 처리가 완료되면 `Kafka Client` 는 `Consumer Offset Topic` 에 
+`poll` 메시지 중 마지막 메시지의(`m3`) 오프셋을 커밋하고, 이 시점부터 처리한 메시지들이 소비동작이 완료된다. 
+그리고 그 다음 `poll` 둥작은 `m4` 메시지 부터 시작해 가져오게 된다. 
+
+
+.. 그림 .. 
+
+아래 도식화된 흐름은 `Kafka Client` 가 배치로 `Inbound Topic` 으로 부터 
+메시지를 소비하고 이를 `Kafka Consumer` 로 전달 및 처리 후 오피셋을 커밋까지 과정을 보여준다. 
+해당 예시에서는 단일 `Inbound Topic` 을 사용하므로 `Consumer Offset Topic` 의 커밋 또한 하나의 레코드로 수행된다. 
+
+.. 그림 ..
+
