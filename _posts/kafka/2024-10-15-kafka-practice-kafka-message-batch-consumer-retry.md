@@ -118,3 +118,21 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-batch-consumer-retry-6.png)
 
+
+### Multiple Topic
+`Kafka Consumer` 는 여러 `Partition` 또는 여러 `Topic` 을 한번에 구독해 메시지를 소비 할 수 있다. 
+여기서 `Kafka Client` 가 `poll` 을 수행해 메시지를 소비할 때 각 `Topic` 에 대해서 받는 것이 아닌 전체 `Topic` 을 대상으로 
+`batch` 방식으로 메시지를 수신하게 된다. 
+즉 아래 그림으로 바탕으로 `poll` 을 수행 했을 때 3개의 메시지 소비한다면 `m1`, `m2`, `mm1` 메시지를 소비한다고 할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-batch-consumer-retry-7.drawio.png)
+
+이러한 여러 `Topic` 을 구독하는 `Kafka Consumer` 또한 앞서 알아본 3가지 경우의 증상은 모두 동일하다. 
+
+
+### Kafka Consumer Retry
+`Kafka Consumer` 를 사용해서 메시지를 처리할 때 예외 처리는, 예외 처리가 불가한 경우 `dead-letter-topic` 으로 전달하거나 
+`Kafka Client` 에게 그대로 예외를 던지는 방낭이 있을 수 있다. 
+이러한 재시도 구성에 있어서 다양한 고려 사항과 스펙이 있는데, `stateless retry` 와 `stateful retry` 등이 있다. 
+이와 관련 자세한 내용은 [여기](2024-04-02-kafka-practice-kafka-consumer-retry.md)
+에서 확인 할 수 있다.  
