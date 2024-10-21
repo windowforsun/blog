@@ -136,3 +136,24 @@ use_math: true
 이러한 재시도 구성에 있어서 다양한 고려 사항과 스펙이 있는데, `stateless retry` 와 `stateful retry` 등이 있다. 
 이와 관련 자세한 내용은 [여기](2024-04-02-kafka-practice-kafka-consumer-retry.md)
 에서 확인 할 수 있다.  
+
+
+### Demo
+데모 전체 코드는 [여기](https://github.com/windowforsun/spring-kafka-batch-consume-exam)
+에서 확인 할 수 있다. 
+데모는 앞선 시나리오의 예시와 마찬가지로 `batch` 방식으로 3개의 메시지를 `poll` 할 때, 
+예외가 발생하는 경우와 발생하지 않는 경우의 결과 차이를 보여주고 있고 그 결과는 예제에서 설명한 것과 동일하다. 
+
+
+그리고 추가적으로 `Spring Kafka` 의 `MessageListenerContainer` 를 통해 설정할 수 있는 `BatchListener` 에 대한 예제도 
+함께 포함돼 있다. 
+또한 `MessageListenerContainer` 에 대한 설정으로 `ackMode` 가 있는데 `Spring Kafka` 는 기본값으로 `BATCH` 를 사용한다. 
+`BATCH` 는 배치로 수신한(`poll`) 메시지가 모두 처리가 완료된 다음에 오프셋을 커밋하는 정책이다.  
+만약 `BatchListener` 를 활성화된 상태에서 `ackMode` 를 `BATCH` 를 사용하면 예제에서 다뤘던 내용과 결과적으로 차이가 있다는 것을 유의해야 한다.
+결론적으로 `Spring Kafka` 에서 `BatchListener` 를 활성화된 상태에서 중간 메시지 처리과정에 예외가 발생한다면, 
+중복처리가 발생하게 된다.  
+
+
+---  
+## Reference
+[Kafka Message Batch Consumer Retry](https://www.lydtechconsulting.com/blog-kafka-message-batch-consumer-retry.html)   
