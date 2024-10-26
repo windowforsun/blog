@@ -1,0 +1,46 @@
+@startuml
+
+participant kclient as "Kafka Client"
+participant kconsumer as "Kafka Consumer"
+participant inbound as "Inbound Topic"
+participant offset as "Consumer Offset Topic"
+
+title Successfully consumed
+
+
+activate kclient
+
+kclient -> inbound : poll
+activate inbound
+inbound -> kclient : message batch(m1, m2, m3)
+deactivate inbound
+
+kclient -> kconsumer : handle(m1)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> kconsumer : handle(m2)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> kconsumer : handle(m3)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> offset : write offset(m3)
+
+kclient -> inbound : poll
+activate inbound
+inbound -> kclient : message batch(m4, ...)
+deactivate inbound
+
+deactivate kclient
+
+
+@enduml

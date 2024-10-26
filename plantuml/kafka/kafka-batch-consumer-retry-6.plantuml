@@ -1,0 +1,67 @@
+@startuml
+
+participant kclient as "Kafka Client"
+participant kconsumer as "Kafka Consumer"
+participant inbound as "Inbound Topic"
+participant offset as "Consumer Offset Topic"
+
+title Exception in processing batch
+
+
+activate kclient
+
+kclient -> inbound : poll
+activate inbound
+inbound -> kclient : message batch(m1, m2, m3)
+deactivate inbound
+
+kclient -> kconsumer : handle(m1)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> kconsumer : handle(m2)
+activate kconsumer
+kconsumer -> kconsumer : process
+note over kconsumer : Thrown Exception
+kconsumer --> kclient : exception
+deactivate kconsumer
+
+kclient -> offset : write offset(m1)
+
+kclient -> inbound : poll
+activate inbound
+inbound -> kclient : message batch(m2, m3, m4)
+deactivate inbound
+
+
+kclient -> kconsumer : handle(m2)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> kconsumer : handle(m3)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> kconsumer : handle(m4)
+activate kconsumer
+kconsumer -> kconsumer : process
+kconsumer --> kclient
+deactivate kconsumer
+
+kclient -> offset : write offset(m4)
+
+kclient -> inbound : poll
+activate inbound
+inbound -> kclient : message batch(m5, ...)
+deactivate inbound
+
+deactivate kclient
+
+
+@enduml
