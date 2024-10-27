@@ -287,3 +287,124 @@ $ curl -X DELETE localhost:8083/connectors/file-source-json
 ```
 
 이제 기본으로 제공하는 각 `Transforms` 에는 무엇이 있고 어떻게 사용하며 어떠한 결과가 나오는지 살펴 볼 것이다.   
+
+### HoistField
+[HoistField](https://docs.confluent.io/platform/current/connect/transforms/hoistfield.html)
+는 데이터에 스키마가 있는 경우 지정한 필드 이름을 사용해서, 
+데이터를 구조체(`Struct`)에 래핑한다. 
+그리고 데이터 스키마가 없는 경우에는 지정한 필드 이름을 사용해 데이터를 맵(`Map`)에 래핑한다. 
+아래와 같이 메시지 키/값을 지정해서 모두 사용 할 수 있다.  
+
+- Key : `org.apache.kafka.connect.transforms.HoistField$Key`
+- Value : `org.apache.kafka.connect.transforms.HoistField$Value`
+
+`hoist-field.txt` 의 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```  
+
+#### HoistField Struct
+
+이를 데이터 스키마가 없는 경우 값을 `message` 라는 필드 이름으로 래핑하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-hoist-field-map",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/hoist-field-input.txt",
+    "topic" : "file-source-hoist-field-map-topic",
+    "value.converter.schemas.enable": "false",
+    "transforms" : "HoistFieldExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message"
+  }
+}
+```  
+
+결과 토픽을 구독해서 메시지를 확인하면 아래와 같다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-hoist-field-map-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    Struct{message=111}
+NO_HEADERS      null    Struct{message=222}
+```  
+
+
+#### HoistField Map
+
+이를 데이터 스키마가 없는 경우 값을 `message` 라는 필드 이름으로 래핑하는 `Json` 요청은 아래와 같다.
+
+```json
+{
+  "name": "file-source-hoist-field-map",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/hoist-field-input.txt",
+    "topic" : "file-source-hoist-field-map-topic",
+    "value.converter.schemas.enable": "false",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "HoistFieldExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message"
+  }
+}
+```  
+
+결과 토픽을 구독해서 메시지를 확인하면 아래와 같다.
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-hoist-field-map-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    {"message":"111"}
+NO_HEADERS      null    {"message":"222"}
+```  
+
+#### HoistField Schemas
+
+이제 데이터 스키마가 있는 경우 값을 `message` 라는 필드 이름으로 래핑하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-hoist-field",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/hoist-field-input.txt",
+    "topic" : "file-source-hoist-field-topic",
+    "value.converter.schemas.enable": "true",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "HoistFieldExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message"
+  }
+}
+```  
+
+결과 토픽을 구독해서 메시지를 확인하면 아래와 같다.
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-hoist-field-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":false},"payload":{"message":"111"}}
+NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":false},"payload":{"message":"222"}}
+```  
