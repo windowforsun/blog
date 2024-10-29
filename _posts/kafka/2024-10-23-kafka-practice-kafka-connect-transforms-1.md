@@ -408,3 +408,54 @@ $ docker exec -it myKafka kafka-console-consumer.sh \
 NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":false},"payload":{"message":"111"}}
 NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":false},"payload":{"message":"222"}}
 ```  
+
+### ValueToKey
+[ValueToKey](https://docs.confluent.io/platform/current/connect/transforms/valuetokey.html)
+는 메시지 레코드의 값의 필드를 키로 설정한다. 
+
+- Value : `org.apache.kafka.connect.transforms.ValueToKey`
+
+`value-to-key.input.txt` 의 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```  
+
+파일로 부터 읽은 값을 `message` 라는 레코드로 구조화 시키고 이를 다시 키로 설정하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-value-to-key",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/value-to-key-input.txt",
+    "topic" : "file-source-value-to-key-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,ValueToKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message"
+  }
+}
+```  
+
+결과 토픽을 확인하면 `message` 레코드의 값이 키 값으로 설정된 것을 확인 할 수 있다.  
+
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-value-to-key-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      Struct{message=111}     Struct{message=111}
+NO_HEADERS      Struct{message=222}     Struct{message=222}
+NO_HEADERS      Struct{message=333}     Struct{message=333}
+NO_HEADERS      Struct{message=444}     Struct{message=444}
+```  
