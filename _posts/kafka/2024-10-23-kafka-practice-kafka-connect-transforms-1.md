@@ -459,3 +459,144 @@ NO_HEADERS      Struct{message=222}     Struct{message=222}
 NO_HEADERS      Struct{message=333}     Struct{message=333}
 NO_HEADERS      Struct{message=444}     Struct{message=444}
 ```  
+
+### InsertField
+[InsertField](https://docs.confluent.io/platform/current/connect/transforms/insertfield.html)
+는 키 혹은 값에 정적인 값 혹은 제공하는 몇가지 속성을 추가할 수 있도록 한다. 
+정적값인 `static` 을 포함해서 `offset`, `partition`, `timestamp`, `topic` 을 추가할 수 있다.  
+
+- Key : `org.apache.kafka.connect.transforms.InsertField$Key`
+- Value : `org.apache.kafka.connect.transforms.InsertField$Value`
+
+
+`insert-field-static.input.txt` 의 내용은 아래와 같다.
+
+```
+111
+222
+333
+444
+```  
+
+#### InsertField StaticField
+정적값을 키와 값에 추가하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-insert-field-static",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/insert-field-static-input.txt",
+    "topic" : "file-source-insert-field-static-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,ValueToKeyExam,InsertFieldStaticValueExam,InsertFieldStaticKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.InsertFieldStaticValueExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldStaticValueExam.static.field" : "static_value_field",
+    "transforms.InsertFieldStaticValueExam.static.value" : "static_value_value",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message",
+    "transforms.InsertFieldStaticKeyExam.type" : "org.apache.kafka.connect.transforms.InsertField$Key",
+    "transforms.InsertFieldStaticKeyExam.static.field" : "static_Key_field",
+    "transforms.InsertFieldStaticKeyExam.static.value" : "static_Key_value"
+  }
+}
+```  
+
+결과 토픽을 확인하면 아래와 같이 키와 값에 정의한 필드와 값이 추가된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-insert-field-static-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      Struct{message=111,static_Key_field=static_Key_value}   Struct{message=111,static_value_field=static_value_value}
+NO_HEADERS      Struct{message=222,static_Key_field=static_Key_value}   Struct{message=222,static_value_field=static_value_value}
+NO_HEADERS      Struct{message=333,static_Key_field=static_Key_value}   Struct{message=333,static_value_field=static_value_value}
+NO_HEADERS      Struct{message=444,static_Key_field=static_Key_value}   Struct{message=444,static_value_field=static_value_value}
+```  
+
+#### InsertField TimestampField
+현재 타임스탬프 값을 추가하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-insert-field-timestamp",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/insert-field-timestamp-input.txt",
+    "topic" : "file-source-insert-field-timestamp-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,ValueToKeyExam,InsertFieldTimestampValueExam,InsertFieldTimestampKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message",
+    "transforms.InsertFieldTimestampValueExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldTimestampValueExam.timestamp.field" : "timestamp_value",
+    "transforms.InsertFieldTimestampKeyExam.type" : "org.apache.kafka.connect.transforms.InsertField$Key",
+    "transforms.InsertFieldTimestampKeyExam.timestamp.field" : "timestamp_key"
+  }
+}
+```  
+
+결과 토픽을 확인하면 키와 값에 정의한 타임스탬프 필드 이름인 `timestamp_key`, `timestamp_value` 에 현재 타임 스탬프값이 설정된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-insert-field-timestamp-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      Struct{message=111,timestamp_key=Sat Jun 15 09:33:31 GMT 2024}  Struct{message=111,timestamp_value=Sat Jun 15 09:33:31 GMT 2024}
+NO_HEADERS      Struct{message=222,timestamp_key=Sat Jun 15 09:33:31 GMT 2024}  Struct{message=222,timestamp_value=Sat Jun 15 09:33:31 GMT 2024}
+NO_HEADERS      Struct{message=333,timestamp_key=Sat Jun 15 09:33:31 GMT 2024}  Struct{message=333,timestamp_value=Sat Jun 15 09:33:31 GMT 2024}
+NO_HEADERS      Struct{message=444,timestamp_key=Sat Jun 15 09:33:31 GMT 2024}  Struct{message=444,timestamp_value=Sat Jun 15 09:33:31 GMT 2024}
+```  
+
+#### InsertField TopicField
+`Kafka Connector` 가 목적지로 하는 `Topic` 이름을 추가하는 `Json` 요청은 아래와 같다.  
+
+```json
+{
+  "name": "file-source-insert-field-topic",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/insert-field-topic-input.txt",
+    "topic" : "file-source-insert-field-topic-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,ValueToKeyExam,InsertFieldTopicValueExam,InsertFieldTopicKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message",
+    "transforms.InsertFieldTopicValueExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldTopicValueExam.topic.field" : "topic_value",
+    "transforms.InsertFieldTopicKeyExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldTopicKeyExam.topic.field" : "topic_key"
+  }
+}
+```  
+
+결과 토픽을 확인하면 키와 값에 `topic_key`, `topic_value` 라는 필드 이름으로 현재 토픽의 이름이 추가된 것을 확인 할 수 있다.  
+
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-insert-field-topic-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      Struct{message=111,topic_key=file-source-insert-field-topic-topic}      Struct{message=111,topic_value=file-source-insert-field-topic-topic}
+NO_HEADERS      Struct{message=222,topic_key=file-source-insert-field-topic-topic}      Struct{message=222,topic_value=file-source-insert-field-topic-topic}
+NO_HEADERS      Struct{message=333,topic_key=file-source-insert-field-topic-topic}      Struct{message=333,topic_value=file-source-insert-field-topic-topic}
+NO_HEADERS      Struct{message=444,topic_key=file-source-insert-field-topic-topic}      Struct{message=444,topic_value=file-source-insert-field-topic-topic}
+```  
