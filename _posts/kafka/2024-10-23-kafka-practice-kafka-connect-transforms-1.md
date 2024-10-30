@@ -600,3 +600,64 @@ NO_HEADERS      Struct{message=222,topic_key=file-source-insert-field-topic-topi
 NO_HEADERS      Struct{message=333,topic_key=file-source-insert-field-topic-topic}      Struct{message=333,topic_value=file-source-insert-field-topic-topic}
 NO_HEADERS      Struct{message=444,topic_key=file-source-insert-field-topic-topic}      Struct{message=444,topic_value=file-source-insert-field-topic-topic}
 ```  
+
+### Cast
+[Cast](https://docs.confluent.io/platform/current/connect/transforms/cast.html) 
+는 특정 키/값의 필드의 타입을 변경할 수 있다. 
+`List`, `Map` 과 값은 복잡한 타입변경은 불가능하고, 
+`int`, `string`, `boolean`, `float` 과 같은 원형 타입만 지원 가능하다.  
+
+- Key : `org.apache.kafka.connect.transforms.Cast$Key`
+- Value : `org.apache.kafka.connect.transforms.Cast$Value`
+
+`cast-input.txt` 의 내용은 아래와 같다. 
+
+```
+111
+222
+333
+444
+```  
+
+타입 변환을 정확하게 확인하기 위해 `Schema` 를 활성화하기 위해 `key`, `value` 의 `Converter` 를 `JsonConverter` 로 설정해서 진행한다.   
+
+아래는 `message` 필드의 값을 키에서는 `float` 으로 값은 `int` 로 형변환하는 예제의 `Json` 요청이다.  
+
+```json
+{
+  "name": "file-source-cast",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/cast-input.txt",
+    "topic" : "file-source-cast-topic",
+    "value.converter.schemas.enable": "true",
+    "key.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "HoistFieldExam,ValueToKeyExam,CastValueExam,CastKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message",
+    "transforms.CastValueExam.type" : "org.apache.kafka.connect.transforms.Cast$Value",
+    "transforms.CastValueExam.spec" : "message:int32",
+    "transforms.CastKeyExam.type" : "org.apache.kafka.connect.transforms.Cast$Key",
+    "transforms.CastKeyExam.spec" : "message:float64"
+  }
+}
+```  
+
+결과 토픽을 확인하면 키에서 `message` 필드의 타입은 `float` 이고, 값에서 `message` 필드의 타입은 `int` 로 형변환이 된 것을 확인 할 수 있다.  
+
+```bash
+docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-cast-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":111.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":111}}
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":222.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":222}}
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":333.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":333}}
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":444.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":444}}
+```  
