@@ -12,9 +12,10 @@ categories :
 tags:
     - Practice
     - Kafka
-    - Retry
-    - Non Blocking
-    - Consumer
+    - Kafka Connect
+    - Kafka Connector
+    - Transforms
+    - SMT
     - HoistField
     - ValueToKey
     - InsertField
