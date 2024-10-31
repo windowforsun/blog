@@ -661,3 +661,77 @@ NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional"
 NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":333.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":333}}
 NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"double","optional":false,"field":"message"}],"optional":false},"payload":{"message":444.0}}  {"schema":{"type":"struct","fields":[{"type":"int32","optional":false,"field":"message"}],"optional":false},"payload":{"message":444}}
 ```  
+
+### Drop
+[Drop](https://docs.confluent.io/platform/current/connect/transforms/drop.html)
+를 통해 메시지의 키 혹은 값은 제거해서 `null` 로 설정 할 수 있다. 
+이때 스키마를 사용할 경우 스키마에 어떤 식으로 설정 할지도 선택할 수 있다. 
+
+- Key : `io.confluent.connect.transforms.Drop$Key`
+- Value : `io.confluent.connect.transforms.Drop$Value`
+
+`drop-input.txt` 파일 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```
+
+`null` 로 한 뒤 스키마는 어떻게 처리할 지는 아래 종류 중에 선택 가능하다.  
+
+- `nullify` : 스키마도 `null` 로 만든다. 
+- `retain` : 지우고 스키마는 그대로 유지한다. 
+- `validate` : `optional` 인 경우 현재 스키마를 유지하고, `optional` 이 아니라면 예외를 발생시킨다. 
+- `force_optional` : 스키마를 강제 `optional` 로 설정한다. 
+
+아래 `Json` 요청은 키를 지울 때는 `force_optional` 을 통해 강제 `optional` 로 설정하고, 
+값을 지울 때는 `nullify` 를 사용해서 스키마까지 `null` 로 만드는 요청의 예시이다.  
+
+```json
+{
+  "name": "file-source-drop",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/drop-input.txt",
+    "topic" : "file-source-drop-topic",
+    "value.converter.schemas.enable": "true",
+    "key.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "HoistFieldExam,ValueToKeyExam,DropKeyExam,DropValueExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message",
+    "transforms.DropKeyExam.type" : "io.confluent.connect.transforms.Drop$Key",
+    "transforms.DropKeyExam.schema.behavior" : "force_optional",
+    "transforms.DropValueExam.type" : "io.confluent.connect.transforms.Drop$Value",
+    "transforms.DropValueExam.schema.behavior" : "nullify"
+  }
+}
+```  
+
+결과 토픽을 확인하면 키의 경우 `force_optional` 로 설정했기 때문에 스키마가 `optional` 이 활성화 된 상태로 존재하고, 
+값의 경우 `nullify` 로 설정했기 때문에 `null` 로만 나오는 것을 확인 할 수 있다.  
+
+```bash
+docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-drop-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":true},"payload":null}        null
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":true},"payload":null}        null
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":true},"payload":null}        null
+NO_HEADERS      {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message"}],"optional":true},"payload":null}        null
+```
+
+
+---  
+## Reference
+[Kafka Connect Single Message Transform](https://docs.confluent.io/platform/current/connect/transforms/overview.html)  
+[How to Use Single Message Transforms in Kafka Connect](https://www.confluent.io/blog/kafka-connect-single-message-transformation-tutorial-with-examples/?session_ref=https://www.google.com/&_gl=1*1vjg9z4*_ga*MjA0NzkyNTk2MC4xNzAxMzgyMDQ3*_ga_D2D3EGKSGD*MTcxNzkzMjc5My44Mi4xLjE3MTc5MzM0NjAuNTQuMC4w&_ga=2.7783026.1766080457.1717921898-2047925960.1701382047)  
+
