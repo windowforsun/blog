@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] Kafka Connect Transforms(SMT) 1"
+title: "[Kafka] Kafka Connect Transforms(SMT) 1st"
 header:
   overlay_image: /img/kafka-bg.jpg
 excerpt: 'Kafka Connect 에서 데이터를 변환/필터링 할 수 있는 SMT와 HoistField, ValueToKey, InsertField, Cast, Drop 예제를 살펴보자'
