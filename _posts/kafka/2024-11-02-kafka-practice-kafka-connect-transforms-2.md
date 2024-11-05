@@ -217,3 +217,71 @@ NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","o
 NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"data"}],"optional":false},"payload":{"data":"333"}}
 NO_HEADERS      null    {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"data"}],"optional":false},"payload":{"data":"444"}}
 ```  
+
+### TimestampConverter
+[TimestampConverter](https://docs.confluent.io/platform/current/connect/transforms/timestampconverter.html)
+는 `Unix Epoch` 혹은 문자열, `Date`, `Timestamp` 과 같은 다양한 시간을 표현하는 타입간의 타임스탬프 변환을 할 수 있다. 
+
+- Key : `org.apache.kafka.connect.transforms.TimestampConverter$Key`
+- Value : `org.apache.kafka.connect.transforms.TimestampConverter$Value`
+
+`timestamp-converter-input.txt` 파일 내용은 아래와 같다. 
+
+```
+1696521093000
+1696621093000
+1696721093000
+1696821093000
+1696921093000
+1697021093000
+```  
+
+아래 `Json` 요청은 파일의 내용인 타입스탬프를 읽어 `yyyy-MM-dd` 형태로 변환하고, 
+`InsertField` 를 사용해서 현재 타임스탬프 필드인 `timestamp_value` 를 추가한 뒤 
+이를 `yyyy-MM-dd HH:mm:ss` 형태로 변환하는 예시이다.  
+
+
+```json
+{
+  "name": "file-source-timestamp-converter",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/timestamp-converter-input.txt",
+    "topic" : "file-source-timestamp-converter-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,CastExam,TimestampConverter1Exam,InsertFieldTimestampValueExam,TimestampConverter2Exam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.CastExam.type" : "org.apache.kafka.connect.transforms.Cast$Value",
+    "transforms.CastExam.spec" : "message:int64",
+    "transforms.TimestampConverter1Exam.type" : "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.TimestampConverter1Exam.format" : "yyyy-MM-dd",
+    "transforms.TimestampConverter1Exam.field" : "message",
+    "transforms.TimestampConverter1Exam.target.type" : "string",
+    "transforms.InsertFieldTimestampValueExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldTimestampValueExam.timestamp.field" : "timestamp_value",
+    "transforms.TimestampConverter2Exam.type" : "org.apache.kafka.connect.transforms.TimestampConverter$Value",
+    "transforms.TimestampConverter2Exam.format" : "yyyy-MM-dd HH:mm:ss",
+    "transforms.TimestampConverter2Exam.field" : "timestamp_value",
+    "transforms.TimestampConverter2Exam.target.type" : "string"
+  }
+}
+```  
+
+결과 토픽을 보면 `message` 필드는 특정 타임스탬프 값을 `yyyy-MM-dd` 형태로 변환했고, 
+`timestamp_value` 필드는 현재 시간을 `yyyy-MM-dd HH:mm:ss` 형태로 변환한 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-timestamp-converter-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    Struct{message=2023-10-05,timestamp_value=2024-06-15 17:05:54}
+NO_HEADERS      null    Struct{message=2023-10-06,timestamp_value=2024-06-15 17:05:54}
+NO_HEADERS      null    Struct{message=2023-10-07,timestamp_value=2024-06-15 17:05:54}
+NO_HEADERS      null    Struct{message=2023-10-09,timestamp_value=2024-06-15 17:05:54}
+NO_HEADERS      null    Struct{message=2023-10-10,timestamp_value=2024-06-15 17:05:54}
+```  
