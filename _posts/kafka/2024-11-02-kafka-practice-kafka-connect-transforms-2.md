@@ -285,3 +285,69 @@ NO_HEADERS      null    Struct{message=2023-10-07,timestamp_value=2024-06-15 17:
 NO_HEADERS      null    Struct{message=2023-10-09,timestamp_value=2024-06-15 17:05:54}
 NO_HEADERS      null    Struct{message=2023-10-10,timestamp_value=2024-06-15 17:05:54}
 ```  
+
+### InsertHeader
+[InsertHeader](https://docs.confluent.io/platform/current/connect/transforms/insertheader.html)
+를 사용하면 메시지 헤더에 특정 필드와 값을 추가할 수 있다. 
+`int`, `boolean`, `float` 등 기본형 타입도 가능하고, 
+배열 및 맵 형식의 레코드도 추가할 수 있다. 
+
+
+- `org.apache.kafka.connect.transforms.InsertHeader`
+
+`insert-header-input.txt` 파일 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```  
+
+아래 `Json` 요청은 메시지 헤더에 `header.int`, `header.boolean`, `header.string`, 
+`header.array`, `header.map` 레코드를 추가하는 예시이다.  
+
+```json
+{
+  "name": "file-source-insert-header",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/insert-header-input.txt",
+    "topic" : "file-source-insert-header-topic",
+    "value.converter.schemas.enable": "true",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "InsertHeaderIntExam,InsertHeaderBooleanExam,InsertHeaderStringExam,InsertHeaderArrayExam,InsertHeaderMapExam",
+    "transforms.InsertHeaderIntExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderIntExam.header" : "header.int",
+    "transforms.InsertHeaderIntExam.value.literal" : 1234,
+    "transforms.InsertHeaderBooleanExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderBooleanExam.header" : "header.boolean",
+    "transforms.InsertHeaderBooleanExam.value.literal" : true,
+    "transforms.InsertHeaderStringExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderStringExam.header" : "header.string",
+    "transforms.InsertHeaderStringExam.value.literal" : "stringValue",
+    "transforms.InsertHeaderArrayExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderArrayExam.header" : "header.array",
+    "transforms.InsertHeaderArrayExam.value.literal" : "[\"a\", \"b\",\"c\"]",
+    "transforms.InsertHeaderMapExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderMapExam.header" : "header.map",
+    "transforms.InsertHeaderMapExam.value.literal" : "{\"str\" :  \"string\", \"num\" :  123, \"list\" :  [-1,-2,-3,-4], \"map\" : {\"key\": \"value\"}}"
+  }
+}
+```  
+
+결과 토픽을 보면 헤더 출력 부분에 헤더에 추가한 필드와 값이 모두 정상적으로 메시지에 담긴것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-insert-header-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"111"}
+header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"222"}
+header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"333"}
+header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"444"}
+```  
