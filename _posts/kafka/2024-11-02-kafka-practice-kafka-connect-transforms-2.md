@@ -351,3 +351,58 @@ header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a",
 header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"333"}
 header.int:1234,header.boolean:true,header.string:stringValue,header.array:["a","b","c"],header.map:{"str":"string","num":123,"list":[-1,-2,-3,-4],"map":{"key":"value"}}  null    {"schema":{"type":"string","optional":false},"payload":"444"}
 ```  
+
+### DropHeaders
+[DropHeaders](https://docs.confluent.io/platform/current/connect/transforms/dropheaders.html) 
+를 사용하면 헤더에 있는 레코드 중 지정한 레코드를 제거할 수 있다. 
+
+- `org.apache.kafka.connect.transforms.DropHeaders`  
+
+아래 `Json` 요청은 `InsertHeader` 에서 추가한 필드 중 `header.int`, `header.array`, `header.map` 을 헤더에서 지우는 예제이다. 
+
+```json
+{
+  "name": "file-source-drop-headers",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/drop-headers-input.txt",
+    "topic" : "file-source-drop-headers-topic",
+    "value.converter.schemas.enable": "true",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "InsertHeaderIntExam,InsertHeaderBooleanExam,InsertHeaderStringExam,InsertHeaderArrayExam,InsertHeaderMapExam,DropHeadersExam",
+    "transforms.InsertHeaderIntExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderIntExam.header" : "header.int",
+    "transforms.InsertHeaderIntExam.value.literal" : 1234,
+    "transforms.InsertHeaderBooleanExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderBooleanExam.header" : "header.boolean",
+    "transforms.InsertHeaderBooleanExam.value.literal" : true,
+    "transforms.InsertHeaderStringExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderStringExam.header" : "header.string",
+    "transforms.InsertHeaderStringExam.value.literal" : "stringValue",
+    "transforms.InsertHeaderArrayExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderArrayExam.header" : "header.array",
+    "transforms.InsertHeaderArrayExam.value.literal" : "[\"a\", \"b\",\"c\"]",
+    "transforms.InsertHeaderMapExam.type" : "org.apache.kafka.connect.transforms.InsertHeader",
+    "transforms.InsertHeaderMapExam.header" : "header.map",
+    "transforms.InsertHeaderMapExam.value.literal" : "{\"str\" :  \"string\", \"num\" :  123, \"list\" :  [-1,-2,-3,-4], \"map\" : {\"key\": \"value\"}}",
+    "transforms.DropHeadersExam.type" : "org.apache.kafka.connect.transforms.DropHeaders",
+    "transforms.DropHeadersExam.headers" : "header.int,header.array,header.map"
+  }
+}
+```  
+
+결과 토픽을 보면 `InsertHeader` 를 통해 추가한 5개의 헤더 중 `header.boolean`, `header.string` 2개의 헤더만 남은 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-drop-headers-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"111"}
+header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"222"}
+header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"333"}
+header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"444"}
+```  
