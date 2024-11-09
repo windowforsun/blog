@@ -406,3 +406,69 @@ header.boolean:true,header.string:stringValue   null    {"schema":{"type":"strin
 header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"333"}
 header.boolean:true,header.string:stringValue   null    {"schema":{"type":"string","optional":false},"payload":"444"}
 ```  
+
+### HeaderFrom
+[HeaderFrom](https://docs.confluent.io/platform/current/connect/transforms/headerfrom.html)
+을 상요하면 메시지의 키, 벨류의 특정 필드를 헤더로 이동하거나 복사 할 수 있다.  
+
+- Key : `org.apache.kafka.connect.transforms.HeaderFrom$Key`
+- Value : `org.apache.kafka.connect.transforms.HeaderFrom$Value`
+
+`header-from-input.txt` 파일 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```  
+
+아래 `Json` 요청은 메시지 값 중 파일에서 읽은 `message` 필드와 `InsertField` 로 추가한 `static_field` 를 헤더로 복사하고, 
+메시지 키에 있는 `static_field` 는 헤더로 이동시키는 예제이다.  
+
+
+```json
+{
+  "name": "file-source-header-from",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/header-from-input.txt",
+    "topic" : "file-source-header-from-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,InsertFieldStaticExam,HeaderFromValueExam,ValueToKeyExam,HeaderFromKeyExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.InsertFieldStaticExam.type" : "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertFieldStaticExam.static.field" : "static_field",
+    "transforms.InsertFieldStaticExam.static.value" : "static_value",
+    "transforms.HeaderFromValueExam.type" : "org.apache.kafka.connect.transforms.HeaderFrom$Value",
+    "transforms.HeaderFromValueExam.fields" : "message,static_field",
+    "transforms.HeaderFromValueExam.headers" : "header_message,header_static_field",
+    "transforms.HeaderFromValueExam.operation" : "copy",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "static_field",
+    "transforms.HeaderFromKeyExam.type" : "org.apache.kafka.connect.transforms.HeaderFrom$Key",
+    "transforms.HeaderFromKeyExam.fields" : "static_field",
+    "transforms.HeaderFromKeyExam.headers" : "header_static_key_field",
+    "transforms.HeaderFromKeyExam.operation" : "move"
+  }
+}
+```  
+
+결과 토픽을 확인하면 메시지 값중 파일에서 읽은 `message` 필드는 `header_message` 라는 필드로 헤더에 복사 됐고, 
+`InsertField` 를 통해 추가한 `static_field` 는 `header_static_field` 라는 필드로 헤더에 복사 됐다. 
+그리고 메시지 키에 있는 `static_field` 필드는 `header_static_key_field` 라는 필드로 헤더로 이동 된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-header-from-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+header_message:111,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=111,static_field=static_value}
+header_message:222,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=222,static_field=static_value}
+header_message:333,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=333,static_field=static_value}
+header_message:444,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=444,static_field=static_value}
+```  
