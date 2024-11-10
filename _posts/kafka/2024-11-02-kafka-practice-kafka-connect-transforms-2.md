@@ -472,3 +472,78 @@ header_message:222,header_static_field:static_value,header_static_key_field:stat
 header_message:333,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=333,static_field=static_value}
 header_message:444,header_static_field:static_value,header_static_key_field:static_value        Struct{}        Struct{message=444,static_field=static_value}
 ```  
+
+### Flatten
+[Flatten](https://docs.confluent.io/platform/current/connect/transforms/flatten.html)
+을 사용하면 중첩 데이터 구조에서 필드의 이름을 지정된 문자로 연결해 평탄화 할 수 있다. 
+스키마가 존재하는 경우 스키마에도 변경내용이 반영되고, 스키마가 없는 경우에는 맵 형식으로 적용된다.  
+
+- Key : `org.apache.kafka.connect.transforms.Flatten$Key`
+- Value : `org.apache.kafka.connect.transforms.Flatten$Value`
+
+`flatten-input.txt` 파일 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```
+
+아래 `Json` 요청은 키의 경우 스키마가 적용되지 않은 상태이고, 값은 스키마를 사용하는 경우이다. 
+이때 중첩 데이터 구조를 만들어서 평탄화 하는 예시이다.  
+
+```json
+{
+  "name": "file-source-flatten",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/flatten-input.txt",
+    "topic" : "file-source-flatten-topic",
+    "value.converter.schemas.enable": "true",
+    "value.converter" : "org.apache.kafka.connect.json.JsonConverter",
+    "transforms" : "HoistFieldValueExam1,ValueToKeyExam,HoistFieldValueExam2,HoistFieldValueExam3,HoistFieldKeyExam1,HoistFieldKeyExam2,FlattenValueExam,FlattenKeyExam",
+    "transforms.HoistFieldValueExam1.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldValueExam1.field" : "message1",
+    "transforms.ValueToKeyExam.type" : "org.apache.kafka.connect.transforms.ValueToKey",
+    "transforms.ValueToKeyExam.fields" : "message1",
+    "transforms.HoistFieldValueExam2.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldValueExam2.field" : "message2",
+    "transforms.HoistFieldValueExam3.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldValueExam3.field" : "message3",
+    "transforms.HoistFieldKeyExam1.type" : "org.apache.kafka.connect.transforms.HoistField$Key",
+    "transforms.HoistFieldKeyExam1.field" : "message2",
+    "transforms.HoistFieldKeyExam2.type" : "org.apache.kafka.connect.transforms.HoistField$Key",
+    "transforms.HoistFieldKeyExam2.field" : "message3",
+    "transforms.FlattenValueExam.type": "org.apache.kafka.connect.transforms.Flatten$Value",
+    "transforms.FlattenValueExam.delimiter" : "_",
+    "transforms.FlattenKeyExam.type": "org.apache.kafka.connect.transforms.Flatten$Value"
+  }
+}
+```  
+
+결과 토픽을 보면 키의 경우 `Flatten` 을 사용 할때 별도로 `delimiter` 를 지정하지 않았기 때문에 기본 값인 `.` 가 사용된 것을 확인 할 수 있다.
+그리고 값의 경우 설정한 `delimiter` 인 `_` 사용해서 3뎁스 구조의 메시지를 평탄화 한 것을 볼 수 있다. 
+가장 상위 레벨 필드인 `message3` 가 가장 앞에 오고, 가장 하위 레벨 필드인 `message1` 이 가장 뒤에 위치하게 된다.  
+
+```bash
+docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-flatten-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      Struct{message3.message2.message1=111}  {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message3_message2_message1"}],"optional":false},"payload":{"message3_message2_message1":"111"}}
+NO_HEADERS      Struct{message3.message2.message1=222}  {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message3_message2_message1"}],"optional":false},"payload":{"message3_message2_message1":"222"}}
+NO_HEADERS      Struct{message3.message2.message1=333}  {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message3_message2_message1"}],"optional":false},"payload":{"message3_message2_message1":"333"}}
+NO_HEADERS      Struct{message3.message2.message1=444}  {"schema":{"type":"struct","fields":[{"type":"string","optional":false,"field":"message3_message2_message1"}],"optional":false},"payload":{"message3_message2_message1":"444"}}
+```  
+
+
+
+---  
+## Reference
+[Kafka Connect Single Message Transform](https://docs.confluent.io/platform/current/connect/transforms/overview.html)  
+[How to Use Single Message Transforms in Kafka Connect](https://www.confluent.io/blog/kafka-connect-single-message-transformation-tutorial-with-examples/?session_ref=https://www.google.com/&_gl=1*1vjg9z4*_ga*MjA0NzkyNTk2MC4xNzAxMzgyMDQ3*_ga_D2D3EGKSGD*MTcxNzkzMjc5My44Mi4xLjE3MTc5MzM0NjAuNTQuMC4w&_ga=2.7783026.1766080457.1717921898-2047925960.1701382047)  
+
