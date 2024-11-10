@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Connect Transforms(SMT) 2"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: 'Kafka Connect 에서 데이터를 변환/필터링 할 수 있는 SMT 중 '
+excerpt: 'Kafka Connect 에서 데이터를 변환/필터링 할 수 있는 SMT 중 ExtractField, ReplaceField, TimestampConverter, InsertHeader, InsertHeader, DropHeader, HeaderFrom, Flatten 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
