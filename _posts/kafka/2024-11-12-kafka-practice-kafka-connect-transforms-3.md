@@ -159,3 +159,72 @@ NO_HEADERS      null    Struct{message2=Struct{message=exam-topic-3}}
 NO_HEADERS      null    Struct{message2=Struct{message=exam-topic-3}}
 ```  
 
+
+### Filter(Confluent)
+[Filter(Confluent)](https://docs.confluent.io/platform/current/connect/transforms/filter-confluent.html)
+를 사용하면 `filter.condition` 을 만족하는 레코드를 포함하거나 제외시킬 수 있다. 
+`filter.condition` 에 작성되는 내용은 [JSON Path](https://github.com/json-path/JsonPath)
+술어로 각 레코드에 적용된다. 
+`filter.condition` 과 일치하는 경우 `filter.type=include` 라면 해당 레코드는 포함시키고, 
+`filter.type=exclude` 라면 해당 레코드는 제외된다. 
+그리고 `missing.or.null.behavior` 속성 지정을 통해 레코드가 존재하지 않을 경우의 동작을 지정할 수 있다. 
+기본적으론 레코드가 존재하지 않는다면 실패하게 된다. 
+
+- Key : `io.confluent.connect.transforms.Filter$Key`
+- Value : `io.confluent.connect.transforms.Filter$Value`
+
+해당 `Transform` 은 `Confluent` 에서 지원하는 내용이므로 사용이 필요하다면 별도로 [설치](https://docs.confluent.io/confluent-cli/current/command-reference/connect/plugin/confluent_connect_plugin_install.html)
+를 해줘야 한다.  
+
+`filter-confluent-input.txt` 파일의 내용은 아래와 같다.  
+
+```
+100
+500
+200
+600
+300
+700
+400
+800
+0
+```  
+
+#### Filter(Confluent) Value
+아래 `JSON` 요청은 값에서 `message` 필드의 값이 `500` 이상인 레코드만 포함하는 예제이다.  
+
+```json
+{
+  "name": "file-source-filter-confluent",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/filter-confluent-input.txt",
+    "topic" : "file-source-filter-confluent-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "HoistFieldExam,CastExam,FilterConfluentExam",
+    "transforms.HoistFieldExam.type" : "org.apache.kafka.connect.transforms.HoistField$Value",
+    "transforms.HoistFieldExam.field" : "message",
+    "transforms.CastExam.type" : "org.apache.kafka.connect.transforms.Cast$Value",
+    "transforms.CastExam.spec" : "message:int32",
+    "transforms.FilterConfluentExam.type" : "io.confluent.connect.transforms.Filter$Value",
+    "transforms.FilterConfluentExam.filter.condition" : "$[?(@.message > 500)]",
+    "transforms.FilterConfluentExam.filter.type" : "include"
+  }
+}
+```  
+
+결과 토픽을 보면 파일에 작성된 전체 값 중 500 이상인 값들은 모두 필터링으로 제외되고, 
+이상인 `600`, `700`, `800` 만 출력되는 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-filter-confluent-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    Struct{message=600}
+NO_HEADERS      null    Struct{message=700}
+NO_HEADERS      null    Struct{message=800}
+```  
