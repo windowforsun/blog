@@ -431,3 +431,68 @@ $ docker exec -it myKafka kafka-console-consumer.sh \
 --from-beginning 
 EMPTY
 ```
+
+### TimestampRouter
+[TimestampRouter](https://docs.confluent.io/platform/current/connect/transforms/timestamprouter.html)
+을 사용하면 메시지를 시간값이 포함된 토픽으로 전달할 수 있다. 
+주로 `SinkConnector` 에서 다른 저장소에 일자별 메시지를 저장해야 하는 경우 사용 할 수 있다. 
+
+- `org.apache.kafka.connect.transforms.TimestampRouter`
+
+`timestamp-router-input.txt` 파일 내용은 아래와 같다.  
+
+```
+111
+222
+333
+444
+```  
+
+아래 `JSON` 요청은 파일 소스로 부터 데이터를 읽은 뒤 이를 `yyy-MM-dd` 접미사가 붙은 토픽으로 메시지를 전달하는 예시이다.  
+
+```json
+{
+  "name": "file-source-timestamp-router",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/timestamp-router-input.txt",
+    "topic" : "file-source-timestamp-router-topic",
+    "value.converter.schemas.enable": "true",
+    "transforms" : "TimestampRouterExam",
+    "transforms.TimestampRouterExam.type" : "org.apache.kafka.connect.transforms.TimestampRouter",
+    "transforms.TimestampRouterExam.topic.format" : "new-${topic}-${timestamp}",
+    "transforms.TimestampRouterExam.timestamp.format" : "yyyy-MM-dd"
+  }
+}
+```  
+
+`Kafka` 토픽을 보면 설정한 것과 같이 `new-${topic}-${timestamp}` 포맷으로 토픽이 존재하는 것을 확인 할 수 있다. 
+그리고 해당 토픽에 파일 소스에 있는 데이터들이 담겨 있다.  
+
+
+```bash
+$ docker exec -it myKafka kafka-topics.sh --bootstrap-server localhost:9092 --list
+new-file-source-timestamp-router-topic-2024-06-19
+
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic new-file-source-timestamp-router-topic-2024-06-19 \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    111
+NO_HEADERS      null    222
+NO_HEADERS      null    333
+NO_HEADERS      null    444
+```  
+
+
+
+
+
+---  
+## Reference
+[Kafka Connect Single Message Transform](https://docs.confluent.io/platform/current/connect/transforms/overview.html)  
+[How to Use Single Message Transforms in Kafka Connect](https://www.confluent.io/blog/kafka-connect-single-message-transformation-tutorial-with-examples/?session_ref=https://www.google.com/&_gl=1*1vjg9z4*_ga*MjA0NzkyNTk2MC4xNzAxMzgyMDQ3*_ga_D2D3EGKSGD*MTcxNzkzMjc5My44Mi4xLjE3MTc5MzM0NjAuNTQuMC4w&_ga=2.7783026.1766080457.1717921898-2047925960.1701382047)  
+
