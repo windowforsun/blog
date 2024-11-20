@@ -31,3 +31,29 @@ use_math: true
 실 서비스에서 안정적인 메시징을 위해서는 메시지 중복 처리, 트랜잭션, 메시지 순서 등 고려할 것들이 많다. 
 하지만 이번 포스팅에서는 `Spring Kafka` 를 기반으로 `Kafka Broker` 와 메시지 소비/생산에 대한 기본적인 
 부분에 대해서만 초점을 맞춘 내용만 다룬다.  
+
+### Consuming Message
+`Kafka Broker` 로 부터 메시지를 소비하는 시작점은 `@Kafka Listener` 어노테이션이다. 
+메시지를 전달 받아 처리할 메소드에 해당 어노테이션을 아래와 같이 선언해주면 된다.  
+
+```java
+@KafkaListener(topics = "exam-inbound-topic",
+        groupId = "exam-consumer-group",
+        containerFactory = "kafkaListenerContainerFactory")
+public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key,
+        @Payload final String payload) {
+    // ...
+}
+```  
+
+[@KafkaListener](https://docs.spring.io/spring-kafka/reference/kafka/receiving-messages/listener-annotation.html)
+에는 `Kafka Consumer` 에 설정할 수 있는 다양한 설정 값들이 존재한다. 
+위 코드에서는 `exam-inbound-topic` 이라는 토픽에서 메시지를 소비하고, 
+`Consumer Group` 의 아이디는 `exam-consumer-group` 으로 지정했다. 
+그리고 메시지 소비에 사용할 `Kafka Consumer` 인스턴스는 `kafkaListenerContainerFactory` 라는 
+`ContainerFactory` 를 사용하도록 했다. 
+이후 설명에 나오겠지만, `kafkaListenerContainerFactory` 는 별도의 `JavaConfig` 에서 
+빈을 선언해 줄 것이다.  
+
+위와 같이 토픽으로 부터 `Kafka Consumer` 가 메시지를 소비하기 위한 추가적인 구현코드는 필요하지 않다. 
+메시지를 소비하고 해당 메시지를 처리할 비지니스 로직에만 집중하면 된다.  
