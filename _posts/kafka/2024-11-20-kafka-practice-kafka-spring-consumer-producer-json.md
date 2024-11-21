@@ -57,3 +57,17 @@ public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key,
 
 위와 같이 토픽으로 부터 `Kafka Consumer` 가 메시지를 소비하기 위한 추가적인 구현코드는 필요하지 않다. 
 메시지를 소비하고 해당 메시지를 처리할 비지니스 로직에만 집중하면 된다.  
+
+#### Consumer Group
+다른 포스팅에서도 다룬 내용이지만, `Consumer Group` 은 `Kafka` 생태계에서 
+처리량과 안전성에 밀접한 관계가 있다. 
+토픽을 구성하는 `Partition` 의 수 만큼 동일한 `Consumer Group` 으로 `Consumer Instance` 를 구성해 
+토픽을 기준으로 처리량을 크게 늘릴 수 있다. 
+같은 `Consumer Group` 아이디를 같은 `Consumer Instance` 들은 자신이 소비하는 토픽의 하나 이상의 `Partition` 을 할당 받을 수 있기 때문이다. 
+이러한 개념이기 때문에 각 `Consumer Instance` 는 다른 `Partition` 의 메시지를 소비하므로 서로 다른 메시지를 소비하게 된다. 
+만약 토픽을 구성하는 `Partition` 의 수보다 많은 `Consumer Instance` 를 동일한 `Consumer Group` 으로 구성한다면, 
+`Partition` 수 이상의 `Consumer Instance` 들은 메시지를 소비하지 않는 `Idle` 상태가 된다. 
+그리고 이러한 개념을 통해 토픽 메시지 처리에 안정성을 높이는 `Stand-by` 모드로 `Consumer Instance` 를 추가로 구성해 둘 수 있다.  
+
+그리고 만약 서로 다른 `Consumer Group` 아이디로 동일한 토픽을 구독한다면, 
+`Consumer Group` 을 기준으로 서로 다른 `Consumer Group` 은 모두 동일한 메시지를 소비하게 된다.  
