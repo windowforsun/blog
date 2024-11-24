@@ -71,3 +71,24 @@ public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key,
 
 그리고 만약 서로 다른 `Consumer Group` 아이디로 동일한 토픽을 구독한다면, 
 `Consumer Group` 을 기준으로 서로 다른 `Consumer Group` 은 모두 동일한 메시지를 소비하게 된다.  
+
+#### Listener Container Factory
+`Listener Container Factory` 는 `Kafka Broker` 의 지정된 토픽으로 부터 메시지를 소비하고, 
+`@KafkaListener` 어노테이션이 선언된 메소드(e.g. listen) 를 호출하는 역할을 수행한다. 
+앞선 코드 예시의 `@KafkaListener` 의 `containerFactory` 설정에는 `Listener Conatiner Factory` 의 
+빈 이름을 설정해주면 된다. 
+그리고 실제 빈은 아래와 같이 `Java Config` 를 통해 미리 선언돼 있어야 한다.  
+
+```java
+@Bean
+public ConcurrentKafkaListenerContainerFactory kafkaListenerContainerFactory(final ConsumerFactory consumerFactory) {
+   final ConcurrentKafkaListenerContainerFactory factory = new ConcurrentKafkaListenerContainerFactory();
+   factory.setConsumerFactory(consumerFactory);
+   return factory;
+}
+```  
+
+`Listener Container Facotry` 에는 추가적으로 동시성, 재시도, 메시지 필터링, 에러 핸들링 등과 같은 
+설정을 추가할 수 있다. 
+이중 몇가지는 `@KafkaListener` 어노테이션에서도 설정이 가능하다.  
+
