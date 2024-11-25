@@ -92,3 +92,29 @@ public ConcurrentKafkaListenerContainerFactory kafkaListenerContainerFactory(fin
 설정을 추가할 수 있다. 
 이중 몇가지는 `@KafkaListener` 어노테이션에서도 설정이 가능하다.  
 
+
+#### Consumer Factory
+`Consumer Factory` 는 `Listener Container Factory` 를 생성하는데 필요한 필수 요소로 
+이또한 아래와 같이 `Java Config` 를 통해 선언해 줄 수 있다. 
+아래는 `StringDeserializer` 를 통해 키/메시지를 문자열로 역직렬화하는 경우의 예시이다.  
+
+```java
+@Bean
+public ConsumerFactory consumerFactory(@Value("${kafka.bootstrap-servers}") final String bootstrapServers) {
+   final Map config = new HashMap<>();
+   config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+   config.put(ConsumerConfig.GROUP_ID_CONFIG, "exam-consumer-group-2");
+   config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+   config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+   return new DefaultKafkaConsumerFactory<>(config);
+}
+```  
+
+`Consumer Factory` 는 `Kafka Consumer` 를 설정하는 것과 동일하다. 
+역직렬화, 병렬화, 배치 크기 등 [Kafka Consumer Config](https://docs.confluent.io/platform/current/installation/configuration/consumer-configs.html)
+에 필요한 모든 내용을 담을 수 있다. 
+그리고 몇몇 설정은 `@KafkaListener` 어노테이션과 모두 중복으로 설정할 수 있다. 
+앞서 제시한 코드 예시로 들면 `Consumer Group` 아이디의 경우 `Consumer Factory` 는 `exam-consumer-gorup-2` 로 했고, 
+`@KafkaListener` 는 `exam-consumer-group` 으로 했다. 
+이렇게 중복으로 설정된 경우 `@KafkaListener` 의 값을 사용하기 때문에 실제 설정되는 `Consumer Group` 아이디는 `exam-consumer-group` 이 된다.  
+
