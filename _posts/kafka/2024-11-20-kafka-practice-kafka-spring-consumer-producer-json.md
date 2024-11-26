@@ -118,3 +118,33 @@ public ConsumerFactory consumerFactory(@Value("${kafka.bootstrap-servers}") fina
 `@KafkaListener` 는 `exam-consumer-group` 으로 했다. 
 이렇게 중복으로 설정된 경우 `@KafkaListener` 의 값을 사용하기 때문에 실제 설정되는 `Consumer Group` 아이디는 `exam-consumer-group` 이 된다.  
 
+
+### Producing Message
+#### KafkaTemplate
+`Spring Kafka` 는 `Kafka Broker` 에게 메시지를 전송하기 위해 
+`Producer API` 의 추상화된 구현체는 `KafkaTemplate` 을 제공한다. 
+이는 낮은 수준의 추상화를 통해 사용자가 직접 메시지를 전송할 수 있도록 한다.  
+
+```java
+@Bean
+public KafkaTemplate kafkaTemplate(final ProducerFactory producerFactory) {
+   return new KafkaTemplate<>(producerFactory);
+}
+```  
+
+[KafkaTemplate](https://docs.spring.io/spring-kafka/docs/2.6.9/api/org/springframework/kafka/core/KafkaTemplate.html)
+에는 `Overload` 된 다양한 종류의 `send()` 메서드를 제공한다. 
+필요에 따라 적합한 메서드를 사용해서 `Kafka Broker` 에게 메시지를 전송 할 수 있다. 
+아래 예시는 `ProducerRecord` 를 사용해서 `send()` 메시지를 사용하는 예시이다.  
+
+```java
+final ProducerRecord record = new ProducerRecord<>(properties.getOutboundTopic(), key, payload);
+final SendResult result = (SendResult) kafkaTemplate.send(record).get();
+final RecordMetadata metadata = result.getRecordMetadata();
+```  
+
+`send()` 는 비동기 방식으로 동작하기 때문에, 
+반환 값이 `ListenableFuture`([3.0](https://docs.spring.io/spring-kafka/docs/3.0.7/api/org/springframework/kafka/core/KafkaTemplate.html) 부터는 `CompletableFuture`) 이다. 
+그러므로 메시지 전송을 동기적으로 하고 싶다면 아래와 같이 `send().get()` 을 호출하면 된다. 
+반환 결과는 [SendResult](https://docs.spring.io/spring-kafka/docs/current/api/org/springframework/kafka/support/SendResult.html)
+인데 여기에는 `Kafka Broker` 가 확인한 레코드의 메타데이터 및 메시지가 기록된 토픽, 파티션, 타임스탬프 등의 정보가 포함돼 있다.  
