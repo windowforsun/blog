@@ -148,3 +148,31 @@ final RecordMetadata metadata = result.getRecordMetadata();
 그러므로 메시지 전송을 동기적으로 하고 싶다면 아래와 같이 `send().get()` 을 호출하면 된다. 
 반환 결과는 [SendResult](https://docs.spring.io/spring-kafka/docs/current/api/org/springframework/kafka/support/SendResult.html)
 인데 여기에는 `Kafka Broker` 가 확인한 레코드의 메타데이터 및 메시지가 기록된 토픽, 파티션, 타임스탬프 등의 정보가 포함돼 있다.  
+
+#### Producer Factory
+`KafakTemplate` 빈은 `Producer Factory` 빈을 통해 생성된다. 
+아래는 `StringSerializer` 를 사용해서 메시지를 문자열로 직렬화하는 예시이다.  
+
+```java
+@Bean
+public ProducerFactory producerFactory(@Value("${kafka.bootstrap-servers}") final String bootstrapServers) {
+   final Map config = new HashMap<>();
+   config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+   config.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+   config.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+   return new DefaultKafkaProducerFactory<>(config);
+}
+```  
+
+
+`Producer Factory` 빈에는 [Kafka Producer](https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html)
+설정에 필요한 내용들을 지정할 수 있다. 
+`Consumer Factory` 와 동일하게 직렬화, 재시도, 배치 크기, 트랜잭션 등 구현에 필요한 설정을 지정할 수 있다.  
+
+
+### Kafka Message Serialization
+앞서 서술한 `Kafka Consumer` 와 `Kafka Producer` 를 `Spring Kafka` 를 사용해 구성하는 내용은 
+문자열 그대로 메시지를 소비/생산하는 예시였다. 
+`Kafka` 를 사용해서 `MessagingStream` 을 구현할 때는 데이터를 구성하는 포맷으로 소비/생산하는게 일반적이다. 
+이번에는 `Spring Kafka` 를 사용해서 문자열이 아닌 특정 포맷으로 메시지를 소비(역직렬화)/생산(직렬화)하는 법을 알아 볼 것이다. 
+그 중 일반적인 메시지 포맷인 `JSON` 형식의 메시지를 사용하는 방법과 흐름에 대해 알아본다.  
