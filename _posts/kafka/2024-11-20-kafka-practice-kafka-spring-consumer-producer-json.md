@@ -176,3 +176,157 @@ public ProducerFactory producerFactory(@Value("${kafka.bootstrap-servers}") fina
 `Kafka` 를 사용해서 `MessagingStream` 을 구현할 때는 데이터를 구성하는 포맷으로 소비/생산하는게 일반적이다. 
 이번에는 `Spring Kafka` 를 사용해서 문자열이 아닌 특정 포맷으로 메시지를 소비(역직렬화)/생산(직렬화)하는 법을 알아 볼 것이다. 
 그 중 일반적인 메시지 포맷인 `JSON` 형식의 메시지를 사용하는 방법과 흐름에 대해 알아본다.  
+
+#### Spring Kafka JSON Serialization
+`Kafka Broker` 와 메시지를 소비/생산 할때 실제 메시지는 바이트 배열로 전송된다. 
+하지만 이를 정해진 데이터 유형으로 직렬화/역직렬화해 좀 더 친화적으로 사용 할 수 있다. 
+그 중 가장 보편적인 유형이 바로 `String` 타입이다. 
+하지만 `String` 타입을 사용할 경우 큰 확률로 다시 다른 타입으로 직렬화/역직렬화가 필요한 경우가 많으므로, 
+`JSON` 타입을 사용하면 이를 다시 `POJO` 로 변화해 비지니스 처리에 사용할 수 있다.  
+
+```json
+{
+  "id" : 1,
+  "name" : "jack",
+  "age" : 27
+}
+```
+
+위 예시와 같이 `JSON` 형태는 `String` 과 비교해서 데이터 관점에서 좀 더 읽기 쉽고, 
+필드를 구분으로 다양한 데이터와 포맷을 담아 둘 수 있다는 장점이 있다.  
+
+`Spring Kafka` 는 `Kafka Consumer` 가 토픽으로 부터 메시지 소비단계에서 
+바이트 배열을 역직렬화하는 것과 `Kafka Producer` 가 토픽으로 메시지 전송 단계에서 
+바이트 배열로 직렬화하는 직렬화/역직렬화 추상화를 제공한다. 
+이를 통해 사용자는 필요한 직렬화 포맷만 `Kafka Consumer` 와 `Kafka Producer` 빈 생성 단계에서 
+설정해주면 `Java POJO` 객체를 사용한 메시지 처리를 손 쉽게 구현 할 수 있다.  
+
+`Spring Kafka` 를 사용해서 직렬화/역직렬화 설정은 `Properties` 파일에 지정하는 방법과 
+`Java Config` 파일에서 빈 생성시 직접 지정하는 방법이 있다. 
+`Properties` 로 지정하는 방법의 경우 `Spring Context` 가 로드되는 시점에 `Properties` 에 
+지정된 값들을 바탕으로 `Spring Kafka` 가 필요한 기본 빈들을 생성할 때 사용된다. 
+`Java Config` 로 직접 설정하는 방법의 경우 직접 모든 빈을 선언하고 설정해줘야 한다는 점이 있지만, 
+컴파일 시점에 설정에 대한 유효성 검사를 할 수 있다는 장점이 있다. 
+그리고 하나의 애플리케이션에서 하나 이상의 `Consumer` 와 `Producer` 를 사용할 때 더욱 유용하다.  
+
+
+### Spring Kafka JSON Serialization Demo
+데모 애플리케이션은 단일 `Kafka Consumer` 와 `Kafka Producer` 로 구성돼 있는데, 
+이를 도식화 하면아래와 같다.  
+
+.. 그림 ..
+
+1. `Kafka Consumer` 는 `demo-inbound-topic` 으로 부터 메시지를 소비한다. 
+2. `Kafka Consumer` 는 소비한 바이트 배열의 메시지의 `key/value` 를 `JsonDeserializer` 를 사용해서 프로젝트에 정의된 `POJO` 인 `InboundKey`, `InboundPayload` 클래스로 변환한다. 
+3. `Kafka Producer` 는 메시지 전처리가 완료된 메시지 구성 `OutboundKey`, `OutboundPayload` 의 `POJO` 를 `JsonSerializer` 를 사용해서 바이트 배열로 직렬화 한다. 
+4. `Kafka Producer` 는 최종적으로 메시지를 `demo-outbound-topic` 으로 전송한다.  
+
+#### Consumer
+데모 애플리케이션에서 사용하는 `Consumer` 구현부는 아래와 같다. 
+토픽과 `ConsumerGroup` 아이디, `containerFactory` 를 지정한다. 
+
+```java
+@KafkaListener(topics = "${demo.inboundTopic}",
+    groupId = "demo-consumer-group",
+    containerFactory = "kafkaListenerContainerFactory")
+public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) InboundKey key, @Payload InboundPayload payload) {
+	// ...
+}
+```  
+
+메시지의 키와 페이로드 타입은 `InboundKey`, `InboundPayload` 로 별도로 정의한 `POJO` 이다. 
+이는 후술할 `Java Config` 파일에서 타입에 대한 지정을 되어있는 상태로, 
+사용자는 `@KafkaListener` 어노테이션이 선언된 메서드에 타입에 맞게 사용만 하면 된다. 
+이는 바이트 배열의 키와 페이로드를 `JSON` 으로 역직렬화 하고 나서, 
+선언된 `POJO` 객체로 매핑하게 된다. 
+이러한 내용들은 모두 `KafkaListenerContainerFactory` 에 설정된 내용을 기반으로 수행된다.  
+
+#### KafkaListenerContainerFactory
+`KafkaListenerContainerFactory` 는 별도로 `Java Config` 파일에 정의한 빈으로
+`@KafkaListener` 어노테이션의 `containerFactory` 에 참조되어 사용된다. 
+이를 정의하기 위해서는 `ConsumerFactory` 빈이 필요한데 `ConsumerFactory` 는 아래와 같이 
+`Kafka Consumer` 의 직렬화 키/값 속성 등의 설정이 정의 돼있다.  
+
+```java
+@Bean
+public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(final ConsumerFactory<Object, Object> consumerFactory) {
+	final ConcurrentKafkaListenerContainerFactory<Object, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+	factory.setConsumerFactory(consumerFactory);
+
+	return factory;
+}
+
+@Bean
+public ConsumerFactory<Object, Object> consumerFactory() {
+    final Map<String, Object> props = new HashMap<>();
+
+    props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    props.put(ErrorHandlingDeserializer.KEY_DESERIALIZER_CLASS, JsonDeserializer.class);
+    props.put(JsonDeserializer.KEY_DEFAULT_TYPE, InboundKey.class.getCanonicalName());
+    props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
+    props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
+    props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, InboundPayload.class.getCanonicalName());
+
+    return new DefaultKafkaConsumerFactory<>(props);
+}
+```  
+
+`ConsumerFactory` 정의를 보면 키/값에 대한 `DeserializerClass` 로 `ErrorHandlingDeserializer` 를 사용했다. 
+그리고 해당 역직렬화 클래스는 `DefaultType` 으로 지정된 `JsonDeserializer` 에게 실제 역직렬화 동작을 위임한다. 
+여기서 `ErrorHandlingDeserializer` 클래스를 사용하는 이유는 역직렬화 과정에서 발생할 수 있는 에러를 위해서다. 
+만약 해당 클래스를 사용하지 않는 상황에서 `JSON` 으로 역직렬화 할 수 없는 메시지를 소비하게 되면 `Consumer` 는 예외가 발생하게 된다. 
+그리고 해당 메시지가 정상적으로 소비되지 않았기 때문에 `Offset` 는 증가하지 않고 다음 폴링에도 동일한 메시지가 소비된다. 
+이러한 예외 동작의 반복으로 해당 `Partition` 의 메시지 소비는 다음 메시지로 넘어가지 않고 소비가 중단 된 것 같은 `Poison Pill` 상태에 빠지게 되는 것이다.  
+
+`ErrorHandlingDeserializer` 를 사용하면 역직렬화 과정에서 에러가 발생했을 때, 
+에러 처리에 대한 구현부를 작성하고 다음 메시지를 이어서 계속 소비할 수 있어 `Partition` 의 메시지 소비가 막히는 것을 방지할 수 있다. 
+여기서 에러 처리는 로깅을 남긴다던가, `dead-letter` 토픽으로 전송한다던가 하는 동작이 될 수 있다.  
+
+
+아래는 `ErrorHandlingDeserializer` 를 사용 할때 역직렬화 에러 발생시 처리하는 `errorHandler` 를 사용하는 예시이다. 
+`errorHandling` 구현 빈을 선언하고 `@KafkaListener` 어노테이션에 해당 빈을 설정해주면 된다. 
+아래 예제는 역직렬화 에러 발생시 로깅만 남기고 다음 메시지로 넘어가게 된다.  
+
+```java
+@KafkaListener(topics = "#{'${demo.inboundTopic}'}",
+    groupId = "demo-consumer-group",
+    containerFactory = "kafkaListenerContainerFactory",
+    errorHandler = "errorHandler")
+public void listen(@Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) InboundKey key, @Payload InboundPayload payload) {
+	// ...
+}
+
+@Bean
+public KafkaListenerErrorHandler errorHandler() {
+    return (message, e) -> {
+            log.error("message deserializer error message: {}, error : {}", message, e.getMessage());
+
+            return null;
+    };
+}
+```  
+
+메시지의 키/값에 대한 타입 설정은 명시적으로 선언해두는 방식을 사용했다. 
+명시적으로 설정하지 않고 이러한 타입 정보를 메시지 헤더에 탐아 사용 할 수도 있다. 
+`Spring Kafka` 는 기본적으로 메시지 헤더에 메시지 타입에 대한 정보를 추가한다. 
+만약 이러한 처리가 불필요할 경우 아래와 같이 `ProducerFactory` 에 설정 할 수 있다.  
+
+```java
+config.put(JsonSerializer.ADD_TYPE_HEADERS, false);
+```  
+
+만약 메시지 헤더에 타입정보가 존재한다면 `Consumer` 는 기본적으로 헤더의 타입정보를 사용한다. 
+`ConsumerFactory` 에서 헤더에 타입정보가 존재하더라도 명시적으로 설정한 타입을 사용하도록 설정 할 수 있다.  
+
+```java
+config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+```  
+
+이런 메시지 직렬화/역직렬화에 대한 설정은 `ConsumerFactory` 에서 하는 방법도 있지만, 
+아래와 같이 별도의 빈을 선언하지 않고 기본 `ConsumerFactory` 빈을 바탕으로 `Properties` 기반으로 설정 할 수 있다.  
+
+```properties
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+spring.kafka.consumer.properties.spring.deserializer.value.delegate.class=org.springframework.kafka.support.serializer.JsonDeserializer
+```  
