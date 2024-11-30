@@ -330,3 +330,91 @@ config.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
 spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
 spring.kafka.consumer.properties.spring.deserializer.value.delegate.class=org.springframework.kafka.support.serializer.JsonDeserializer
 ```  
+
+#### Producer
+애플리케이션에서 처리가 완료된 메시지를 `Outbound Topic` 으로 전송하는 `DemoProducer` 는 
+미리 선언한 `KafkaTemplate` 빈을 내부적으로 사용한다. 
+앞서 알아본 `Consumer` 의 `@KafkaListener` 와 유사하게 `KafkaTemplate` 는 선언시 기입한 설정(직렬화,..) 값들을 바탕으로 구성되고, 
+직렬화를 위해 별도의 처리코드를 작성할 필요 없다.  
+
+메시지를 토픽으로 전송은 아래와 같이 `KafkaTemplate` 의 `send()` 메소드에 토픽 이름, 메시지 키, 메시지 값을 전달하면 된다.  
+
+```java
+this.kafkaTemplate.send(this.properties.getOutboundTopic(), key, payload).get();
+```  
+
+`send()` 메소드가 호출되면 파라미터로 전달된 값들을 기반으로 메시지를 `Kafka` 로 전송한다. 
+`send()` 메소드를 호출할 때 `get()` 를 호출해주는 것을 볼 수 있다. 
+만약 `send()` 만 호출하게 된다면 `Kafka` 로 메시지 전송은 비동기로 이뤄진다. 
+즉 전송의 성공여부를 기다리지 않는 `fire and forget` 으로 수행되는데, 
+전송 결과 확인 및 전송 후 처리가 필요하다면 `send()` 로 번환되는 `ListenableFuture(CompletableFuture)` 를 사용해야 한다. 
+`get()` 을 추가로 호출하는 경우 전송 과정은 동기적으로 수행하기 때문에 전송이 완료될 때까지 대기하게 된다. 
+`get()` 이 반환하는 `SendResult` 를 사용해서 예외처리를 한다던가 재시도를 하는 등의 식의 코드를 이후에 작성 할 수 있다.  
+
+`send()` 처리가 완료되면 `Spring Kafka` 는 `enable.auto.commit=true` 인 경우 소비한 메시지에 대한 오프셋도 커밋하여 
+메시지가 정상적으로 소비되었음을 표시해 중복 처리가 되지 않도록 한다.  
+
+#### KafkaTemplate Config
+`KafkaTemplate` 또한 `Java Config` 를 통해 미리 정의된 빈으로, 
+`ProducerFactory` 빈을 기반으로 생성된다. 
+앞서 알아본 `ConsumerFactory` 와 동일하게 `ProducerFactory` 에는 
+`Kafka Producer` 관련 설정인 직렬화, 키/값 속성등이 포함돼있다.  
+
+```java
+@Bean
+public KafkaTemplate<Object, Object> kafkaTemplate(final ProducerFactory<Object, Object> producerFactory) {
+    return new KafkaTemplate<>(producerFactory);
+}
+
+@Bean
+public ProducerFactory<Object, Object> producerFactory() {
+    final Map<String, Object> props = new HashMap<>();
+
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+    return new DefaultKafkaProducerFactory<>(props);
+}
+```  
+
+`Producer` 의 경우는 `Consumer` 와 다르게 전송과정에서 메시지 지결ㄹ화에 대한 에러 핸들링이 가능하기 때문에 
+`ErrorHandling` 은 사용하지 않고, 
+직접적으로 `JsonSerializer` 를 명시적으로 설정해서 사용한다. 
+`Producer` 의 설정 또한 기본 `KafkaTemplate` 빈에 대한 설정을 `Properties` 를 기반으로 구성할 수 있다.  
+
+#### Spring Kafka Generic Types
+예제 코드에서 `Spring Kafka` 관련 모든 빈은 `DemoConfig` 라는 `Java Config` 파일에 선언돼있다. 
+이때 이러한 빈들은 `Generic` 사용해서 아래와 같이 타입을 강하게 지정할 수 있다.  
+
+```java
+public ConcurrentKafkaListenerContainerFactory<DemoInboundKey, DemoInboundPayload> kafkaListenerContainerFactory(final ConsumerFactory<DemoInboundKey, DemoInboundPayload> consumerFactory) {
+	// ...
+}
+
+public KafkaTemplate<DemoOutboundKey, DemoOutboundEvent> kafkaTemplate(final ProducerFactory<DemoOutboundKey, DemoOutboundEvent> producerFactory) {
+    // ..
+}
+```  
+
+그리고 `Object` 와 같이 지정해서 명시적으로 타입을 지정하지 않을 수도 있다. 
+
+```java
+
+public ConcurrentKafkaListenerContainerFactory<Object, Object> kafkaListenerContainerFactory(final ConsumerFactory<Object, Object> consumerFactory) {
+	// ...
+}
+
+public KafkaTemplate<Object, Object> kafkaTemplate(final ProducerFactory<Object, Object> producerFactory) {
+    // ..
+}
+```  
+
+`Object` 와 같이 명시적인 타입을 지정하지 않을 경우 여러 타입에 대한 `Producer`, `Consumer` 를 생성하지 않아도 된다는 장점이 있다. 
+즉 여러 메시지 타입을 소비하고 생산하는 애플리케이션에서 하나의 빈을 공유해서 재사용이 가능한 것이다.
+
+---  
+## Reference
+[Kafka JSON Serialization](https://www.lydtechconsulting.com/blog-kafka-json-serialization.html)   
+[Kafka Consume & Produce: Spring Boot Demo](https://www.lydtechconsulting.com/blog-kafka-consume-produce-demo.html)   
+
