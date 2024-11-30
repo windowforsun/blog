@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Spring Kafka Consumer & Producer Json Overview"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Spring Kafka 에서 Consumer 와 Producer 를 Json 메시지 포멧을 사용해 구현하는 예제에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,10 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Consumer
+    - Producer
+    - Spring Kafka
+    - KafkaTemplate
 toc: true
 use_math: true
 ---  
@@ -26,7 +30,9 @@ use_math: true
 `Spring Kafka` 를 사용해서 구현한 애플리케이션을 도식화하면 아래와 같이 `Inbound Topic` 에서 
 메시지를 `Consume` 하고 처리 후 `Outbound Topic` 으로 메시지를 `Producd` 하는 형상이다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-spring-consumer-producer-json.drawio.png)
+
 
 실 서비스에서 안정적인 메시징을 위해서는 메시지 중복 처리, 트랜잭션, 메시지 순서 등 고려할 것들이 많다. 
 하지만 이번 포스팅에서는 `Spring Kafka` 를 기반으로 `Kafka Broker` 와 메시지 소비/생산에 대한 기본적인 
@@ -214,7 +220,8 @@ public ProducerFactory producerFactory(@Value("${kafka.bootstrap-servers}") fina
 데모 애플리케이션은 단일 `Kafka Consumer` 와 `Kafka Producer` 로 구성돼 있는데, 
 이를 도식화 하면아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-spring-consumer-producer-json-2.drawio.png)
+
 
 1. `Kafka Consumer` 는 `demo-inbound-topic` 으로 부터 메시지를 소비한다. 
 2. `Kafka Consumer` 는 소비한 바이트 배열의 메시지의 `key/value` 를 `JsonDeserializer` 를 사용해서 프로젝트에 정의된 `POJO` 인 `InboundKey`, `InboundPayload` 클래스로 변환한다. 
