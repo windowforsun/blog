@@ -87,3 +87,171 @@ KStream|GlobalKTable|O|O|X
 |파티셔닝|`Source Stream` 의 파티셔닝 전략을 따름|파티셔닝을 고려할 필요 없음
 |메모리 사용|상대적으로 적은 메모리 사용|모든 인스턴스에 전체 데이터를 저장하므로 사용량이 많음
 
+
+### Join Demo
+각 소스와 각 조인 연산에 대한 결과 차이를 보이기 위해 아래와 같은 예제 이벤트를 사용한다. 
+이는 웹 사이트에서 사용자가 방문하고, 페이지의 특정 영역을 클릭하는 이벤트를 `Kafka Topic` 으로 전송하여 이를 조인하는 예제이다. 
+사용자가 페이지에 접근 하는 이벤트를 담는 `View Topic` 과 페이지 접근 후 특정 영역을 클릭하는 `Click Topic` 을 사용한다. 
+그리고 두 `Topic` 에 기록되는 메시지의 키는 모두 사용자의 아이디가 동일하게 사용된다.  
+
+예제 이벤트 스트림을 통해 아래 7가지 시나리오를 살펴볼 수 있도록 구성했다. 
+
+- A : 클릭 이벤트가 방문 이벤트 1초 후 도착 
+- B : 클릭 이벤트가 방문 이벤트 11초 후 도착 
+- C : 방문 이벤트가 클릭 이벤트 1초 후 도착
+- D : 방문 이벤트는 있지만 클릭 이벤트는 없음
+- E : 클릭 이벤트는 있지만 방문 이벤트는 없음
+- F : 2번의 연속 방문 이벤트 1초 후 클릭 이벤트가 있음
+- G : 방문 이벤트 1초 후 2개의 클릭 이벤트가 있음
+
+이를 타임시리즈 기반으로 도식화 하면 아래와 같다. 
+시간단위는 초를 의미하고 키는 색상으로 구분했다. 
+
+.. 그림 .. 
+
+이후 각 예제에서 사용되는 예제 코드의 전체 내용은 [kafka-streams-join]()
+에서 확인 할 수 있다.  
+
+### KStream-KStream Inner Join
+`KStream` 간 조인을 하려면 `Window` 를 반드시 적용해야 하는데, 
+이를 위해서는 유의미한 값을 도출할 수 있는 `Window` 의 시간 범위를 정의해야 한다. 
+`KStream` 은 `Statess` 하므로 조인을 수행하기 위해서는 스트림상에서 상태를 유지할 기준을 마련해야 하기 때문이다. 
+그렇지 않으면 무한한 스트림 전체를 스캔해 상태를 구성해야 한다. 
+그리고 두 스트림 조인은 일반적으로 가까운 시간내에 있을 때 의미있는 결과를 도출하기 마련이기 때문이다. 
+이렇게 `Window` 에 대한 자세한 내용은 [여기]()
+에서 확인 할 수 있다. 
+이렇게 `Window` 를 정의해서 조인을 수행하면 
+두 스트림에서 `Window` 시간내에 포함되는 모든 레코드들을 기반으로 조인이 수행된다.  
+
+아래는 10초 `Window` 를 사용해서 `View` 와 `Click` 스트림을 조인했을 때의 결과 예시이다.  
+
+.. 그림 ..
+
+- `A` 와 `C` 키 이벤트는 발생하고 10초 이내, 다른 스트림에서 `A`, `C` 이벤트가 발생했기 때문에 조인 결과가 출력된다. 
+- `B` 키 이벤트가 발생하고 10초 이내 다른 스트림에서 `B` 이벤트가 발생하지 않았으므로 조인 결과는 존재하지 않는다. 
+- `View` 에서만 `D` 키 이벤트가 있고, `Click` 에서만 `E` 키 이벤트가 있기 때문에 조인 결과는 존재하지 않는다. 
+- `F` 키에 대한 이벤트가 2번 발생하고, 10초 이내 다른 스트림에서 `F` 이벤트가 발생했기 때문에 2개의 조인 결과가 출력된다. 
+- `G` 키에 대한 이벤트가 빌생하고, 10초 이내 다른 스트림에서 `G` 이벤트가 2번 발생했기 때문에 2개의 조인 결과가 출력된다. 
+
+이를 코드로 작성하면 아래와 같다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KStream<String, String> clickStream = streamsBuilder.stream(this.clickTopic);
+    JoinWindows joinWindows = JoinWindows.of(Duration.ofMillis(this.windowDuration));
+
+    KStream<String, String> joinedStream = viewStream.join(clickStream,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        },
+        joinWindows,
+        StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String())
+    );
+
+    joinedStream.to(this.resultTopic);
+}
+
+@Test
+public void viewStream_clickStream_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(6));
+
+	assertThat(recordList.get(0).timestamp(), is(1000L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(1).timestamp(), is(3000L));
+	assertThat(recordList.get(1).key(), is("C"));
+	assertThat(recordList.get(1).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(2).timestamp(), is(7000L));
+	assertThat(recordList.get(2).key(), is("F"));
+	assertThat(recordList.get(2).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(3).timestamp(), is(7000L));
+	assertThat(recordList.get(3).key(), is("F"));
+	assertThat(recordList.get(3).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(4).timestamp(), is(9000L));
+	assertThat(recordList.get(4).key(), is("G"));
+	assertThat(recordList.get(4).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(5).timestamp(), is(9000L));
+	assertThat(recordList.get(5).key(), is("G"));
+	assertThat(recordList.get(5).value(), is("VIEW:G1, CLICK:G2"));
+}
+```  
+
+일반적인 두 스트림의 `Join Window` 는 대칭적인 성격을 띈다. 
+이는 다른 스트림과 조인이 될 레코드가 과거, 미래에 모두 존재할 수 있고 모든 경우에도 동일 `Window` 에만 있다면 조인이 발생한다. 
+간단한 예로 `View` 이벤트가 발생한 이후 발생한 `Click` 이벤트에 대한 조인만 하고 싶은 경우가 있을 것이다. 
+현재 위 예제는 이러한 경우는 대응되지 않았지만 필요한 경우 추가로 구현해서 `(C, C)` 조인 결과를 제거할 수 있는데 그 예시는 아래와 같다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KStream<String, String> clickStream = streamsBuilder.stream(this.clickTopic);
+    JoinWindows joinWindows = JoinWindows.of(Duration.ofMillis(this.windowDuration));
+
+    KStream<String, String> joinedStream = clickStream.leftJoin(viewStream,
+        (leftClickValue, rightViewValue) -> {
+            String result = rightViewValue + ", " + leftClickValue;
+            log.info(result);
+            return result;
+        },
+        joinWindows,
+        StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String())
+    );
+
+    streamsBuilder.addStateStore(Stores.keyValueStoreBuilder(
+        Stores.persistentKeyValueStore("buffer-store"),
+        Serdes.String(),
+        new ValueAndTimestampSerde<>(Serdes.String()))
+    );
+
+    KStream<String, String> filteredStream = joinedStream.transform(() -> new Transformer<String, String, KeyValue<String, String>>() {
+        private KeyValueStore<String, ValueAndTimestamp<String>> bufferStore;
+
+        @Override
+        public void init(ProcessorContext processorContext) {
+            this.bufferStore = (KeyValueStore<String, ValueAndTimestamp<String>>) processorContext.getStateStore("buffer-store");
+        }
+
+        @Override
+        public KeyValue<String, String> transform(String key, String value) {
+            if (value.contains("null")) {
+                this.bufferStore.put(key, ValueAndTimestamp.make(value, System.currentTimeMillis()));
+
+                return null;
+            } else {
+                ValueAndTimestamp<String> bufferedValue = this.bufferStore.get(key);
+
+                if (bufferedValue != null) {
+                    bufferStore.delete(key);
+
+                    return null;
+                } else {
+                    return new KeyValue<>(key, value);
+                }
+
+            }
+        }
+
+        @Override
+        public void close() {
+
+        }
+    }, "buffer-store");
+
+    filteredStream.to(this.resultTopic);
+}
+```  
+
+조인 결과는 토픽 이벤트의 타임스탬프를 기준 순서대로 처리된다는 것을 기억해야 한다.  
+
