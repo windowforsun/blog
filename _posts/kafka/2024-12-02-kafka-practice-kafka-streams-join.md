@@ -255,3 +255,97 @@ public void process(StreamsBuilder streamsBuilder) {
 
 조인 결과는 토픽 이벤트의 타임스탬프를 기준 순서대로 처리된다는 것을 기억해야 한다.  
 
+
+### KStream-KStream Left Join
+`Left Join` 은 `Left Stream(Primary:View)` 와 `Right Stream(Secondary:Click)` 에 이벤트가 도착할 때마다 조인 연산을 수행하는데 출력 결과에는 약간 차이가 있다. 
+우선 `Left Stream` 에 이벤트가 도착하면 다른 스트림에 이전에 이벤트가 도착하면 해당 레코드와 조인하고 없다면 `null` 로 조인하여 무조건 결과가 출력된다. 
+그리고 `Right Stream` 에 이벤트가 도착하는 경우에는 `Left Stream` 에 이전에 도착한 이벤트 중 조인 가능한 레코드가 있는 경우에만 결과가 출력된다. 
+아래는 실제로 예제 스트림을 `Left Join` 했을 때의 결과이다.  
+
+.. 그림 ..
+
+- `Left Join` 의 결과는 `Inner Join` 의 모든 결과를 포함한다. 
+- `View` 에만 존재하는 `D` 키 이벤트에 대한 조인 결과가 출력된다. 
+- `View` 에 먼저 도착한 경우인 `A`, `F1`, `F2`, `G` 의 타임스탬프에도 조인 결과가 포함된다. 
+
+아래는 코드로 구현한 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KStream<String, String> clickStream = streamsBuilder.stream(this.clickTopic);
+    JoinWindows joinWindows = JoinWindows.of(Duration.ofMillis(this.windowDuration));
+
+    KStream<String, String> joinedStream = viewStream.leftJoin(clickStream,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        },
+        joinWindows,
+        StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String())
+    );
+
+    joinedStream.to(this.resultTopic);
+}
+
+@Test
+public void viewStream_clickStream_left_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(12));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, null"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, null"));
+
+	assertThat(recordList.get(2).timestamp(), is(1000L));
+	assertThat(recordList.get(2).key(), is("A"));
+	assertThat(recordList.get(2).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(3).timestamp(), is(3000L));
+	assertThat(recordList.get(3).key(), is("C"));
+	assertThat(recordList.get(3).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(4).timestamp(), is(4000L));
+	assertThat(recordList.get(4).key(), is("D"));
+	assertThat(recordList.get(4).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(5).timestamp(), is(6000L));
+	assertThat(recordList.get(5).key(), is("F"));
+	assertThat(recordList.get(5).value(), is("VIEW:F1, null"));
+
+	assertThat(recordList.get(6).timestamp(), is(6000L));
+	assertThat(recordList.get(6).key(), is("F"));
+	assertThat(recordList.get(6).value(), is("VIEW:F2, null"));
+
+	assertThat(recordList.get(7).timestamp(), is(7000L));
+	assertThat(recordList.get(7).key(), is("F"));
+	assertThat(recordList.get(7).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(8).timestamp(), is(7000L));
+	assertThat(recordList.get(8).key(), is("F"));
+	assertThat(recordList.get(8).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(9).timestamp(), is(8000L));
+	assertThat(recordList.get(9).key(), is("G"));
+	assertThat(recordList.get(9).value(), is("VIEW:G1, null"));
+
+	assertThat(recordList.get(10).timestamp(), is(9000L));
+	assertThat(recordList.get(10).key(), is("G"));
+	assertThat(recordList.get(10).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(11).timestamp(), is(9000L));
+	assertThat(recordList.get(11).key(), is("G"));
+	assertThat(recordList.get(11).value(), is("VIEW:G1, CLICK:G2"));
+}
+```  
+
+다시 한번 정리하면 `Left Join` 은 `Inner Join` 과 `Left Stream` 에 도착한 모든 레코드를 조인결과로 포함한다고 할 수 있다.  
+
