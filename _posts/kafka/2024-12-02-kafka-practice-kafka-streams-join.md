@@ -349,3 +349,108 @@ public void viewStream_clickStream_left_join() {
 
 다시 한번 정리하면 `Left Join` 은 `Inner Join` 과 `Left Stream` 에 도착한 모든 레코드를 조인결과로 포함한다고 할 수 있다.  
 
+
+### KStream-KStream Outer Join
+`Ourter Join` 은 `Left Stream(Primary:View)`, `Right Stream(Secondary:Click)` 중 어느 스트림에서든 이벤트가 발생 할 때 조인 결과가 발생한다. 
+아래는 `Outer Join` 의 결과이다. 
+
+.. 그림 ..
+
+- `Outer Join` 은 `Left Join` 의 모든 결과를 포함한다.
+- `Click` 에만 존재하는 `E` 키 이벤트에 대한 조인 결과가 출력된다. 
+- `Click` 에 먼저 도착한 경우인 `C` 키 이벤트의 타임스탬프에도 조인 결과가 포함된다. 
+- `Click` 에서 `Join Window` 에 포함되지 못한 `B` 키 이벤트에 대한 타임스탬프에도 조인 결과가 포함된다.  
+
+아래는 코드로 구현한 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KStream<String, String> clickStream = streamsBuilder.stream(this.clickTopic);
+    JoinWindows joinWindows = JoinWindows.of(Duration.ofMillis(this.windowDuration));
+
+    KStream<String, String> joinedStream = viewStream.outerJoin(clickStream,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        },
+        joinWindows,
+        StreamJoined.with(Serdes.String(), Serdes.String(), Serdes.String())
+    );
+
+    joinedStream.to(this.resultTopic);
+}
+
+@Test
+public void viewStream_clickStream_outer_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(15));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, null"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, null"));
+
+	assertThat(recordList.get(2).timestamp(), is(1000L));
+	assertThat(recordList.get(2).key(), is("A"));
+	assertThat(recordList.get(2).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(3).timestamp(), is(2000L));
+	assertThat(recordList.get(3).key(), is("C"));
+	assertThat(recordList.get(3).value(), is("null, CLICK:C1"));
+
+	assertThat(recordList.get(4).timestamp(), is(3000L));
+	assertThat(recordList.get(4).key(), is("C"));
+	assertThat(recordList.get(4).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(5).timestamp(), is(4000L));
+	assertThat(recordList.get(5).key(), is("D"));
+	assertThat(recordList.get(5).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(6).timestamp(), is(5000L));
+	assertThat(recordList.get(6).key(), is("E"));
+	assertThat(recordList.get(6).value(), is("null, CLICK:E1"));
+
+	assertThat(recordList.get(7).timestamp(), is(6000L));
+	assertThat(recordList.get(7).key(), is("F"));
+	assertThat(recordList.get(7).value(), is("VIEW:F1, null"));
+
+	assertThat(recordList.get(8).timestamp(), is(6000L));
+	assertThat(recordList.get(8).key(), is("F"));
+	assertThat(recordList.get(8).value(), is("VIEW:F2, null"));
+
+	assertThat(recordList.get(9).timestamp(), is(7000L));
+	assertThat(recordList.get(9).key(), is("F"));
+	assertThat(recordList.get(9).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(10).timestamp(), is(7000L));
+	assertThat(recordList.get(10).key(), is("F"));
+	assertThat(recordList.get(10).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(11).timestamp(), is(8000L));
+	assertThat(recordList.get(11).key(), is("G"));
+	assertThat(recordList.get(11).value(), is("VIEW:G1, null"));
+
+	assertThat(recordList.get(12).timestamp(), is(9000L));
+	assertThat(recordList.get(12).key(), is("G"));
+	assertThat(recordList.get(12).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(13).timestamp(), is(9000L));
+	assertThat(recordList.get(13).key(), is("G"));
+	assertThat(recordList.get(13).value(), is("VIEW:G1, CLICK:G2"));
+
+	assertThat(recordList.get(14).timestamp(), is(12000L));
+	assertThat(recordList.get(14).key(), is("B"));
+	assertThat(recordList.get(14).value(), is("null, CLICK:B1"));
+}
+```  
+
+정리하면 `Outer Join` 은 `Inner Join` 의 결과와 `Left Stream` 와 `Right Stream` 에 도착한 모든 레코드를 조인결과로 포함한다고 할 수 있다.  
+
