@@ -454,3 +454,124 @@ public void viewStream_clickStream_outer_join() {
 
 정리하면 `Outer Join` 은 `Inner Join` 의 결과와 `Left Stream` 와 `Right Stream` 에 도착한 모든 레코드를 조인결과로 포함한다고 할 수 있다.  
 
+
+### KTable-KTable Inner Join
+`KTable` 은 `changelog stream` 으로 `KStream` 의 `Stateless` 한 성격과 달리 `Stateful` 한 성격을 지닌다. 
+그리고 `KTable` 은 이러한 `changelog stream` 기반 상태관리를 위해 `State Store` 를 주로 사용한다. 
+가장 대표적인 예가 바로 `KStream` 의 레코드를 `State Store` 로 구체화해 키에 대한 최신 값을 포함하는 테이블을 만드는 것이다. 
+그러므로 `KTable` 의 조인에는 `KStream` 에서 필수적으로 사용했던 `Join Window` 가 사용되지 않고, 
+`KTable` 을 통해 계속해서 업데이트 되는 테이블을 기준으로 조인이 수행된다. 
+조인 결과 `KTable` 은 소스 테이블이 업데이트 될 때마다 새로운 조인 결과를 출력하는 레코드이다. 
+즉 소스 테이블처럼 구체화되지는 않는다.  
+
+아래는 `View`, `Click` 스트림을 `KTable` 로 구체화 한 후 `Inner Join` 한 결과 예시이다. 
+
+.. 그림 ..
+
+- 두 소스 스트림에 존재하는 동일한 키에 대한 조인은 모두 조인 결과로 출력된다. 
+- `Join Window` 를 사용하지 않기 때문에, `Join Window` 예시에서는 조인되지 않았던 `B` 키에 대한 조인도 결과로 출력된다. 
+- `F` 키 이벤트의 경우 `View KTable` 이 `F1` 으로 설정되고, `F2` 로 업데이트 된 다음 조인 되기 때문에 1개의 조인 결과만 출력된다. 
+- `G` 키 이벤트의 경우 `View KTable` 에 `G` 이벤트가 있는 상태에서, `Click Table` 에 `G1` 이 설정 될 때 한번, `G2` 로 업데이트 될 때 한번 조인 결과가 발생해 총 2번 출력된다. 
+
+아래는 코드로 구현한 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KTable<String, String> viewTable = streamsBuilder.table(this.viewTopic, Materialized.as("view-store"));
+    KTable<String, String> clickTable = streamsBuilder.table(this.clickTopic, Materialized.as("click-store"));
+
+    KTable<String, String> joinTable = viewTable.join(clickTable,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        });
+
+    joinTable.toStream().to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewTable_clickTable_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(6));
+
+	assertThat(recordList.get(0).timestamp(), is(1000L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(1).timestamp(), is(3000L));
+	assertThat(recordList.get(1).key(), is("C"));
+	assertThat(recordList.get(1).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(2).timestamp(), is(7000L));
+	assertThat(recordList.get(2).key(), is("F"));
+	assertThat(recordList.get(2).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(3).timestamp(), is(9000L));
+	assertThat(recordList.get(3).key(), is("G"));
+	assertThat(recordList.get(3).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(4).timestamp(), is(9000L));
+	assertThat(recordList.get(4).key(), is("G"));
+	assertThat(recordList.get(4).value(), is("VIEW:G1, CLICK:G2"));
+
+	assertThat(recordList.get(5).timestamp(), is(12000L));
+	assertThat(recordList.get(5).key(), is("B"));
+	assertThat(recordList.get(5).value(), is("VIEW:B1, CLICK:B1"));
+}
+```  
+
+`KTable` 업데이트에 따른 조인은 삭제동작에 해당하는 [Tombstone](https://medium.com/@damienthomlutz/deleting-records-in-kafka-aka-tombstones-651114655a16)
+레코드에도 수행된다는 것을 기억해야 한다. 
+여기서 삭제 레코드란 `key=A, payload=null` 과 같은 레코드를 의미한다. 
+이러한 레코드로 테이블이 업데이트 되면 `A` 키에 대한 조인 결과도 `null` 값으로 변경되어 전달된다. 
+
+```java
+@Test
+public void viewTable_clickTable_join2() {
+    Util.sendEvent(this.viewEventInput, this.clickEventInput);
+    this.viewEventInput.pipeInput("A", null, 13000);
+    this.viewEventInput.pipeInput("B", null, 14000);
+
+    List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+    assertThat(recordList, hasSize(8));
+
+    assertThat(recordList.get(0).timestamp(), is(1000L));
+    assertThat(recordList.get(0).key(), is("A"));
+    assertThat(recordList.get(0).value(), is("VIEW:A1, CLICK:A1"));
+
+    assertThat(recordList.get(1).timestamp(), is(3000L));
+    assertThat(recordList.get(1).key(), is("C"));
+    assertThat(recordList.get(1).value(), is("VIEW:C1, CLICK:C1"));
+
+    assertThat(recordList.get(2).timestamp(), is(7000L));
+    assertThat(recordList.get(2).key(), is("F"));
+    assertThat(recordList.get(2).value(), is("VIEW:F2, CLICK:F1"));
+
+    assertThat(recordList.get(3).timestamp(), is(9000L));
+    assertThat(recordList.get(3).key(), is("G"));
+    assertThat(recordList.get(3).value(), is("VIEW:G1, CLICK:G1"));
+
+    assertThat(recordList.get(4).timestamp(), is(9000L));
+    assertThat(recordList.get(4).key(), is("G"));
+    assertThat(recordList.get(4).value(), is("VIEW:G1, CLICK:G2"));
+
+    assertThat(recordList.get(5).timestamp(), is(12000L));
+    assertThat(recordList.get(5).key(), is("B"));
+    assertThat(recordList.get(5).value(), is("VIEW:B1, CLICK:B1"));
+
+    // delete operation
+    assertThat(recordList.get(6).timestamp(), is(13000L));
+    assertThat(recordList.get(6).key(), is("A"));
+    assertThat(recordList.get(6).value(), nullValue());
+
+    assertThat(recordList.get(7).timestamp(), is(14000L));
+    assertThat(recordList.get(7).key(), is("B"));
+    assertThat(recordList.get(7).value(), nullValue());
+}
+```  
+
