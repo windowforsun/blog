@@ -228,6 +228,9 @@ public ProducerFactory producerFactory(@Value("${kafka.bootstrap-servers}") fina
 3. `Kafka Producer` 는 메시지 전처리가 완료된 메시지 구성 `OutboundKey`, `OutboundPayload` 의 `POJO` 를 `JsonSerializer` 를 사용해서 바이트 배열로 직렬화 한다. 
 4. `Kafka Producer` 는 최종적으로 메시지를 `demo-outbound-topic` 으로 전송한다.  
 
+데모의 전체적인 코드는 [여기](https://github.com/windowforsun/spraing-kafka-json-message-exam)
+에서 확인할 수 있다.  
+
 #### Consumer
 데모 애플리케이션에서 사용하는 `Consumer` 구현부는 아래와 같다. 
 토픽과 `ConsumerGroup` 아이디, `containerFactory` 를 지정한다. 
