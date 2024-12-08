@@ -660,3 +660,96 @@ public void viewTable_clickTable_left_join() {
 }
 ```  
 
+
+### KTable-KTable Outer Join
+`KTable` 의 `Outer Join` 또한 `KStream` 에서 알아본 개념과 동일하다. 
+`Left Table(Primary:View)`, `Right Table(Secondary:Click)` 에 업데이트 시점과 `Inner Join` 의 결과를 모두 포함한다.  
+
+.. 그림 ..
+
+아래는 코드로 구현한 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KTable<String, String> viewTable = streamsBuilder.table(this.viewTopic, Materialized.as("view-store"));
+    KTable<String, String> clickTable = streamsBuilder.table(this.clickTopic, Materialized.as("click-store"));
+
+    KTable<String, String> joinTable = viewTable.outerJoin(clickTable,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        });
+
+    joinTable.toStream().to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewTable_clickTable_outer_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(14));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, null"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, null"));
+
+	assertThat(recordList.get(2).timestamp(), is(1000L));
+	assertThat(recordList.get(2).key(), is("A"));
+	assertThat(recordList.get(2).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(3).timestamp(), is(2000L));
+	assertThat(recordList.get(3).key(), is("C"));
+	assertThat(recordList.get(3).value(), is("null, CLICK:C1"));
+
+	assertThat(recordList.get(4).timestamp(), is(3000L));
+	assertThat(recordList.get(4).key(), is("C"));
+	assertThat(recordList.get(4).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(5).timestamp(), is(4000L));
+	assertThat(recordList.get(5).key(), is("D"));
+	assertThat(recordList.get(5).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(6).timestamp(), is(5000L));
+	assertThat(recordList.get(6).key(), is("E"));
+	assertThat(recordList.get(6).value(), is("null, CLICK:E1"));
+
+	assertThat(recordList.get(7).timestamp(), is(6000L));
+	assertThat(recordList.get(7).key(), is("F"));
+	assertThat(recordList.get(7).value(), is("VIEW:F1, null"));
+
+	assertThat(recordList.get(8).timestamp(), is(6000L));
+	assertThat(recordList.get(8).key(), is("F"));
+	assertThat(recordList.get(8).value(), is("VIEW:F2, null"));
+
+	assertThat(recordList.get(9).timestamp(), is(7000L));
+	assertThat(recordList.get(9).key(), is("F"));
+	assertThat(recordList.get(9).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(10).timestamp(), is(8000L));
+	assertThat(recordList.get(10).key(), is("G"));
+	assertThat(recordList.get(10).value(), is("VIEW:G1, null"));
+
+	assertThat(recordList.get(11).timestamp(), is(9000L));
+	assertThat(recordList.get(11).key(), is("G"));
+	assertThat(recordList.get(11).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(12).timestamp(), is(9000L));
+	assertThat(recordList.get(12).key(), is("G"));
+	assertThat(recordList.get(12).value(), is("VIEW:G1, CLICK:G2"));
+
+	assertThat(recordList.get(13).timestamp(), is(12000L));
+	assertThat(recordList.get(13).key(), is("B"));
+	assertThat(recordList.get(13).value(), is("VIEW:B1, CLICK:B1"));
+}
+```  
+
+`KTable` 의 조인은 `KStream` 보다 좀 더 `SQL` 조인과 유사하다. 
+차이점으로는 소스 `KTable` 이 업데이트 되면 조인 결과 `KTable` 도 함께 업데이트 된다는 점이다. 
+
