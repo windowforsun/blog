@@ -753,3 +753,149 @@ public void viewTable_clickTable_outer_join() {
 `KTable` 의 조인은 `KStream` 보다 좀 더 `SQL` 조인과 유사하다. 
 차이점으로는 소스 `KTable` 이 업데이트 되면 조인 결과 `KTable` 도 함께 업데이트 된다는 점이다. 
 
+
+### KStream-KTable Inner Join
+`KStream-KTable` 조인을 사용하면 `KStream` 을 통해 무한하게 들어오는 이벤트를 테이블과 실시간으로 조인 할 수 있다. 
+`KTable-KTable` 조인과 같이 `Join Window` 를 사용하지 않지만 조인 결과는 `KStream` 이다. 
+먼저 알아본 `KStream-KStream`, `KTable-KTable` 과 같은 동일 타입의 조인이 대칭적인 성격이 있었다면, 
+`KStream-KTable` 의 조인은 비대칭적인 성격을 띈다. 
+여기서 대칭적이라는 것은 조인의 소스가 되는 `Left`, `Right` 중 어느 하나가 업데이트 되더라도 조인 수행의 트리거가 된다는 것으 의미한다. 
+비대칭성격을 띄는 `KStream-KTable` 조인은 `Left(KStream)` 만이 조인 수행을 트리거 하고, 
+`Right(KTable)` 은 구체화된 테이블만 업데이트한다. 
+`Join Window` 를 사용하지 않기 때문에 `KStream` 은 상태가 없으므로 `KTable` 이 조인 수행을 트리거 할 수 없기 때문이다.  
+
+이러한 `KStream-KTable` 은 일반적으로 `KStream` 의 이벤트 데이터를 좀 더 풍부하게 구성하는 용도로 사용 할 수 있다. 
+이벤트 키별로 구체화된 `KTable` 을 바탕으로 `KStream` 에 새로운 이벤트가 들어왔을 때 `KTable` 에 있는 추가적인 데이터와 매핑해서 사용할 수 있기 때문이다. 
+간단한 예로 키는 사용자 `ID` 이고 `KTable` 에는 사용자에 대한 데이터가 구체화 돼있다고 해보자. 
+이때 `View` 이벤트 레코드에는 간략한 정보만 있더라도 `KTable` 과 매핑해서 구체적인 사용자 정보를 실시간으로 조회해서 활용할 수 있다.  
+
+.. 그림 ..  
+
+아래는 코드 구현의 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KTable<String, String> clickTable = streamsBuilder.table(this.clickTopic, Materialized.as("click-store"));
+
+    KStream<String, String> joinedStream = viewStream.join(clickTable,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+    });
+
+    joinedStream.to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewStream_clickTable_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	System.out.println(recordList.size());
+	recordList.forEach(System.out::println);
+
+	assertThat(recordList, hasSize(1));
+
+	assertThat(recordList.get(0).timestamp(), is(3000L));
+	assertThat(recordList.get(0).key(), is("C"));
+	assertThat(recordList.get(0).value(), is("VIEW:C1, CLICK:C1"));
+}
+```  
+
+`KStream-KTable` 조인의 경우 비대칭성으로 소스의 실제 이벤트 전달 시점/순서 따라 조인 결과에 큰 영향을 미친다. 
+`KStream-KStream`, `KTable-KTable` 는 실제 이벤트 전달 시점/순서 따라 큰 영향은 미치지 않는데, 
+이는 대칭성으로 양쪽에서 조인 트리거가 가능하기 때문이다. 
+하지만 `KStream-KTable` 조인의 경우 비대칭적이므로 `KTable` 레코드의 타임스탬프가 `KStream` 레코드보다 직지만, 
+우연히 `KStream` 의 레코드가 먼저 처리되면 `KStream` 이 조인을 트리거하는 시점에는 `KTable` 레코드가 존재하지 않기 때문에 조인 결과는 손실된다. (`2.0.x` 이전 기준)  
+
+`2.1.x` 이후 버전 부터는 `Kafka Streams` 에 대한 타임스탬프 동기화가 개선되어 타임스탬프를 기준으로 레코드를 처리할 때 더 나은 정확성을 보장한다. 
+이는 `partition head` 레코드의 타임스탬프가 가장 작은 것을 선택하여 처리하는 방안으로, 
+소스 스트림이 사용하는 파티션에 하나 이상의 메시지가 존재할 때만 가능하다. 
+그래서 사용하는 파티션 중 하나라도 메시지가 존재하지 않는 경우 `max.task.idel.ms` 로 최대 대기시간을 설정 할 수 있다. 
+설정한 대기시간 동안 도착하지 않으면, 수행 가능한 레코드를 기반으로 처리를 계속하게 된다.  
+
+
+### KStream-KTable Left Join
+`Left Join` 의 경우 `Inner Join` 을 결과를 포함해서, `KStream` 의 모든 이벤트에 대한 조인 결과를 포함한다. (`KTable` 과 매칭이 안될 경우 `null`)  
+
+.. 그림 ..
+
+아래는 코드 구현의 예시이다. 
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    KTable<String, String> clickTable = streamsBuilder.table(this.clickTopic, Materialized.as("click-store"));
+
+    KStream<String, String> joinedStream = viewStream.leftJoin(clickTable,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+    });
+
+    joinedStream.to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewStream_clickStream_left_join() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	recordList.forEach(System.out::println);
+
+	assertThat(recordList, hasSize(12));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, null"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, null"));
+
+	assertThat(recordList.get(2).timestamp(), is(1000L));
+	assertThat(recordList.get(2).key(), is("A"));
+	assertThat(recordList.get(2).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(3).timestamp(), is(3000L));
+	assertThat(recordList.get(3).key(), is("C"));
+	assertThat(recordList.get(3).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(4).timestamp(), is(4000L));
+	assertThat(recordList.get(4).key(), is("D"));
+	assertThat(recordList.get(4).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(5).timestamp(), is(6000L));
+	assertThat(recordList.get(5).key(), is("F"));
+	assertThat(recordList.get(5).value(), is("VIEW:F1, null"));
+
+	assertThat(recordList.get(6).timestamp(), is(6000L));
+	assertThat(recordList.get(6).key(), is("F"));
+	assertThat(recordList.get(6).value(), is("VIEW:F2, null"));
+
+	assertThat(recordList.get(7).timestamp(), is(7000L));
+	assertThat(recordList.get(7).key(), is("F"));
+	assertThat(recordList.get(7).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(8).timestamp(), is(7000L));
+	assertThat(recordList.get(8).key(), is("F"));
+	assertThat(recordList.get(8).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(9).timestamp(), is(8000L));
+	assertThat(recordList.get(9).key(), is("G"));
+	assertThat(recordList.get(9).value(), is("VIEW:G1, null"));
+
+	assertThat(recordList.get(10).timestamp(), is(9000L));
+	assertThat(recordList.get(10).key(), is("G"));
+	assertThat(recordList.get(10).value(), is("VIEW:G1, CLICK:G1"));
+
+	assertThat(recordList.get(11).timestamp(), is(9000L));
+	assertThat(recordList.get(11).key(), is("G"));
+	assertThat(recordList.get(11).value(), is("VIEW:G1, CLICK:G2"));
+}
+```  
