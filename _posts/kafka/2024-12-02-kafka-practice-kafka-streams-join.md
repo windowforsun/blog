@@ -899,3 +899,93 @@ public void viewStream_clickStream_left_join() {
 	assertThat(recordList.get(11).value(), is("VIEW:G1, CLICK:G2"));
 }
 ```  
+
+### KStream-GlobalKTable Inner Join
+`KStream-GlobalKTable` 조인의 경우 `KStream-KTable` 과 동작은 동일하지만, 
+전혀 다른 결과를 출력할 수 있다. 
+이는 `GlobalKTable` 이 `KTable` 과는 구체화된 테이블 구성 방삭이 다르기 때문이다. 
+`GlobalKTable` 의 경우 구성이 시작되면 소스 토픽의 전체에 대한 구체화된 테이블을 우선 구성한 뒤 처리가 시작된다. 
+그리고 업데이트가 발생 한다면 해당 테이블에 계속해서 반영한다.  
+
+.. 그림 ..
+
+- 모든 `Click` 토픽에 있는 이벤트를 `GlobalKTable` 로 구성한다. 
+- 그 이후 `KStream` 이벤트에 따라 조인이 수행된다. 
+- 그러므로 `D` 이벤트를 제외한 모든 이벤트가 조인된다. 
+- `G` 키의 경우 `G1` 에서 `G2` 로 업데이트 된 후 `KStream` 이벤트를 기준으로 조인 되기때문에 `G2` 에 대한 조인 결과만 출력된다.  
+
+아래는 코드 구현의 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    GlobalKTable<String, String> clickGlobalTable = streamsBuilder.globalTable(this.clickTopic, Materialized.as("click-store"));
+
+    KStream<String, String> joinedStream = viewStream.join(clickGlobalTable,
+        (leftViewKey, rightClickKey) -> leftViewKey,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        });
+
+    joinedStream.to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewStream_clickGlobalTable_join_presetGlobalTable() {
+	Util.sendClickEvent(this.clickEventInput);
+	Util.sendViewEvent(this.viewEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	assertThat(recordList, hasSize(6));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, CLICK:B1"));
+
+	assertThat(recordList.get(2).timestamp(), is(3000L));
+	assertThat(recordList.get(2).key(), is("C"));
+	assertThat(recordList.get(2).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(3).timestamp(), is(6000L));
+	assertThat(recordList.get(3).key(), is("F"));
+	assertThat(recordList.get(3).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(4).timestamp(), is(6000L));
+	assertThat(recordList.get(4).key(), is("F"));
+	assertThat(recordList.get(4).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(5).timestamp(), is(8000L));
+	assertThat(recordList.get(5).key(), is("G"));
+	assertThat(recordList.get(5).value(), is("VIEW:G1, CLICK:G2"));
+}
+```  
+
+`KStream-GlobalKTable` 조인의 경우 시작 시점 부터 구체화된 테이블을 먼저 구축하고 처리가 시작되므로, 
+`KStream-KTable` 과 같은 런타임 시점/순서에 따른 의존성은 가지지 않는다.  
+
+추가적으로 앞선 코드에서 테스트 예시는 다른 테스트 코드와는 달리, 
+`GlobalKTable` 을 선 구축하기 위해 `Click` 이벤트를 먼저 전체 발송 후 `View` 이벤트를 발생 했다. 
+만약 기존 테스트 코드와 같이 `View` 와 `Click` 이벤트가 기존 순서대로 발생한다면 아래와 같이 `KStream-KTable` 결과와 동일하다.  
+
+```java
+@Test
+public void viewStream_clickGlobalTable_join_not_presetGlobalTable() {
+    Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+    List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+    assertThat(recordList, hasSize(1));
+
+    assertThat(recordList.get(0).timestamp(), is(3000L));
+    assertThat(recordList.get(0).key(), is("C"));
+    assertThat(recordList.get(0).value(), is("VIEW:C1, CLICK:C1"));
+}
+```  
+
