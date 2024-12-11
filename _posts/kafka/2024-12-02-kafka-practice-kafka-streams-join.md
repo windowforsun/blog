@@ -989,3 +989,108 @@ public void viewStream_clickGlobalTable_join_not_presetGlobalTable() {
 }
 ```  
 
+
+### KStream-GlobalKTable Left Join
+`Left Join` 은 기존 `Inner Join` 의 결과에서 `D` 키 이벤트에 대한 결과가 포함된다.  
+
+.. 그림 ..
+
+아래는 코드 구현의 예시이다.  
+
+```java
+public void process(StreamsBuilder streamsBuilder) {
+    KStream<String, String> viewStream = streamsBuilder.stream(this.viewTopic);
+    GlobalKTable<String, String> clickGlobalTable = streamsBuilder.globalTable(this.clickTopic, Materialized.as("click-store"));
+
+    KStream<String, String> joinedStream = viewStream.leftJoin(clickGlobalTable,
+        (leftViewKey, rightClickKey) -> leftViewKey,
+        (leftViewValue, rightClickValue) -> {
+            String result = leftViewValue + ", " + rightClickValue;
+            log.info(result);
+            return result;
+        });
+
+    joinedStream.to(this.resultTopic, Produced.with(Serdes.String(), Serdes.String()));
+}
+
+@Test
+public void viewStream_clickGlobalTable_join_not_presetGlobalTable() {
+	Util.sendEvent(this.viewEventInput, this.clickEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	System.out.println(recordList.size());
+	recordList.forEach(System.out::println);
+
+	assertThat(recordList, hasSize(7));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, null"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, null"));
+
+	assertThat(recordList.get(2).timestamp(), is(3000L));
+	assertThat(recordList.get(2).key(), is("C"));
+	assertThat(recordList.get(2).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(3).timestamp(), is(4000L));
+	assertThat(recordList.get(3).key(), is("D"));
+	assertThat(recordList.get(3).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(4).timestamp(), is(6000L));
+	assertThat(recordList.get(4).key(), is("F"));
+	assertThat(recordList.get(4).value(), is("VIEW:F1, null"));
+
+	assertThat(recordList.get(5).timestamp(), is(6000L));
+	assertThat(recordList.get(5).key(), is("F"));
+	assertThat(recordList.get(5).value(), is("VIEW:F2, null"));
+
+	assertThat(recordList.get(6).timestamp(), is(8000L));
+	assertThat(recordList.get(6).key(), is("G"));
+	assertThat(recordList.get(6).value(), is("VIEW:G1, null"));
+}
+
+@Test
+public void viewStream_clickGlobalTable_join_presetGlobalTable() {
+	Util.sendClickEvent(this.clickEventInput);
+	Util.sendViewEvent(this.viewEventInput);
+
+	List<TestRecord<String, String>> recordList = this.resultOutput.readRecordsToList();
+
+	System.out.println(recordList.size());
+	recordList.forEach(System.out::println);
+
+	assertThat(recordList, hasSize(7));
+
+	assertThat(recordList.get(0).timestamp(), is(0L));
+	assertThat(recordList.get(0).key(), is("A"));
+	assertThat(recordList.get(0).value(), is("VIEW:A1, CLICK:A1"));
+
+	assertThat(recordList.get(1).timestamp(), is(1000L));
+	assertThat(recordList.get(1).key(), is("B"));
+	assertThat(recordList.get(1).value(), is("VIEW:B1, CLICK:B1"));
+
+	assertThat(recordList.get(2).timestamp(), is(3000L));
+	assertThat(recordList.get(2).key(), is("C"));
+	assertThat(recordList.get(2).value(), is("VIEW:C1, CLICK:C1"));
+
+	assertThat(recordList.get(3).timestamp(), is(4000L));
+	assertThat(recordList.get(3).key(), is("D"));
+	assertThat(recordList.get(3).value(), is("VIEW:D1, null"));
+
+	assertThat(recordList.get(4).timestamp(), is(6000L));
+	assertThat(recordList.get(4).key(), is("F"));
+	assertThat(recordList.get(4).value(), is("VIEW:F1, CLICK:F1"));
+
+	assertThat(recordList.get(5).timestamp(), is(6000L));
+	assertThat(recordList.get(5).key(), is("F"));
+	assertThat(recordList.get(5).value(), is("VIEW:F2, CLICK:F1"));
+
+	assertThat(recordList.get(6).timestamp(), is(8000L));
+	assertThat(recordList.get(6).key(), is("G"));
+	assertThat(recordList.get(6).value(), is("VIEW:G1, CLICK:G2"));
+}
+```  
