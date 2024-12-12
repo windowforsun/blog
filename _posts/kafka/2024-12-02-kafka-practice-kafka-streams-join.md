@@ -1094,3 +1094,34 @@ public void viewStream_clickGlobalTable_join_presetGlobalTable() {
 	assertThat(recordList.get(6).value(), is("VIEW:G1, CLICK:G2"));
 }
 ```  
+
+### Partition & Parallelization
+`Kafka` 는 기본적으로 `Consumer Group` 그룹이 하나의 `Topic` 을 담당하는 구조이다. 
+그리고 `Consumer Group` 은 1개 이상의 `Consumer Instance` 로 구성되고, 
+`Topic` 은 1개 이상의 `Partition` 으로 구성된다. 
+`Consumer Instance` 는 하나 이상의 `Topic Partition` 을 할당 받아 `Topic` 으로 들어오는 메시지를 소비하는 구조가 되는 것이다.  
+
+위와 같은 구조에서 `State Store` 를 사용하고, `Join` 을 사용하는 `Kafka Streams` 애플리케이션을 가정해 보자. 
+이때 중요한 것은 `Join` 을 수행하려면 두 소스 `Topic` 이 `Co-Partitioned` 되어야 한다는 것이다. 
+이는 두 `Topic` 이 동알한 수의 `Partition` 을 가진다는 의미로, 그렇지 않으면 `Join` 은 수행될 수 없다. (`GlobalKTable` 제외)
+더 나아가 해당 두 소스 `Topic` 으로 메시지를 생산하는 `Produce` 가 사용하는 `Partitioner` 또한 동일해야 한다. 
+앞서 사용한 예제에서 `View` 토픽의 `A` 키 이벤트는 0번 파티션으로 전달되고, `Click` 토픽의 `A` 키 이벤트는 1번 파티션으로 전달된다면, 
+`Partition` 의 수가 동일하더라더 기대하는 `Join` 결과는 얻을 수 없게 된다.  
+
+위와 같은 몇가지 제약사항에서 벗어날 수 있는 방법이 바로 `GlobalKTable` 의 사용이다. 
+`GlobalKTable` 은 소스 토픽의 모든 파티션 데이터 전체를 복사본으로 보유하는 특성이 있기 대문에, 
+`GlobalKTable` 과 `Join` 연산을 수행하는 다른 소스 토픽의 파티션 수/파티셔너가 일치할 필요 없다. 
+하지만 이런 `GlobalKTable` 은 주로 정적인 데이터에만 사용해야하는데, 그 이유는 메모리/디스크 사용량이 크게 증가할 수 있다는 점에 있다. 
+또한 `GlobalKTable` 의 특성으로 재처리와 같은 연산에 큰 어려움이 있다. 
+그러므로 `GlobalKTable` 은 좋은 대안일 수는 있지만, 정적인 데이터에만 사용하고 동적인 데이터에는 `KTable` 을 사용해야 한다.  
+
+
+
+---  
+## Reference
+[Crossing the Streams – Joins in Apache Kafka](https://www.confluent.io/blog/crossing-streams-joins-apache-kafka/)   
+[KIP-99: Add Global Tables to Kafka Streams](https://cwiki.apache.org/confluence/display/KAFKA/KIP-99%3A+Add+Global+Tables+to+Kafka+Streams)   
+[GlobalKTable](https://docs.confluent.io/platform/current/streams/concepts.html#globalktable)   
+[KTable](https://docs.confluent.io/platform/current/streams/concepts.html#ktable)   
+[Kafka Streams Joining](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#joining)   
+
