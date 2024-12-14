@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Join"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에서 KStream 혹은 KTable 간 조인 연산에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Join
+    - Inner Join
+    - Outer Join
+    - Left Join
+    - KStream
+    - KTable
 toc: true
 use_math: true
 ---  
@@ -56,7 +63,8 @@ use_math: true
 `Kafka Streams Join` 의 기본적인 개념은 `SQL` 에 차용되어 3가지 조인연산을 제공 하지만, 
 `SQL` 의 조인 개념과 완전히 동일하지는 않다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-join-1.jpg)
+
 
 - `Inner Join` : 두 소스에서 동일한 키를 가진 레코드가 있을 때 출력값이 발생한다. 
 - `Left Join` : 좌측(`Primary`)소스의 모든 레코드에 대해 출력이 발생한다. 우측 레코드에 동일한 키가 있다면 해당 레코드와 조인되고, 없는 경우는 `null` 로 설정된다. 
@@ -107,9 +115,10 @@ KStream|GlobalKTable|O|O|X
 이를 타임시리즈 기반으로 도식화 하면 아래와 같다. 
 시간단위는 초를 의미하고 키는 색상으로 구분했다. 
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-2.drawio.png)
 
-이후 각 예제에서 사용되는 예제 코드의 전체 내용은 [kafka-streams-join]()
+
+이후 각 예제에서 사용되는 예제 코드의 전체 내용은 [kafka-streams-join](https://github.com/windowforsun/kafka-streams-kstream-ktable-join-exam)
 에서 확인 할 수 있다.  
 
 ### KStream-KStream Inner Join
@@ -118,14 +127,14 @@ KStream|GlobalKTable|O|O|X
 `KStream` 은 `Statess` 하므로 조인을 수행하기 위해서는 스트림상에서 상태를 유지할 기준을 마련해야 하기 때문이다. 
 그렇지 않으면 무한한 스트림 전체를 스캔해 상태를 구성해야 한다. 
 그리고 두 스트림 조인은 일반적으로 가까운 시간내에 있을 때 의미있는 결과를 도출하기 마련이기 때문이다. 
-이렇게 `Window` 에 대한 자세한 내용은 [여기]()
+이렇게 `Window` 에 대한 자세한 내용은 [여기]({{site.baseurl}}{% link _posts/kafka/2024-06-20-kafka-practice-kafka-streams-windowing.md %})
 에서 확인 할 수 있다. 
 이렇게 `Window` 를 정의해서 조인을 수행하면 
 두 스트림에서 `Window` 시간내에 포함되는 모든 레코드들을 기반으로 조인이 수행된다.  
 
 아래는 10초 `Window` 를 사용해서 `View` 와 `Click` 스트림을 조인했을 때의 결과 예시이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-3.drawio.png)
 
 - `A` 와 `C` 키 이벤트는 발생하고 10초 이내, 다른 스트림에서 `A`, `C` 이벤트가 발생했기 때문에 조인 결과가 출력된다. 
 - `B` 키 이벤트가 발생하고 10초 이내 다른 스트림에서 `B` 이벤트가 발생하지 않았으므로 조인 결과는 존재하지 않는다. 
@@ -262,7 +271,7 @@ public void process(StreamsBuilder streamsBuilder) {
 그리고 `Right Stream` 에 이벤트가 도착하는 경우에는 `Left Stream` 에 이전에 도착한 이벤트 중 조인 가능한 레코드가 있는 경우에만 결과가 출력된다. 
 아래는 실제로 예제 스트림을 `Left Join` 했을 때의 결과이다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-4.drawio.png)
 
 - `Left Join` 의 결과는 `Inner Join` 의 모든 결과를 포함한다. 
 - `View` 에만 존재하는 `D` 키 이벤트에 대한 조인 결과가 출력된다. 
@@ -354,7 +363,7 @@ public void viewStream_clickStream_left_join() {
 `Ourter Join` 은 `Left Stream(Primary:View)`, `Right Stream(Secondary:Click)` 중 어느 스트림에서든 이벤트가 발생 할 때 조인 결과가 발생한다. 
 아래는 `Outer Join` 의 결과이다. 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-5.drawio.png)
 
 - `Outer Join` 은 `Left Join` 의 모든 결과를 포함한다.
 - `Click` 에만 존재하는 `E` 키 이벤트에 대한 조인 결과가 출력된다. 
@@ -466,7 +475,7 @@ public void viewStream_clickStream_outer_join() {
 
 아래는 `View`, `Click` 스트림을 `KTable` 로 구체화 한 후 `Inner Join` 한 결과 예시이다. 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-6.drawio.png)
 
 - 두 소스 스트림에 존재하는 동일한 키에 대한 조인은 모두 조인 결과로 출력된다. 
 - `Join Window` 를 사용하지 않기 때문에, `Join Window` 예시에서는 조인되지 않았던 `B` 키에 대한 조인도 결과로 출력된다. 
@@ -580,7 +589,7 @@ public void viewTable_clickTable_join2() {
 `KTable` 간 `Left Join` 은 `KStream` 에서 알아본 개념과 동일하게 `Left Table(Primary:View)` 의 업데이트가 발생 할 때마다 
 조인 결과가 발생하는데, `Right Table(Secondary:Click)` 에 매칭되는 키가 있는 경우에는 두 테이블의 값이 조인되고, 없는 경우 `null` 로 설정 된다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-7.drawio.png)
 
 - `Inner Join` 의 결과를 모두 포함한다. 
 - `View` 에 이벤트가 먼저 업데이트 되는 레코드에 대해 `(A, null)` 과 같은 결과가 추가로 출력된다.  
@@ -665,7 +674,7 @@ public void viewTable_clickTable_left_join() {
 `KTable` 의 `Outer Join` 또한 `KStream` 에서 알아본 개념과 동일하다. 
 `Left Table(Primary:View)`, `Right Table(Secondary:Click)` 에 업데이트 시점과 `Inner Join` 의 결과를 모두 포함한다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-8.drawio.png)
 
 아래는 코드로 구현한 예시이다.  
 
@@ -769,7 +778,7 @@ public void viewTable_clickTable_outer_join() {
 간단한 예로 키는 사용자 `ID` 이고 `KTable` 에는 사용자에 대한 데이터가 구체화 돼있다고 해보자. 
 이때 `View` 이벤트 레코드에는 간략한 정보만 있더라도 `KTable` 과 매핑해서 구체적인 사용자 정보를 실시간으로 조회해서 활용할 수 있다.  
 
-.. 그림 ..  
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-9.drawio.png)
 
 아래는 코드 구현의 예시이다.  
 
@@ -821,7 +830,8 @@ public void viewStream_clickTable_join() {
 ### KStream-KTable Left Join
 `Left Join` 의 경우 `Inner Join` 을 결과를 포함해서, `KStream` 의 모든 이벤트에 대한 조인 결과를 포함한다. (`KTable` 과 매칭이 안될 경우 `null`)  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-10.drawio.png)
+
 
 아래는 코드 구현의 예시이다. 
 
@@ -907,7 +917,7 @@ public void viewStream_clickStream_left_join() {
 `GlobalKTable` 의 경우 구성이 시작되면 소스 토픽의 전체에 대한 구체화된 테이블을 우선 구성한 뒤 처리가 시작된다. 
 그리고 업데이트가 발생 한다면 해당 테이블에 계속해서 반영한다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-11.drawio.png)
 
 - 모든 `Click` 토픽에 있는 이벤트를 `GlobalKTable` 로 구성한다. 
 - 그 이후 `KStream` 이벤트에 따라 조인이 수행된다. 
@@ -993,7 +1003,7 @@ public void viewStream_clickGlobalTable_join_not_presetGlobalTable() {
 ### KStream-GlobalKTable Left Join
 `Left Join` 은 기존 `Inner Join` 의 결과에서 `D` 키 이벤트에 대한 결과가 포함된다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kkafka-streams-join-12.drawio.png)
 
 아래는 코드 구현의 예시이다.  
 
