@@ -97,3 +97,42 @@ use_math: true
 여기서 우리가 좀 더 알아봐야 할 것은 바로 `Outbox` 테이블의 변경사항을 어떻게 모니터링 하고, 
 이를 `Apache Kafka` 로 밀어 넣어주냐인데 우리는 `Debezium` 과 `CDC`(데이터 변경 캡쳐)를 사용해 이를 손쉽게 해결하고 활용 할 수 있다.  
 
+
+### CDC
+`CDC` 는 소스의 변경을 캡쳐해 타겟이 되는 곳으로 전송하는 것을 의미한다. 
+여기서는 `Apache Kafka` 에서 활용할 수 있는 `Debezium CDC` 를 사용할 예정이므로 이를 기준으로 내용을 기술한다. 
+`Debezium CDC` 는 테이블을 폴링(조회)하는 방식이 아닌 변경 로그를 기반으로 소스가 되는 데이터 테이블의 변경사항을 캡쳐한다. 
+그러므로 다른 방식의 캡쳐와 비교해 낮은 오버해드와 실시간성 및 정확도에 큰 이점이 있다. 
+관련해서는 [여기](https://debezium.io/blog/2018/07/19/advantages-of-log-based-change-data-capture/)
+에서 상세한 내용을 확인 할 수 있다.   
+
+이후 예제에서는 앞서 설명한 `Outbox Table` 을 `CDC` 를 통해 `Apache Kafka Topic` 에 실시간 스트리밍하는 목적으로 활용할 예정이다. 
+그러면 `Outbox Topic` 을 구독하는 여타 서비스에서 이벤트를 받아 필요한 비지니스를 목적에 맞게 수행할 수 있다.  
+
+아래 그림을 보면 데모 애플리케이션 구성과 전체적인 이벤트 흐름을 파악할 수 있다. 
+`order-service` 에서 새로운 주문 레코드를 `INSERT` 하고 동일 트랜잭션에서 `Outbox` 테이블에도 해당 이벤트를 나타내는 레코드를 `INSERT` 한다. 
+그리면 `CDC` 가 `Outbox` 테이블의 변경을 캡쳐해 이를 `Apache Kafka Topic` 으로 전송하게 된다. 
+그리고 해당 `Topic` 을 구독하는 `shipment-service` 는 이벤트 내용을 받아 새로운 배송 레코드를 `INSERT` 하게된다. 
+이는 주문이 수정(취소)되거나 배송이 완료되어 주문 서비스에 알려주는 경우도 동일한 흐름으로 진행된다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-cdc-outbox-1.drawio.png)  
+
+
+### Outbox Table
+데모에서 사용할 `Outbox Table` 의 스키마는 아래와 같다. 
+
+Column|	Type|	Modifiers
+---|---|---
+id|	uuid|	not null
+aggregatetype|	character varying(255)|	not null
+aggregateid|	character varying(255)|	not null
+type|	character varying(255)|	not null
+payload|	jsonb|	not null
+
+각 스키마 필드의 설명은 아래와 같다. 
+
+- `id` : 각 이벤트 메시지의 고유 `ID` 로 소비자의 실패 상황 등에 재시도가 이뤄질 때 중복 이벤트를 김자하는 목적으로 사용될 수 있다. 
+- `aggregatetype` : 이벤트를 `Kafka Topic` 으로 라우팅 할때 사용된다. `주문 서비스` 와 `배송 서비스` 가 있다면 구매에 대한 `Topic` 과 배송에 대한 `Topic` 으로 나눌 수 있다. 해당 타입은 동일한 `aggregate` 내에 포함되는 이벤트라면 동일한 유형을 사용해야 한다. 만약 주문 취소 이벤트가 있다면 이또한 주문과 동일한 유형을 사용해야 한다. 즉 주문 취소도 주문 `Topic` 에 들어가도록 해야한다. 
+- `aggregateid` : 각 `aggregatetype` 에서 고유하게 식별될 수 있는 아이디로 이벤트 아이디라고 할 수 있다. 이는 이후 `Kafka Topic` 의 키로 사용된다는 점을 기억해야 한다. `주문 서비스`와 `배송 서비스` 가 있다면 개별 주문의 `ID` 와 개별 배송의 `ID` 가 사용 될 수 있다. 만약 주문 취소 이벤트라면 이또한 동일한 `aggregatetype` 을 사용하므로 주문시에 사용된 주문 `ID` 를 동일하게 사용해야 한다. 이러한 방식으로 각 이벤트를 구독해서 소비할 때 동일한 `aggregatetype`(`Topic`) 이라면 모든 이벤트를 생성된 순서대로 소비할 수 있게 된다. 
+- `type` : 이벤트의 유형으로 `OrderCreate` 구매 주문, `OrderCancel` 주문 취소가 될 수 있다. 이는 `Topic` 에서 이벤트를 소비했을 때 적절한 이벤트 핸들러를 트리거할 수 있도록 한다. 
+- `payload` : 실제 이벤트 내용을 담는 `JSON` 필드이다. 구매 주문 이벤트라면 주문 테이블에 대한 정보와 더불어 추가적으로 구매자 정보 등이 포함 될 수 있다.  
