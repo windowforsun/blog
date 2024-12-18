@@ -136,3 +136,143 @@ payload|	jsonb|	not null
 - `aggregateid` : 각 `aggregatetype` 에서 고유하게 식별될 수 있는 아이디로 이벤트 아이디라고 할 수 있다. 이는 이후 `Kafka Topic` 의 키로 사용된다는 점을 기억해야 한다. `주문 서비스`와 `배송 서비스` 가 있다면 개별 주문의 `ID` 와 개별 배송의 `ID` 가 사용 될 수 있다. 만약 주문 취소 이벤트라면 이또한 동일한 `aggregatetype` 을 사용하므로 주문시에 사용된 주문 `ID` 를 동일하게 사용해야 한다. 이러한 방식으로 각 이벤트를 구독해서 소비할 때 동일한 `aggregatetype`(`Topic`) 이라면 모든 이벤트를 생성된 순서대로 소비할 수 있게 된다. 
 - `type` : 이벤트의 유형으로 `OrderCreate` 구매 주문, `OrderCancel` 주문 취소가 될 수 있다. 이는 `Topic` 에서 이벤트를 소비했을 때 적절한 이벤트 핸들러를 트리거할 수 있도록 한다. 
 - `payload` : 실제 이벤트 내용을 담는 `JSON` 필드이다. 구매 주문 이벤트라면 주문 테이블에 대한 정보와 더불어 추가적으로 구매자 정보 등이 포함 될 수 있다.  
+
+### Send Outbox Events
+이벤트를 `Outbox` 로 전송한다는 것은 각 서비스에서 전파하고 싶은 이벤트를 `Outbox Table` 에 `INSERT` 하는 것을 의미한다. 
+이벤트는 이후 변경사항에 대해 유연성을 가지는 것이 필요하므로 추상화된 `API` 를 사용하는 것이 좋다. 
+그래서 `OutboxEvent` 라는 인터페이스를 정의해 `Outbox` 로 전송이 필요한 세부 이벤트들은 이를 구현해 `Outbox Table` 에 추가 될 수 있도록 한다.  
+
+```java
+public interface OutboxEvent {
+	static ObjectMapper objectMapper = new ObjectMapper();
+	String getAggregateId();
+	String getAggregateType();
+	String getOutboxPayload() throws JsonProcessingException;
+	String getType();
+	Instant getTimestamp();
+}
+```  
+
+주문 서비스에서 구매 주문과 주문 변경을 처리하는 서비스 코드에서 아래와 같이 목적에 맞는 비지니스 처리 후 `Outbox` 이벤트를 추가하는 데 사용된다. 
+
+```java
+public class OrderService {
+	private final OrderLineRepository orderRepository;
+	private final OutboxService outboxService;
+
+	@Transactional
+	public OrderLine addOrder(OrderLine order) throws JsonProcessingException {
+		log.info("addOrder {}", order);
+		// 구매 주문 데이터 추가
+		this.orderRepository.save(order);
+
+		OrderCreateEvent orderCreateEvent = OrderCreateEvent.of(order);
+
+		// 구매 주문 이벤트 전파
+		this.outboxService.exportEvent(Outbox.of(orderCreateEvent));
+
+		return order;
+	}
+
+	@Transactional
+	public OrderLine updateOrder(long orderId, OrderStatus newStatus) throws JsonProcessingException {
+		OrderLine order = this.orderRepository.findById(orderId).orElse(null);
+
+		if (order == null) {
+			throw new RuntimeException("order id " + orderId + " not found");
+		}
+
+		OrderStatus oldStatus = order.getStatus();
+		order.setStatus(newStatus);
+		// 주문 변경 데이터 수정
+		order = this.orderRepository.save(order);
+
+		OrderUpdateEvent orderUpdateEvent = OrderUpdateEvent.of(orderId, newStatus, oldStatus);
+        // 주문 변경 이벤트 전파
+		this.outboxService.exportEvent(Outbox.of(orderUpdateEvent));
+
+		return order;
+	}
+}
+```  
+
+`addOrder()` 와 `updateOrer()` 메소드는 구매 주문처리와 주문 변경 처리를 수행하고 데이터베이스에 저장한다. 
+그리고 해당 데이터를 사용해서 `OrderCreateEvent` 와 `OrderUpdateEvent` 를 생성하고 `Outbox Table` 에 `INSERT` 하여 전파한다. 
+여기서 각 비지니스 데이터를 `INSERT` 하는 것과 이벤트 전파를 위해 `Outbox Table` 에 `INSERT` 하는 것은 동일한 트랜잭션에서 수행된다. 
+즉 구매 주문 1건이 들어오면 주문 테이블과 `Outbox Table` 에 각 1개씩 총 2개의 레코드가 추가된다.  
+
+아래는 `OrderCreateEvent` 를 생성하는 구현 클래스의 내용이다.  
+
+```java
+public class OrderCreateEvent  implements OutboxEvent{
+	private final OrderCreateMessage orderCreateMessage;
+	private final Instant timestamp;
+
+	private OrderCreateEvent(long id, OrderLine order) {
+		this.orderCreateMessage = OrderCreateMessage.builder()
+			.id(order.getId())
+			.item(order.getItem())
+			.status(order.getStatus())
+			.quantity(order.getQuantity())
+			.totalPrice(order.getTotalPrice())
+			.build();
+		this.timestamp = Instant.now();
+	}
+
+	public static OrderCreateEvent of(OrderLine order) {
+		return new OrderCreateEvent(order.getId(), order);
+	}
+
+	@Override
+	public String getAggregateId() {
+		return String.valueOf(this.orderCreateMessage.getId());
+	}
+
+	@Override
+	public String getAggregateType() {
+		return "Order";
+	}
+
+	@Override
+	public String getOutboxPayload() throws JsonProcessingException {
+		return OutboxEvent.objectMapper.writeValueAsString(this.orderCreateMessage);
+	}
+
+	@Override
+	public String getType() {
+		return "OrderCreate";
+	}
+
+	@Override
+	public Instant getTimestamp() {
+		return this.timestamp;
+	}
+}
+```  
+
+이벤트의 정보를 담고 있는 `payload` 는 `ObjectMapper` 를 사용해서 이벤트 데이터를 `JSON` 형식으로 표한하고 있다. 
+그리고 아래는 이벤트 전파를 수행하는 서비스 코드이다.  
+
+```java
+public class OutboxService {
+	private final OutboxRepository outboxRepository;
+
+	@Transactional
+	public void exportEvent(Outbox outbox) {
+		this.outboxRepository.save(outbox);
+		this.outboxRepository.deleteById(outbox.getId());
+	}
+}
+```  
+
+`exportEvent()` 에 전파하고자 하는 이벤트 객체를 넣어주면 `Outbox Table` 에 해당 레코드가 추가되고 바로 삭제된다. 
+이러한 방식으로 이벤트를 전파할 수 있는 이유는 앞서 설명한 `CDC` 동작 방식의 특성때문이다. 
+`CDC` 는 실제 테이블을 검사하는 것이 아니라 트랜잭션 로그를 추적하는 방식을 사용한다. 
+그러기 때문에 `save()` 후 바로 `delete()` 를 수행하더라도 해당 트랜잭션이 커밋되는 순간 `INSERT` 와 `DELETE` 로그가 생성된다. 
+그 후 `CDC` 는 이러한 이벤트 로그를 사용해서 `INSERT` 인 경우 `Apache Kafka` 로 전송해주면 테이블에서 레코드는 삭제되지만 이벤트 전파는 가능하다. 
+`DELETE` 의 이벤트도 `CDC` 에서 감지가 가능하지만 이는 옵션을 통해 `INSERT` 에 대한 내용만 감지하도록 할 수 있다. 
+이러한 방식의 장점은 `CDC Outbox` 방식으로 이벤트는 계속해서 전파 가능하지만 `Outbox Table` 는 항상 비어 있다는 점이다. 
+이는 추가적인 디스크 공간이 필요하지 않기 때문에 별도 관리를 위한 프로세스를 구축해 줄 필요없다. 
+하지만 만약 `Outbox Table` 에서 이벤트의 이력관르를 하고 싶다면 `save()` 만 수행하고, 
+이후 별도의 프로세스에서 `Outbox Table` 의 보존기한을 두고 주기적으로 삭제해주는 관리가 필요하다.  
+
