@@ -276,3 +276,47 @@ public class OutboxService {
 하지만 만약 `Outbox Table` 에서 이벤트의 이력관르를 하고 싶다면 `save()` 만 수행하고, 
 이후 별도의 프로세스에서 `Outbox Table` 의 보존기한을 두고 주기적으로 삭제해주는 관리가 필요하다.  
 
+
+### Debezium CDC Connector
+위 내용까지해서 `Outbox Table` 에 이벤트를 `INSERT` 하는 구현까지는 알아보았다. 
+이제 `Debezium CDC Connector` 를 등록해서 `Outbox Table` 에 추가되는 이벤트를 캡쳐하고 이를 `Apache Kafka` 로 전달하는 방법에 대해 알아본다. 
+아래 `JSON` 요청은 `Kafka Connect` 에 `Debezium CDC Connector` 를 등록하는 `REST API` 의 `POST Body` 내용이다.  
+
+```json
+{
+  "name": "cdc-outbox",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "exam-db",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.name": "exam-db",
+    "database.history.kafka.topic": "cdc-outbox",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.allowPublicKeyRetrieval" : "true",
+    "tombstones.on.delete" : "false",
+    "table.include.list": "exam.outbox",
+    "value.converter" : "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter" : "org.apache.kafka.connect.storage.StringConverter",
+    "transforms": "outbox",
+    "transforms.outbox.type" : "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.fields.additional.placement" : "type:header:type",
+    "value.converter.schemas.enable": "false",
+    "value.converter.delegate.converter.type": "org.apache.kafka.connect.json.JsonConverter"
+  }
+}
+```  
+
+`io.debezium.connector.mysql.MySqlConnector` 를 사용해서 `Kafka Connector` 를 등록한다. 
+그러면 `JSON` 에 설정된 `DB` 와 해당하는 `Table` 의 변경사항을 해당 `Connector` 가 캡쳐하고 이를 설정된 `Apache Kafka` 의 `Topic` 으로 전송한다. 
+이후에 설명하겠지만 전송하는 `Topic` 은 `io.debezium.transforms.outbox.EventRouter` 를 사용하면 간편하게 각 `aggregatetype` 별로 전송 `Topic` 을 라우팅 할 수 있다. 
+
+
+### Topic Routing
+`Outbox Table` 을 기반으로 하는 이벤트 전파는 해당 이벤트의 `root context` 를 의미하는 `aggregatetype` 을 기반으로 라우팅이 필요하다. 
+초창기에는 이러한 라우팅을 위해 커스텀한 `SMT` 을 구현하였지만, 이제 `Debeizum` 에서 제공하는 [io.debezium.transforms.outbox.EventRouter](https://debezium.io/documentation/reference/transformations/outbox-event-router.html)
+를 사용해 쉽게 적요 할 수 있다. 
+이 `SMT` 는 `Outbox Table` 의 변경 이벤트를 캡쳐해서 각 이벤트 유형(`aggregatetype`)에 맞는 `Kafka Topic` 으로 메시지를 라우팅한다. 
+그러므로 특정 `aggregatetype` 이벤트에 관심있는 소비자는 해당하는 이벤트 유형만 받아 처리 할 수 있다.  
+
