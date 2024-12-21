@@ -320,3 +320,373 @@ public class OutboxService {
 이 `SMT` 는 `Outbox Table` 의 변경 이벤트를 캡쳐해서 각 이벤트 유형(`aggregatetype`)에 맞는 `Kafka Topic` 으로 메시지를 라우팅한다. 
 그러므로 특정 `aggregatetype` 이벤트에 관심있는 소비자는 해당하는 이벤트 유형만 받아 처리 할 수 있다.  
 
+
+### Events in Kafka
+실제로 `Apache Kafka` 를 통해 전파되는 이벤트에 대해 알아본다. 
+전파가 되는 이벤트로는 `OrderCreate`, `OrderUpdate`, `ShipmentUpdate` 가 있다. 
+이벤트를 받기 위해서는 우선 환경 구축이 필요하다. 
+전체 구성 및 프로젝트는 [여기](https://github.com/windowforsun/cdc-outbox-exam)
+에서 확인 할 수 있다. 
+우선 아래 명령을 프로젝트 루트 경로에서 실행해 `order-service` 와 `shipment-service` 를 로컬 `Docker Image` 로 빌드한다. 
+
+```bash
+$ ./gradlew order-service:jibDockerBuild
+
+$ ./gradlew shipment-service:jibDockerBuild
+```  
+
+그리고 `/docker` 경로로 이동 후 `docker-compose` 명령으로 전체 구성을 실행한다.  
+
+```bash
+$ docker-compose up --build
+```  
+
+데모 실행에 필요한 모든 컨테이너가 실행 됐으면 우선 모드 정상적으로 구성 됐는지 아래 명령어들로 확인 한다.  
+
+```bash
+$ docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "show tables"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++------------------+
+| Tables_in_exam   |
++------------------+
+| consumed_message |
+| order_line       |
+| outbox           |
+| shipment         |
++------------------+
+
+$ curl localhost:8083/connector-plugins | jq
+[
+  {
+    "class": "io.debezium.connector.mysql.MySqlConnector",
+    "type": "source",
+    "version": "1.5.0.Final"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "type": "sink",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "type": "source",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorCheckpointConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "type": "source",
+    "version": "1"
+  }
+]
+
+$ docker exec -it myKafka \
+> kafka-topics.sh --bootstrap-server localhost:9092 --list
+__consumer_offsets
+outbox.event.Order
+outbox.event.Shipment
+```  
+
+위 `outbox.event.Order`, `outbox.event.Shipment` 토픽은 `order-service`, `shipment-service` 에서 해당 토픽을 구독하는 `Consumer` 가 있기 때문에 초기 구성부터 생성될 수 있다. 
+모든 구성의 정상 실행이 확인 되면 먼저 `Kafka Connect` 컨테이너에 `Debeizum CDC Connector` 를 등록해 실행 한다.  
+
+```bash
+$ curl -X POST -H "Content-Type: application/json" \
+> --data @docker/cdc-outbox.json \
+> http://localhost:8083/connectors | jq
+{
+  "name": "cdc-outbox",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "exam-db",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.name": "exam-db",
+    "database.history.kafka.topic": "cdc-outbox",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.allowPublicKeyRetrieval": "true",
+    "tombstones.on.delete": "false",
+    "table.include.list": "exam.outbox",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.fields.additional.placement": "type:header:type",
+    "value.converter.schemas.enable": "false",
+    "value.converter.delegate.converter.type": "org.apache.kafka.connect.json.JsonConverter",
+    "name": "cdc-outbox"
+  },
+  "tasks": [],
+  "type": "source"
+}
+```  
+
+`Kafka Connector` 등록 및 실행 상태는 `/status` 를 통한 요청과 필요한 `Kafka Topic` 이 생성됐는지로 확인 할 수 있다.  
+
+```bash
+$ curl -X POST -H "Content-Type: application/json" \
+> --data @docker/cdc-outbox.json \
+> http://localhost:8083/connectors | jq
+{
+  "name": "cdc-outbox",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "exam-db",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.name": "exam-db",
+    "database.history.kafka.topic": "cdc-outbox",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.allowPublicKeyRetrieval": "true",
+    "tombstones.on.delete": "false",
+    "table.include.list": "exam.outbox",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.fields.additional.placement": "type:header:type",
+    "value.converter.schemas.enable": "false",
+    "value.converter.delegate.converter.type": "org.apache.kafka.connect.json.JsonConverter",
+    "name": "cdc-outbox"
+  },
+  "tasks": [],
+  "type": "source"
+}
+
+$  docker exec -it myKafka kafka-topics.sh \
+> --bootstrap-server localhost:9092 \
+>  --list
+__consumer_offsets
+cdc-outbox
+cdc-outbox-config
+cdc-outbox-offset
+cdc-outbox-status
+exam-db
+outbox.event.Order
+outbox.event.Shipment
+```  
+
+`cdc-outbox` 로 시작하는 토픽과 `exam-db` 관련 토픽이 생성된 것을 확인 할 수 있다.  
+
+이제 필요한 모든 구성은 완료된 상태이다. 
+이벤트 흐름을 살펴보기 위해 `Outblx Table` 에 추가되는 레코드는 지우지 않고 유지하는 형태로 수정 후 진행한다. 
+먼저 `OrderCreate` 이벤트는 `order-service` 에 `POST /order` 를 통해 구매 주문이 들어왔을 때 수행되는 이벤트로 아래와 같은 흐름을 갖는다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-cdc-outbox-2.drawio.png)
+
+구매 주문을 수행한 후 `DB` 테이블과 `Kafka Topic` 을 조회하면 아래와 같다.  
+
+```bash
+$  curl -X POST \
+> -H "Content-Type: application/json" \
+> localhost:8080/order \
+> --data '{
+quote>  "item" : "test1",
+quote>  "quantity" : 1,
+quote>  "totalPrice" : 101,
+quote>  "status" : "ENTERED"
+quote> }' | jq
+{
+  "id": 1,
+  "item": "test1",
+  "quantity": 1,
+  "totalPrice": 101,
+  "status": "ENTERED"
+}
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from order_line"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+----------+-------------+---------+
+| id | item  | quantity | total_price | status  |
++----+-------+----------+-------------+---------+
+|  1 | test1 |        1 |         101 | ENTERED |
++----+-------+----------+-------------+---------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from shipment"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+----------+---------+
+| id | order_id | status  |
++----+----------+---------+
+|  1 |        1 | ENTERED |
++----+----------+---------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from outbox"
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+| id | aggregatetype | aggregateid | type        | payload                                                                  |
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+|  1 | Order         | 1           | OrderCreate | {"id":1,"item":"test1","quantity":1,"totalPrice":101,"status":"ENTERED"} |
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic outbox.event.Order \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+id:1,type:OrderCreate   1       {"id":1,"item":"test1","quantity":1,"totalPrice":101,"status":"ENTERED"}
+```  
+
+구매 주문이 들어오게 되면 `OrderLine` 테이블에 구매 주문에 대한 레코드가 생성되고 해당 이벤트는 `Outbox Table` 를 통해 `outbox.event.Order` 토픽으로 전달된다. 
+그러면 해당 토픽을 구독하는 `shipment-service` 에서 `Shipment` 테이블에 배송에 대한 레코드를 생성하게 된다.  
+
+`OrderUpdate` 는 `order-service` 에 `PUT /order` 요청을 통해 기존 구매 주문내용을 갱신했을 떄 발생하는데 그 흐름을 도식화하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-cdc-outbox-3.drawio.png)
+
+주문 변경을 수행한 후 `DB` 테이블과 `Kafka Topic` 을 조회하면 아래와 같다.
+
+```bash
+$  curl -X PUT \
+> -H "Content-Type: application/json" \
+> localhost:8080/order \
+> --data '{
+quote>   "orderId" : 1,
+quote>   "newStatus" : "CANCELLED"
+quote> }' | jq
+{
+  "id": 1,
+  "item": "test1",
+  "quantity": 1,
+  "totalPrice": 101,
+  "status": "CANCELLED"
+}
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from order_line"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+----------+-------------+-----------+
+| id | item  | quantity | total_price | status    |
++----+-------+----------+-------------+-----------+
+|  1 | test1 |        1 |         101 | CANCELLED |
++----+-------+----------+-------------+-----------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from shipment"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+----------+----------+
+| id | order_id | status   |
++----+----------+----------+
+|  1 |        1 | CANCELED |
++----+----------+----------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from outbox"
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+| id | aggregatetype | aggregateid | type        | payload                                                                  |
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+|  1 | Order         | 1           | OrderCreate | {"id":1,"item":"test1","quantity":1,"totalPrice":101,"status":"ENTERED"} |
+|  2 | Order         | 1           | OrderUpdate | {"orderId":1,"newStatus":"CANCELLED","oldStatus":"ENTERED"}              |
++----+---------------+-------------+-------------+--------------------------------------------------------------------------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic outbox.event.Order \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+id:1,type:OrderCreate   1       {"id":1,"item":"test1","quantity":1,"totalPrice":101,"status":"ENTERED"}
+id:2,type:OrderUpdate   1       {"orderId":1,"newStatus":"CANCELLED","oldStatus":"ENTERED"}
+```  
+
+주문 변경이 들어오면 이후 수행되는 흐름은 먼저 살펴본 구매 주문 흐름과 동일하다. 
+예시는 주문 상태가 `CANCELED` 로 변경되는 상황인데 해당 이벤트는 `OrderUpdate` 값이 `Outbox` 테이블의 `type` 필드에 사용된다. 
+그리소 해당 이벤트를 구독하는 `shipment-service` 는 주문 변경에 해당하는 자신의 `Shipment` 테이블에 레코드의 상태도 `CANCELED` 로 변경한다.  
+
+마지막으로 `ShipmentUpdate` 이벤트는 배송이 완료된 경우 `shipment-service` 로 `PUT /shipment` 요청을 통해 
+배송 상태를 변경했을 때의 이벤트이다. 이를 흐름을 도식화 하면 아래와 같다.  
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-cdc-outbox-4.drawio.png)
+
+배송 완료을 수행한 후 `DB` 테이블과 `Kafka Topic` 을 조회하면 아래와 같다. 
+`id` 가 2변인 새로운 구매 주문을 생성 후 진행한다.  
+
+```bash
+$  curl -X POST \
+> -H "Content-Type: application/json" \
+> localhost:8080/order \
+> --data '{
+quote>  "item" : "test2",
+quote>  "quantity" : 1,
+quote>  "totalPrice" : 101,
+quote>  "status" : "ENTERED"
+quote> }' | jq
+{
+  "id": 2,
+  "item": "test2",
+  "quantity": 1,
+  "totalPrice": 101,
+  "status": "ENTERED"
+}
+
+$  curl -X PUT \
+> -H "Content-Type: application/json" \
+> localhost:8081/shipment \
+> --data '{
+quote>   "shipmentId" : 2,
+quote>   "newStatus" : "DONE"
+quote> }' | jq
+{
+  "id": 2,
+  "orderId": 2,
+  "status": "DONE"
+}
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from order_line"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+----------+-------------+-----------+
+| id | item  | quantity | total_price | status    |
++----+-------+----------+-------------+-----------+
+|  1 | test1 |        1 |         101 | CANCELLED |
+|  2 | test2 |        1 |         101 | SHIPPED   |
++----+-------+----------+-------------+-----------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from shipment"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+----------+----------+
+| id | order_id | status   |
++----+----------+----------+
+|  1 |        1 | CANCELED |
+|  2 |        2 | DONE     |
++----+----------+----------+
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from outbox"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+---------------+-------------+----------------+--------------------------------------------------------------------------+
+| id | aggregatetype | aggregateid | type           | payload                                                                  |
++----+---------------+-------------+----------------+--------------------------------------------------------------------------+
+|  1 | Order         | 1           | OrderCreate    | {"id":1,"item":"test1","quantity":1,"totalPrice":101,"status":"ENTERED"} |
+|  2 | Order         | 1           | OrderUpdate    | {"orderId":1,"newStatus":"CANCELLED","oldStatus":"ENTERED"}              |
+|  3 | Order         | 2           | OrderCreate    | {"id":2,"item":"test2","quantity":1,"totalPrice":101,"status":"ENTERED"} |
+|  4 | Shipment      | 2           | ShipmentUpdate | {"shipmentId":2,"orderId":2,"newStatus":"DONE","oldStatus":"ENTERED"}    |
++----+---------------+-------------+----------------+--------------------------------------------------------------------------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic outbox.event.Shipment \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+id:4,type:ShipmentUpdate        2       {"shipmentId":2,"orderId":2,"newStatus":"DONE","oldStatus":"ENTERED"}
+```  
+
+배송 완료 요청이 들어오면 `Shipment` 테이블에 해당 배송 레코드의 상태가 `DONE` 으로 변경된다. 
+그리고 배송 완료에 대한 이벤튼는 `outbox.event.Shipment` 토픽으로 전달된다. 
+그러면 해당 토픽을 구독하는 `order-service` 는 `payload` 에 있는 `orderId` 를 사용해서 해당하는 구매 주문의 상태를 `DONE` 으로 변경한다. 
