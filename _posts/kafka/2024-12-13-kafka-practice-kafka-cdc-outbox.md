@@ -690,3 +690,105 @@ id:4,type:ShipmentUpdate        2       {"shipmentId":2,"orderId":2,"newStatus":
 배송 완료 요청이 들어오면 `Shipment` 테이블에 해당 배송 레코드의 상태가 `DONE` 으로 변경된다. 
 그리고 배송 완료에 대한 이벤튼는 `outbox.event.Shipment` 토픽으로 전달된다. 
 그러면 해당 토픽을 구독하는 `order-service` 는 `payload` 에 있는 `orderId` 를 사용해서 해당하는 구매 주문의 상태를 `DONE` 으로 변경한다. 
+
+### Duplication Event in Consuming Service
+`Apache Kafka` 의 `Topic` 을 구독해 처리하는 서비스에서는 중복 메시지 처리에 대한 방안 마련이 필요하다. 
+지금까지 알아본 `CDC Outbox` 는 구매 주문이 발생 했을 때 새로운 구매 주문 레코드 추가와 구매 주문 발생 이벤트를 하나의 트랜잭션으로 묶는 역할을 하기 때문이다. 
+`outbox.event.Order` 토픽에 메시지가 추가 됐다는 것은 새로운 구매 주문이 들어왔다는 것은 절대적으로 보장하지만, 
+이를 구독하는 `Consumer` 가 메시지를 한번만 받는다는 것은 보장하지 않는다. 
+
+이에 대한 가장 간단한 예시로 `outbox.event.Order` 를 구독하는 `shipment-service` 의 `Consumer` 가 배포와 같은 경우로 재시작 되는 겅우를 가정해보자. 
+새로운 `shipment-service` 가 실행되면 `Consumer` 도 새롭게 초기화 된다. 
+그러면 `Kafka Consumer` 의 정책에 따라 새로운 `Consumer` 는 `outbox.event.Order` 토픽의 처음 부터 끝까지 메시지를 다시 수신하게 된다. 
+위와 같은 상황에 만약 `shipment-service` 의 `Consumer` 에서 이벤트 중복 처리에 대한 내용이 없다면 다수의 이벤트가 중복 처리 될 것이다.  
+
+아래 `shipment-service` 에서 `outbox.event.Order` 토픽을 처리하는 구현 내용을 살펴보자. 
+
+```java
+public class OutboxConsumer {
+	private final ShipmentService shipmentService;
+	private final MessageLogService messageLogService;
+	private static ObjectMapper objectMapper = new ObjectMapper();
+
+	@Transactional
+	@KafkaListener(topics = "outbox.event.Order")
+	public void listen(String outboxEvent, @Header(name = "type") String type, @Header(name = "id") String id) {
+		log.info("shipment received outboxEvent : {}", outboxEvent);
+		long eventId = Long.parseLong(id);
+
+		if(this.messageLogService.isProcessed(eventId)) {
+			log.info("Event id : {} was already processed, ignored", eventId);
+			return;
+		}
+
+		switch (type) {
+			case "OrderCreate":
+				OrderCreateMessage orderCreateEvent = this.<OrderCreateMessage>parseMessage(OrderCreateMessage.class, outboxEvent);
+				log.info("received orderCreateEvent : {}", orderCreateEvent);
+				this.shipmentService.addShipment(orderCreateEvent);
+				break;
+			case "OrderUpdate":
+				OrderUpdateMessage orderUpdateEvent = this.<OrderUpdateMessage>parseMessage(OrderUpdateMessage.class, outboxEvent);
+				log.info("received orderUpdateEvent : {}", orderUpdateEvent);
+				this.shipmentService.updateShipment(orderUpdateEvent);
+				break;
+		}
+
+		this.messageLogService.processed(eventId);
+	}
+
+	public <T> T parseMessage(Class<T> clazz, String event) {
+		T msg = null;
+		try {
+			msg = this.objectMapper.readValue(event, clazz);
+		} catch (Exception e) {
+			log.error("order event convert fail : " + event, e);
+		}
+
+		return msg;
+	}
+}
+```  
+
+이벤트 중복을 판별하기 위해 `Header` 에 있는 `id` 를 받아 `isProcessed()` 를 통해 중복 검사를 수행한다. 
+처리한 적이 있다면 현재 수신한 메시지는 아무런 처리를 하지 않고 리턴된다. 
+그리고 처리한 적이 없는 메시지는 기존 처리를 수행 완료 후 `processed()` 를 호출해 해당 `id` 의 처리가 완료 됐음을 표시한다. 
+아래는 이러한 중복 검사가 구현된 `MessageLogService` 의 구현 내용이다. 
+
+```java
+public class MessageLogService {
+	private final ConsumedMessageRepository consumedMessageRepository;
+
+	@Transactional(value = Transactional.TxType.MANDATORY)
+	public void processed(Long eventId) {
+		this.consumedMessageRepository.save(ConsumedMessage.builder()
+				.eventId(eventId)
+				.timeOfReceived(Instant.now())
+			.build());
+	}
+
+	@Transactional(value = Transactional.TxType.MANDATORY)
+	public boolean isProcessed(Long eventId) {
+		return this.consumedMessageRepository.findById(eventId).orElse(null) != null;
+	}
+}
+```  
+
+이벤트 처리 중복검사를 위해서는 `ConsumedMessage` 라는 `Entity` 와 `Repository` 를 구성해 `DB` 테이블에 저장해서 관리하는 방식을 사용한다. 
+그리고 정의된 모든 메소드는 `@Transactional` 을 선언해 이벤트 처리시 사용하는 트랜잭션에서 수행될 수 있도록 한다. 
+이러한 방식을 사용하면 이벤트 처리 트랜잭션이 어떠한 사유로든 롤백되면 메시지도 처리된 것으로 표시되지 않고, 재시도 등을 통해 사후 처리를 진행 할 수 있다.  
+
+데모에서 구현된 내용보다 보다 완성도를 높이고 싶다면 이벤트 처리 실패시 재시도 횟수와 실패에 따른 `dead-letter-topic` 으로 전송하는 등의 구현을 고려 할 수 있다. 
+이런 `Consumer` 의 메시지 재처리에 대한 내용은 [여기]({{site.baseurl}}{% link _posts/kafka/2024-04-15-kafka-practice-kafka-consumer-non-block-retry-with-spring.md %})
+에서 확인 할 수 있다. 
+또한 `consumed_message` 테이블에 대한 관리 정책도 필요한데, 
+이는 현재 `Consumer` 의 `Offsets` 로 커밋된 메시지보다 오래된 이벤트는 테이블에서 삭제하는 방식으로 관리 할 수 있다.  
+
+
+---  
+## Reference
+[Reliable Microservices Data Exchange With the Outbox Pattern](https://debezium.io/blog/2019/02/19/reliable-microservices-data-exchange-with-the-outbox-pattern)  
+[Outbox Event Router](https://debezium.io/documentation/reference/transformations/outbox-event-router.html)
+[Five Advantages of Log-Based Change Data Capture](https://debezium.io/blog/2018/07/19/advantages-of-log-based-change-data-capture/)
+
+
