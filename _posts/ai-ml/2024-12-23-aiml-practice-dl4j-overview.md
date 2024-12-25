@@ -48,3 +48,36 @@ use_math: true
 - `Apache Spark Integration` : `Apache Spark` 프레이뭐크와 통합하여 `Spark` 에서 딥러닝 파이프라인 실행을 지원한다. 
 - `DataVec` : 원시 입력 데이터를 신경망 실행에 적합한 텐서로 변환하는 데이터 변환 라이브러리이다. ETL(추출, 변환, 로드) 작업을 처리해 데이터 정규화, 특징 엔지니어링, 구조화된 데이터와 비구조화된 데이터를 처리할 수 있다. 
 - `Model Zoo` : 이미지 인식, 자연어 처리(`NLP`)와 같은 일반적인 작업을 위한 사전 학습된 모델을 제공하여 모델 개발 시간을 절약할 수 있다. 
+
+
+### Demo
+`DL4J` 를 사용해서 간단한 모델 기반 학습을 한 뒤 `input` 에 따른 예측결과 `output` 을 도출하는 간단한 예제에 대해 살펴본다. 
+데모의 자세한 코드 내용은 [여기](https://github.com/windowforsun/dl4j-simple-demo)
+에서 확인할 수 있다.  
+
+우선 `DL4J` 사용에 필요한 아래와 같은 의존성을 추가한다.  
+
+```groovy
+ext {
+    dl4jVersion = '1.0.0-M2.1'
+}
+
+dependencies {
+    // only nd4j for example
+    implementation "org.nd4j:nd4j-native:${dl4jVersion}"
+    // apple silicon
+    implementation "org.nd4j:nd4j-native:${dl4jVersion}:macosx-arm64"
+    implementation "org.nd4j:nd4j-native-platform:${dl4jVersion}"
+    implementation "org.deeplearning4j:deeplearning4j-datasets:${dl4jVersion}"
+    implementation "org.deeplearning4j:deeplearning4j-core:${dl4jVersion}"
+
+    // + dl4j for example
+    implementation "org.datavec:datavec-api:${dl4jVersion}"
+    implementation "org.datavec:datavec-data-image:${dl4jVersion}"
+    implementation "org.datavec:datavec-local:${dl4jVersion}"
+    implementation "org.deeplearning4j:resources:${dl4jVersion}"
+    implementation "org.deeplearning4j:deeplearning4j-ui:${dl4jVersion}"
+    implementation "org.deeplearning4j:deeplearning4j-zoo:${dl4jVersion}"
+    implementation "org.deeplearning4j:deeplearning4j-parallel-wrapper:${dl4jVersion}"
+}
+```  
