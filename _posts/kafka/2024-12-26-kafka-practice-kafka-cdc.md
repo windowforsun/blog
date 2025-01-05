@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka CDC(Change Data Capture) Overview"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka CDC 에 대한 설명과 Polling-based CDC 와 Log-based CDC 의 차이점에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,15 @@ categories :
 tags:
     - Practice
     - Kafka
+    - CDC
+    - Change Data Capture
+    - Polling-based CDC
+    - Log-based CDC
+    - Debezium
+    - Kafka Connect
+    - Kafka CDC
+    - CDC Connector
+    - Kafka CDC Connector
 toc: true
 use_math: true
 ---  
