@@ -90,3 +90,30 @@ rules:
 ```  
 
 위 설정 내용에서 알 수 있듯이 `JMX` 를 수집할 때 사용할 포트는 `5556` 이다.  
+
+### Prometheus
+`Kafka Connect` 에서 `JMX Exporter` 를 사용해 메트릭을 수집할 수 있도록 공개했다면, 
+메트릭을 수집하는 과정이 필요하다. 
+이때 사용할 것이 바로 `Prometheus` 로 `Prometheus` 의 설정 파일인 `prometheus.yml` 파일에 
+아래와 같이 `Kafka Connect` 에서 메트릭을 수집하도록 추가한다.  
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+
+  - job_name: 'grafana'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['grafana:3000']
+
+  - job_name: 'kafka-connect'
+    static_configs:
+      - targets: [ 'exam-connect:5556' ]
+```  
