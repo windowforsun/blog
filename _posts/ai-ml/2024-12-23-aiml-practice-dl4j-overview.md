@@ -195,7 +195,9 @@ public class LinearRegressionExample {
 
 		// 5. 예측 결과 출력
 		System.out.println("예측 결과:");
-		double[][] testInputs = {{0d}, {1d}, {2d}, {3d}, {4d}}; // 테스트 입력값
+		double[][] testInputs = { 
+			{0d}, {1d}, {2d}, {3d}, {4d} 
+		}; // 테스트 입력값
 		for (double[] testInput : testInputs) {
 			double[] prediction = model.output(Nd4j.create(new double[][] {testInput})).toDoubleVector();
 			System.out.printf("입력: %.1f -> 예측 출력: %.3f\n", testInput[0], prediction[0]);
