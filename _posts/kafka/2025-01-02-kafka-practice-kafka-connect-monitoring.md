@@ -117,3 +117,160 @@ scrape_configs:
     static_configs:
       - targets: [ 'exam-connect:5556' ]
 ```  
+
+
+
+### 데모 환경 구성
+이제 `docker-compose.yaml` 파일을 통해 테스트에 필요한 전체 구성을 작성하고 실행한다. 
+`docker-compose.yaml` 파일 내용은 아래와 같이 `kafka`, `zookeeper`, `kafka-connect`, `prometheus`, `grafana` 로 구성돼있다.  
+
+```yaml
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - exam-net
+
+  kafka:
+    container_name: myKafka
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    networks:
+      - exam-net
+
+  exam-connect:
+    container_name: exam-connect
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+      - "5556:5556"
+    command: sh -c "
+      echo 'waiting 10s' &&
+      sleep 10 &&
+      /etc/confluent/docker/run"
+    environment:
+      CONNECT_GROUP_ID: 'exam-connect'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_CONFIG_STORAGE_TOPIC: 'file-source-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'file-source-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'file-source-status'
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      CONNECT_REST_ADVERTISED_HOST_NAME: exam-connect
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+      KAFKA_JMX_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=5556:/opt/config.yml -Dcom.sun.management.jmxremote.authenticate=false"
+      TZ: 'Asia/Seoul'
+      JAVA_OPTS: "-Duser.timezone=Asia/Seoul"
+    volumes:
+      - ./data:/data
+      - ./config.yml:/opt/config.yml
+    networks:
+      - exam-net
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - exam-net
+
+  # id : admin, pw : admin
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - exam-net
+
+networks:
+  exam-net:
+```  
+
+`Kafka Connect` 쪽 `environment` 를 보면 `KAFKA_JMX_OPTS` 환경변수를 통해 
+다운로드 받은 `JMX Exporter` 실행 파일과 사용할 포트 그리고 설정 파일인 `config.yml` 지정했다.  
+
+```yaml
+KAFKA_JMX_OPTS: "-javaagent:/opt/jmx_prometheus_javaagent.jar=5556:/opt/config.yml -Dcom.sun.management.jmxremote.authenticate=false"
+```
+
+모든 구성은 `docker-compose up --build` 명령으로 실행할 수 있다.  
+
+```bash
+$ docker-compose up --build                                                   0.0s
+[+] Running 6/0
+ ✔ Container docker-grafana-1                                                                                                                               Created0.0s 
+ ✔ Container myZookeeper                                                                                                                                    Created0.0s 
+ ✔ Container exam-connect                                                                                                                                   Created0.0s 
+ ✔ Container docker-prometheus-1                                                                                                                            Created0.0s 
+ ! zookeeper The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested 0.0s 
+ ✔ Container myKafka                                                                                                                                        Created0.0s 
+Attaching to docker-grafana-1, docker-prometheus-1, exam-connect, myKafka, myZookeeper
+
+...
+
+```  
+
+그리고 데모 테스트를 위해 `FileStreamSourceConnector` 를 사용하는 `Kafka Connector` 를 아래 요청으로 등록한다.  
+
+```bash
+$ curl -X POST -H "Content-Type: application/json" \
+--data '{
+  "name": "exam-file-source",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/file-source-input.txt",
+    "topic" : "file-source-topic"
+  }
+}' \
+http://localhost:8083/connectors | jq
+
+{
+  "name": "exam-file-source",
+  "config": {
+    "connector.class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "tasks.max": "1",
+    "file": "/data/file-source-input.txt",
+    "topic": "file-source-topic",
+    "name": "exam-file-source"
+  },
+  "tasks": [],
+  "type": "source"
+}
+```  
+
+그리고 `Kafka` 에서 `file-source-topic` 컨슘하면 파일의 내용이 토픽에 추가가 된 것으로 
+`Kafka Connect` 및 `Kafka Connector` 실행이 정상적으로 된 것을 확인 할 수 있다.  
+
+```bash
+$ docker exec -it myKafka kafka-console-consumer.sh \
+--bootstrap-server localhost:9092 \
+--topic file-source-topic \
+--property print.key=true \
+--property print.headers=true \
+--from-beginning 
+NO_HEADERS      null    111
+NO_HEADERS      null    222
+```  
