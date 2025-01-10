@@ -274,3 +274,132 @@ $ docker exec -it myKafka kafka-console-consumer.sh \
 NO_HEADERS      null    111
 NO_HEADERS      null    222
 ```  
+
+### JMX 메트릭 확인
+`Kafka Connect` 의 `JMX Exporter` 를 통해 공개되는 메트릭은 `5556` 포트를 통해 조회할 수 있다. 
+아래와 같이 요청을 하면 수집 가능한 메트릭 확인이 가능하다.  
+
+```bash
+$  curl localhost:5556/metrics | grep 'kafka_connect'
+# TYPE kafka_connect_source_task_metrics_source_record_active_count_avg untyped
+kafka_connect_source_task_metrics_source_record_active_count_avg{connector="exam-file-source",task="0",} NaN
+# HELP kafka_connect_connect_metrics_failed_authentication_rate The number of connections with failed authentication per second (kafka.connect<type=connect-metrics, client-id=connect-1><>failed-authentication-rate)
+# TYPE kafka_connect_connect_metrics_failed_authentication_rate untyped
+kafka_connect_connect_metrics_failed_authentication_rate{client_id="connect-1",} 0.0
+# HELP kafka_connect_connect_metrics_failed_reauthentication_rate The number of failed re-authentication of connections per second (kafka.connect<type=connect-metrics, client-id=connect-1><>failed-reauthentication-rate)
+# TYPE kafka_connect_connect_metrics_failed_reauthentication_rate untyped
+kafka_connect_connect_metrics_failed_reauthentication_rate{client_id="connect-1",} 0.0
+# HELP kafka_connect_connect_metrics_request_rate The number of requests sent per second (kafka.connect<type=connect-metrics, client-id=connect-1><>request-rate)
+# TYPE kafka_connect_connect_metrics_request_rate untyped
+kafka_connect_connect_metrics_request_rate{client_id="connect-1",} 0.36672014668805863
+# HELP kafka_connect_connect_coordinator_metrics_assigned_connectors The number of connector instances currently assigned to this consumer (kafka.connect<type=connect-coordinator-metrics, client-id=connect-1><>assigned-connectors)
+# TYPE kafka_connect_connect_coordinator_metrics_assigned_connectors untyped
+kafka_connect_connect_coordinator_metrics_assigned_connectors{client_id="connect-1",} 1.0
+# HELP kafka_connect_connect_metrics_outgoing_byte_rate The number of outgoing bytes sent to all servers per second (kafka.connect<type=connect-metrics, client-id=connect-1><>outgoing-byte-rate)
+# TYPE kafka_connect_connect_metrics_outgoing_byte_rate untyped
+kafka_connect_connect_metrics_outgoing_byte_rate{client_id="connect-1",} 31.583772633509053
+# HELP kafka_connect_connect_worker_metrics_task_startup_success_percentage The average percentage of this worker's tasks starts that succeeded. (kafka.connect<type=connect-worker-metrics><>task-startup-success-percentage)
+# TYPE kafka_connect_connect_worker_metrics_task_startup_success_percentage untyped
+kafka_connect_connect_worker_metrics_task_startup_success_percentage 0.0
+# HELP kafka_connect_task_error_metrics_deadletterqueue_produce_requests The number of attempted writes to the dead letter queue. (kafka.connect<type=task-error-metrics, connector=exam-file-source, task=0><>deadletterqueue-produce-requests)
+# TYPE kafka_connect_task_error_metrics_deadletterqueue_produce_requests untyped
+kafka_connect_task_error_metrics_deadletterqueue_produce_requests{connector="exam-file-source",task="0",} 0.0
+# HELP kafka_connect_connect_metrics_select_rate The number of times the I/O layer checked for new I/O to perform per second (kafka.connect<type=connect-metrics, client-id=connect-1><>select-rate)
+# TYPE kafka_connect_connect_metrics_select_rate untyped
+kafka_connect_connect_metrics_select_rate{client_id="connect-1",} 55.57974834406729
+# HELP kafka_connect_connect_worker_rebalance_metrics_rebalancing Whether this worker is currently rebalancing. (kafka.connect<type=connect-worker-rebalance-metrics><>rebalancing)
+# TYPE kafka_connect_connect_worker_rebalance_metrics_rebalancing untyped
+kafka_connect_connect_worker_rebalance_metrics_rebalancing 0.0
+# HELP kafka_connect_connect_metrics_connection_creation_rate The number of new connections established per second (kafka.connect<type=connect-metrics, client-id=connect-1><>connection-creation-rate)
+# TYPE kafka_connect_connect_metrics_connection_creation_rate untyped
+kafka_connect_connect_metrics_connection_creation_rate{client_id="connect-1",} 0.0
+# HELP kafka_connect_connect_metrics_network_io_rate The number of network operations (reads or writes) on all connections per second (kafka.connect<type=connect-metrics, client-id=connect-1><>network-io-rate)
+# TYPE kafka_connect_connect_metrics_network_io_rate untyped
+kafka_connect_connect_metrics_network_io_rate{client_id="connect-1",} 0.7334402933761173
+# HELP kafka_connect_connect_metrics_reauthentication_latency_avg The average latency observed due to re-authentication (kafka.connect<type=connect-metrics, client-id=connect-1><>reauthentication-latency-avg)
+# TYPE kafka_connect_connect_metrics_reauthentication_latency_avg untyped
+kafka_connect_connect_metrics_reauthentication_latency_avg{client_id="connect-1",} NaN
+# HELP kafka_connect_kafka_metrics_count_count total number of registered metrics (kafka.connect<type=kafka-metrics-count><>count)
+# TYPE kafka_connect_kafka_metrics_count_count untyped
+kafka_connect_kafka_metrics_count_count 61.0
+kafka_connect_kafka_metrics_count_count{client_id="connect-1",} 98.0
+# HELP kafka_connect_source_task_metrics_poll_batch_avg_time_ms The average time in milliseconds taken by this task to poll for a batch of source records. (kafka.connect<type=source-task-metrics, connector=exam-file-source, task=0><>poll-batch-avg-time-ms)
+# TYPE kafka_connect_source_task_metrics_poll_batch_avg_time_ms untyped
+kafka_connect_source_task_metrics_poll_batch_avg_time_ms{connector="exam-file-source",task="0",} NaN
+# HELP kafka_connect_connect_coordinator_metrics_last_heartbeat_seconds_ago The number of seconds since the last coordinator heartbeat was sent (kafka.connect<type=connect-coordinator-metrics, client-id=connect-1><>last-heartbeat-seconds-ago)
+# TYPE kafka_connect_connect_coordinator_metrics_last_heartbeat_seconds_ago untyped
+kafka_connect_connect_coordinator_metrics_last_heartbeat_seconds_ago{client_id="connect-1",} 1.0
+# HELP kafka_connect_task_error_metrics_total_errors_logged The number of errors that were logged. (kafka.connect<type=task-error-metrics, connector=exam-file-source, task=0><>total-errors-logged)
+# TYPE kafka_connect_task_error_metrics_total_errors_logged untyped
+kafka_connect_task_error_metrics_total_errors_logged{connector="exam-file-source",task="0",} 0.0
+
+...
+```  
+
+그리고 이번에는 `Prometheus` 가 `Kafka Connect` 의 `JMX` 메트릭을 정상 수집이 가능한지 확인을 위해 웹 브라우저를 통해 
+`localhost:9090` 에 접속해 나오는 화면에서 확인이 필요한 메트릭 명을 입력해 조회할 수 있다. 
+그리고 아래와 같이 `Prometheus` 에서 제공하는 `REST API` 를 사용해 확인 하는 것도 가능하다.  
+
+```bash
+$  curl "http://localhost:9090/api/v1/query?query=kafka_connect_connect_worker_metrics_task_count" | jq
+{
+  "status": "success",
+  "data": {
+    "resultType": "vector",
+    "result": [
+      {
+        "metric": {
+          "__name__": "kafka_connect_connect_worker_metrics_task_count",
+          "instance": "exam-connect:5556",
+          "job": "kafka-connect"
+        },
+        "value": [
+          1723284580.359,
+          "1"
+        ]
+      }
+    ]
+  }
+}
+```  
+
+만약 정상적으로 조회되지 않으면 `Prometheus` 에서 수집 타겟 상태를 확인해 볼 수 있다.  
+
+```bash
+$  curl "http://localhost:9090/api/v1/targets?state=active&scrapePool=kafka-connect" | jq
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   618  100   618    0     0  49527      0 --:--:-- --:--:-- --:--:-- 68666
+{
+  "status": "success",
+  "data": {
+    "activeTargets": [
+      {
+        "discoveredLabels": {
+          "__address__": "exam-connect:5556",
+          "__metrics_path__": "/metrics",
+          "__scheme__": "http",
+          "__scrape_interval__": "15s",
+          "__scrape_timeout__": "10s",
+          "job": "kafka-connect"
+        },
+        "labels": {
+          "instance": "exam-connect:5556",
+          "job": "kafka-connect"
+        },
+        "scrapePool": "kafka-connect",
+        "scrapeUrl": "http://exam-connect:5556/metrics",
+        "globalUrl": "http://exam-connect:5556/metrics",
+        "lastError": "",
+        "lastScrape": "2024-08-10T10:24:00.857769124Z",
+        "lastScrapeDuration": 0.042762583,
+        "health": "up",
+        "scrapeInterval": "15s",
+        "scrapeTimeout": "10s"
+      }
+    ],
+    "droppedTargets": [],
+    "droppedTargetCounts": null
+  }
+}
+```
