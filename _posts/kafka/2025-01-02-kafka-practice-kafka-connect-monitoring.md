@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Connect Monitoring"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Connect 를 운영하며 모니터링을 위한 환경을 구축하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,18 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Connect
+    - Monitoring
+    - JMX
+    - Prometheus
+    - Grafana
+    - Docker
+    - Docker Compose
+    - JMX Exporter
+    - Kafka Connector
+    - FileStreamSourceConnector
+    - FileStreamSinkConnector
+    - Kafka Connect REST API
 toc: true
 use_math: true
 ---  
@@ -26,7 +38,7 @@ use_math: true
 모니터링 대시보드를 구축한다. 
 이를 도식화해 그리면 아래와 같다.  
 
-구축의 상세 내용이 있는 예제는 [여기]()
+구축의 상세 내용이 있는 예제는 [여기](https://github.com/windowforsun/kafka-connect-monitoring-exam)
 에서 확인 할 수 있다.  
 
 ### Kafka Connect JMX Metrics
@@ -403,3 +415,36 @@ $  curl "http://localhost:9090/api/v1/targets?state=active&scrapePool=kafka-conn
   }
 }
 ```
+
+
+### Grafana 대시보드 구성
+`Prometheus` 정상 수집까지 확인이 됐으면 이제 이를 `Grafana` 와 연동하고 메트릭을 사용해서 대시보드를 구성하면 된다. 
+우선 웹 브라우저로 `localhost:3000` 에 접속하고 초기 `id` 와 `pw` 인 `admin` 을 입력해 로그인한다. 
+그리고 `Prometheus` 를 `Grafana` 의 `Data Source` 로 등록하는 방법은 아래와 같다.  
+
+1. 좌측 상단 `Configuration` > `Data Sources` 이동
+2. `Add data source` 클릭
+3. `Prometheus` 클릭
+4. `URL` 에 `http://prometheus:9090` 입력
+5. `Save & Test` 클릭해 연결 확인
+
+그리고 대시 보드를 추가하는 방법은 아래와 같다.  
+
+1. 좌측 상단 `Dashboards` 클릭
+2. `Create dashboard` 클릭
+3. `Import dashborad` 클릭
+4. 아래 `JSON` 내용 붙여 넣기
+5. `Load` 클릭
+6. `Import` 클릭
+
+`Grafana` 에 `Import` 할 `JSON` 내용은 [여기](https://github.com/windowforsun/kafka-connect-monitoring-exam/blob/master/docker/grafana-dashboard.json)
+에서 확인 할 수 있다.
+테스트 삼아 구성해본 내용이므로 리얼환경에서는 좀 더 모니터링하고자 하는 목적에 맞는 차트 구성과 메트릭 선택이 필요하다.  
+
+
+---  
+## Reference
+[Use JMX to Monitor Connect](https://docs.confluent.io/platform/current/connect/monitoring.html#use-jmx-to-monitor-kconnect)  
+[Prometheus HTTP API](https://prometheus.io/docs/prometheus/latest/querying/api/)  
+
+
