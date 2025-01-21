@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[AI/ML] "
+title: "[AI/ML] ML Basics Part 1: Overview"
 header:
   overlay_image: /img/ai-ml-bg.png
-excerpt: ''
+excerpt: '`Machine Learning(ML)` 의 기본 개념인 Classification 분류와 Regression 회귀의 기초 개념을 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,18 @@ categories :
 tags:
     - Practice
     - ML
+    - Machine Learning
+    - Classification
+    - Regression
+    - Predictor
+    - Cost Function
+    - Loss Function
+    - Decision Boundary
+    - Normal Equation
+    - Gradient Descent
+    - Mean Squared Error
+    - MSE
+    - Linear Regression
 toc: true
 use_math: true
 ---
@@ -188,3 +200,38 @@ C = \frac{1}{N} \sum_{i=1}^N (x_i - y(x_i))^2
 $$
 
 위와 같이 모든 제곱 오차를 더한 다음 데이터 포인트의 수인 `N` 으로 나누게 되면 최종적으로 `MSE` 를 계산할 수 있다.  
+
+### Gradient Descent
+`Gradient Descent` 경사 하강법은 `Cost Function` 비용 함수를 최소화하는 가중치를 찾는 방법이다.
+`Cost Function` 을 그래프로 나타내면(변수가 2개인 경우) 아래와 같이 표현할 수 있다.  
+
+![그림 1]({{site.baseurl}}/img/aiml/aiml-ml-basics-part1-9.webp)
+
+
+위 그림을 통해 비용 함수의 최솟값이 어느 부분에 있는지 눈으로 확인할 수 있다. 
+하지만 실제 수백, 수천 혹은 그 이상의 파라미터를 사용하는 경우 이를 그래프로 표현하는 것은 불가능에 가깝다. 
+그러므로 매우 고차원 비용 함수의 최소값을 찾기 위해 `Gradient Descent` 경사 하강법을 사용한다.  
+
+경사 하강법의 동작 원리는 매우 단순하다. 만약 위 비용 함수 그래프 그림에서 공을 굴린다고 가정해 보자. 
+그러면 공은 계속해서 표면 기울기가 가장 가파른 방향으로 굴러가고 결국 가장 아래쪽에서 멈추게 될 것이다. 
+바로 이런 식으로 최소 비용을 찾는 것이 바로 경사 하강법의 방법이다. 
+그래프에서 임의의 지점을 선택하고, 
+가장 가파른 기울기의 방향을 찾고 그 방향으로 약간 움직이는 것을 반복해 비용 함수의 최솟값에 도달하게 되는 것이다. 
+그리고 이렇게 찾아진 비용 함수의 파리미터가 바로 데이터의 분류하는 선을 그리기 위해 사용된다.  
+
+
+### Conclusion
+`ML` 의 요소 중 `Classification`, `Regression`, `Predictor`, `Cost Function`, `Gradient Descent` 에 대해 알아보았다.
+이를 통해 기계 학습은 훈련 데이터를 통해 선을 그리는 것에 불과하다는 것을 수 있었다. 
+선을 그리는 목적은 분류 알고리즘에서의 결정 경계 또는 현실 세계의 행동을 모델링하는 예측기를 결정하는 것이고, 
+이러한 선은 경사 하강법을 통해 비용 함수의 최솟값을 찾아 생성할 수 있다는 것도 알아보았다. 
+이렇게 `ML` 은 패턴 인식이라고 할 수 있다. 
+`ML` 알고리즘은 훈련ㄷ ㅔ이터를 통해 선을 그려 패텬을 배우고, 이를 새로운 데이터에 일반화 하는 것을 의미한다.  
+
+
+
+---  
+## Reference
+[Machine Learning Crash Course: Part 1 — Regression/Classification, Cost Functions, and Gradient Descent](https://medium.com/@ml.at.berkeley/machine-learning-crash-course-part-1-9377322b3042)  
+
+
