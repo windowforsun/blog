@@ -25,3 +25,23 @@ use_math: true
 - 무중단 : 데이터 수집 및 전달의 중단 없이 지속적으로 운영될 수 있어야 한다. 
 - 장애 복구 : `Worker` 나 `Connector` 가 장애를 겪는 상황에서 빠르게 복구 할 수 있어야 한다. 
 - 성능 및 확장성 : 여러 `Worker` 가 작업을 분산 처리함으로써 성능을 향상시키고, 시스템 확장성이 용이하다. 
+
+### Kafka Connect Cluster
+`Kafka Connect` 의 고가용성을 위해서는 `Standalone` 보다는 `Distributed` 모드를 사용해 클러스터를 구성해야 한다. 
+분산 모드에서는 여러 `Worker` 가 협력하여 데이터를 처리하며, `Worker` 간 로드 밸린성과 장애 복구가 자동으로 이뤄진다. 
+이는 여러 `Worker` 가 동일한 클러스터에 속하면, 동일한 작업을 공유하며 하나의 `Worker` 가 실패하더라도 다른 `Worker` 가 작업을 계속 처리 할 수 있게 된다.  
+
+`Kafka Connect Cluster` 를 구성할 때 필수적인 설정 옵션은 아래와 같다. 
+더 상세한 옵션과 설명은 [여기](https://docs.confluent.io/platform/current/connect/references/allconfigs.html#distributed-worker-configuration)
+에서 확인 할 수 있다.  
+
+- `group.id` : `Kafka Connect Cluster` 의 모든 `Worker` 가 동일한 `gorup.id` 를 사용하여 하나의 클러스터로 동작할 수 있도록한다. 즉 동일한 `group.id` 를 사용해 여러 `Kafka Connect` 를 구성 하면 이는 `group.id` 를 기준으로 하나의 클러스트롤 이루고 작업 분산과 장애처리를 수행한다. 
+- `config.storage.topic` : `Kafka Connect` 설정을 저장하는 `Kafka Topic` 이다. 
+- `offset.storage.topic` : `Kafka Connect` 가 처리한 데이터의 `offset` 을 자정하는 `Kafka Topic` 이다. 
+- `status.storage.topic` : `Kafka Connect` 및 `Worker` 상태 정보를 저장하는 `Kafka Topic` 이다. 
+- `config.storage.replication.factor` : `config.storage.topic` 의 복제 팩터로 최소 3이상 설정이 필요하다.
+- `offset.storage.replication.factor` : `offset.storage.topic` 의 복제 팩터로 최소 3이상 설정이 필요하다.
+- `status.storage.replication.factor` : `status.storage.topic` 의 복제 팩터로 최소 3이상 설정이 필요하다.
+- `offset.storage.partitions` : `offset.storage.topic` 의 파티션 수로 데이터가 최소 5이상 많다면 25이상 지정하는게 좋다. 
+- `status.storage.partitions` : `status.storage.topic` 의 파티션 수로 비교적 데이터가 적기 때문에 5이상 지정하는게 좋다. 
+
