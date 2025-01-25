@@ -45,3 +45,150 @@ use_math: true
 - `offset.storage.partitions` : `offset.storage.topic` 의 파티션 수로 데이터가 최소 5이상 많다면 25이상 지정하는게 좋다. 
 - `status.storage.partitions` : `status.storage.topic` 의 파티션 수로 비교적 데이터가 적기 때문에 5이상 지정하는게 좋다. 
 
+
+### Demo
+앞서 알아본 내용을 바탕으로 `Kafka Connect Cluster` 를 사용해 고가용성이 고려된 구성을 만들어본다. 
+`Kafka Connector` 는 `Debezium Mysql Source Connect` 를 사용한다. 
+데모의 전체 내용은 [여기]()
+에서 확인 할 수 있다.  
+
+데모 환경을 도식화하면 아래와 같다.  
+
+.. 그림 ..
+
+아래는 데모의 전체 구성 내용이 담겨 있는 `docker-compose.yaml` 의 파일 내용이다.  
+
+```yaml
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - exam-net
+
+  kafka:
+    container_name: myKafka
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+    networks:
+      - exam-net
+
+  kafka-connect-1:
+    container_name: kafka-connect-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    command: sh -c "
+      echo 'waiting 10s' &&
+      sleep 10 &&
+      /etc/confluent/docker/run"
+    environment:
+      CONNECT_GROUP_ID: 'exam-cluster'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_CONFIG_STORAGE_TOPIC: 'exam-cluster-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'exam-cluster-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'exam-cluster-status'
+      CONNECT_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect-1
+      # kafka cluster 가 단일로 구성돼 1로 설정, ha 를 위해서는 replication.factor 는 3이상 필요
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_PARTITIONS: '26'
+      CONNECT_STATUS_STORAGE_PARTITIONS: '6'
+    depends_on:
+      - exam-db
+      - zookeeper
+      - kafka
+    networks:
+      - exam-net
+
+  kafka-connect-2:
+    container_name: kafka-connect-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8083"
+    command: sh -c "
+      echo 'waiting 10s' &&
+      sleep 10 &&
+      /etc/confluent/docker/run"
+    environment:
+      CONNECT_GROUP_ID: 'exam-cluster'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_CONFIG_STORAGE_TOPIC: 'exam-cluster-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'exam-cluster-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'exam-cluster-status'
+      CONNECT_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect-2
+      # kafka cluster 가 단일로 구성돼 1로 설정, ha 를 위해서는 replication.factor 는 3이상 필요
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_PARTITIONS: '26'
+      CONNECT_STATUS_STORAGE_PARTITIONS: '6'
+    depends_on:
+      - exam-db
+      - zookeeper
+      - kafka
+    networks:
+      - exam-net
+
+  exam-db:
+    container_name: exam-db
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./init-sql/:/docker-entrypoint-initdb.d/
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpw
+    networks:
+      - exam-net
+
+networks:
+  exam-net:
+```  
+
+명시적으로 컨테이너는 `kafka-connect-1`, `kafka-connect-1` 로 분리해서 구성했다. 
+하지만 환경변수를 사용해 `group.id` 를 비롯해 `config.storage.topic` 등 `Kafka Connect Cluster` 구성에 필요한 내용들은 동일하게 설정했다. 
+이는 테스트를 위해 컨테이너를 각 별도로 구성한 것이므로 실제 환경에서는 `Kubernetes` 등과 같은 `Orchestration` 을 사용해 `Replicas` 등을 조절해서 `Kafka Connect Cluster` 를 구성하는 것도 가능하다.  
+
+이제 `docker-compose up --build` 명령으로 전체 구성을 실행한다.  
+
+```bash
+$ docker-compose up --build
+[+] Building 2.8s (13/13) FINISHED                                                                      0.0s
+[+] Running 1/0
+ ⠋ Container myZookeeper                                                                                                                                    Creating0.0s 
+[+] Running 6/3am-db                                                                                               
+ ✔ Container myZookeeper                                                                                                                                    Created0.0s d64) does not match the detected host platform (linux/arm64/v8
+ ✔ Container exam-db                                                                                                                                        Created0.0s 
+ ! zookeeper The requested image's platform (linux/amd64) does not match the detected host platform (linux/arm64/v8) and no specific platform was requested 0.0s 
+ ✔ Container myKafka                                                                                                                                        Created0.0s 
+ ✔ Container kafka-connect-1                                                                                                                                Created0.0s 
+ ✔ Container kafka-connect-2                                                                                                                                Created0.1s 
+Attaching to exam-db, kafka-connect-1, kafka-connect-2, myKafka, myZookeeper
+
+...
+```  
