@@ -192,3 +192,117 @@ Attaching to exam-db, kafka-connect-1, kafka-connect-2, myKafka, myZookeeper
 
 ...
 ```  
+
+모든 구성 실행이 완료 됐다면 아래 명령들로 모든 구성이 정상적으로 됐는지 확인 한다.  
+
+```bash
+.. Debezium Mysql Source Connector 에서 CDC 할 테이블 확인 ..
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "show tables"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----------------+
+| Tables_in_exam |
++----------------+
+| test_table     |
++----------------+
+
+.. Kafka Connect Cluster 에서 구성한 Topic 확인 ..
+$  docker exec -it myKafka \
+> kafka-topics.sh --bootstrap-server localhost:9092 --list
+__consumer_offsets
+exam-cluster-config
+exam-cluster-offset
+exam-cluster-status
+
+.. Kafka Connect Cluster Topic 상세 정보 확인 .. 
+$  docker exec -it myKafka \
+> kafka-topics.sh --bootstrap-server localhost:9092 --topic exam-cluster-config --describe
+Topic: exam-cluster-config      TopicId: pFYK-SVtSZaqgrUoZmbF_g PartitionCount: 1       ReplicationFactor: 1    Configs: cleanup.policy=compact,segment.bytes=1073741824
+        Topic: exam-cluster-config      Partition: 0    Leader: 1001    Replicas: 1001  Isr: 1001
+        
+$  docker exec -it myKafka \
+> kafka-topics.sh --bootstrap-server localhost:9092 --topic exam-cluster-offset --describe
+Topic: exam-cluster-offset      TopicId: 5ECYbCpTTH28D7vLam-qMg PartitionCount: 26      ReplicationFactor: 1    Configs: cleanup.policy=compact,segment.bytes=1073741824
+        Topic: exam-cluster-offset      Partition: 0    Leader: 1001    Replicas: 1001  Isr: 1001
+        Topic: exam-cluster-offset      Partition: 1    Leader: 1001    Replicas: 1001  Isr: 1001
+        Topic: exam-cluster-offset      Partition: 2    Leader: 1001    Replicas: 1001  Isr: 1001
+...
+
+$  docker exec -it myKafka \
+> kafka-topics.sh --bootstrap-server localhost:9092 --topic exam-cluster-status --describe
+Topic: exam-cluster-status      TopicId: 9vj_-6TEQG-RTcs1z99K3A PartitionCount: 6       ReplicationFactor: 1    Configs: cleanup.policy=compact,segment.bytes=1073741824
+        Topic: exam-cluster-status      Partition: 0    Leader: 1001    Replicas: 1001  Isr: 1001
+        Topic: exam-cluster-status      Partition: 1    Leader: 1001    Replicas: 1001  Isr: 1001
+        Topic: exam-cluster-status      Partition: 2    Leader: 1001    Replicas: 1001  Isr: 1001
+...
+
+.. kafka-connect-1 컨테이너 확인 ..
+$  curl localhost:8083/connector-plugins | jq
+[
+  {
+    "class": "io.debezium.connector.mysql.MySqlConnector",
+    "type": "source",
+    "version": "1.5.0.Final"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "type": "sink",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "type": "source",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorCheckpointConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "type": "source",
+    "version": "1"
+  }
+]
+
+.. kafka-connect-2 컨테이너 확인 ..
+$  curl localhost:8084/connector-plugins | jq
+[
+  {
+    "class": "io.debezium.connector.mysql.MySqlConnector",
+    "type": "source",
+    "version": "1.5.0.Final"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+    "type": "sink",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.file.FileStreamSourceConnector",
+    "type": "source",
+    "version": "7.0.10-ccs"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorCheckpointConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorHeartbeatConnector",
+    "type": "source",
+    "version": "1"
+  },
+  {
+    "class": "org.apache.kafka.connect.mirror.MirrorSourceConnector",
+    "type": "source",
+    "version": "1"
+  }
+]
+```  
