@@ -306,3 +306,59 @@ $  curl localhost:8084/connector-plugins | jq
   }
 ]
 ```  
+
+모든 구성이 정상적으로 실행된 것을 확인하면 `Kafka Connect` 에 실행 할 `Kafka Connector` 를 아래 요청으로 등록한다. 
+사용할 `Kafka Connector` 는 `MySQL` 의 변경사항을 `CDC` 하는 `Debezium Mysql Source Connector` 이다. 
+동일한 `group.id` 로 클러스터가 구성돼 있다면 `Kafka Connector` 등록 요청은 `Kafka Connect Cluster` 구성요소 중 하나에 한번만 수행하면된다. 
+그러면 `Kafka Connect Cluster` 에서 구성 요소들을 바탕으로 작업을 분배하고 실행하게 된다. 
+
+> Debezium Mysql Source Connector 의 경우 `MySQL` 의 트랜잭션 로그를 추적하는 `Source Connector` 이다 그러므로 `tasks.max` 는 1로만 설정해야 하고, 
+> 그 이상 설정하면 에러가 발생한다. 
+
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+--data '{
+  "name": "cdc-exam",
+  "config": {
+    "tasks.max" : "1",
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "exam-db",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.name": "exam-db",
+    "database.history.kafka.topic": "cdc-outbox",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.allowPublicKeyRetrieval" : "true",
+    "tombstones.on.delete" : "false",
+    "table.include.list": "exam.test_table",
+    "value.converter" : "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter" : "org.apache.kafka.connect.storage.StringConverter"
+  }
+}' \
+http://localhost:8083/connectors | jq
+
+{
+  "name": "cdc-exam",
+  "config": {
+    "tasks.max": "1",
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "database.hostname": "exam-db",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.name": "exam-db",
+    "database.history.kafka.topic": "cdc-outbox",
+    "database.history.kafka.bootstrap.servers": "kafka:9092",
+    "database.allowPublicKeyRetrieval": "true",
+    "tombstones.on.delete": "false",
+    "table.include.list": "exam.test_table",
+    "value.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "name": "cdc-exam"
+  },
+  "tasks": [],
+  "type": "source"
+}
+```  
