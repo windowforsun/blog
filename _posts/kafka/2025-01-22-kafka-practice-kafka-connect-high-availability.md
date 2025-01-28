@@ -362,3 +362,68 @@ http://localhost:8083/connectors | jq
   "type": "source"
 }
 ```  
+
+그 후 `kafka-connect-1`, `kafka-connect-2` 에 모두 등록한 `Connector` 의 상태를 조회하면 아래와 같이 모두 정상적으로 조회되는 것을 확인 할 수 있다.  
+
+```bash
+$  curl localhost:8083/connectors/cdc-exam/status | jq
+{
+  "name": "cdc-exam",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "kafka-connect-1:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "kafka-connect-1:8083"
+    }
+  ],
+  "type": "source"
+}
+
+$  curl localhost:8084/connectors/cdc-exam/status | jq
+{
+  "name": "cdc-exam",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "kafka-connect-1:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "kafka-connect-1:8083"
+    }
+  ],
+  "type": "source"
+}
+
+```  
+
+상태 조회결과에서 알 수 있듯이 `exam-cluster` 에서 방금 등록한 `Kafka Connector` 는 `kafka-connect-1` 에서 실행 중인 상태이다. 
+이제 `CDC` 가 정상 동작하는지 확인을 위해 `test_table` 에 `ROW` 하나를 `INSERT` 하고 타겟이 되는 `Kafka Topic` 을 확인하면 아래와 같다.  
+
+```bash
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "insert into test_table(value) values('a')"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from test_table"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+
+| id | value |
++----+-------+
+|  1 | a     |
++----+-------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic exam-db.exam.test_table \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+NO_HEADERS      Struct{id=1}    Struct{after=Struct{id=1,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372195000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=375,row=0},op=c,ts_ms=1723372195833}
+```  
