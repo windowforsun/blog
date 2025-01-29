@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Connect High Availability"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Connect Cluster 를 구성하고 고가용성을 보장하는 방법에 대해 알아본다.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,13 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Connect
+    - High Availability
+    - Distributed
+    - Worker
+    - Kafka Connector
+    - Debezium
+    - Mysql
 toc: true
 use_math: true
 ---  
@@ -426,4 +433,77 @@ $  docker exec -it myKafka kafka-console-consumer.sh \
 > --property print.headers=true \
 > --from-beginning 
 NO_HEADERS      Struct{id=1}    Struct{after=Struct{id=1,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372195000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=375,row=0},op=c,ts_ms=1723372195833}
+```  
+
+`Debezium MySQL Source Connector` 가 `test_table` 의 변경사항을 감지하고 이를 `Kafka Topic` 에 정상적으로 전송한 것을 확인 할 수 있다. 
+이제 `Kafka Connect Cluster` 의 고가용성 확인을 위해 `Kafka Connector` 가 실행 중인 `kafka-connect-1` 컨테이너를 중지 시킨 후 `kafka-connect-2` 에 상태 조회를 수행하면 아래와 같다.  
+
+```bash
+$  docker-compose -f ./docker/docker-compose.yaml stop kafka-connect-1
+[+] Stopping 1/1
+ ✔ Container kafka-connect-1  Stopped              
+ 
+$  curl localhost:8084/connectors/cdc-exam/status | jq
+{
+  "name": "cdc-exam",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "kafka-connect-2:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "kafka-connect-2:8083"
+    }
+  ],
+  "type": "source"
+}
+```  
+
+`kafka-connect-1` 컨테이너가 종료되자 `Rebalance` 가 수행되며 `Connector` 를 실행하는 `Worker` 가 `kafka-connect-2` 로 자동 할당된 것을 볼 수 있다. 
+실제로 아래와 같은 로그가 발생한다.  
+
+```bash
+kafka-connect-1  | [2024-08-11 19:33:55,645] INFO Kafka Connect stopped (org.apache.kafka.connect.runtime.Connect)
+kafka-connect-2  | [2024-08-11 19:33:56,019] INFO [Worker clientId=connect-1, groupId=exam-cluster] Rebalance started (org.apache.kafka.connect.runtime.distributed.WorkerCoordinator)
+kafka-connect-2  | [2024-08-11 19:33:56,019] INFO [Worker clientId=connect-1, groupId=exam-cluster] (Re-)joining group (org.apache.kafka.connect.runtime.distributed.WorkerCoordinator)
+myKafka          | [2024-08-11 10:33:56,021] INFO [GroupCoordinator 1001]: Stabilized group exam-cluster generation 5 (__consumer_offsets-0) with 1 members (kafka.coordinator.group.GroupCoordinator)
+kafka-connect-2  | [2024-08-11 19:33:56,022] INFO [Worker clientId=connect-1, groupId=exam-cluster] Successfully joined group with generation Generation{generationId=5, memberId='connect-1-d24c7c49-2e9f-47ea-96e2-4232d3f39d64', protocol='sessioned'} (org.apache.kafka.connect.runtime.distributed.WorkerCoordinator)
+myKafka          | [2024-08-11 10:33:56,040] INFO [GroupCoordinator 1001]: Assignment received from leader for group exam-cluster for generation 5. The group has 1 members, 0 of which are static. (kafka.coordinator.group.GroupCoordinator)
+kafka-connect-2  | [2024-08-11 19:33:56,041] INFO [Worker clientId=connect-1, groupId=exam-cluster] Successfully synced group in generation Generation{generationId=5, memberId='connect-1-d24c7c49-2e9f-47ea-96e2-4232d3f39d64', protocol='sessioned'} (org.apache.kafka.connect.runtime.distributed.WorkerCoordinator)
+kafka-connect-2  | [2024-08-11 19:33:56,041] INFO [Worker clientId=connect-1, groupId=exam-cluster] Joined group at generation 5 with protocol version 2 and got assignment: Assignment{error=0, leader='connect-1-d24c7c49-2e9f-47ea-96e2-4232d3f39d64', leaderUrl='http://kafka-connect-2:8083/', offset=4, connectorIds=[cdc-exam], taskIds=[cdc-exam-0], revokedConnectorIds=[], revokedTaskIds=[], delay=0} with rebalance delay: 0 (org.apache.kafka.connect.runtime.distributed.DistributedHerder)
+kafka-connect-2  | [2024-08-11 19:33:56,041] INFO [Worker clientId=connect-1, groupId=exam-cluster] Starting connectors and tasks using config offset 4 (org.apache.kafka.connect.runtime.distributed.DistributedHerder)
+kafka-connect-2  | [2024-08-11 19:33:56,043] INFO [Worker clientId=connect-1, groupId=exam-cluster] Starting connector cdc-exam (org.apache.kafka.connect.runtime.distributed.DistributedHerder)
+kafka-connect-2  | [2024-08-11 19:33:56,043] INFO [Worker clientId=connect-1, groupId=exam-cluster] Starting task cdc-exam-0 (org.apache.kafka.connect.runtime.distributed.DistributedHerder)
+kafka-connect-2  | [2024-08-11 19:33:56,046] INFO Creating task cdc-exam-0 (org.apache.kafka.connect.runtime.Worker)
+
+...
+```  
+
+이제 다시 `test_table` 이 `ROW` 를 `INSERT` 하면, 중복 처리 없이 `kafka-connect-1` 에서 실행했던 다음 부터 정상 수행되는 것을 확인 할 수 있다.  
+
+```bash
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "insert into test_table(value) values('a')"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from test_table"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+
+| id | value |
++----+-------+
+|  1 | a     |
+|  2 | a     |
++----+-------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic exam-db.exam.test_table \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+NO_HEADERS      Struct{id=1}    Struct{after=Struct{id=1,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372195000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=375,row=0},op=c,ts_ms=1723372195833}
+NO_HEADERS      Struct{id=2}    Struct{after=Struct{id=2,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372668000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=671,row=0},op=c,ts_ms=1723372668305}
 ```  
