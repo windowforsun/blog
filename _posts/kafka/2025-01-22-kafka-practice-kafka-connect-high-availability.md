@@ -507,3 +507,89 @@ $  docker exec -it myKafka kafka-console-consumer.sh \
 NO_HEADERS      Struct{id=1}    Struct{after=Struct{id=1,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372195000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=375,row=0},op=c,ts_ms=1723372195833}
 NO_HEADERS      Struct{id=2}    Struct{after=Struct{id=2,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372668000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=671,row=0},op=c,ts_ms=1723372668305}
 ```  
+
+다시 한번 동일한 흐름을 테스트를 해도 `Kafka Connect Cluster` 는 가용할 수 있는 `Worker` 만 존재한다면 단일 `Worker` 에 문제가 발생하더라도, 
+중단없이 데이터 처리 작업을 지속 할 수 있다. 
+아래는 다시 `kafka-connect-1` 을 실행 시킨 후 `kafka-connect-2` 를 중단 시켜 상황을 다시 재현한 결과이다.  
+
+```bash
+$  docker-compose -f ./docker/docker-compose.yaml start kafka-connect-1
+[+] Running 1/1
+ ✔ Container kafka-connect-1  Started             
+ 
+$  curl localhost:8083/connectors/cdc-exam/status | jq
+{
+  "name": "cdc-exam",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "kafka-connect-2:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "kafka-connect-2:8083"
+    }
+  ],
+  "type": "source"
+}
+
+$  docker-compose -f ./docker/docker-compose.yaml stop kafka-connect-2 
+[+] Stopping 1/1
+ ✔ Container kafka-connect-2  Stopped              
+ 
+$  curl localhost:8083/connectors/cdc-exam/status | jq
+{
+  "name": "cdc-exam",
+  "connector": {
+    "state": "RUNNING",
+    "worker_id": "kafka-connect-1:8083"
+  },
+  "tasks": [
+    {
+      "id": 0,
+      "state": "RUNNING",
+      "worker_id": "kafka-connect-1:8083"
+    }
+  ],
+  "type": "source"
+}
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "insert into test_table(value) values('a')"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+
+$  docker exec -it exam-db \
+> mysql -uroot -proot -Dexam -e "select * from test_table"
+mysql: [Warning] Using a password on the command line interface can be insecure.
++----+-------+
+| id | value |
++----+-------+
+|  1 | a     |
+|  2 | a     |
+|  3 | a     |
++----+-------+
+
+$  docker exec -it myKafka kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --topic exam-db.exam.test_table \
+> --property print.key=true \
+> --property print.headers=true \
+> --from-beginning 
+NO_HEADERS      Struct{id=1}    Struct{after=Struct{id=1,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372195000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=375,row=0},op=c,ts_ms=1723372195833}
+NO_HEADERS      Struct{id=2}    Struct{after=Struct{id=2,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372668000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=671,row=0},op=c,ts_ms=1723372668305}
+NO_HEADERS      Struct{id=3}    Struct{after=Struct{id=3,value=a},source=Struct{version=1.5.0.Final,connector=mysql,name=exam-db,ts_ms=1723372907000,db=exam,table=test_table,server_id=1,file=mysql-bin.000003,pos=967,row=0},op=c,ts_ms=1723372907421}
+```  
+
+이렇게 `Kafka Connect Cluster` 를 구성하면 `Kafka Connect` 기반 데이터 처리에 있어서 고가용성을 보장 할 수 있다. 
+그러므로 `Kafka Connect` 를 구성 할때는 `Cluster` 로 최소 2개 이상의 `Worker` 를 수행하고, 
+보다 안정성이 필요하다면 2개 이상의 `IDC` 에 구성해서 특정 `IDC` 전체에 장애가 발생하더라도 지속적인 데이터 처리를 수행 할 수 있도록 구성 가능하다.  
+
+
+---  
+## Reference
+[Kafka Connect Worker Configuration Properties for Confluent Platform](https://docs.confluent.io/platform/current/connect/references/allconfigs.html#)  
+[Kafka Source Connector Configuration Reference for Confluent Platform](https://docs.confluent.io/platform/current/installation/configuration/connect/source-connect-configs.html#cp-config-source-connect)  
+[Kafka Sink Connector Configuration Reference for Confluent Platform](https://docs.confluent.io/platform/current/installation/configuration/connect/sink-connect-configs.html#cp-config-sink-connect)  
+
+
