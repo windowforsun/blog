@@ -88,3 +88,56 @@ use_math: true
 그리고 `Versioned State Store` 의 업데이트 또한 히스토리 보존 기간으로 적용된다. 
 즉 히스토리 보존 기간보다 오래된 타임스템프의 쓰기 요청은 거부된다.  
 
+
+#### get(key)
+`Versioned State Store` 기반 테이블은 기존 `Un-Versioned` 와 비교했을 때 조회 기준이 최신 오프셋에서 
+최산 타임스탬프로 변경됐기 때문에, 주어진 키에 대해 최신 값을 가져오는 `get(key)` 메서드는 최신 오프셋 레코드가 아닌 최신 타임스탬프 레코드를 반환한다.  
+
+
+### Versioned Stream-Table Join
+앞선 주문 시스템의 문제를 `Versioned State Store` 를 사용하면 문제로 늦기 도착한 주문에 대해서도 해당 주문이 들어온 시간에 가용할 수 있는 가격으로 금액을 계산할 수 있다. 
+
+.. 그림 ..
+
+`Versioned State Store` 로 구성된 테이블과 스트림이 조인될 때, 
+`Kafka Streams` 는 스트림 레코드의 타임스탬프를 사용해 테이블 저장소에 타임스탬프를 기반으로 조회를 수행한다. 
+늦게 도착한 `Casandra` 의 주문이 들어왔을 때 해당 스트림 레코드와 조인할 가격 테이블의 레코드는 
+`get(key=pizza, asOfTimestamp=3)` 을 통해 찾고, 
+해당 조회의 결과는 `8` 값을 가지기 때문에 `Casandra` 의 최종 지불 금액은 기존 문제가 있었던 `30` 이 아닌 정상적인 `24` 로 계산된다.  
+
+### Latest Timestamp
+`Versioned State Store` 는 타임스탬프 기반 조회외에도, 
+애플리케이션이 최신 오프셋 기준이 아닌 최신 타임스탬프 기준으로 동작할 수 있도록 한다. 
+이는 메시지 전달에서 순서가 변경되더라도, `Table Aggregation` 혹은 `Table-Table Join` 연산에서 타임스탬프 처리를 개선할 수 있다.  
+
+#### Table Aggregation
+`Versioned State Store` 기반 테이블에서 `Aggregation` 동작이 `최신 오프셋`아 아닌, 
+`최신 타임스탬프` 레코드를 기준으로 반영되는 것을 보이기 위해 식당에서 선호 메뉴 투표상황을 가정해본다.  
+
+.. 그림 ..
+
+`Aggregation` 을 수행하면 각 키에 대한 집계 결과를 추적하는 상태 저장소를 유지한다. 
+새로운 고객인 `sandwich` 에 투표하면 `Aggregation` 은 상태 저장소에서 `sandwich` 의 투표 수를 조회하고 증가시킨 후, 
+이를 다시 상태 저장소에 쓰게 된다. 
+그리고 `Aggregation` 을 수행하는 프로세서의 업스트림 테이블 또한 상태 저장소로 구현이 필요하다. 
+만약 이미 `pizza` 에 투표한 고객이 `sandwich` 로 투표를 변경한다면 `Aggregation` 은 `pizza` 의 투표 수는 감소시키고, 
+`sandwich` 의 투표 수는 증가시켜야 하기 때문이다. 
+이는 해당 고객의 이전 투표가 `pizza` 라는 사실을 결정하기 위해 고객의 투표 정보도 테이블로 물리화하고, 
+투표의 결과도 테이블로 물리화가 필요한 것이다.  
+
+.. 그림 ..
+
+위 그림은 고객 투표 정보 일부가 늦게 도착해 순서가 뒤바뀐 상황을 가정한 것이다. 
+`Anna` 는 `t=3` 에 `pizza` 에 투표했었다. 
+그리고 `t=4` 에 다시 자신의 투표를 `sandwich` 로 변경했다. 
+하지만 `sandwich` 로 변경하기 전인 `t=3` 에 `icecream` 으로 투표를 변경했지만, 
+해당 메시지는 시스템의 이슈로 늦게 도착했다. 
+위 그림처럼 `Un-Versioned State Store` 를 사용한 경우에는 `Kafka Streams` 의 `Aggregation` 동작을 
+이를 다른 메시지와 동일하게 처리한다. 
+늦게 도착한 `icecream` 메시지 시점에 `icecream` 투표는 증가하고 `sandwich` 의 투표는 감소하게 되는 것이다. 
+이는 `icecream` 으로 변경한 메시지가 늦게 도착한 만큼 오프셋이 `sandwich` 보다 크기 때문에 여타 메시지와 동일하게 처리가 된다.  
+
+.. 그림 ..
+
+하지만 `Versioned State Store` 을 기반으로 구성했다면 `Aggregation` 을 수행할 때 최신 오프셋이 아닌 최신 타임스탬프를 기준으로 연산이 된다. 
+그러므로 `Anna` 의 늦게 도착한 `icecream` 투표는 투표에 반영되지 않고 투표 결과는 최신 타임스템프를 기준으로 구성된다.  
