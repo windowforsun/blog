@@ -41,12 +41,15 @@ use_math: true
 `order-topic` 은 `key:메뉴,value:고객명-수량` 과 같은 구성이다. 
 이러한 메시지 구조에서 키를 기준으로 조인을 수행해 해당 고객의 최종 가격을 알아낸다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-1.drawio.png)
+
 
 위 처럼 타임스탬프를 신경쓰지 않는 경우에는 식당 주문 시스템의 스트림 처리는 아무 문제 없다. 
 이제 타임스템프 정보를 추가해서 순서가 꼬이는 상황을 가정하면 아래와 같다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-2.drawio.png)
 
 `t=0` 시점에 `pizza` 의 가격은 `8` 이기 때문에 `t=1` 에 들어온 `Anna` 의 `pizza` 2개 주문은 총 `16` 이 된다. 
 그리고 `t=4` 에 `pizza` 의 가격이 `10` 으로 인상되고, `Ben` 이 `t=5` 에 주문한 1개 주문은 정상적으로 `10` 으로 계산 된다. 
@@ -63,7 +66,8 @@ use_math: true
 `Versioned KeyValue Store` 는 `get(key, asOfTimestamp)` 라는 타임스탬프기반 조회 메서드를 지원하여, 
 해당 타임스탬프에 활성화된 레코드 버전을 반환한다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-3.drawio.png)
 
 `Versioned State Store` 의 각 레코드는 버전과 관련된 `validFrom` 타임스탬프와 `validTo` 라는 타임스탬프 2개가 존재한다. 
 `validFrom` 은 해당 레코드의 타임스탬프이고, `validTo` 타임스탬프는 해당 레코드의 다음 버전 레코드의 타임스탬프이다. 
@@ -74,6 +78,10 @@ use_math: true
 
 인프라의 자원은 유한하기 때문에 무한한 스트림의 모든 버전을 상태 저장소에 저장할 수는 없다. 
 그래서 `Versioned State Store` 를 생성할 때는 보존 기간인 `History Retention` 를 필수적으로 설정해야 한다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-4.drawio.png)
+
 
 위 그림에서 `History Retention` 는 `30` 이고 현재 스트림의 시간은 `t=63` 인 상태이다. 
 현 시점을 기준으로는 `t=60`, `t=50` 그리고 최소 `t=33` 의 시간까지 타임스탬프 조회가 유효하다. 
@@ -97,7 +105,8 @@ use_math: true
 ### Versioned Stream-Table Join
 앞선 주문 시스템의 문제를 `Versioned State Store` 를 사용하면 문제로 늦기 도착한 주문에 대해서도 해당 주문이 들어온 시간에 가용할 수 있는 가격으로 금액을 계산할 수 있다. 
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-5.drawio.png)
 
 `Versioned State Store` 로 구성된 테이블과 스트림이 조인될 때, 
 `Kafka Streams` 는 스트림 레코드의 타임스탬프를 사용해 테이블 저장소에 타임스탬프를 기반으로 조회를 수행한다. 
@@ -114,7 +123,8 @@ use_math: true
 `Versioned State Store` 기반 테이블에서 `Aggregation` 동작이 `최신 오프셋`아 아닌, 
 `최신 타임스탬프` 레코드를 기준으로 반영되는 것을 보이기 위해 식당에서 선호 메뉴 투표상황을 가정해본다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-6.drawio.png)
 
 `Aggregation` 을 수행하면 각 키에 대한 집계 결과를 추적하는 상태 저장소를 유지한다. 
 새로운 고객인 `sandwich` 에 투표하면 `Aggregation` 은 상태 저장소에서 `sandwich` 의 투표 수를 조회하고 증가시킨 후, 
@@ -125,7 +135,8 @@ use_math: true
 이는 해당 고객의 이전 투표가 `pizza` 라는 사실을 결정하기 위해 고객의 투표 정보도 테이블로 물리화하고, 
 투표의 결과도 테이블로 물리화가 필요한 것이다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-7.drawio.png)
 
 위 그림은 고객 투표 정보 일부가 늦게 도착해 순서가 뒤바뀐 상황을 가정한 것이다. 
 `Anna` 는 `t=3` 에 `pizza` 에 투표했었다. 
@@ -137,7 +148,23 @@ use_math: true
 늦게 도착한 `icecream` 메시지 시점에 `icecream` 투표는 증가하고 `sandwich` 의 투표는 감소하게 되는 것이다. 
 이는 `icecream` 으로 변경한 메시지가 늦게 도착한 만큼 오프셋이 `sandwich` 보다 크기 때문에 여타 메시지와 동일하게 처리가 된다.  
 
-.. 그림 ..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-8.drawio.png)
 
 하지만 `Versioned State Store` 을 기반으로 구성했다면 `Aggregation` 을 수행할 때 최신 오프셋이 아닌 최신 타임스탬프를 기준으로 연산이 된다. 
 그러므로 `Anna` 의 늦게 도착한 `icecream` 투표는 투표에 반영되지 않고 투표 결과는 최신 타임스템프를 기준으로 구성된다.  
+
+
+#### Table-Table Join
+`Table-Table Join` 에서도 앞서 살펴본 `Table Aggregation` 과 동일한 효과를 `Versioned State Store` 를 사용함으로써 얻을 수 있다. 
+`Versioned State Store` 를 사용해서 테이블 조인을 수행할 때 조인 결과는 키별로 각 소스 테이블의 최신 타임스탬프 레코드를 기반으로 반영하므로, 
+순서가 뒤바뀐 메시지가 있는 경우 그 차이를 확인할 수 있다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-9.drawio.png)
+
+투표를 진행할 때 고객의 위치와 조인해 지역별 선호도도 함께 고려한다고 가정하보자. 
+`Table-Table Join` 의 경우 조인에 포함되는 어떤 테이블이 업데이트 되든 조인의 트리거 된다. 
+이때 기존 키에 대해 순서가 뒤바뀐 메시지 전달을 통한 테이블 업데이트는 조인 동작을 트리거하지 않는다. 
+이는 최신 조인 결과가 순서가 바뀐 메시지가 있더라도 각 테이블의 최신 타임스템프를 반영하도록 보장하기 때문이다.  
+
