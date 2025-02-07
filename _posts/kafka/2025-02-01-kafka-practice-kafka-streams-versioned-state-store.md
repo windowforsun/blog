@@ -168,3 +168,55 @@ use_math: true
 이때 기존 키에 대해 순서가 뒤바뀐 메시지 전달을 통한 테이블 업데이트는 조인 동작을 트리거하지 않는다. 
 이는 최신 조인 결과가 순서가 바뀐 메시지가 있더라도 각 테이블의 최신 타임스템프를 반영하도록 보장하기 때문이다.  
 
+
+### Case of Versioned Table
+`Versioned State Store` 를 기반으로 테이블을 구성 할때 중간 처리 과정으로 인해 버전 테이블이 아닌 상태에서 스트림 처리가 이뤄질 수 있다. 
+그러므로 `Versioned Table` 을 사용 할 때는 어떠한 경우가 `Versioned Table` 이고 아닌지 구분이 필요하므로 이를 판별 할 수 있는 몇가지 경우에 대해 알아보고자 한다.  
+
+#### Stateless Processor
+먼저 가장 기본적인 경우는 소스 테이블이 `Versioned State Store` 로 물리화되면 이는 `Versioned Table` 이고, 
+소스 테이블이 `Un-Versioned State Store` 로 물리회되면 `Un-Versioned Table` 이다. 
+그리고 테이블로 물리화되지 않는 경우도 `Un-Versioned Table` 임을 기억해야 한다. 
+이러한 기본적인 경우를 정리하면 아래와 같다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-10.drawio.png)
+
+
+소스 테이블이 `Versioned State Store` 로 물리화된 다음 해당 테이블에 대한 변환 연산이 수행된 경우에는 좀 더 세분화가 필요하다. 
+만약 `mapValues`, `transformValues`, `filter` 와 같이 `Stateless` 한 연산이라면, 
+이는 `Versioned Table` 상태를 유지한다. 
+즉 `Versioned Table` 을 `Stateless` 연산을 수행한 결과는 여전히 `Versioned Table` 이라는 것이다.  
+
+하지만 변환 결과를 `Un-Versioned State Store` 로 저장하면 `DownStream` 관점에서 이는 `Un-Versioned Table` 이고, 
+테이블로 물리화를 수행할 때 명시적으로 저장소 타입을 지정하지 않고 저장소 이름으로만 물리화해도 동일하다. (`Materialized.as("store-name")`) 
+반대로 변환 결과를 `Versioned State Store` 로 명시적으로 물리화한다면 이는 `DownStream` 관점에서 `Versioned Table` 이다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-11.drawio.png)
+
+
+#### Stateful Processor
+중간 변환 과정에서 `Aggregation` 혹은 `Join` 과 같은 `Stateful` 한 연산이 있는 경우, 
+소스 테이블이 변환 전 `Versioned State Store` 를 사용했더라도 `DownStream` 관점에서는 `Un-Versioned Table` 로 간주된다. 
+이는 `Stateful` 연산의 경우 기본적으로 상태 저장을 위해 `State Store` 를 사용하는데 기본으로 사용되는 `State Store` 가 `Un-Versioned State Store` 이기 때문이다. 
+즉 `Versioned Table` 에서 `Stateful` 한 연산이 수행될 때 명시적으로 물리화를 지정하지 않아도 내부적으로 물리화를 진행하기 때문에, 
+그 결과는 `Un-Versioned Table` 이 된다.  
+
+만약 `Stateful` 한 연산을 수행하고 변환 결과를 명시적으로 `Versioned State Store` 로 저장한다면 이는 `Versioned Table` 로 간주된다. 
+하지만 `Stateful` 연산이 생성하는 버전 이력이 불완전할 수 있으므로, `Stateful` 한 변관 결과를 `Versioned Table` 로 물리화할 때는 주의가 필요하다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-12.drawio.png)
+
+
+#### Versioned Table to Stream
+`Versioned Table` 을 `KTable.toStream()` 을 사용해 스트림으로 변환한 다음 `KStream.toTable()` 을 통해 다시 테이블로 변환한다면, 
+이는 다시 `Versioned State Store` 를 명시적으로 사용하지 않는 한 `Versioned Table` 이 되지 않는다.  
+
+
+#### Summary
+`Versioned Table` 변환을 결과가 `Versioned Table` 인지에 대한 내용을 요약하면, 
+`DownStream` 관점에서 테이블이 `Versioned Table` 로 간주되려면 대부분 `UpStream` 에서 명시적으로 `Versioned State Store` 를 통해 물리화 돼야 한다. 
+그리고 `Un-Versioned State Store` 를 통한 테이블 물리화, 명시적인 저장소 타입 지정이 없는 테이블 물리화, `Stateful` 연산, `KTable.toStream()` 이후 `KStream.toTable()` 
+중 하나라도 스트림 처리 과정에 존재해서는 안된다.  
