@@ -220,3 +220,42 @@ use_math: true
 `DownStream` 관점에서 테이블이 `Versioned Table` 로 간주되려면 대부분 `UpStream` 에서 명시적으로 `Versioned State Store` 를 통해 물리화 돼야 한다. 
 그리고 `Un-Versioned State Store` 를 통한 테이블 물리화, 명시적인 저장소 타입 지정이 없는 테이블 물리화, `Stateful` 연산, `KTable.toStream()` 이후 `KStream.toTable()` 
 중 하나라도 스트림 처리 과정에 존재해서는 안된다.  
+
+### Versioned State Store Demo
+`Versioned State Store` 는 `Apache Kafka 3.5` 부터 `Kafka Streams` 에서 사용 할 수 있다. 
+기존 이전 버전 사용자들이 `3.5` 버전으로 업그레이드하더라도 기존 `State Store` 는 이전 상태 저장소의 성격 그대로 사용가능하고, 
+`Versioned State Store` 는 별도로 명시해야 사용 할 수 있다.  
+
+`Streams DSL` 에서 `Versioned State Store` 사용을 위해서는 `Materialized` 를 통해 `Stores.persistentVersionedKeyValueStore` 를 전달하여 
+생성할 수 있다.  
+
+```java
+streamsBuilder
+    .table(
+        topicName,
+        Materialized.as(
+            Stores.persistentVersionedKeyValueStore(
+                STORE_NAME, 
+                Duration.ofMillis(HISTORY_RETENTION)
+            )
+        )
+    );
+```  
+
+`Processor API` 를 사용하는 경우 `addStateSotre` 에 `Stores.versionedKeyValueStoreBuilder` 를 사용해 생성할 수 있다.  
+
+```java
+streamsBuilder
+    .addStateStore(
+        Stores.versionedKeyValueStoreBuilder(
+            Stores.persistentVersionedKeyValueStore(
+                STORE_NAME, 
+                Duration.ofMillis(HISTORY_RETENTION)),
+            Serdes.Integer(),
+            Serdes.String()
+        )
+    );
+```  
+
+`Versioned State Store` 를 생성할 때는 `history retention` 값을 꼭 적절하게 설정해야 하고, 
+`3.5` 버전에서는 아직 `Versioned State Store` 에 대해 `In-Memory` 구현은 제공되지 않는다.  
