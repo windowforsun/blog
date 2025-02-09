@@ -259,3 +259,22 @@ streamsBuilder
 
 `Versioned State Store` 를 생성할 때는 `history retention` 값을 꼭 적절하게 설정해야 하고, 
 `3.5` 버전에서는 아직 `Versioned State Store` 에 대해 `In-Memory` 구현은 제공되지 않는다.  
+
+
+### Upgrade to Versioned State Store
+`Stores.persistentVersionedKeyValueStore` 의 저장소 구현은 
+`Store.persistentKeyValueStore` 와 `Stores.persistentTimestampKeyValueStore` 에서 제공하는 `Un-Versioned` 저장소 구현과 
+동일한 `changelog topic` 을 공유한다. 
+여기서 `Versioned State Store` 와 `Un-Versioned State Store` 의 차이점은 `changelog topic` 에 `min.compaction.lag.ms`
+라는 토픽 설정 값을 통해 `history retention` 기간이 경과하기 전에 오래된 기록 이력이 압축되는 것을 방지하기 위해 사용된다는 점이 있다. 
+만약 기존 `Un-Versioned State Store` 를 `Versioned State Store` 로 업그레이드 하고 싶다면 아래와 같은 절차를 따를 수 있다.  
+
+1. 애플리케이션 중지
+2. 모든 애플리케이션 인스턴스에서 저장소의 로컬 상태를 삭제
+3. `history retention` 에 적합한 값으로 `min.compaction.lag.ms` 를 설정 해 `changelog topic` 을 업데이트
+4. 애플리케이션 코드에서 `Versioned State Store` 를 사용하도록 수정
+5. 애플리케이션 재시작
+
+이러한 절차를 통해 `Versioned Stae Store` 를 `Un-Versioned State Store` 로 업데이트 하는 것도 가능하다. 
+각 `State Store` 의 종루에 따라 내부 포맷이 동일하지 않기 때문에 애플리케이션에서 `changelog topic` 을 통해 내부 상태를 복원할 수 있도록
+로컬 상태를 삭제하는 것이 중요하다.  
