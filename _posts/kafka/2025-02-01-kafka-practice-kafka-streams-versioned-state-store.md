@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Versioned State Store"
 header:
   overlay_image: /img/kafka-bg.jpg
 excerpt: ''
@@ -12,6 +12,12 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - Versioned State Store
+    - State Store
+    - Stream Join
+    - Stateful Processor
+    - Stateless Processor
 toc: true
 use_math: true
 ---  
@@ -278,3 +284,51 @@ streamsBuilder
 이러한 절차를 통해 `Versioned Stae Store` 를 `Un-Versioned State Store` 로 업데이트 하는 것도 가능하다. 
 각 `State Store` 의 종루에 따라 내부 포맷이 동일하지 않기 때문에 애플리케이션에서 `changelog topic` 을 통해 내부 상태를 복원할 수 있도록
 로컬 상태를 삭제하는 것이 중요하다.  
+
+
+### Performance
+`Versioned State Store` 는 `Un-Versioned State Store` 와 비교 했을 때 성능이 일부 떨어질 수 있다. 
+이는 `Versioned State Store` 는 키별로 단일 값을 저장하는 것이 아닌, 
+각 키별로 여러 값을 보존하고 있기 때문에 관리 혹은 조회에 따른 성능 저하이다. 
+이는 `Versioned State Store` 사용시 중요할 수 있으므로 `RocksDB` 기반 구현에 대해 좀 더 알아본다.  
+
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-versioned-state-store-13.drawio.png)
+
+`Versioned State Store` 는 `Kafka Streams` 의 `Window Store` 구현과 유사하게 고정 크기 세그먼트로 구성된다. 
+각 기록은 시크먼트에 저장되고, 오래된 기록은 세그먼트 단위로 삭제된다. 
+그리고 각 세그먼트의 기준은 `validFrom`(시작 시간 값)이 아닌 `validTo`(종류 시간 값)을 기준으로 저장된다. 
+이러한 방식을 통해 `history retention` 이 끝날 때까지 오래된 기록 버전이 말료되지 않도록 보장할 수 있다. 
+각 세그먼트에서 동일한 키의 모든 기록 버전은 하나의 `RocksDB` 레코드로 함께 저장된다.  
+
+각 키에 대한 최신 값은 `validTo`(종류 시간 값)이 정의되지 않아 무한하다. 
+그러므로 최신 값은 `latest value store` 에 별도로 저장된다. 
+주어진 키에 대한 최신 버전을 조회하는 `get(key)` 의 구현은 `latest value store` 만 확인한다. 
+이는 `Un-Versioned State Store` 에서 `get(key)` 조회와 동일한 `RocksDB` 조회이므로 성능이 거의 유사하다.  
+
+하지만 타임스탬프 기반으로 이전 버전을 조회할 때는, `latest value store` 를 먼저 확인 후, 
+지정된 타임스탬프 범위를 만족하는 버전을 찾으면 즉시 반환한다. 
+이는 `latest value store` 를 먼저 확인 하고나서, 
+찾지 못하면 좀 더 과거 세그먼트를 점진적으로 확인하는 방식이다.  
+만약 `get(key, asOfTimestamp)` 에 주어진 타임스탬프의 값이 `latest value store` 에서 찾는 다면, 
+이는 `get(key)` 의 성능가 유사하다. 
+그렇지 않다면 추가적인 `RocksDB` 조회가 필요하므로 성능이 저하될 수 있다. 
+즉 오래된 타임스탬프를 조회할수록 더 많은 세그먼트를 확인해야 하므로 성능이 더 저하될 수 있는 구조이다.  
+
+이는 쓰기 동작에서도 위와 같은 절차가 수행된다. 
+쓰기 동작이 수행되면 `latest value store` 에서 현재 쓰려는 키의 기록이 있는지 확인한다. 
+존재하고 새로 쓰려는 버전이 더 최신이라면(더 나중 타임스탬프), 새로 쓰려는 기록은 `latest value store` 에 기록이 필요하다. 
+이 경우 `latest value store` 를 없데이트 하는 동작과 기존에 `latest value store` 에 있던 버전을 적절한 세그먼트 저장소로 이동하는 2번의 쓰기 필요하다. 
+`Un-Versioned State Store` 와 비교했을 때 2번의 쓰기 동작이 필요하므로 어느정도 성능 저하는 발생할 수 있다.  
+
+`Versioned State Store` 의 성능은 세그먼트의 크기도 중요한 요소이다. 
+작은 세그먼트 크기는 더 많은 세그먼트를 생성하고 오래된 타임스탬프 조회 또는 순차적이지 않은 쓰기 시 더 많은 `RocksDB` 읽기가 필요하다. 
+반대로 큰 세그먼트 크기는 동일한 세그먼트에 더 많은 버전을 수집할 수 있어 `RocksDB` 에서 세그먼트를 업데이트 할때 마다 큰 데이터를 읽고 써야하므로 성능에 영항을 줄 수 있다. 
+최적의 세그먼트 크기는 각 구현마다 다를 수 있으므로 `Stores.persistentVersionedKeyValueStore` 에서 인수로 적절한 값 설정이 필요하다.  
+
+
+---  
+## Reference
+[Introducing Versioned State Store in Kafka Streams](https://www.confluent.io/blog/introducing-versioned-state-store-in-kafka-streams/?session_ref=https://www.google.com/)  
+
+
