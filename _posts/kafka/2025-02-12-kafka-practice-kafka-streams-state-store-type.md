@@ -73,3 +73,128 @@ use_math: true
 각 `State Store` 마다 이런 상황에서 어떠한 결과를 보이는지도 함께 살펴보고자 한다. 
 추가로 이러한 순서가 바뀐 경우 순서를 보장하도록 처리할 수 있는 방안이 `VersionedStateStore` 인데 해당 포스팅에서는 간단한 개념만 다루고, 
 자세한 내용은 [여기]() 에서 확인 할 수 있다.  
+
+#### KeyValueStore
+간단한 `key-value` 저장소이다. 
+각 키에 대한 단일 값을 저장할 수 있고, 
+이 값은 동일한 키로 업데이트될 수 있다. 
+가장 단순한 형태의 상태 저장소로, 이후 설명하는 저장소들과 같이 세션이나 시간과 무관하게 `key-value` 쌍을 저장한다. 
+그리고 `In-Memory`, `Persistent` 타입의 `State Store` 를 모두 제공한다. 
+
+.. 그림 2..
+
+예제 코드 테스트 결과를 보면 알 수 있듯이, 
+`input-topic` 으로 들어오는 투표자들의 모든 투표를 통합해서 각 후보마다 카운트하는 결과를 도출하게 된다. 
+순서가 뒤바뀐 `voter5` 에 대한 투표는 시간 기준으로 먼저 투표한 결과만 반영된 결과를 보이기 때문에 실제로는 이런 상황에서 옳바른 결과를 도출하지 못하는 것을 확인할 수 있다.  
+
+아래는 `inMemoryKeyValueStore` 을 사용한 예제이다. 
+
+
+```java
+public void inMemoryKeyValueStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.<String, String>stream("input-topic");
+
+    // count
+    inputTopicStream
+        .toTable(
+            Materialized.<String, String>as(Stores.inMemoryKeyValueStore("in-memory-key-value-store"))
+                .withKeySerde(Serdes.String())
+                .withValueSerde(Serdes.String()))
+        .groupBy((voter, item) -> KeyValue.pair(item, item))
+        .count(Materialized.as(Stores.inMemoryKeyValueStore("in-memory-key-value-store-count")))
+        .toStream()
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void inMemoryKeyValueStore() {
+	this.inMemoryStateStore.inMemoryKeyValueStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+	KeyValueStore<String, Long> outputStore = this.topologyTestDriver.getKeyValueStore("in-memory-key-value-store-count");
+
+	assertThat(outputStore.get("a").longValue(), is(2L));
+	assertThat(outputStore.get("b").longValue(), is(2L));
+	assertThat(outputStore.get("c").longValue(), is(2L));
+
+	List<KeyValue<String, Long>> outputStream = this.outputTopic.readKeyValuesToList();
+
+	assertThat(outputStream, hasSize(8));
+
+	assertThat(outputStream.get(0), is(KeyValue.pair("a", 1L)));
+	assertThat(outputStream.get(1), is(KeyValue.pair("b", 1L)));
+	assertThat(outputStream.get(2), is(KeyValue.pair("c", 1L)));
+	assertThat(outputStream.get(3), is(KeyValue.pair("a", 2L)));
+	assertThat(outputStream.get(4), is(KeyValue.pair("a", 3L)));
+	assertThat(outputStream.get(5), is(KeyValue.pair("a", 2L)));
+	assertThat(outputStream.get(6), is(KeyValue.pair("b", 2L)));
+	assertThat(outputStream.get(7), is(KeyValue.pair("c", 2L)));
+}
+```  
+
+그리고 아래는 `persistentKeyValueStore` 의 사용 예시이다.  
+
+```java
+public void persistentKeyValueStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .toTable(
+                Materialized.<String, String>as(Stores.persistentKeyValueStore("persistent-key-value-store"))
+                    .withKeySerde(Serdes.String())
+                    .withValueSerde(Serdes.String()))
+        .groupBy((voter, item) -> KeyValue.pair(item, item))
+        .count(Materialized.as(Stores.persistentKeyValueStore("persistent-key-value-store-count")))
+        .toStream()
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void persistentKeyValueStore() {
+	this.persistentStateStore.persistentKeyValueStore(this.streamsBuilder);
+	this.startStream();
+	
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+
+	KeyValueStore<String, Long> outputStore = this.topologyTestDriver.getKeyValueStore("persistent-key-value-store-count");
+	outputStore.all().forEachRemaining(System.out::println);
+
+	assertThat(outputStore.get("a").longValue(), is(2L));
+	assertThat(outputStore.get("b").longValue(), is(2L));
+	assertThat(outputStore.get("c").longValue(), is(2L));
+
+	List<KeyValue<String, Long>> outputStream = this.outputTopic.readKeyValuesToList();
+	outputStream.forEach(System.out::println);
+
+	assertThat(outputStream, hasSize(8));
+
+	assertThat(outputStream.get(0), is(KeyValue.pair("a", 1L)));
+	assertThat(outputStream.get(1), is(KeyValue.pair("b", 1L)));
+	assertThat(outputStream.get(2), is(KeyValue.pair("c", 1L)));
+	assertThat(outputStream.get(3), is(KeyValue.pair("a", 2L)));
+	assertThat(outputStream.get(4), is(KeyValue.pair("a", 3L)));
+	assertThat(outputStream.get(5), is(KeyValue.pair("a", 2L)));
+	assertThat(outputStream.get(6), is(KeyValue.pair("b", 2L)));
+	assertThat(outputStream.get(7), is(KeyValue.pair("c", 2L)));
+}
+```  
