@@ -198,3 +198,193 @@ public void persistentKeyValueStore() {
 	assertThat(outputStream.get(7), is(KeyValue.pair("c", 2L)));
 }
 ```  
+
+#### SessionStore
+`Session` 기반의 저장소로 특정 키에 대한 연속적인 이벤트 그룹을 저장한다. 
+`SessionStore` 는 각 키에 대해 `Session` 을 관리하며, 세션이 끝난 후 특정 기간 동안 저장된 유지한다. 
+`SessionStore` 는 [여기]() 
+에서 좀 더 자세한 내용을 확인 할 수 있다. 
+즉 `SessionStore` 를 사용하면 키 별 이벤트 발생을 기준으로 그룹화를 시작하고 정해진 `inactivityGap` 시간 동안 해당 `Session` 이 유지되며 들어오는 이벤트를 하나의 그룹으로 구성한다. 
+그리고 그룹화 된 데이터는 `retentionPeriod` 동안 저장소에 유지되는 방식이다.  
+`SessionStore` 도 `In-Memory`, `Persistent` 저장소에서 모두 사용할 수 있다.  
+
+.. 그림 3.. 
+
+위 결과는 `inactivityGap=10ms` 이고 `retentionPeriod=100ms` 로 설정된 상태에서 결과이다. 
+`voter3` 과 `voter6` 이 투표한 `c` 결과를 보면 `t=3` 에 한번 `t=30` 에 한번씩 메시지가 들어오는 상황에서 
+`inactivityGap=10ms` 을 지난 이벤트이므로 다른 그룹으로 구성된 것을 확인 할 수 있다.  
+
+아래는 `inMemorySessionStore` 을 사용한 예제이다. 
+
+```java
+public void inMemorySessionStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .groupBy((voter, item) -> item)
+        .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(10)))
+        .count(Materialized.<String, Long>as(
+                Stores.inMemorySessionStore("in-memory-session-store-count", Duration.ofMillis(100)))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long()))
+        .toStream()
+        .map((stringWindowed, aLong) -> KeyValue.pair(stringWindowed.key(), aLong))
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void inMemorySessionStore() {
+	this.inMemoryStateStore.inMemorySessionStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+	SessionStore<String, Long> outputStore = this.topologyTestDriver.getSessionStore("in-memory-session-store-count");
+
+	assertThat(outputStore.fetchSession("a", 1l, 10L), is(3L));
+	assertThat(outputStore.fetchSession("b", 2L, 8L), is(2L));
+	assertThat(outputStore.fetchSession("c", 3L, 3L), is(1L));
+	assertThat(outputStore.fetchSession("c", 30L, 30L), is(1L));
+
+	List<TestRecord<String, Long>> outputStream = this.outputTopic.readRecordsToList();
+
+	assertThat(outputStream, hasSize(10));
+
+	assertThat(outputStream.get(0).key(), is("a"));
+	assertThat(outputStream.get(0).value(), is(1L));
+	assertThat(outputStream.get(0).timestamp(), is(1L));
+
+	assertThat(outputStream.get(1).key(), is("b"));
+	assertThat(outputStream.get(1).value(), is(1L));
+	assertThat(outputStream.get(1).timestamp(), is(2L));
+
+	assertThat(outputStream.get(2).key(), is("c"));
+	assertThat(outputStream.get(2).value(), is(1L));
+	assertThat(outputStream.get(2).timestamp(), is(3L));
+
+	assertThat(outputStream.get(3).key(), is("a"));
+	assertThat(outputStream.get(3).value(), is(nullValue()));
+	assertThat(outputStream.get(3).timestamp(), is(1L));
+
+	assertThat(outputStream.get(4).key(), is("a"));
+	assertThat(outputStream.get(4).value(), is(2L));
+	assertThat(outputStream.get(4).timestamp(), is(5L));
+
+	assertThat(outputStream.get(5).key(), is("a"));
+	assertThat(outputStream.get(5).value(), is(nullValue()));
+	assertThat(outputStream.get(5).timestamp(), is(5L));
+
+	assertThat(outputStream.get(6).key(), is("a"));
+	assertThat(outputStream.get(6).value(), is(3L));
+	assertThat(outputStream.get(6).timestamp(), is(10L));
+
+	assertThat(outputStream.get(7).key(), is("b"));
+	assertThat(outputStream.get(7).value(), is(nullValue()));
+	assertThat(outputStream.get(7).timestamp(), is(2L));
+
+	assertThat(outputStream.get(8).key(), is("b"));
+	assertThat(outputStream.get(8).value(), is(2L));
+	assertThat(outputStream.get(8).timestamp(), is(8L));
+
+	assertThat(outputStream.get(9).key(), is("c"));
+	assertThat(outputStream.get(9).value(), is(1L));
+	assertThat(outputStream.get(9).timestamp(), is(30L));
+}
+```  
+
+그리고 아래는 `persistentSessionStore` 를 사용한 예제이다.  
+
+```java
+public void persistentSessionStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .groupBy((voter, item) -> item)
+        .windowedBy(SessionWindows.ofInactivityGapAndGrace(Duration.ofMillis(10), Duration.ofMillis(10)))
+        .count(Materialized.<String, Long>as(
+                Stores.persistentSessionStore("persistent-session-store-count", Duration.ofMillis(100)))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long()))
+        .toStream()
+        .map((stringWindowed, aLong) -> KeyValue.pair(stringWindowed.key(), aLong))
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void persistentSessionStore() {
+	this.persistentStateStore.persistentSessionStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+
+	SessionStore<String, Long> outputStore = this.topologyTestDriver.getSessionStore("persistent-session-store-count");
+
+	assertThat(outputStore.fetchSession("a", 1l, 10L), is(3L));
+	assertThat(outputStore.fetchSession("b", 2L, 8L), is(2L));
+	assertThat(outputStore.fetchSession("c", 3L, 3L), is(1L));
+	assertThat(outputStore.fetchSession("c", 30L, 30L), is(1L));
+
+	List<TestRecord<String, Long>> outputStream = this.outputTopic.readRecordsToList();
+
+	assertThat(outputStream, hasSize(10));
+
+	assertThat(outputStream.get(0).key(), is("a"));
+	assertThat(outputStream.get(0).value(), is(1L));
+	assertThat(outputStream.get(0).timestamp(), is(1L));
+
+	assertThat(outputStream.get(1).key(), is("b"));
+	assertThat(outputStream.get(1).value(), is(1L));
+	assertThat(outputStream.get(1).timestamp(), is(2L));
+
+	assertThat(outputStream.get(2).key(), is("c"));
+	assertThat(outputStream.get(2).value(), is(1L));
+	assertThat(outputStream.get(2).timestamp(), is(3L));
+
+	assertThat(outputStream.get(3).key(), is("a"));
+	assertThat(outputStream.get(3).value(), is(nullValue()));
+	assertThat(outputStream.get(3).timestamp(), is(1L));
+
+	assertThat(outputStream.get(4).key(), is("a"));
+	assertThat(outputStream.get(4).value(), is(2L));
+	assertThat(outputStream.get(4).timestamp(), is(5L));
+
+	assertThat(outputStream.get(5).key(), is("a"));
+	assertThat(outputStream.get(5).value(), is(nullValue()));
+	assertThat(outputStream.get(5).timestamp(), is(5L));
+
+	assertThat(outputStream.get(6).key(), is("a"));
+	assertThat(outputStream.get(6).value(), is(3L));
+	assertThat(outputStream.get(6).timestamp(), is(10L));
+
+	assertThat(outputStream.get(7).key(), is("b"));
+	assertThat(outputStream.get(7).value(), is(nullValue()));
+	assertThat(outputStream.get(7).timestamp(), is(2L));
+
+	assertThat(outputStream.get(8).key(), is("b"));
+	assertThat(outputStream.get(8).value(), is(2L));
+	assertThat(outputStream.get(8).timestamp(), is(8L));
+
+	assertThat(outputStream.get(9).key(), is("c"));
+	assertThat(outputStream.get(9).value(), is(1L));
+	assertThat(outputStream.get(9).timestamp(), is(30L));
+}
+```  
