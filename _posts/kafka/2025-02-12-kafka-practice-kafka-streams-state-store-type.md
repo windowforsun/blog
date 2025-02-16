@@ -559,3 +559,95 @@ public void persistentWindowStore() {
 	assertThat(outputStream.get(6).timestamp(), is(30L));
 }
 ```  
+
+
+#### TimestampKeyValueStore
+`Timestamp` 가 포함된 `KeyValueStore` 이다.
+`KeyValueStore` 의 각 `key-value` 쌍에 대해 `Timestamp` 를 관리한다.
+각 키의 현재 값이 마지막으로 업데이트된 `Timestamp` 를 확인할 수 있다.
+`TimestampKeyValueStore` 는 `Persistent` 저장소에서만 사용 가능하다.
+
+.. 그림 6..
+
+위 그림을 보면 `TimestampKeyValueStore` 에 실제로 저장된 값에는 각 키가 가장 최근에 업데이트된 타임스탬프도 함께 구성되는 것을 확인할 수 있다.
+처리나 동작은 기존 `KeyValueStore` 와 동일하다.
+
+아래는 `persistentTimestampKeyValueStore` 의 사용 예시이다.
+
+```java
+public void persistentTimestampKeyValueStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .toTable(
+            Materialized.<String, String>as(Stores.persistentTimestampedKeyValueStore("persistent-timestamp-key-value-store"))
+                .withKeySerde(Serdes.String())
+                .withValueSerde(Serdes.String()))
+        .groupBy((voter, item) -> KeyValue.pair(item, item))
+        .count(Materialized.<String, Long>as(
+                Stores.persistentTimestampedKeyValueStore("persistent-timestamp-key-value-store-count"))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long()))
+        .toStream()
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void persistentTimestampKeyValueStore() {
+	this.persistentStateStore.persistentTimestampKeyValueStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+	KeyValueStore<String, ValueAndTimestamp<Long>> outputStore = this.topologyTestDriver.getTimestampedKeyValueStore("persistent-timestamp-key-value-store-count");
+
+	assertThat(outputStore.get("a"), is(ValueAndTimestamp.make(2L, 10L)));
+	assertThat(outputStore.get("b"), is(ValueAndTimestamp.make(2L, 8L)));
+	assertThat(outputStore.get("c"), is(ValueAndTimestamp.make(2L, 30L)));
+
+	List<TestRecord<String, Long>> outputStream = this.outputTopic.readRecordsToList();
+
+	assertThat(outputStream, hasSize(8));
+
+	assertThat(outputStream.get(0).key(), is("a"));
+	assertThat(outputStream.get(0).value(), is(1L));
+	assertThat(outputStream.get(0).timestamp(), is(1L));
+
+	assertThat(outputStream.get(1).key(), is("b"));
+	assertThat(outputStream.get(1).value(), is(1L));
+	assertThat(outputStream.get(1).timestamp(), is(2L));
+
+	assertThat(outputStream.get(2).key(), is("c"));
+	assertThat(outputStream.get(2).value(), is(1L));
+	assertThat(outputStream.get(2).timestamp(), is(3L));
+
+	assertThat(outputStream.get(3).key(), is("a"));
+	assertThat(outputStream.get(3).value(), is(2L));
+	assertThat(outputStream.get(3).timestamp(), is(5L));
+
+	assertThat(outputStream.get(4).key(), is("a"));
+	assertThat(outputStream.get(4).value(), is(3L));
+	assertThat(outputStream.get(4).timestamp(), is(10L));
+
+	assertThat(outputStream.get(5).key(), is("a"));
+	assertThat(outputStream.get(5).value(), is(2L));
+	assertThat(outputStream.get(5).timestamp(), is(10L));
+
+	assertThat(outputStream.get(6).key(), is("b"));
+	assertThat(outputStream.get(6).value(), is(2L));
+	assertThat(outputStream.get(6).timestamp(), is(8L));
+
+	assertThat(outputStream.get(7).key(), is("c"));
+	assertThat(outputStream.get(7).value(), is(2L));
+	assertThat(outputStream.get(7).timestamp(), is(30L));
+}
+```  
