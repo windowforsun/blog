@@ -651,3 +651,94 @@ public void persistentTimestampKeyValueStore() {
 	assertThat(outputStream.get(7).timestamp(), is(30L));
 }
 ```  
+
+
+
+#### TimestampWindowStore
+`Timestamp` 가 포함된 `WindowStore` 이다.
+기본적으로 `WindowStore` 가 관리하는 시간 값은 현재 윈도우의 시작과 끝나는 시간값이다.
+여기에 대해 `TimestampWindowStore` 는 해당 윈도우가 마지막에 업데이트된 `Timestamp` 도 관리하기 때문에 확인도 가능하다.  
+`TimestampWindowStore` 는 `Persistent` 저장소에서만 사용 가능하다.
+
+.. 그림 7..
+
+기본적인 동적과 처리 결과는 `WindowStore` 와 동일하다.
+차이점은 `TimestampKeyValueStore` 와 동일하게 각 윈도우 별로 가장 최근에 업데이트된 타임스템프가 함께 저장된다는 점이다.
+
+
+아래는 `persistentTimestampWindowStore` 의 사용 예시이다.
+
+```java
+public void persistentTimestampWindowStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .groupBy((voter, item) -> item)
+        .windowedBy(TimeWindows.of(Duration.ofMillis(10)))
+        .count(Materialized.<String, Long>as(
+                Stores.persistentTimestampedWindowStore("persistent-timestamp-window-store-count", Duration.ofMillis(100),
+                    Duration.ofMillis(10), false))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long()))
+        .toStream()
+        .map((stringWindowed, aLong) -> KeyValue.pair(stringWindowed.key(), aLong))
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void persistentTimestampWindowStore() {
+	this.persistentStateStore.persistentTimestampWindowStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+	WindowStore<String, ValueAndTimestamp<Long>> outputStore = this.topologyTestDriver.getTimestampedWindowStore("persistent-timestamp-window-store-count");
+
+	assertThat(outputStore.fetch("a", 0L, 10L).next().value, is(ValueAndTimestamp.make(2L, 5L)));
+	assertThat(outputStore.fetch("a", 10L, 20L).next().value, is(ValueAndTimestamp.make(1L, 10L)));
+	assertThat(outputStore.fetch("b", 0L, 10L).next().value, is(ValueAndTimestamp.make(2L, 8L)));
+	assertThat(outputStore.fetch("c", 0L, 10L).next().value, is(ValueAndTimestamp.make(1L, 3L)));
+	assertThat(outputStore.fetch("c", 30L, 40L).next().value, is(ValueAndTimestamp.make(1L, 30L)));
+
+	List<TestRecord<String, Long>> outputStream = this.outputTopic.readRecordsToList();
+
+	assertThat(outputStream, hasSize(7));
+
+	assertThat(outputStream.get(0).key(), is("a"));
+	assertThat(outputStream.get(0).value(), is(1L));
+	assertThat(outputStream.get(0).timestamp(), is(1L));
+
+	assertThat(outputStream.get(1).key(), is("b"));
+	assertThat(outputStream.get(1).value(), is(1L));
+	assertThat(outputStream.get(1).timestamp(), is(2L));
+
+	assertThat(outputStream.get(2).key(), is("c"));
+	assertThat(outputStream.get(2).value(), is(1L));
+	assertThat(outputStream.get(2).timestamp(), is(3L));
+
+	assertThat(outputStream.get(3).key(), is("a"));
+	assertThat(outputStream.get(3).value(), is(2L));
+	assertThat(outputStream.get(3).timestamp(), is(5L));
+
+	assertThat(outputStream.get(4).key(), is("a"));
+	assertThat(outputStream.get(4).value(), is(1L));
+	assertThat(outputStream.get(4).timestamp(), is(10L));
+
+	assertThat(outputStream.get(5).key(), is("b"));
+	assertThat(outputStream.get(5).value(), is(2L));
+	assertThat(outputStream.get(5).timestamp(), is(8L));
+
+	assertThat(outputStream.get(6).key(), is("c"));
+	assertThat(outputStream.get(6).value(), is(1L));
+	assertThat(outputStream.get(6).timestamp(), is(30L));
+}
+```  
