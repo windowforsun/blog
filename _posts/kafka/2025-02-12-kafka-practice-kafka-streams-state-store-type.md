@@ -742,3 +742,86 @@ public void persistentTimestampWindowStore() {
 	assertThat(outputStream.get(6).timestamp(), is(30L));
 }
 ```  
+
+#### VersionedKeyValueStore
+버전관리가 가능한 `KeyValueStore` 이다.
+동일한 키에 대해 여러 버전의 값을 저장할 수 있다.
+각 버전은 특정 타임스탬프와 함께 관리되고,
+과거 데이터를 조회하거나 특정 시점의 데이터를 복원할 수 있다.
+`VersionedKeyValueStore` 관련 상세한 내용은 [여기]()
+에서 확인 가능하다.
+그리고 `VersionedKeyValueStore` 는 `Persistent` 저장소에만 사용 가능하다.
+
+.. 그림 5..
+
+위 그림을 보면 대부분 처리는 `KeyValueStore` 와 유사하다.
+하지만 `voter5` 에 대한 투표 결과를 보면 `KeyValueStore` 와 다른 것을 볼 수 있다.
+이는 `VersionedKeyValueStore` 의 경우 집계 연산인 `count()` 를 수행할 때,
+`t=10` 에 `a` 에 투표한 결과만 반영된다.
+순서가 바껴 늦게 도착한 `t=8` 에 `b` 에 투표한 메시지는 시간 상으로는 더 과거이므로,
+`voter5` 의 최신 투표는 `a` 이기 때문에 `b` 에 투표한 것은 무시되는 것이다.
+
+아래는 `persistentVersionedKeyValueStore` 의 사용 예시이다.
+
+```java
+public void persistentVersionedKeyValueStore(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopicStream = streamsBuilder.stream("input-topic");
+
+    // count
+    inputTopicStream
+        .toTable(
+            Materialized.<String, String>as(Stores.persistentVersionedKeyValueStore("persistent-versioned-key-value-store", Duration.ofMillis(10)))
+                .withKeySerde(Serdes.String())
+                .withValueSerde(Serdes.String()))
+        .groupBy((voter, item) -> KeyValue.pair(item, item))
+        .count(Materialized.<String, Long>as(
+                Stores.persistentVersionedKeyValueStore("persistent-versioned-key-value-store-count", Duration.ofMillis(10)))
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long()))
+        .toStream()
+        .to("output-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+
+@Test
+public void persistentVersionedKeyValueStore() throws InterruptedException {
+	this.persistentStateStore.persistentVersionedKeyValueStore(this.streamsBuilder);
+	this.startStream();
+
+	this.inputTopic.pipeInput("voter1", "a", 1L);
+	this.inputTopic.pipeInput("voter2", "b", 2L);
+	this.inputTopic.pipeInput("voter3", "c", 3L);
+
+	this.inputTopic.pipeInput("voter4", "a", 5L);
+
+	this.inputTopic.pipeInput("voter5", "a", 10L);
+	this.inputTopic.pipeInput("voter5", "b", 8L);
+	this.inputTopic.pipeInput("voter6", "c", 30L);
+
+
+	VersionedKeyValueStore<String, Long> outputStore = this.topologyTestDriver.getVersionedKeyValueStore("persistent-versioned-key-value-store-count");
+
+	assertThat(outputStore.get("a"), is(new VersionedRecord<>(3L, 10L)));
+	assertThat(outputStore.get("b"), is(new VersionedRecord<>(1L, 2L)));
+	assertThat(outputStore.get("c"), is(new VersionedRecord<>(2L, 30L)));
+
+	List<KeyValue<String, Long>> outputStream = this.outputTopic.readKeyValuesToList();
+
+	assertThat(outputStream, hasSize(6));
+
+	assertThat(outputStream.get(0), is(KeyValue.pair("a", 1L)));
+	assertThat(outputStream.get(1), is(KeyValue.pair("b", 1L)));
+	assertThat(outputStream.get(2), is(KeyValue.pair("c", 1L)));
+	assertThat(outputStream.get(3), is(KeyValue.pair("a", 2L)));
+	assertThat(outputStream.get(4), is(KeyValue.pair("a", 3L)));
+	assertThat(outputStream.get(5), is(KeyValue.pair("c", 2L)));
+}
+```  
+
+
+
+
+---  
+## Reference
+[Kafka Streams State Stores](https://kafka.apache.org/38/javadoc/org/apache/kafka/streams/state/Stores.html)  
+
+
