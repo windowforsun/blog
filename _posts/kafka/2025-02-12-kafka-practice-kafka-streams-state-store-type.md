@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams State Store Type"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에서 사용할 수 있는 State Store 의 종류와 특징에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,18 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Kafka Streams
+    - State Store
+    - In-Memory
+    - Persistent
+    - KeyValueStore
+    - VersionedStateStore
+    - SessionStore
+    - WindowStore
+    - TimestampKeyValueStore
+    - TimestampWindowStore
+    - RocksDB
+    - Change-Log Topic
 toc: true
 use_math: true
 ---  
@@ -23,7 +35,7 @@ use_math: true
 `Kafka Streams` 에서는 크게 `In-Memory State Store` 와 `Persistent State Store` 라는 두 가지 유형의 상태 저장소가 있다.  
 
 이후 설명하는 `State Store` 의 설명은 각 유형별 특징과 차이점에 초점을 맞춘 내용이다. 
-`State Store` 에 대한 전반적인 내용은 [여기]()
+`State Store` 에 대한 전반적인 내용은 [여기](https://github.com/windowforsun/kafka-streams-state-store-type)
 에서 확인 가능하다.  
 
 
@@ -57,14 +69,16 @@ use_math: true
 
 ### State Store Type
 `Kafka Streams` 을 사용해서 `Topology` 를 구성할 때 사용할 수 있는 `State Store` 에는 어떤 유형이 있는지 알아본다. 
-이와 관련된 전체 소스 코드는 [여기]()
+이와 관련된 전체 소스 코드는 [여기](https://github.com/windowforsun/kafka-streams-state-store-type)
 에서 확인 할 수 있다.  
 
 사용 가능한 `State Store` 종류별 특징을 확인하기 위해 예제 스트림은 투표결과를 카운트하는 비지니스를 구현한다. 
 이를 통해 동일한 투표 스트림 데이터가 들어올 때 각 `State Store` 가 어떤 결과를 도출하는 지 확인하는 과정으로 각 상태 저장소의 특징과 차이를 알아본다.  
 아래는 예제에 대한 메시지와 `State Store` 기반 처리 과정을 도식화한 것이다. 
 
-.. 그림 1..
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-1.drawio.png)
+
 
 위 메시지 스트림에서 주의해야할 부분은 `voter5` 의 투표이다. 
 `a` 로 투표한 메시지가 먼저 도착한 후, `b` 로 변경된 투표가 도착한 것을 볼 수 있다. 
@@ -81,7 +95,8 @@ use_math: true
 가장 단순한 형태의 상태 저장소로, 이후 설명하는 저장소들과 같이 세션이나 시간과 무관하게 `key-value` 쌍을 저장한다. 
 그리고 `In-Memory`, `Persistent` 타입의 `State Store` 를 모두 제공한다. 
 
-.. 그림 2..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-2.drawio.png)
+
 
 예제 코드 테스트 결과를 보면 알 수 있듯이, 
 `input-topic` 으로 들어오는 투표자들의 모든 투표를 통합해서 각 후보마다 카운트하는 결과를 도출하게 된다. 
@@ -208,7 +223,8 @@ public void persistentKeyValueStore() {
 그리고 그룹화 된 데이터는 `retentionPeriod` 동안 저장소에 유지되는 방식이다.  
 `SessionStore` 도 `In-Memory`, `Persistent` 저장소에서 모두 사용할 수 있다.  
 
-.. 그림 3.. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-3.drawio.png)
+
 
 위 결과는 `inactivityGap=10ms` 이고 `retentionPeriod=100ms` 로 설정된 상태에서 결과이다. 
 `voter3` 과 `voter6` 이 투표한 `c` 결과를 보면 `t=3` 에 한번 `t=30` 에 한번씩 메시지가 들어오는 상황에서 
@@ -399,7 +415,8 @@ public void persistentSessionStore() {
 필요에 따라 그룹화한 데이터 유지기한인 `retentionPeriod` 또는 윈도우 업데이트 유효시간인 `graceTime` 를 정해 구성할 수 있다. 
 `WindowStore` 도 `In-Memory`, `Persistent` 저장소에서 모두 사용할 수 있다.
 
-.. 그림 4..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-4.drawio.png)
+
 
 위 결과는 `windowSize=10ms`, `graceTime=10ms`, `retentionPeriod=100ms` 로 설정했을 떄의 결과이다. 
 `WindowStore` 의 시간 범위는 `[0~10)`(0이상 10미만)이므로 `a` 에 투표한 `voter1` 과 `voter4` 는 동일한 윈도우에 속했지만, 
@@ -567,7 +584,8 @@ public void persistentWindowStore() {
 각 키의 현재 값이 마지막으로 업데이트된 `Timestamp` 를 확인할 수 있다.
 `TimestampKeyValueStore` 는 `Persistent` 저장소에서만 사용 가능하다.
 
-.. 그림 6..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-6.drawio.png)
+
 
 위 그림을 보면 `TimestampKeyValueStore` 에 실제로 저장된 값에는 각 키가 가장 최근에 업데이트된 타임스탬프도 함께 구성되는 것을 확인할 수 있다.
 처리나 동작은 기존 `KeyValueStore` 와 동일하다.
@@ -660,7 +678,8 @@ public void persistentTimestampKeyValueStore() {
 여기에 대해 `TimestampWindowStore` 는 해당 윈도우가 마지막에 업데이트된 `Timestamp` 도 관리하기 때문에 확인도 가능하다.  
 `TimestampWindowStore` 는 `Persistent` 저장소에서만 사용 가능하다.
 
-.. 그림 7..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-7.drawio.png)
+
 
 기본적인 동적과 처리 결과는 `WindowStore` 와 동일하다.
 차이점은 `TimestampKeyValueStore` 와 동일하게 각 윈도우 별로 가장 최근에 업데이트된 타임스템프가 함께 저장된다는 점이다.
@@ -752,7 +771,8 @@ public void persistentTimestampWindowStore() {
 에서 확인 가능하다.
 그리고 `VersionedKeyValueStore` 는 `Persistent` 저장소에만 사용 가능하다.
 
-.. 그림 5..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-state-store-type-5.drawio.png)
+
 
 위 그림을 보면 대부분 처리는 `KeyValueStore` 와 유사하다.
 하지만 `voter5` 에 대한 투표 결과를 보면 `KeyValueStore` 와 다른 것을 볼 수 있다.
