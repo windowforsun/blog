@@ -1,0 +1,39 @@
+@startuml
+
+participant producer as "Kafka Producer"
+participant avro as "Avro Serializer"
+participant client as "CachedSchema\nRegistryClient"
+participant registry as "Schema Registry"
+participant out as "Outbound Topic"
+
+title Producer Avro serialization
+
+activate producer
+producer -> avro : message
+activate avro
+avro -> avro : get schema\nby reflection
+avro -> client : get schema id
+activate client
+
+alt schema id not exists
+client -> registry : POST schema
+activate registry
+note over registry : register schema
+registry --> client : schema id
+deactivate registry
+client -> client : cached schema id
+end
+
+client --> avro : schema id
+deactivate client
+avro -> avro : serialize message\nwith schema id
+avro --> producer : serialized message
+deactivate avro
+
+producer -> out : write
+deactivate producer
+
+
+
+
+@enduml

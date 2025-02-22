@@ -1,0 +1,39 @@
+@startuml
+
+participant consumer as "Kafka Consumer"
+participant avro as "Avro Deserializer"
+participant client as "CachedSchema\nRegistryClient"
+participant registry as "Schema Registry"
+participant in as "Inbound Topic"
+
+title Consumer Avro serialization
+
+activate consumer
+in -> consumer : consume
+consumer -> avro : message
+activate avro
+avro -> avro : get schema id\nfrom message
+avro -> client : get schema\nfrom schema id
+activate client
+
+alt schema not exists
+client -> registry : GET schema\nfrom schema id
+activate registry
+registry --> client : schema
+deactivate registry
+client -> client : cached schema\nfor schema id
+end
+
+client -> avro : schema
+deactivate client
+
+avro -> avro : deserialize message
+
+avro -> consumer : deserialized message
+deactivate avro
+deactivate consumer
+
+
+
+
+@enduml
