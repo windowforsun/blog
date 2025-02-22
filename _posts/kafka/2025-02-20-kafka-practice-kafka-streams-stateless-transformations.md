@@ -120,3 +120,71 @@ public void branch() {
 	assertThat(outputOther.get(2), is(KeyValue.pair("voter6", "d")));
 }
 ```  
+
+#### filter
+`KStream.filter()`, `KTable.filter()` 는 주어진 조건을 만족하는 레코드만 통과시키는 연산이다. 
+조건을 만족하지 않는 레코드는 버려진다. 
+이는 각 레코드를 게별적으로 판별해서 조건을 만족하는 레코드만 `downstream` 으로 넘기게 된다. 
+이를 위해서 판별하고자 하는 식을 `true/false` 를 반환하는 조건식으로 구현해야 한다.  
+
+```
+KStream -> KStream
+KTable -> KTable
+```  
+
+소개할 예제는 레코드의 `value` 값이 `a` 문자열을 포함하는 경우는 스트림형 결과 토픽으로 넘기게되고, 
+`b` 문자열을 포함하는 경우에는 테이블형 결과 토픽으로 넘기게 된다. 
+이를 도식화하면 아래와 같다.  
+
+.. 그림 ..
+
+코드 구현 예시와 이를 검증하는 테스트 코드는 아래와 같다.
+
+```java
+public void filter(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+    KTable<String, String> inputTable = inputStream.toTable();
+
+    inputStream.filter((k, v) -> v.contains("a")).to("output-stream-topic");
+
+    inputTable.filter((k, v) -> v.contains("b")).toStream().to("output-table-topic");
+}
+
+@Test
+public void filter() {
+	this.statelessTransforms.filter(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+	TestOutputTopic<String, String> outputStreamTopic = this.topologyTestDriver.createOutputTopic("output-stream-topic", this.stringSerde.deserializer(), this.stringSerde.deserializer());
+	TestOutputTopic<String, String> outputTableTopic = this.topologyTestDriver.createOutputTopic("output-table-topic", this.stringSerde.deserializer(), this.stringSerde.deserializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+
+	List<KeyValue<String, String>> outputStream = outputStreamTopic.readKeyValuesToList();
+	assertThat(outputStream, hasSize(3));
+	assertThat(outputStream.get(0), is(KeyValue.pair("voter1", "a")));
+	assertThat(outputStream.get(1), is(KeyValue.pair("voter4", "a")));
+	assertThat(outputStream.get(2), is(KeyValue.pair("voter5", "a")));
+
+	List<KeyValue<String, String>> outputTable = outputTableTopic.readKeyValuesToList();
+	assertThat(outputTable, hasSize(8));
+	assertThat(outputTable.get(0), is(KeyValue.pair("voter1", null)));
+	assertThat(outputTable.get(1), is(KeyValue.pair("voter2", "b")));
+	assertThat(outputTable.get(2), is(KeyValue.pair("voter3", null)));
+	assertThat(outputTable.get(3), is(KeyValue.pair("voter4", null)));
+	assertThat(outputTable.get(4), is(KeyValue.pair("voter5", null)));
+	assertThat(outputTable.get(5), is(KeyValue.pair("voter5", "b")));
+	assertThat(outputTable.get(6), is(KeyValue.pair("voter6", null)));
+	assertThat(outputTable.get(7), is(KeyValue.pair("voter6", null)));
+}
+```  
