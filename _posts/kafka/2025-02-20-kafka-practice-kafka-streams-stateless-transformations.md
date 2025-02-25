@@ -334,3 +334,73 @@ public void flatMap() {
 	assertThat(outputResult.get(10), is(KeyValue.pair("voter6", "d")));
 }
 ```
+
+#### flatMapValues
+`KStream.flatMapValues()` 는 `flatMap` 과 유사하지만, 
+레코드의 키는 유지하고 값만 변환하는 연산이다.
+각 레코드는 다중 레코드 리스트로 변환될 수 있으며, 리스트에 담긴 모든 레코드는 최정 결과 스트림에 들어간다.
+하나의 레코드에서 여러 레코드르 생성할 수 있기 때문에 반환 값은 레코드의 리스트나 `Collection` 종류를 사용해야 한다.
+
+```
+KStream -> KStream
+```  
+
+소개할 예제는 레코드의 `value` 값이 `a` 인 경우 동일한 키와 값을 갖는
+새로운 레코드를 만들어 총 2개읠 레코드를 반환한다. 
+`flatMapValues` 는 값만 추가하면 키는 변경없이 동일한 키로 사용된다. 
+이를 도식화 하면 아래와 같다.
+
+.. 그림 .. 
+
+```java
+public void flatMapValues(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream.flatMapValues(value -> {
+        List<String> kvs = new ArrayList<>();
+
+        kvs.add(value);
+
+        if ("a".equals(value)) {
+            kvs.add(value);
+        }
+
+        return kvs;
+    }).to("output-result-topic");
+}
+
+@Test
+public void flatMapValues() {
+	this.statelessTransforms.flatMapValues(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+	TestOutputTopic<String, String> outputResultTopic = this.topologyTestDriver.createOutputTopic("output-result-topic", this.stringSerde.deserializer(), this.stringSerde.deserializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+
+	List<KeyValue<String, String>> outputResult = outputResultTopic.readKeyValuesToList();
+
+	assertThat(outputResult, hasSize(11));
+	assertThat(outputResult.get(0), is(KeyValue.pair("voter1", "a")));
+	assertThat(outputResult.get(1), is(KeyValue.pair("voter1", "a")));
+	assertThat(outputResult.get(2), is(KeyValue.pair("voter2", "b")));
+	assertThat(outputResult.get(3), is(KeyValue.pair("voter3", "c")));
+	assertThat(outputResult.get(4), is(KeyValue.pair("voter4", "a")));
+	assertThat(outputResult.get(5), is(KeyValue.pair("voter4", "a")));
+	assertThat(outputResult.get(6), is(KeyValue.pair("voter5", "a")));
+	assertThat(outputResult.get(7), is(KeyValue.pair("voter5", "a")));
+	assertThat(outputResult.get(8), is(KeyValue.pair("voter5", "b")));
+	assertThat(outputResult.get(9), is(KeyValue.pair("voter6", "c")));
+	assertThat(outputResult.get(10), is(KeyValue.pair("voter6", "d")));
+}
+```  
