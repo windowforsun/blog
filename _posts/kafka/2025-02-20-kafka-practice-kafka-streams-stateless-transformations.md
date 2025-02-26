@@ -404,3 +404,62 @@ public void flatMapValues() {
 	assertThat(outputResult.get(10), is(KeyValue.pair("voter6", "d")));
 }
 ```  
+
+#### foreach
+`KStream.foreach()`, `KTable.foreach()` 는 각 레코드에 대해 주어진 동작을 수행하지만, 
+결과 스트림을 반환하지 않는다. 
+레코드의 변환 없이 부수적인 작업(로깅, 외부 시스템 연동, ..)을 할 때 사용한다. 
+`foreach` 는 스트림을 번환하지 않으므로 이어서 후속처리가 필요하다면 다른 연산을 사용해야 한다. 
+그리고 외부 시스템과 연동할 때는 `I/O` 성능에 유의해야 한다. 
+외부 시스템과의 `I/O` 로 지연이 발생한다면 이는 스트림 처리 전체의 지연으로 이어질 수 있기 때문이다.  
+
+```
+KStream -> void
+KTable -> void
+```
+
+소개할 예제는 스트림으로 들어오는 레코드를 `foreach : {key}-{value}` 와 같은 포맷으로 
+로깅하는 예제이다. 
+이를 도식화 하면 아래와 같다.  
+
+.. 그림 ..
+
+```java
+public void foreach(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream.foreach((key, value) -> log.info("foreach : {}-{}", key, value));
+}
+
+@Test
+public void foreach() {
+	this.statelessTransforms.foreach(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+}
+/*
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter1-a
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter2-b
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter3-c
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter4-a
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter4-a
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter5-a
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter5-b
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter5-b
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter6-c
+INFO 39138 --- [           main] c.w.k.s.s.t.StatelessTransforms          : foreach : voter6-d
+ */
+```  
+
