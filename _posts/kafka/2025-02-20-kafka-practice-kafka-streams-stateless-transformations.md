@@ -924,3 +924,304 @@ public void merge() {
 	assertThat(outputResult.get(7), is(KeyValue.pair("voter6", "d")));
 }
 ```  
+
+
+#### peek
+`KStream.peek()` 은 각 레코드를 일시적으로 관찰하여 부수적인 작업(로깅)을 수행하지만, 
+레코드에 변화를 주지 않고 그대로 `downstream` 으로 전달하는 역할을 하는 연산이다. 
+스트림의 레코드를 관찰할 수 있다는 측면에서는 `foreach` 와 유사하지만, 
+레코드를 처리한 후 변경하지 않고 원래 상태 그대로 스트림을 반환해 `downstream` 을 끊기지 않고 계속 처리할 수 있게 한다. 
+즉 `foreach` 의 반환 타입은 `void` 인 반면 `peek` 은 `KStream` 인 것을 기억해야 한다. 
+디버깅이나 모니터링, 메트릭 수집 등의 용도로 사용할 수 있지만, 스트림 상 과도하게 많거나 무거운 연산이 있는 경우 
+전체 스트림 성능에 영향을 줄 수 있다.  
+
+추가적으로 `peek` 을 통해 외부 시스템 쓰기 동작이 있다면 이는 `Kafka` 가 제공하는 `exactly-once` 와 같은 
+메시지 전달 보장이 되지 않을 수 있다. 
+중복 쓰기 혹은 쓰기 누락이 발생할 수 있으므로 이러한 작업에는 별도의 오류 처리와 재시도 로직을 고려해야 한다.  
+
+```
+KStream -> KStream
+```  
+
+소개할 예제는 입력 스트림 원본에 대해 `peek` 을 사용해서 로깅을 수행하고, 
+`mapValues` 로 레코드의 값을 수정 후 이를 다시 `peek` 으로 로깅을 수행하는 흐름이다. 
+이를 도식화 하면 아래와 같다.  
+
+.. 그림 ..
+
+```java
+public void peek(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream
+        .peek((key, value) -> log.info("before mapValues {} {}", key, value))
+        .mapValues(value -> {
+            if ("a".equals(value)) {
+                return "aa";
+            }
+
+            return value;
+        })
+        .peek((key, value) -> log.info("after mapValues {} {}", key, value))
+        .to("output-result-topic");
+}
+
+@Test
+public void peek() {
+	this.statelessTransforms.peek(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+	TestOutputTopic<String, String> outputResulTopic = this.topologyTestDriver.createOutputTopic("output-result-topic", this.stringSerde.deserializer(), this.stringSerde.deserializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+
+	List<KeyValue<String, String>> outputResult = outputResulTopic.readKeyValuesToList();
+
+	assertThat(outputResult, hasSize(8));
+	assertThat(outputResult.get(0), is(KeyValue.pair("voter1", "aa")));
+	assertThat(outputResult.get(1), is(KeyValue.pair("voter2", "b")));
+	assertThat(outputResult.get(2), is(KeyValue.pair("voter3", "c")));
+	assertThat(outputResult.get(3), is(KeyValue.pair("voter4", "aa")));
+	assertThat(outputResult.get(4), is(KeyValue.pair("voter5", "aa")));
+	assertThat(outputResult.get(5), is(KeyValue.pair("voter5", "b")));
+	assertThat(outputResult.get(6), is(KeyValue.pair("voter6", "c")));
+	assertThat(outputResult.get(7), is(KeyValue.pair("voter6", "d")));
+}
+```  
+
+
+#### print
+`KStream.print()` 는 스트림의 각 레코드의 내용을 콘솔에 출력하는 연산이다. 
+주로 디버깅 목적으로 사용되고, 스트림의 레코드를 간편하게 확인해 볼 수 있다. 
+이는 `foreach((k, v) -> System.out.println(k + ", " + v))` 
+와 동일한 연산이다.  
+
+```
+KStream -> KStream
+```
+
+소개할 예제는 스트림의 레코드를 `print` 를 사용해 `testLabel` 이라는 라벨을 붙여 
+콘솔에 출력하는 예제이다.  
+
+
+.. 그림 .. 
+
+```java
+public void print(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream.print(Printed.<String, String>toSysOut().withLabel("testLabel"));
+}
+
+@Test
+public void print() {
+	this.statelessTransforms.print(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+}
+/*
+[testLabel]: voter1, a
+[testLabel]: voter2, b
+[testLabel]: voter3, c
+[testLabel]: voter4, a
+[testLabel]: voter5, a
+[testLabel]: voter5, b
+[testLabel]: voter6, c
+[testLabel]: voter6, d
+ */
+```  
+
+#### repartition
+`KStream.repartition()` 은 스트림의 레코드를 키를 기준으로 재분배하는 연산이다. 
+데이터가 균등하게 분포되지 않거나, 키를 변경한 후 새로운 분포가 필요할 때 사용할 수 있다. 
+일반적으로 `selectKey`, `groupBy`, `map`, `flatMap` 과 같이 키 변경이 가능한 연산을 수행 후 
+사용 할 수 있다.  
+
+이는 수동으로 `repartition` 을 강제 트리거하는 연산으로 데이터 분배를 더 세밀하게 제어 할 수 있다. 
+`through()` 와 비슷한 역할을 하지만, 
+`Kafka Streams` 가 자동으로 내부 토픽을 관리한다는 차이점이 있다. 
+`through()` 는 사용자가 토픽을 사용해 데이터를 이동시키지만, 
+`repartition()` 은 `Kafka Streams Internal Topic` 을 생성해 그 안에서 데이터를 재분배한다. 
+그러므로 재분배에 사용된 내부 토픽 또한 자동으로 정리되기 때문에 따로 관리가 필요 없다.  
+
+`repartition()` 은 앞선 사용처들과 병렬 처리를 높이는 용도의 사용과 사용자가 별다른 관리가 필요없다는 장점이 있다. 
+그리고 일반적인 레코드의 키가 변경되는 연산의 경우 자동으로 `repartition` 이 트리거 되지만 `Processor API` 를 사용 하는 경우에는 
+`repartition` 이 발생하지 않기 때문에 명시적인 사용이 필요할 수 있다. 
+하지만 `repartition` 은 네트워크 트래픽을 증가시킬 수 있어 성능 저하로 이어질 수 있기 때문에, 
+불필요한 사용은 피해야 한다. 
+그리고 `repartition` 으로 인해 레코드의 파티션이 변경되기 때문에 데이터 순서나 일관성이 중요한 경우에는 사용에 주의가 필요하다.  
+
+```
+KStream -> KStream
+```  
+
+소개할 예제는 입력 스트림으로 들어오는 레코드를 `Processor API` 를 사용해서 레코드의 `key-value` 와 파티션 번호를 로그로 남긴다. 
+그리고 `repartition()` 을 호출해 강제로 트리거 시킨 후 다시 `Processor API` 를 통해 동일한 로그를 찍어 파티션이 어떻게 변경됐는지 확인 한다. 
+
+.. 그림 ..
+
+```java
+public void repartition(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream
+        .process(new PartitionLoggingProcessor("before"), Named.as("test1"))
+        .repartition(Repartitioned.numberOfPartitions(10))
+        .process(new PartitionLoggingProcessor("after"), Named.as("test2"))
+        .to("output-result-topic");
+}
+
+class PartitionLoggingProcessor implements ProcessorSupplier<String, String, String, String> {
+    private String label;
+
+    public PartitionLoggingProcessor(String label) {
+        this.label = label;
+    }
+
+    @Override
+    public Processor<String, String, String, String> get() {
+        return new Processor<String, String, String, String>() {
+            private ProcessorContext context;
+
+            @Override
+            public void init(ProcessorContext<String, String> context) {
+                this.context = context;
+            }
+
+            @Override
+            public void process(Record<String, String> record) {
+                log.info("[{}] record {}-{}, partition : {}", label, record.key(), record.value(), this.context.recordMetadata()
+                    .orElseThrow().partition());
+
+                this.context.forward(record);
+            }
+        };
+    }
+}
+
+@Test
+public void repartition() throws InterruptedException {
+	this.startStream();
+
+	this.kafkatemplate.send("input-topic", "voter1", "a");
+	this.kafkatemplate.send("input-topic", "voter2", "b");
+	this.kafkatemplate.send("input-topic", "voter3", "c");
+	this.kafkatemplate.send("input-topic", "voter4", "d");
+	this.kafkatemplate.send("input-topic", "voter5", "e");
+	this.kafkatemplate.send("input-topic", "voter6", "f");
+
+	Thread.sleep(2000);
+}
+/*
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter1-a, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter2-b, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter3-c, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter4-d, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter5-e, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [before] record voter6-f, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter1-a, partition : 0
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter4-d, partition : 2
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter2-b, partition : 3
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter3-c, partition : 4
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter6-f, partition : 4
+INFO 83594 --- [-StreamThread-1] c.w.k.s.s.t.StatelessTransforms          : [after] record voter5-e, partition : 6
+ */
+```  
+
+
+#### selectKey
+`KStream.selectKey()` 는 레코드의 새로운 키를 설정하는 연산이다. 
+기존 키를 변경하여 데이터를 재분배하거나, 이후 그룹화 및 집계 연산을 준비할 떄 사용할 수 있다. 
+`selectKey` 연산은 `map((key, value) -> KeyValue.pair(newKey, vlaue))` 와 동일한 연산이다.  
+
+키를 변경하는 만큼 `map`, `flatMap` 등 처럼 키를 변경 할 수 있는 연산들과 동일하게 
+`repartition` 에 대한 주의가 필요하다. 
+해당 연산 수행 후 `grouping` 혹은 `joining` 연산을 수행하면 `repartition` 이 발생한다.  
+
+```
+KStream -> KStream
+```  
+
+소개할 예제는 레코드의 값이 `a` 인 경우 키를 `<기존 키>-2` 와 같이 변경하는 흐름이다.  
+
+.. 그림 .. 
+
+```java
+public void selectKey(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic");
+
+    inputStream.selectKey((key, value) -> {
+
+        if ("a".equals(value)) {
+            return key + "-2";
+        }
+
+        return key;
+    }).to("output-result-topic");
+}
+
+@Test
+public void selectKey() {
+	this.statelessTransforms.selectKey(this.streamsBuilder);
+	this.startStream();
+
+	TestInputTopic<String, String> inputTopic = this.topologyTestDriver.createInputTopic("input-topic", this.stringSerde.serializer(), this.stringSerde.serializer());
+	TestOutputTopic<String, String> outputResultTopic = this.topologyTestDriver.createOutputTopic("output-result-topic", this.stringSerde.deserializer(), this.stringSerde.deserializer());
+
+	inputTopic.pipeInput("voter1", "a", 1L);
+	inputTopic.pipeInput("voter2", "b", 2L);
+	inputTopic.pipeInput("voter3", "c", 3L);
+
+	inputTopic.pipeInput("voter4", "a", 5L);
+
+	inputTopic.pipeInput("voter5", "a", 10L);
+	inputTopic.pipeInput("voter5", "b", 18L);
+	inputTopic.pipeInput("voter6", "c", 30L);
+	inputTopic.pipeInput("voter6", "d", 40L);
+
+	List<KeyValue<String, String>> outputResult = outputResultTopic.readKeyValuesToList();
+
+	assertThat(outputResult, hasSize(8));
+	assertThat(outputResult.get(0), is(KeyValue.pair("voter1-2", "a")));
+	assertThat(outputResult.get(1), is(KeyValue.pair("voter2", "b")));
+	assertThat(outputResult.get(2), is(KeyValue.pair("voter3", "c")));
+	assertThat(outputResult.get(3), is(KeyValue.pair("voter4-2", "a")));
+	assertThat(outputResult.get(4), is(KeyValue.pair("voter5-2", "a")));
+	assertThat(outputResult.get(5), is(KeyValue.pair("voter5", "b")));
+	assertThat(outputResult.get(6), is(KeyValue.pair("voter6", "c")));
+	assertThat(outputResult.get(7), is(KeyValue.pair("voter6", "d")));
+}
+```  
+
+
+
+
+
+---  
+## Reference
+[Stateless transformations](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#stateless-transformations)  
+
+
+
