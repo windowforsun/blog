@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Stateless Transformations"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams Stateless Transformations 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,8 @@ tags:
     - Practice
     - Kafka
     - Kafka Streams
+    - Stateless Transformations
+    - Stateful Transformations
 toc: true
 use_math: true
 ---  
