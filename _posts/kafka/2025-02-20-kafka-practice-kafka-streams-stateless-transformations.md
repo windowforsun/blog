@@ -65,7 +65,9 @@ KStream -> KStream[]
 `a`, `b` 문자를 모두 포함하지 않는 경우로 구성돼있다. 
 이를 그림으로 도식화하면 아래와 같다.  
 
-.. 그림 .. 
+
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-1.drawio.png)
+
 
 코드 구현 예시와 이를 검증하는 테스트 코드는 아래와 같다.  
 
@@ -138,7 +140,7 @@ KTable -> KTable
 `b` 문자열을 포함하는 경우에는 테이블형 결과 토픽으로 넘기게 된다. 
 이를 도식화하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-2.drawio.png)
 
 코드 구현 예시와 이를 검증하는 테스트 코드는 아래와 같다.
 
@@ -207,7 +209,7 @@ KTable -> KTable
 `b` 문자열을 포함하지 않는 경우 테이블형 결과 토픽으로 넘기게 된다.
 이를 도식화하면 아래와 같다.
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-3.drawio.png)
 
 코드 구현 예시와 이를 검증하는 테스트 코드는 아래와 같다.  
 
@@ -282,7 +284,7 @@ KStream -> KStream
 새로운 레코드를 만들어 총 2개읠 레코드를 반환한다.  
 이를 도식화 하면 아래와 같다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-4.drawio.png)
 
 ```java
 public void flatMap(StreamsBuilder streamsBuilder) {
@@ -352,7 +354,7 @@ KStream -> KStream
 `flatMapValues` 는 값만 추가하면 키는 변경없이 동일한 키로 사용된다. 
 이를 도식화 하면 아래와 같다.
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-5.drawio.png)
 
 ```java
 public void flatMapValues(StreamsBuilder streamsBuilder) {
@@ -424,7 +426,7 @@ KTable -> void
 로깅하는 예제이다. 
 이를 도식화 하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-6.drawio.png)
 
 ```java
 public void foreach(StreamsBuilder streamsBuilder) {
@@ -493,7 +495,7 @@ KStream -> KGroupedStream
 그룹화된 키별 레코드의 수를 `count` 한 결과를 토픽으로 보내는 흐름이다. 
 이를 도식화하면 아래와 같다. 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-7.drawio.png)
 
 ```java
 public void groupByKey(StreamsBuilder streamsBuilder) {
@@ -565,7 +567,7 @@ KTable -> KGroupedTable
 그리고 값을 기준으로 그룹화된 각 `count` 값을 결과로 전송하는 흐름이다. 
 이를 도식화 하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-8.drawio.png)
 
 ```java
 public void groupBy(StreamsBuilder streamsBuilder) {
@@ -674,7 +676,7 @@ CogroupedKStream -> CogroupedKStream
 결과 토픽으로 전송하는 흐름이다. 
 이를 도식화하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-9.drawio.png)
 
 ```java
 public void cogroup(StreamsBuilder streamsBuilder) {
@@ -754,7 +756,7 @@ KStream -> KStream
 소개할 예제는 레코드의 값이 `a` 인 경우 키를 `<기존 키>-2` 와 같이 변경해 결과로 보내게 된다. 
 이를 도식화 하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-10.drawio.png)
 
 ```java
 public void map(StreamsBuilder streamsBuilder) {
@@ -816,7 +818,7 @@ KTable -> KTable
 소개할 예제는 레코드의 값이 `a` 인 경우 이를 `aa` 와 같이 값만 변경해 결과 토픽으로 보내는 흐름이다. 
 이를 도식화하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-11.drawio.png)
 
 ```java
 public void mapValues(StreamsBuilder streamsBuilder) {
@@ -880,7 +882,7 @@ KStream -> KStream
 소개할 예제는 2개의 스트림을 `merge` 를 사용해 하나의 스트림으로 구성해 이를 결과 토픽으로 보내는 흐름이다. 
 이를 도식화하면 아래와 같다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-12.drawio.png)
 
 ```java
 public void merge(StreamsBuilder streamsBuilder) {
@@ -949,7 +951,7 @@ KStream -> KStream
 `mapValues` 로 레코드의 값을 수정 후 이를 다시 `peek` 으로 로깅을 수행하는 흐름이다. 
 이를 도식화 하면 아래와 같다.  
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-13.drawio.png)
 
 ```java
 public void peek(StreamsBuilder streamsBuilder) {
@@ -1016,7 +1018,7 @@ KStream -> KStream
 콘솔에 출력하는 예제이다.  
 
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-14.drawio.png)
 
 ```java
 public void print(StreamsBuilder streamsBuilder) {
@@ -1082,7 +1084,7 @@ KStream -> KStream
 소개할 예제는 입력 스트림으로 들어오는 레코드를 `Processor API` 를 사용해서 레코드의 `key-value` 와 파티션 번호를 로그로 남긴다. 
 그리고 `repartition()` 을 호출해 강제로 트리거 시킨 후 다시 `Processor API` 를 통해 동일한 로그를 찍어 파티션이 어떻게 변경됐는지 확인 한다. 
 
-.. 그림 ..
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-15.drawio.png)
 
 ```java
 public void repartition(StreamsBuilder streamsBuilder) {
@@ -1168,7 +1170,7 @@ KStream -> KStream
 
 소개할 예제는 레코드의 값이 `a` 인 경우 키를 `<기존 키>-2` 와 같이 변경하는 흐름이다.  
 
-.. 그림 .. 
+![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateless-transformation-16.drawio.png)
 
 ```java
 public void selectKey(StreamsBuilder streamsBuilder) {
