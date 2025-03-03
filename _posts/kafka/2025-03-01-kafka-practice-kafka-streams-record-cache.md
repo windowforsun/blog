@@ -35,3 +35,16 @@ use_math: true
 `Kafka Streams` 에서는 이러한 `Record Cache` 를 위해 상태 저장소의 최대 캐시 크기를 지정하는 `statestore.cache.max.bytes` 와 
 캐시의 `flush` 시간을 지정하는 `commit.interval.ms` 설정 값을 제공한다. 
 `Record Cache` 의 실제 특성은 `Streams DSL` 과 `Processor API` 에서 약간 차이가 있어 구분해서 설명한다.  
+
+
+### Record caches in Streams DSL
+`Streams DSL` 에서는 `Topology` 인스턴스에 대한 `Record Cache` 의 전체 메모리 크기를 지정할 수 있다. 
+이렇게 설정된 전체 메모리 크기는 아래와 같은 `KTable` 인스턴스에서 사용된다. 
+
+- Source KTable : `StreamsBuilder.table()`, `StreamsBuilder.globalTable()` 을 통해 생성된 `KTable` 인스턴스
+- Aggregation KTable : `Aggregating` 연산의 결과로 생성된 `KTable` 인스턴스
+
+이런 `KTable` 인스턴스에서 `Record Cache` 는 아래와 같은 용도로 사용된다.  
+
+- 내부 캐싱 및 출력 레코드 압축 : 내부 상태 저장소에 기록되기 전에 출력 레코드를 캐싱하고 압축한다. 
+- 다운스트림으로 전달되기 전에 레코드 캐싱 및 압축 : 상태 프로세서 노드에서 다운 스트림으로 전달되기 전의 레코드를 캐싱하고 압축한다.  
