@@ -43,7 +43,7 @@ use_math: true
 
 ### Stateless Transformations
 각 `Transformation` 의 사용 예시를 보며 사용했을 때 스트림의 데이터가 어떤식으로 변환이 되는지 알아본다. 
-전체 코드 내용은 [여기]()
+전체 코드 내용은 [여기](https://github.com/windowforsun/kafka-streams-stateless-transformation-exam)
 에서 확인 가능하다.  
 
 #### branch
