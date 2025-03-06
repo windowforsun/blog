@@ -77,3 +77,24 @@ streamsConfiguration.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 10 * 1
 하지만 `Record Cache` 의 특성을 수행되는 동작들은 모두 클라이언트 애플리케이션내에서 이뤄진다. 
 즉 `Kafka Broker` 와는 상호작용은 수행되지 않는 다는 의미이다. 
 이후 `Record Cache` 가 조건에 의해서 `flush` 되면 `<K1, V2>` 레코드는 다운스트림으로 전달되고 로컬 상태 저장소에도 기록된다.  
+
+`Record Cache` 의 `flush` 조건은 `commit.interval.ms` 또는 `statestore.cache.max.bytes` 중 먼저 값을 초과하는 경우 
+발생해, 상태 저장소에 저장되고 다운스트림으로 전달된다. 
+두 설정값은 모두 `Topology` 별 전역 설정값으로, 개별 `Processor Node` 별 설정은 불가하다.  
+
+만약 `Record Cache` 비활성화가 필요하다면 캐시 크기를 `0` 으로 설정해 가능하다. 
+`Kafka Streams` 에서는 기본으로 `Record Cache` 가 활성화 돼있다. 
+
+```java
+Properties streamsConfiguration = new Properties();
+streamsConfiguration.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0L);
+```  
+
+`Record Cache` 의 시간을 제한하고 싶을 경우 `commit.interval.ms` 설정으로 `commit` 간격을 조절해 가능하다. 
+기본 값은 `30s` 이다.  
+
+```java
+Properties streamsConfiguration = new Properties();
+streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1000);
+```  
+
