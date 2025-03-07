@@ -98,3 +98,33 @@ Properties streamsConfiguration = new Properties();
 streamsConfiguration.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 1000);
 ```  
 
+
+### Record caches in Processor API
+`Kafka Streams` 의 `Processor API` 또한 `Record Caches` 에 대한 설정은`Topology` 기준으로 가능하다. 
+하지만 앞서 알아본 `Streams DSL` 의 `Record Caches` 와는 다른 특징이 있는데, 
+`Processor API` 에서는 다운스트림으로 전달되는 출력 레코드는 캐시하거나 압축하지 않는 다는 점이다. 
+이는 다운스트림은 `Record Cache` 가 활성화 돼있더라도 모든 레코드 혹은 변경사항을 확인 할 수 있고, 
+`Record Cache` 에 영향을 받는 것은 상태 저장소만 해당된다. 
+이렇게 `Processor API` 에서 `Record Cache` 를 사용하면 스트림 처리의 정확성은 보다 더 확보하면서, 
+상태 저장소에 대한 성능을 최적화 할 수 있다.  
+
+`Processor API` 에서는 `Streams DSL` 에서 소개한 설정과 더불어 아래와 같이 `withCachingEnabled()` 을 호출해야 캐싱이 활성화 된다.  
+
+```java
+StoreBuilder countStoreBuilder =
+  Stores.keyValueStoreBuilder(
+    Stores.persistentKeyValueStore("my-store"),
+    Serdes.String(),
+    Serdes.Long())
+  .withCachingEnabled();
+```  
+
+
+
+
+---  
+## Reference
+[Kafka Streams Memory Management for Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/memory-mgmt.html#record-caches-in-the-dsl)  
+
+
+
