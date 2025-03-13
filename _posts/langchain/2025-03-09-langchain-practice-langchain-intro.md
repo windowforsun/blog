@@ -57,3 +57,14 @@ use_math: true
 #### Tools
 `LangChain` 은 계산기, 검색 엔진, API 호출 등의 다양한 외부 도구와 휩게 연동할 수 있도록 설계되어 있다. 
 이를 활용해 단순한 텍스트 응답을 넘어 더욱 복잡한 작업을 수행할 수 있다.  
+
+
+### Architecture
+`LangChain` 은 아래와 같은 여러 패키지로 구성된 프레임워크이다. 
+
+![그림 1]({{site.baseurl}}/img/langchain/langchain-intro-1.svg)
+
+
+#### langchain-core
+다양한 구성 요소에 대한 기본 추상화와 함께 구성하는 방법을 포함한다. 
+채팅 모델, 벡터 저장소, 도구 등의 핵심 구성 요소에 대한 인터페이스가 정의되어 있다. 
