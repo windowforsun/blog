@@ -68,3 +68,12 @@ use_math: true
 #### langchain-core
 다양한 구성 요소에 대한 기본 추상화와 함께 구성하는 방법을 포함한다. 
 채팅 모델, 벡터 저장소, 도구 등의 핵심 구성 요소에 대한 인터페이스가 정의되어 있다. 
+
+#### langchain
+주요 `LangChain` 패키지는 애플리케이션의 인지 아키텍터를 구성하는 `Chain` 과 `Retrieval` 전략을 포함한다. 
+
+### Integration Packages
+`langchain-openai`, `langchain-anthropics` 등 인기 있는 통합 기능들은 별도 패키지로 제공된다. 
+
+- 전체 페키지 목록 : https://python.langchain.com/docs/integrations/providers/
+- API Reference : https://python.langchain.com/api_reference/
