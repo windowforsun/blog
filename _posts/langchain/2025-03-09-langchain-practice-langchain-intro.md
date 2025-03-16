@@ -4,7 +4,7 @@ classes: wide
 title: "[LangChain] LangChain Introduction"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'LLM 을 활용한 애플리케이션 개발을 쉽게 할 수 있도록 도와주는 프레임워크인 Langchain 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -99,3 +99,22 @@ use_math: true
 그러므로 `LangGraph` 를 배포하는 경우 `LangGraph Platform` 을 사용하는 것이 좋다.  
 
 - langserve overview : https://python.langchain.com/docs/langserve/
+
+
+#### LangSmith
+개발자가 `LLM` 애플리케이션을 디버깅, 테스트, 평가, 모니터링할 수 있도록 지원하는 개발자 플랫폼이다.  
+
+- LangSmith overview : https://docs.smith.langchain.com/
+
+
+### Demo
+데모는 `LangChain` 의 몇가지 기본 기능을 사용하는 간단한 예시이다. 
+`LLM` 모델은 `Groq` 의 `llama3-8b-8192` 을 사용해 진행했다.  
+
+우선 `LangChain` 을 사용하기 위해 아래 패키지를 설치해 준다.  
+
+```bash
+$ pip install langchain
+
+$ pip install -qU "langchain[groq]"
+```
