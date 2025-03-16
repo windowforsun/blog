@@ -77,3 +77,25 @@ use_math: true
 
 - 전체 페키지 목록 : https://python.langchain.com/docs/integrations/providers/
 - API Reference : https://python.langchain.com/api_reference/
+
+#### langchain-community
+`LangChain` 커뮤니티에서 유지 미 관리하는 서드파티 통합 기능을 포함하고 있다. 
+중요한 패키지는 `Integration Packages` 에 분라돼 포함되어 있다. 
+채팅 모델, 벡터 저장소, 도구 등 다양한 구성 요소에 대한 통합 기능이 포함된다.  
+
+
+#### langgraph
+`LangChain` 을 확장하여, `Multi-Actor` 기반의 상태를 유지하는 애플리케이션을 구축하기 위한 패키지이다. 
+각 단계를 `Graph` 의 `Node` 와 `Edge` 로 모델링하는 방식으로 설계돼 있다. 
+일반적인 에이전트 구현을 위한 고수준 인터페이스와 사용자 맞춤형 흐름을 구성할 수 있는 저수준 인터페이스를 제공한다. 
+
+- langgraph overview : https://langchain-ai.github.io/langgraph/concepts/high_level/#core-principles
+
+#### langserve
+`LangChain` 체인을 `REST API` 로 배포할 수 있도록 도와주는 패키지이다. 
+이를 통해 프로덕션 환경에서 실행 가능한 `API` 를 손쉽게 설정할 수 있다.  
+
+주로 간단한 `Runnable` 을 배포하고 `langchain-core` 의 기본 요소들과 함께 사용하도록 설계돼있다. 
+그러므로 `LangGraph` 를 배포하는 경우 `LangGraph Platform` 을 사용하는 것이 좋다.  
+
+- langserve overview : https://python.langchain.com/docs/langserve/
