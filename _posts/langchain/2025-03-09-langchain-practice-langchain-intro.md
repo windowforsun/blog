@@ -118,3 +118,48 @@ $ pip install langchain
 
 $ pip install -qU "langchain[groq]"
 ```
+
+```python
+# 기본적인 LLM 호출
+
+import os
+import getpass
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage, SystemMessage
+
+os.environ['GROQ_API_KEY'] = getpass.getpass('인증키 입력')
+
+model = init_chat_model("llama3-8b-8192", model_provider="groq")
+
+
+messages = [
+    SystemMessage("숫자의 제곱근을 구한다."),
+    HumanMessage("4")
+]
+
+response = model.invoke(messages)
+
+print(response.content)
+# The square root of 4 is 2.
+```  
+
+```python
+# 템플릿 및 체인 사용
+import os
+import getpass
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+
+os.environ['GROQ_API_KEY'] = getpass.getpass('인증키 입력')
+
+model = init_chat_model("llama3-8b-8192", model_provider="groq")
+
+prompt = ChatPromptTemplate.from_template("{num} 의 제곱근은 ?")
+
+chain = prompt | model | StrOutputParser()
+
+chain.invoke({"num": 4})
+# 4의 제곱근은 2입니다.
+```  
