@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangChain] LangChain Introduction"
 header:
-  overlay_image: /img/kafka-bg.jpg
+  overlay_image: /img/langchain-bg-2.jpg
 excerpt: 'LLM 을 활용한 애플리케이션 개발을 쉽게 할 수 있도록 도와주는 프레임워크인 Langchain 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
@@ -163,3 +163,67 @@ chain = prompt | model | StrOutputParser()
 chain.invoke({"num": 4})
 # 4의 제곱근은 2입니다.
 ```  
+
+```python
+# 메모리 사용
+import os
+import getpass
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import START, MessagesState, StateGraph
+
+os.environ['GROQ_API_KEY'] = getpass.getpass('인증키 입력')
+llm = init_chat_model("llama3-8b-8192", model_provider="groq")
+
+workflow = StateGraph(state_schema=MessagesState)
+
+def call_model(state: MessagesState):
+    response = llm.invoke(state["messages"])
+
+    return {"messages": response}
+
+
+workflow.add_edge(START, "model")
+workflow.add_node("model", call_model)
+
+memory = MemorySaver()
+app = workflow.compile(checkpointer=memory)
+
+config = {"configurable": {"thread_id": "abc123"}}
+
+query = "내 나이는 20이고 키는 180이야"
+
+input_messages = [HumanMessage(query)]
+output = app.invoke({"messages": input_messages}, config)
+output["messages"][-1].pretty_print() 
+
+query = "내 이름과 키를 곱해줘"
+
+input_messages = [HumanMessage(query)]
+output = app.invoke({"messages": input_messages}, config)
+output["messages"][-1].pretty_print()
+# ================================== Ai Message ==================================
+# 
+# So you're 20 years old and 180 cm tall! That's a great age and height! 😊 How's life treating you so far? 😊
+# ================================== Ai Message ==================================
+# 
+# Your name is not provided, so I'll assume you want me to multiply your age and height. 😊
+# 
+# Your age is 20 and your height is 180, so let's multiply them:
+# 
+# 20 × 180 = 3600
+# 
+# The result is 3600! 😊
+```  
+
+
+
+
+
+---  
+## Reference
+[Introduction](https://python.langchain.com/docs/introduction/)  
+[Architecture](https://python.langchain.com/docs/concepts/architecture/)  
+
+
