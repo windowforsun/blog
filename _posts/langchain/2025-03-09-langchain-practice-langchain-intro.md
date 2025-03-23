@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangChain] LangChain Introduction"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
+  overlay_image: /img/langchain-bg-2.png
 excerpt: 'LLM 을 활용한 애플리케이션 개발을 쉽게 할 수 있도록 도와주는 프레임워크인 Langchain 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
