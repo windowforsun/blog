@@ -73,3 +73,14 @@ dbus          89  0.0  0.0  10020  3564 ?        Ss   09:26   0:00 /usr/bin/dbus
 즉 `PID 1` 프로세스가 `Orphaned/Zombie` 프로세스 관리에 대한 역할이 부족하면 하위 프로세스 관리가 되지 않아, 
 불필요한 리소스가 사용될 수 있고, 과도하게 누적되면 시스템의 프로세스 테이블을 포화시켜 새로운 프로세스 생성을 방해할 수 있다.  
 
+
+### Container PID 1 Problem
+`Container` 환경(`Docker`, `Kubernetes`, ..) 에서는 `ENTRYPOINT(CMD)` 로 명시된 프로세스를 `PID 1` 으로 실행한다. 
+그리고 `Container` 에 전달하는 모든 `Signal` 은 해당 `PID 1` 프로세스에만 전달돼 종료를 시킬 수 있다. 
+이러한 이유로 컨체이너는 경량화 이미지를 사용해 단일 프로세스만 실행하는 경우가 많다.  
+
+하지만 몇가지 상황에서는 `PID 1` 프로세스가 정상적인 역할 수행을 하지 못해 문제가 발생할 수 있다.  
+
+전체 예제 코드는 [여기](https://github.com/windowforsun/docker-pid-1-problem-exam)
+에서 확인할 수 있다.  
+
