@@ -84,3 +84,94 @@ dbus          89  0.0  0.0  10020  3564 ?        Ss   09:26   0:00 /usr/bin/dbus
 전체 예제 코드는 [여기](https://github.com/windowforsun/docker-pid-1-problem-exam)
 에서 확인할 수 있다.  
 
+
+#### User App is PID 1
+컨테이너에서 실행할 애플리케이션을 `ENTRYPOINT` 혹은 `CMD` 로 지정해 `PID 1` 으로 실행하는 상황이다. 
+이렇게 사용할 경우 언어 레벨에서 시그널 이벤트 핸들러를 등록할 수 있기 때문에 단일 종료 시그널 등에 대한 처리는 정상적으로 전달되고 수행된다. 
+
+```java
+@Slf4j
+@SpringBootApplication
+public class ExamApplication {
+	public static void main(String... args) {
+		ConfigurableApplicationContext context = SpringApplication.run(ExamApplication.class, args);
+
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			// log.info("Received SIGTERM. Shutting down ..");
+			log.info("Received ShutdownHook. Shutting down ..");
+			context.close();
+		}));
+
+
+		Signal.handle(new Signal("TERM"), sig -> {
+			log.info("Received SIGTERM. cleanup ..");
+			context.close();
+			System.exit(0);
+		});
+
+		Signal.handle(new Signal("INT"), sig -> {
+			log.info("Received SIGINT. cleanup ..");
+			context.close();
+			System.exit(0);
+		});
+	}
+
+	@PreDestroy
+	public void onShutdown() {
+		log.info("do PreDestroy ..");
+	}
+}
+```  
+
+```dockerfile
+# Build stage
+FROM gradle:7.4.2-jdk17 AS build
+WORKDIR /app
+COPY build.gradle settings.gradle ./
+COPY src ./src
+RUN gradle build --no-daemon
+
+# Run stage
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Copy the jar file from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+# Run the jar file directly, causing PID 1 issue
+CMD ["java", "-jar", "app.jar"]
+```  
+
+위 내용으로 이미지를 빌드하고 컨테이너를 실행한다. 
+그리고 각 종료 시그널을 보내면 시그널 처리가 정상적으로 수행되기 때문에 시그널 이벤트를 정상적으로 받고 바로 종료처리가 되는 것을 확인할 수 있다.    
+
+```bash
+$ docker build -t pid-1-test-cmd-jar -f Dockerfile-cmd-jar .
+
+$ docker run --rm --name pid-1-test-cmd-jar pid-1-test-cmd-jar:latest
+
+.. PID 1 화인 ..
+$ docker exec -it pid-1-test-cmd-jar cat /proc/1/cmdline
+java-jarapp.jar
+
+.. SIGTERM ..
+$ kill -TERM $(ps aux | grep "[p]id-1-test-cmd-jar" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.873 seconds (process running for 2.194)
+INFO 1 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : Received SIGTERM. cleanup ..
+INFO 1 --- [SIGTERM handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 1 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 1 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+
+.. SIGINT ..
+$ kill -INT $(ps aux | grep "[p]id-1-test-cmd-jar" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.873 seconds (process running for 2.194)
+INFO 1 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : Received SIGINT. cleanup ..
+INFO 1 --- [ SIGINT handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 1 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 1 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+
+```  
