@@ -175,3 +175,71 @@ INFO 1 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received
 INFO 1 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
 
 ```  
+
+
+#### User Shell is PID 1
+사용자 쉘 스크립트를 `ENTRYPOINT` 혹은 `CMD` 로 지정해 `PID 1` 으로 지정한 경우 사용자 쉘은 
+`PID 1` 이 수행해야 할 역할에 대한 처리가 돼있지 않기 때문에 문제가 발생할 수 있다.  
+
+```dockerfile
+# Build stage
+FROM gradle:7.4.2-jdk17 AS build
+WORKDIR /app
+COPY build.gradle settings.gradle ./
+COPY src ./src
+RUN gradle build --no-daemon
+
+# Run stage
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Copy the jar file from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+COPY ./entrypoint.sh entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+# Run the jar file directly, causing PID 1 issue
+ENTRYPOINT ["/app/entrypoint.sh"]
+```  
+
+```shell
+#!/usr/bin/env bash
+
+java -jar app.jar
+```
+
+이는 주로 내부 `shell` 파일에 컨테이너 내부에서 초기화 작업이 필요한 경우 초기화 작업 수행 후 애플리케이션 실행이 필요한 경우 사용할 수 있다. 
+하지만 이때 `PID 1` 이 되는 프로세스는 `entrypoint.sh` 이 된다. 
+이미지로 빌드 후 컨테이너를 실행한 뒤 종료 시그널을 각 보내면 시그널을 정상적으로 받지 못하고, `SIGKILL` 시그널을 보내야 종료된다.  
+
+```bash
+$ docker build -t pid-1-test-entry-shell -f Dockerfile-entry-shell .
+
+$ docker run --rm --name pid-1-test-entry-shell pid-1-test-entry-shell:latest
+
+.. PID 1 화인 ..
+$ docker exec -it pid-1-test-entry-shell cat /proc/1/cmdline
+bash/app/entrypoint.sh
+
+.. SIGTERM ..
+$ kill -TERM $(ps aux | grep "[p]id-1-test-entry-shell" | awk '{print $2}')
+.. 반응 없음 ..
+
+.. SIGINT ..
+$ kill -INT $(ps aux | grep "[p]id-1-test-entry-shell" | awk '{print $2}')
+.. 반응 없음 ..
+
+.. SIGKILL ..
+$ kill -KILL $(ps aux | grep "[p]id-1-test-entry-shell" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.873 seconds (process running for 2.194)
+[1]    25077 killed     docker run --rm --name pid-1-test-entry-shell pid-1-test-entry-shell:latest
+```  
+
+앞서 언급한 것처럼 해당 컨테이너에 시그널을 보내면 `PID 1` 인 `entrypoint.sh` 가 받게 되는데 
+해당 쉘 스크립트에는 관련 처리가 돼있지 않기 때문에 자식 프로세스인 애플리케이션으로 시그널이 전달되지 않는 것이다.  
+
