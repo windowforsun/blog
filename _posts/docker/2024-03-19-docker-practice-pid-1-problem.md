@@ -243,3 +243,81 @@ INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started 
 앞서 언급한 것처럼 해당 컨테이너에 시그널을 보내면 `PID 1` 인 `entrypoint.sh` 가 받게 되는데 
 해당 쉘 스크립트에는 관련 처리가 돼있지 않기 때문에 자식 프로세스인 애플리케이션으로 시그널이 전달되지 않는 것이다.  
 
+
+### Dumb-init
+[Dumb-init](https://github.com/Yelp/dumb-init)
+은 컨테이너 환경에서 발생할 수 있는 이러한 문제를 해결하기 위해 `Yelp` 에서 만든 도구로
+컨테이너 환경에서 사용하기 위해 설계된 경량 `init` 시스템이다. 
+컨테이너 내에서 `PID 1` 으로 실행해 초기화 시스템역할을 한다. 
+그리고 일반적인 운영체제의 `init` 시스템을 대체하여 컨테이너에 특화된 시그널 처리, 좀비 프로세스 처리, 프로세스 그룹관리 등을 제공한다.  
+
+예제는 앞선 예제에서 `ENTRYPOINT` 에 사용자 쉘인 `entrypint.sh` 를 지정한 예제를 개선하는 방식으로 진행한다. 
+사용법은 복잡하지 않다. 
+우선 아래와 같이 `Dockerfile` 에서 `dumb-init` 다운로드/설치 명령을 추가하고, 
+`ENTRYPOINT` 의 명령에 `dump-init` 구문을 추가한다.  
+
+```dockerfile
+# Build stage
+FROM gradle:7.4.2-jdk17 AS build
+WORKDIR /app
+COPY build.gradle settings.gradle ./
+COPY src ./src
+RUN gradle build --no-daemon
+
+# Run stage
+FROM openjdk:17-jdk-slim
+
+# Install dumb-init
+RUN apt-get update && apt-get install -y dumb-init
+
+WORKDIR /app
+
+# Copy the jar file from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+COPY ./entrypoint.sh entrypoint.sh
+RUN chmod +x entrypoint.sh
+
+# Use dumb-init as the entry point
+ENTRYPOINT ["/usr/bin/dumb-init", "--", "/app/entrypoint-exec.sh"]
+```  
+
+그리고 쉘 스크립트에서 애플리케이션을 실행할 때 앞에 아래와 같이 `exec` 구문을 추가한다.  
+
+```shell
+#!/usr/bin/env bash
+
+exec java -jar app.jar
+```  
+
+이제 이미지를 빌드한 뒤 컨테이너를 실행하고 시그널을 각 보내면, 
+아래와 같이 모두 정상 처리가 되는 것을 확인할 수 있다.  
+
+```bash
+$ docker build -t pid-1-test-dumb-init -f Dockerfile-dumb-init .
+
+$ docker run --rm --name pid-1-test-dumb-init pid-1-test-dumb-init:latest
+
+.. PID 1 화인 ..
+$ docker exec -it pid-1-test-dumb-init cat /proc/1/cmdline
+/usr/bin/dumb-init--/app/entrypoint-exec.sh
+
+.. SIGTERM ..
+$ kill -TERM $(ps aux | grep "[p]id-1-test-dumb-init" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.128 seconds (process running for 1.355)
+INFO 7 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : Received SIGTERM. cleanup ..
+INFO 7 --- [SIGTERM handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 7 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 7 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+
+.. SIGINT ..
+$ kill -INT $(ps aux | grep "[p]id-1-test-dumb-init" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.166 seconds (process running for 1.379)
+INFO 7 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : Received SIGINT. cleanup ..
+INFO 7 --- [ SIGINT handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 7 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 7 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+```  
