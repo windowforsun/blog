@@ -321,3 +321,95 @@ INFO 7 --- [ SIGINT handler] o.apache.catalina.core.StandardService   : Stopping
 INFO 7 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
 INFO 7 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
 ```  
+
+### tini
+[tini](https://github.com/krallin/tini)
+또한 `dumb-init` 과 마찬가지로 컨테이너 환경을 위해 설계된 경량화된 `init` 시스템이다. 
+기능과 목적은 컨테이너 내에서 `PID 1` 으로 실행돼 초기화 시스템 역할을 하고, 
+일반적인 운영체제의 `init` 시스템을 대체해 컨테이너 특화된 기능을 제공, 
+시그널 처리, 좀비 프로세스 처리, 다닝ㄹ 자식 프로세스 실행 등 대부분 동일한 기능을 제공한다.  
+
+사용법도 `dumb-init` 과 큰 차이가 없다. 
+우선 `Dockerfile` 에 `tini` 다운로드/설치 구문을 추가하고, 
+`ENTRYPOINT` 의 명령에 `tini` 구문을 추가한다.  
+
+```dockerfile
+# Build stage
+FROM gradle:7.4.2-jdk17 AS build
+WORKDIR /app
+COPY build.gradle settings.gradle ./
+COPY src ./src
+RUN gradle build --no-daemon
+
+# Run stage
+FROM openjdk:17-jdk-slim
+
+# Install tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-arm64 /tini
+RUN chmod +x /tini
+
+WORKDIR /app
+
+# Copy the jar file from the build stage
+COPY --from=build /app/build/libs/*.jar app.jar
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+COPY ./entrypoint-exec.sh entrypoint-exec.sh
+RUN chmod +x entrypoint-exec.sh
+
+
+# Use tini as the entry point
+ENTRYPOINT ["/tini", "--", "/app/entrypoint-exec.sh"]
+```  
+
+그리고 쉘 스크림트에도 동일하게 앞에 `exec` 를 붙여준다.  
+
+```shell
+#!/usr/bin/env bash
+
+exec java -jar app.jar
+```  
+
+이미지 빌드 후 컨테이너를 실행해 시그널을 전송해 보면 모두 정상적으로 처리하는 것을 확인 할 수 있다.  
+
+```bash
+$ docker build -t pid-1-test-tini -f Dockerfile-tini .
+
+$ docker run --rm --name pid-1-test-tini pid-1-test-tini:latest
+
+.. PID 1 화인 ..
+$ docker exec -it pid-1-test-tini cat /proc/1/cmdline
+/tini--/app/entrypoint-exec.sh
+
+.. SIGTERM ..
+$ kill -TERM $(ps aux | grep "[p]id-1-test-tini" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.16 seconds (process running for 1.392)
+INFO 7 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : Received SIGTERM. cleanup ..
+INFO 7 --- [SIGTERM handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 7 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 7 --- [SIGTERM handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+
+.. SIGINT ..
+$ kill -INT $(ps aux | grep "[p]id-1-test-tini" | awk '{print $2}')
+INFO 7 --- [           main] c.w.pid1.problem.ExamApplication         : Started ExamApplication in 1.145 seconds (process running for 1.378)
+INFO 7 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : Received SIGINT. cleanup ..
+INFO 7 --- [ SIGINT handler] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+INFO 7 --- [       Thread-1] c.w.pid1.problem.ExamApplication         : Received ShutdownHook. Shutting down ..
+INFO 7 --- [ SIGINT handler] c.w.pid1.problem.ExamApplication         : do PreDestroy ..
+```  
+
+
+
+
+---
+## Reference
+[krallin/tini](https://github.com/krallin/tini)  
+[Yelp/dumb-init](https://github.com/Yelp/dumb-init)  
+[Introducing dumb-init, an init system for Docker containers](https://engineeringblog.yelp.com/2016/01/dumb-init-an-init-for-docker.html)  
+[7 Google best practices for building containers](https://cloud.google.com/blog/products/containers-kubernetes/7-best-practices-for-building-containers?hl=en)  
+[Zombie Processes in Operating Systems](https://www.baeldung.com/cs/process-lifecycle-zombie-state)  
+[Zombie and Orphan Process in OS](https://www.scaler.com/topics/operating-system/zombie-and-orphan-process-in-os/)  
+
