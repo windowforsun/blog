@@ -37,3 +37,140 @@ use_math: true
 
 이후 진행되는 데모의 전체 코드는 [여기]()
 에서 확인할 수 있다.  
+
+### Full Configuration
+데모 구성에 필요한 모든 구성은 `docker-compose` 를 기반으로 구축한다. 
+템플릿 내용은 아래와 같다.  
+
+```yaml
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: confluentinc/cp-zookeeper:7.0.16
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+
+  kafka:
+    container_name: myKafka
+    image: confluentinc/cp-kafka:7.0.16
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "29092:29092"
+
+  schemaRegistry:
+    container_name: schemaRegistry
+    image: confluentinc/cp-schema-registry:7.0.16
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL : 'zookeeper:2181'
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'PLAINTEXT://kafka:9092'
+      SCHEMA_REGISTRY_HOST_NAME: schemaRegistry
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+      SCHEMA_REGISTRY_DEBUG: 'true'
+    depends_on:
+      - zookeeper
+      - kafka
+
+  debezium-avro-source:
+    container_name: debezium-avro-source
+    build:
+      context: ./debezium-avro-source
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_GROUP_ID: 'debezium-avro-source'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_CONFIG_STORAGE_TOPIC: 'debezium-avro-source-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'debezium-avro-source-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'debezium-avro-source-status'
+      CONNECT_KEY_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
+      CONNECT_VALUE_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schemaRegistry:8081'
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schemaRegistry:8081'
+      CONNECT_REST_ADVERTISED_HOST_NAME: debezium-avro-source
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+    depends_on:
+      - zookeeper
+      - kafka
+      - schemaRegistry
+
+  es-avro-sink:
+    container_name: es-avro-sink
+    build:
+      context: ./es-avro-sink
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8083"
+    environment:
+      CONNECT_GROUP_ID: 'es-avro-sink'
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_PORT: 8083
+      CONNECT_CONFIG_STORAGE_TOPIC: 'es-avro-sink-config'
+      CONNECT_OFFSET_STORAGE_TOPIC: 'es-avro-sink-offset'
+      CONNECT_STATUS_STORAGE_TOPIC: 'es-avro-sink-status'
+      CONNECT_KEY_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
+      CONNECT_VALUE_CONVERTER: 'io.confluent.connect.avro.AvroConverter'
+      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schemaRegistry:8081'
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schemaRegistry:8081'
+      CONNECT_REST_ADVERTISED_HOST_NAME: es-avro-sink
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+    depends_on:
+      - zookeeper
+      - kafka
+      - schemaRegistry
+
+  es-single:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.0
+    container_name: es-single
+    environment:
+      - xpack.security.enabled=false
+      - node.name=es-single
+      - cluster.name=es-single
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+
+  originDB:
+    container_name: originDB
+    image: mysql:8.0.29
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf
+      - ./init-sql/:/docker-entrypoint-initdb.d/
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpw
+```  
+
+데모 진행을 위해 아래 명령으로 전체 구성을 실행한다.  
+
+```bash
+$ docker-compose -f docker/docker-compose.yaml up --build
+```  
