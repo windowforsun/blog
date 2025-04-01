@@ -174,3 +174,48 @@ services:
 ```bash
 $ docker-compose -f docker/docker-compose.yaml up --build
 ```  
+
+### Debezium Avro Source Connector
+`Kafka Connector` 에서 `Avro` 및 `Schema Registry` 를 사용하고자 할때, 
+활성화 및 필요한 설정은 아래와 같다.  
+
+
+항목|Schema Registry 사용|Schema Registry 미사용
+---|---|---
+데이터 포맷|Avro|JSON, String 등
+key.converter|설정|io.confluent.connect.avro.AvroConverter|org.apache.kafka.connect.storage.StringConverter, org.apache.kafka.connect.json.JsonConverter 등
+value.converter 설정|io.confluent.connect.avro.AvroConverter|org.apache.kafka.connect.storage.StringConverter, org.apache.kafka.connect.json.JsonConverter 등
+schema.registry.url 설정|필요 (http://localhost:8081)|불필요
+스키마 포함 여부 (schemas.enable)|true (스키마 포함)|false (스키마 미포함)
+
+`Debezium Avro Source Connector` 를 실행하기 위한 설정은 아래와 같다.  
+
+```json
+{
+  "name": "debezium.avro.source",
+  "config": {
+    "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+    "tasks.max": "1",
+    "topic.prefix": "debezium.avro.source",
+    "database.hostname": "originDB",
+    "database.port": "3306",
+    "database.user": "root",
+    "database.password": "root",
+    "database.server.id": "12223232",
+    "database.allowPublicKeyRetrieval": "true",
+    "database.server.name": "originDB",
+    "database.include.list": "user",
+    "database.serverTimezone": "UTC",
+    "table.include.list": "user.user_account",
+    "database.characterEncoding": "utf8",
+    "database.useUnicode": "true",
+    "schema.history.internal.kafka.bootstrap.servers": "kafka:9092",
+    "schema.history.internal.kafka.topic": "debezium.avro.source.history",
+    "include.schema.changes": "true",
+    "key.converter": "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url": "http://schemaRegistry:8081",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schemaRegistry:8081"
+  }
+}
+```  
