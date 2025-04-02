@@ -219,3 +219,62 @@ schema.registry.url 설정|필요 (http://localhost:8081)|불필요
   }
 }
 ```  
+
+커넥터를 실행하고 `Kafka Topic` 및 `Schema Registry` 를 확인하면 아래와 같다.  
+
+```bash
+# 커넥터 실행
+$ curl -X POST -H "Content-Type: application/json" \
+--data @docker/connector-config/debezium-avro-source.json \
+http://localhost:8083/connectors | jq
+
+# kafka topics
+$ docker exec -it myKafka kafka-topics \
+--bootstrap-server localhost:9092 \
+--list
+__consumer_offsets
+_schemas
+debezium-avro-source-config
+debezium-avro-source-offset
+debezium-avro-source-status
+debezium.avro.source
+debezium.avro.source.history
+debezium.avro.source.user.user_account
+
+# kafka topic message
+$ docker exec -it myKafka kafka-console-consumer \
+--bootstrap-server localhost:9092 \
+--topic debezium.avro.source.user.user_account \
+--from-beginning
+jack2.6.0.Final
+mysql(debezium.avro.source�ܼ��lasuser�Բ┳����۠��0user_accountbinlog.000002�r�༥�e���┳����բ��0
+
+# schema registry subjects
+$ curl -X GET http://localhost:8081/subjects | jq
+[
+  "debezium.avro.source-key",
+  "debezium.avro.source-value",
+  "debezium.avro.source.user.user_account-key",
+  "debezium.avro.source.user.user_account-value",
+]
+
+# cdc schema detail key and value
+$ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_account-key/versions/1 | jq
+{
+  "subject": "debezium.avro.source.user.user_account-key",
+  "version": 1,
+  "id": 3,
+  "schema": "{\"type\":\"record\",\"name\":\"Key\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"}],\"connect.name\":\"debezium.avro.source.user.user_account.Key\"}"
+}
+
+$ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_account-value/versions/1 | jq
+{
+  "subject": "debezium.avro.source.user.user_account-value",
+  "version": 1,
+  "id": 4,
+  "schema": "{\"type\":\"record\",\"name\":\"Envelope\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"before\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"Value\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"},{\"name\":\"name\",\"type\":[\"null\",\"string\"],\"default\":null}],\"connect.name\":\"debezium.avro.source.user.user_account.Value\"}],\"default\":null},{\"name\":\"after\",\"type\":[\"null\",\"Value\"],\"default\":null},{\"name\":\"source\",\"type\":{\"type\":\"record\",\"name\":\"Source\",\"namespace\":\"io.debezium.connector.mysql\",\"fields\":[{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"connector\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"ts_ms\",\"type\":\"long\"},{\"name\":\"snapshot\",\"type\":[{\"type\":\"string\",\"connect.version\":1,\"connect.parameters\":{\"allowed\":\"true,last,false,incremental\"},\"connect.default\":\"false\",\"connect.name\":\"io.debezium.data.Enum\"},\"null\"],\"default\":\"false\"},{\"name\":\"db\",\"type\":\"string\"},{\"name\":\"sequence\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"ts_us\",\"type\":\"long\"},{\"name\":\"ts_ns\",\"type\":\"long\"},{\"name\":\"table\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"server_id\",\"type\":\"long\"},{\"name\":\"gtid\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"file\",\"type\":\"string\"},{\"name\":\"pos\",\"type\":\"long\"},{\"name\":\"row\",\"type\":\"int\"},{\"name\":\"thread\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"query\",\"type\":[\"null\",\"string\"],\"default\":null}],\"connect.name\":\"io.debezium.connector.mysql.Source\"}},{\"name\":\"op\",\"type\":\"string\"},{\"name\":\"ts_ms\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"ts_us\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"ts_ns\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"transaction\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"block\",\"namespace\":\"event\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"total_order\",\"type\":\"long\"},{\"name\":\"data_collection_order\",\"type\":\"long\"}],\"connect.version\":1,\"connect.name\":\"event.block\"}],\"default\":null}],\"connect.version\":2,\"connect.name\":\"debezium.avro.source.user.user_account.Envelope\"}"
+}
+
+```  
+
+`Debezium Avro Source Connector` 에서 `Kafka` 로 `Avro` 타입으로 메시지를 전송하고 메시지와 매핑되는 스키마를 `Schema Registry` 에 등록한 것을 볼 수 있다.  
