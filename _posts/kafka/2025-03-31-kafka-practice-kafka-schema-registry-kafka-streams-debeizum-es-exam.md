@@ -278,3 +278,31 @@ $ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_acco
 ```  
 
 `Debezium Avro Source Connector` 에서 `Kafka` 로 `Avro` 타입으로 메시지를 전송하고 메시지와 매핑되는 스키마를 `Schema Registry` 에 등록한 것을 볼 수 있다.  
+
+### Elasticsearch Avro Sink Connector 
+`Elasticsearch` 커넥터도 앞서 `Debezium Avro Source Connector` 와 동일하게 `Avro` 및 `Schema Registry` 설정을 추가하면, 
+`Avro` 메시지를 `Elasticsearch` 로 저장할 수 있다. 
+설정은 아래와 같다.  
+
+```json
+{
+  "name": "es-avro-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "tasks.max": "1",
+    "topics": "debezium.avro.source.user.user_account",
+    "connection.url": "http://es-single:9200",
+    "connection.username" : "root",
+    "connection.password" : "root",
+    "transforms": "InsertTimestamp",
+    "transforms.InsertTimestamp.type": "org.apache.kafka.connect.transforms.InsertField$Value",
+    "transforms.InsertTimestamp.timestamp.field": "timestamp",
+    "type.name" :"_doc",
+    "key.ignore" : "true",
+    "key.converter" : "io.confluent.connect.avro.AvroConverter",
+    "key.converter.schema.registry.url" : "http://schemaRegistry:8081",
+    "value.converter" : "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url" : "http://schemaRegistry:8081"
+  }
+}
+```  
