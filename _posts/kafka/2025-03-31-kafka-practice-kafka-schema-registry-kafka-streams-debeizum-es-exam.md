@@ -306,3 +306,83 @@ $ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_acco
   }
 }
 ```  
+
+커넥터를 실행하고, `Elasticsearch` 에 적재된 데이터를 확인하면 아래와 같다.  
+
+```bash
+# 커넥터 실행
+$ curl -X POST -H "Content-Type: application/json" \
+--data @docker/connector-config/es-avro-sink.json \
+http://localhost:8084/connectors | jq
+
+# elasticsearch index
+$ curl -X GET http://localhost:9200/_aliases\?pretty\=true
+{
+  "debezium.avro.source.user.user_account" : {
+    "aliases" : { }
+  }
+}
+
+# elasticsearch data
+$ curl -X GET http://localhost:9200/debezium.avro.source.user.user_account/_search\?pretty | jq
+{
+  "took": 12,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 1,
+      "relation": "eq"
+    },
+    "max_score": 1,
+    "hits": [
+      {
+        "_index": "debezium.avro.source.user.user_account",
+        "_type": "_doc",
+        "_id": "debezium.avro.source.user.user_account+0+0",
+        "_score": 1,
+        "_source": {
+          "before": null,
+          "after": {
+            "uid": 1,
+            "name": "jack"
+          },
+          "source": {
+            "version": "2.6.0.Final",
+            "connector": "mysql",
+            "name": "debezium.avro.source",
+            "ts_ms": 1740306356000,
+            "snapshot": "last",
+            "db": "user",
+            "sequence": null,
+            "ts_us": 1740306356000000,
+            "ts_ns": 1740306356000000000,
+            "table": "user_account",
+            "server_id": 0,
+            "gtid": null,
+            "file": "binlog.000002",
+            "pos": 157,
+            "row": 0,
+            "thread": null,
+            "query": null
+          },
+          "op": "r",
+          "ts_ms": 1740306356262,
+          "ts_us": 1740306356262071,
+          "ts_ns": 1740306356262071000,
+          "transaction": null,
+          "timestamp": 1740306357296
+        }
+      }
+    ]
+  }
+}
+``` 
+
+`MySQL` 의 테이블 데이터가 `Debezium Connector` 를 통해 `Avro` 로 `Kafka` 에 전성되고, 
+최종적으로 `Elasticsearch Connector` 를 통해 `Elasticsearch` 까지 메시지가 잘 적재 됐다.  
