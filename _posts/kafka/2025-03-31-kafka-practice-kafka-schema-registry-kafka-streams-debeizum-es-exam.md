@@ -386,3 +386,53 @@ $ curl -X GET http://localhost:9200/debezium.avro.source.user.user_account/_sear
 
 `MySQL` 의 테이블 데이터가 `Debezium Connector` 를 통해 `Avro` 로 `Kafka` 에 전성되고, 
 최종적으로 `Elasticsearch Connector` 를 통해 `Elasticsearch` 까지 메시지가 잘 적재 됐다.  
+
+### Kafka Streams with Schema Registry
+`Debezium Avro Source Connector` 가 `Kafka` 에 저장한 `Avro` 메시지는 `Kafka Streams` 에서도 `Avro` 와 `Schema Registry` 
+관련 설정을 추가하면 활용할 수 있다. 
+필요한 설정은 아래와 같다.  
+
+- 아래 의존성 추가
+
+```groovy
+dependencies {
+    implementation 'io.confluent:kafka-streams-avro-serde:7.6.0'
+    implementation 'org.apache.avro:avro:1.11.1'
+}
+```
+
+- `spring.kafka.properties.schema.registry.url` 에 사용할 `Schema Registry` 주소 설정
+- `spring.kafka.streams.default.key.serde` 에 `io.confluent.kafka.streams.serdes.avro.GenericAvroSerde` 또는 `io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde` 설정
+- `spring.kafka.streams.default.value.serde` 에 `io.confluent.kafka.streams.serdes.avro.GenericAvroSerde` 또는 `io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde` 설정
+
+`Kafka Streams` 애플리케이션에서는 2가지 방식으로 `Avro` 메시지를 사용할 수 있는데 `GenericAvroSerde` 와 `SpecificAvroSerde` 가 있다. 
+
+- `GenericAvroSerde` 는 `Avro` 메시지를 `GenericRecord` 로 처리하는 방식으로 `Avro` 메시지의 스키마를 직접 다루는 방식이다. 별도로 메시지에 대한 스키마 정의가 필요하지 않다. 
+- `SpecificAvroSerde` 는 `Avro` 메시지를 `SpecificRecord` 로 처리하는 방식으로 `Avro` 메시지의 스키마를 정의한 클래스를 사용하는 방식이다.  
+
+먼저 `GenericAvroSerde` 를 사용하는 방법은 아래와 같다. 
+`defaul.key.serde` 와 `default.value.serde` 설정을 모두 `GenericAvroSerde` 로 해준 뒤, 별도 `Avro` 스키마 정의 없이 
+아래와 같이 `Kafka Streams` 처리 코드를 `GenericRecord` 타입으로 정의해 주면 된다.  
+
+```java
+@Bean
+public KStream<GenericRecord, GenericRecord> stream(StreamsBuilder streamsBuilder) {
+    KStream<GenericRecord, GenericRecord> stream = streamsBuilder.stream(this.inboundTopic);
+
+    stream.foreach((key, value) -> log.info("{} {}", key, value));
+    stream.foreach((key, value) -> log.info("{} {}", key, value.get("after")));
+
+    return stream;
+}
+/*
+{"uid": 1} {"before": null, "after": {"uid": 1, "name": "jack"}, "source": {"version": "2.6.0.Final", "connector": "mysql", "name": "debezium.avro.source", "ts_ms": 1740306356000, "snapshot": "last", "db": "user", "sequence": null, "ts_us": 1740306356000000, "ts_ns": 1740306356000000000, "table": "user_account", "server_id": 0, "gtid": null, "file": "binlog.000002", "pos": 157, "row": 0, "thread": null, "query": null}, "op": "r", "ts_ms": 1740306356262, "ts_us": 1740306356262071, "ts_ns": 1740306356262071000, "transaction": null}
+{"uid": 1} {"uid": 1, "name": "jack"}
+*/
+```  
+
+`GenericRecord` 를 사용하면 역직렬화 대상이 되는 레코드와 매핑되는 스키마 정의가 필요하지 않기 때문에 간단하게 사용할 수 있다. 
+하지만 하위 필드를 조회하거나 처리할 때 명시적인 타입으로 조회가 불가능하고, `Object` 타입이 리턴된다.   
+
+다음으로 `SpecificAvroSerde` 를 사용하는 방법은 아래와 같다. 
+`defaul.key.serde` 와 `default.value.serde` 설정을 모두 `SpecificAvroSerde` 로 해준 뒤, 별도 `Avro` 스키마를 정의해야 하는데 
+이는 `Debezium` 이 등록한 스키마를 그대로 사용한다.  
