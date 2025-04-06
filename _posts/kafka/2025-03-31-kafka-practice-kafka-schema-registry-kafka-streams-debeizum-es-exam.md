@@ -436,3 +436,46 @@ public KStream<GenericRecord, GenericRecord> stream(StreamsBuilder streamsBuilde
 다음으로 `SpecificAvroSerde` 를 사용하는 방법은 아래와 같다. 
 `defaul.key.serde` 와 `default.value.serde` 설정을 모두 `SpecificAvroSerde` 로 해준 뒤, 별도 `Avro` 스키마를 정의해야 하는데 
 이는 `Debezium` 이 등록한 스키마를 그대로 사용한다.  
+
+```bash
+# debezium 이 등록하 스키마 조회 
+$ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_account-key/versions/1 | jq
+{
+  "subject": "debezium.avro.source.user.user_account-key",
+  "version": 1,
+  "id": 3,
+  "schema": "{\"type\":\"record\",\"name\":\"Key\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"}],\"connect.name\":\"debezium.avro.source.user.user_account.Key\"}"
+}
+
+$ curl -X GET http://localhost:8081/subjects/debezium.avro.source.user.user_account-value/versions/1 | jq
+{
+  "subject": "debezium.avro.source.user.user_account-value",
+  "version": 1,
+  "id": 4,
+  "schema": "{\"type\":\"record\",\"name\":\"Envelope\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"before\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"Value\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"},{\"name\":\"name\",\"type\":[\"null\",\"string\"],\"default\":null}],\"connect.name\":\"debezium.avro.source.user.user_account.Value\"}],\"default\":null},{\"name\":\"after\",\"type\":[\"null\",\"Value\"],\"default\":null},{\"name\":\"source\",\"type\":{\"type\":\"record\",\"name\":\"Source\",\"namespace\":\"io.debezium.connector.mysql\",\"fields\":[{\"name\":\"version\",\"type\":\"string\"},{\"name\":\"connector\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"ts_ms\",\"type\":\"long\"},{\"name\":\"snapshot\",\"type\":[{\"type\":\"string\",\"connect.version\":1,\"connect.parameters\":{\"allowed\":\"true,last,false,incremental\"},\"connect.default\":\"false\",\"connect.name\":\"io.debezium.data.Enum\"},\"null\"],\"default\":\"false\"},{\"name\":\"db\",\"type\":\"string\"},{\"name\":\"sequence\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"ts_us\",\"type\":\"long\"},{\"name\":\"ts_ns\",\"type\":\"long\"},{\"name\":\"table\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"server_id\",\"type\":\"long\"},{\"name\":\"gtid\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"file\",\"type\":\"string\"},{\"name\":\"pos\",\"type\":\"long\"},{\"name\":\"row\",\"type\":\"int\"},{\"name\":\"thread\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"query\",\"type\":[\"null\",\"string\"],\"default\":null}],\"connect.name\":\"io.debezium.connector.mysql.Source\"}},{\"name\":\"op\",\"type\":\"string\"},{\"name\":\"ts_ms\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"ts_us\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"ts_ns\",\"type\":[\"null\",\"long\"],\"default\":null},{\"name\":\"transaction\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"block\",\"namespace\":\"event\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"total_order\",\"type\":\"long\"},{\"name\":\"data_collection_order\",\"type\":\"long\"}],\"connect.version\":1,\"connect.name\":\"event.block\"}],\"default\":null}],\"connect.version\":2,\"connect.name\":\"debezium.avro.source.user.user_account.Envelope\"}"
+}
+```  
+
+위 내용을 `src/main/avro` 디렉토리에 `.avsc` 파일 형식으로 저장하고 프로젝트를 한번 빌드하면 스키마에 해당하는 클래스가 생성된다.
+생성된 클래스는 빌드 경로의 `build/generated--main-avro-java` 에 스키마에 정의된 패키지 이름 하위에 위치한다.
+이제 아래와 같이 `Avro` 스키마를 바탕으로 생성된 클래스를 `Kafka Streams` 에서 사용하면 타입이 명시적이면서 구조회된 방식으로 메시지를 조회하고 처리할 수 있다.
+
+```java
+@Bean
+public KStream<Key, Envelope> stream(StreamsBuilder streamsBuilder) {
+    KStream<Key, Envelope> stream = streamsBuilder.stream(this.inboundTopic);
+
+    stream.foreach((o1, o2) -> log.info("{} {}", o1, o2));
+    stream.foreach((o1, o2) -> log.info("{} {}", o1, o2.getAfter()));
+
+    KStream<Key, debezium.avro.source.user.user_account.Value> valueStream = stream.mapValues((key, envelope) -> envelope.getAfter());
+
+    valueStream.to("test-topic");
+
+    return stream;
+}
+/*
+{"uid": 1} {"before": null, "after": {"uid": 1, "name": "jack"}, "source": {"version": "2.6.0.Final", "connector": "mysql", "name": "debezium.avro.source", "ts_ms": 1740306356000, "snapshot": "last", "db": "user", "sequence": null, "ts_us": 1740306356000000, "ts_ns": 1740306356000000000, "table": "user_account", "server_id": 0, "gtid": null, "file": "binlog.000002", "pos": 157, "row": 0, "thread": null, "query": null}, "op": "r", "ts_ms": 1740306356262, "ts_us": 1740306356262071, "ts_ns": 1740306356262071000, "transaction": null}
+{"uid": 1} {"uid": 1, "name": "jack"}
+ */
+```  
