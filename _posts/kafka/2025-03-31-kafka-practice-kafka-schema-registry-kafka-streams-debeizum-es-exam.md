@@ -479,3 +479,37 @@ public KStream<Key, Envelope> stream(StreamsBuilder streamsBuilder) {
 {"uid": 1} {"uid": 1, "name": "jack"}
  */
 ```  
+
+그리고 위 코드처럼 처리한 메시지 중 `after` 필드 내용만 추출해 다른 `Kafka Topic` 으로 전송하면 해당 토픽에 전송되는 메시지도 `Avro` 타입이 되고,
+`Schema Registry` 에 자동으로 전체 스키마인 `Envelop` 의 내용 중 `after` 필드에 해당하는 `Value` 스키마만 등록된다.
+
+```bash
+# outbound topic message
+$ docker exec -it myKafka kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning                                                    
+jack                                                            
+
+# outbound message schema registry
+$ curl localhost:8081/subjects/test-topic-key/versions/1 | jq
+{
+  "subject": "test-topic-key",
+  "version": 1,
+  "id": 3,
+  "schema": "{\"type\":\"record\",\"name\":\"Key\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"}],\"connect.name\":\"debezium.avro.source.user.user_account.Key\"}"
+}
+
+$ curl localhost:8081/subjects/test-topic-value/versions/1 | jq
+{
+  "subject": "test-topic-value",
+  "version": 1,
+  "id": 5,
+  "schema": "{\"type\":\"record\",\"name\":\"Value\",\"namespace\":\"debezium.avro.source.user.user_account\",\"fields\":[{\"name\":\"uid\",\"type\":\"int\"},{\"name\":\"name\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"default\":null}],\"connect.name\":\"debezium-avro-source.user.user_account.Value\"}"
+}
+```  
+
+
+
+---  
+## Reference
+[Debezium Avro Serialization](https://debezium.io/documentation/reference/stable/configuration/avro.html#confluent-schema-registry)   
+
+
