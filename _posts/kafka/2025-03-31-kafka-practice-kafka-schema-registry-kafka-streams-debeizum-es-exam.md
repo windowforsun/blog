@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams with Schema Registry and Debezium-ES"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Schema Registry 와 Debezium-ES 를 활용한 Kafka Streams 애플리케이션 구성에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -12,6 +12,14 @@ categories :
 tags:
     - Practice
     - Kafka
+    - Schema Registry
+    - Debezium
+    - Kafka Streams
+    - Elasticsearch
+    - CDC
+    - Avro
+    - Kafka Connect
+    - Kafka Connector
 toc: true
 use_math: true
 ---  
@@ -35,7 +43,7 @@ use_math: true
 4. `Elasticsearch Sink Connecotor` 에서도 동일하게 `Avro` 와 `Schema Registry` 연결 설정을 추가해 실행한다. 
 5. `Elasticsearch` 커넥터는 `Avro` 메시지를 사용해 `Elasticsearch` 에 데이터를 적재한다.  
 
-이후 진행되는 데모의 전체 코드는 [여기]()
+이후 진행되는 데모의 전체 코드는 [여기](https://github.com/windowforsun/kafka-streams-debeizum-es-avro-schema-registry)
 에서 확인할 수 있다.  
 
 ### Full Configuration
