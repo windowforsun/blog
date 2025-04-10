@@ -46,3 +46,44 @@ use_math: true
 - 정확성 향상 : 검색된 문서를 바탕으로 응답을 생성하기 때문에, 단순히 생성 모델만 사용하는 것보다 더 정확한 응답을 생성할 수 있다. 
 - 정보 풍부성 : 외부 지식 소스를 활용하여 더 풍부하고 상세한 정보를 제공할 수 있다. 
 - 유연성 : 다양한 검색 기술과 생성 모델을 결합하여 사용할 수 있다. 
+
+
+## RAG 구현 예시
+다음은 `비트코인` 관련 뉴스기사를 활요해 `RAG` 모델을 구현한 예시이다. 
+`LLM` 모델로는 `groq` 를 사용해 `llama-3.3-70b-versatile` 모델을 사용했고, 
+임베딩은 `Nomic` 에서 제공하는 `nomic-embed-text-v1.5` 모델을 사용했다. 
+
+`RAG` 파이프라인은 크게 데이터 로드, 텍스트 분할, 인덱싱, 검색, 생성과 같은 다섯 단계로 구성된다. 
+
+### 환경 설정
+본 예제를 구현 및 실행하기 위해 필요한 파이썬 패키지는 아래와 같다.  
+
+```text
+# requirements.txt
+
+langchain
+langchain_core
+langchain_groq
+langchain_nomic
+langchain_community
+chromadb
+beautifulsoup4
+
+```  
+
+코드 실행에 필요한 전체 `import` 구문은 아래와 같다. 
+
+```python
+import bs4
+from langchain_community.document_loaders import WebBaseLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import os
+import getpass
+from langchain_community.vectorstores import Chroma
+from langchain_nomic import NomicEmbeddings
+from langchain.chat_models import init_chat_model
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+```
+
