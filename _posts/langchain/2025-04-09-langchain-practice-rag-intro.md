@@ -87,3 +87,45 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 ```
 
+
+### Raw Data Load
+`RAG` 에서 사용할 데이터를 불러오는 단계로, 
+외부 데이터 소스에서 정보를 수집하고 변환해 `Document` 화 시키는 작업이다. 
+데이터는 다양한 방식으로 수집할 수 있고, 본 예제에서는 `WebBaseLoader` 를 사용해 웹 뉴스 기사를 크롤링해 사용한다. 
+
+
+```python
+# 비트코인 관련 뉴스 기사
+loader = WebBaseLoader(
+    web_paths=(
+        'https://n.news.naver.com/mnews/article/001/0015253127?sid=104',
+        'https://n.news.naver.com/mnews/article/003/0013105353?sid=104',
+        'https://n.news.naver.com/mnews/article/053/0000048572?sid=101',
+        'https://n.news.naver.com/mnews/article/003/0013102527?sid=101',
+        'https://n.news.naver.com/mnews/article/003/0013104231?sid=104',
+        'https://n.news.naver.com/mnews/article/001/0015252666?sid=104',
+        'https://n.news.naver.com/mnews/article/028/0002734568?sid=101',
+        'https://n.news.naver.com/mnews/article/001/0015249955?sid=100',
+        'https://n.news.naver.com/mnews/article/011/0004458800?sid=105',
+        'https://n.news.naver.com/mnews/article/020/0003619733?sid=100'
+
+
+    ),
+    bs_kwargs=dict(
+        parse_only=bs4.SoupStrainer(
+            'div',
+            attrs={'class' : ['media_end_head_title', 'newsct_article _article_body']}
+        )
+    )
+)
+
+# 웹페이지 텍스트를 Documents 로 변환
+docs = loader.load()
+
+print(len(docs))
+# 10
+print(len(docs[0].page_content))
+# 1136
+print(docs[0].page_content[100:200])
+# 프란시스코=연합뉴스) 김태종 특파원 = 가상화폐 대장주 비트코인이 7일(현지시간) 도널드 트럼프 미국 대통령이 주재한 첫 '디지털 자산 서밋'에도 하락세를 벗어나지 못하고 있다.
+```  
