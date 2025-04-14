@@ -154,3 +154,26 @@ print(splits[10].page_content)
 print(splits[10].metadata)
 # {'source': 'https://n.news.naver.com/mnews/article/003/0013105353?sid=104'}
 ```  
+
+### Indexing(Embedding)
+앞서 분할한 텍스트를 검색 가능한 헝태로 만드는 단계이다. 
+인덱싱을 통해 검색 시간을 단축시키고, 정확도를 높일 수 있다. 
+`langchain` 라이브러리를 통해 텍스트를 임베딩으로 변환하고, 
+이를 `Chroma` 벡터 스토어에 저장해 임베딩 기반으로 유사성 검색을 수행할 수 있다.  
+
+`Nomic` 에서 제공하는 임베딩 모델을 사용해 텍스트를 벡터로 변환하고, 이를 `Chroma` 벡터 스토어에 저장한다. 
+그리고 `similarity_search()` 메서드를 사용해 주어진 쿼리 텍스트에 해당하는 가장 유사한 문서를 검색한다. 
+쿼리와 유사성은 임베딩 간의 거리를 기반으로 계산된다.  
+
+```python
+# nomic api key 입력
+os.environ["NOMIC_API_KEY"] = getpass.getpass("Enter your Nomic API key: ")
+
+vectorstore = Chroma.from_documents(documents=splits, embedding=NomicEmbeddings(model="nomic-embed-text-v1.5"))
+docs = vectorstore.similarity_search("비트 코인 현상황에 대해 알려주세요.")
+
+print(len(docs))
+# 4
+print(docs[0].page_content)
+# 코인과 비트코인 전략적 준비금을 금융정책과 연계해야 한다"고 주장했다.    김 총괄부본부장은 "트럼프 정부의 정책에 맞춰 외환보유고에 비트코인 편입 여부에 대한 논의를 시작해야 한다"며 "STO(토큰증권), 스테이블 코인 활성화를 통해 '디지털 금융 허브' 한국을 준비해야 할 것"이라고 말했다.    국회 정무위원회 소속 민병덕 의원도 이날 오후
+```  
