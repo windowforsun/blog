@@ -177,3 +177,45 @@ print(len(docs))
 print(docs[0].page_content)
 # 코인과 비트코인 전략적 준비금을 금융정책과 연계해야 한다"고 주장했다.    김 총괄부본부장은 "트럼프 정부의 정책에 맞춰 외환보유고에 비트코인 편입 여부에 대한 논의를 시작해야 한다"며 "STO(토큰증권), 스테이블 코인 활성화를 통해 '디지털 금융 허브' 한국을 준비해야 할 것"이라고 말했다.    국회 정무위원회 소속 민병덕 의원도 이날 오후
 ```  
+
+### Retrieval
+사용자 질문이 들어오면 주어진 컨텍스트를 기반으로 가장 관련된 정보를 찾는 과정이다. 
+이는 사용자 입력을 바탕으로 쿼리를 생성하고, 앞서 인덱싱한 데이터를 기반으로 가장 관련도 높은 정보를 검색하게 된다. 
+`lanchain` 에서는 `retriever` 메소드를 사용하면 된다.  
+
+
+### Generation
+검색된 정보를 바탕으로 사용자의 쿼리에 답변을 생성하는 단계이다. 
+`LLM` 모델에 사용자의 쿼리를 전달하고, 
+모델은 앞서 학습한 지식과 검색 결과를 결합해 가장 절적한 답변을 생성한다.  
+
+```python
+llm = init_chat_model("llama-3.3-70b-versatile", model_provider="groq")
+
+
+template = '''사용자의 질문을 사전에 학습한 context 를 기반으로 답변한다: {context}
+질문: {question}
+'''
+
+
+prompt = ChatPromptTemplate.from_template(template)
+
+# Retrieval
+retriever = vectorstore.as_retriever()
+
+# combine documents
+def format_docs(docs):
+    return '\n\n'.join(doc.page_content for doc in docs)
+
+# RAG Chain 연결
+rag_chain = (
+        {'context' : retriever | format_docs, 'question' : RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+)
+
+# chain 실행
+rag_chain.invoke('비트코인 현 상황에 대해 알려주세요.')
+# 현재 비트코인의 상황은 강세를 보이고 있으며, 전문가들은 경기 회복 지표와 장기 상승 가능성에 주목하고 있습니다. 또한, 일부 전문가들은 비트코인의 강세가 시작 단계에 불과하다고 주장하고 있습니다. 그러나 양자컴퓨터의 등장으로 인해 암호화폐의 안전성에 대한 우려가 있기도 합니다. 하지만 양자컴퓨터가 실제로 비트코인에 영향을 미치기 위해서는 수백만 큐비트의 양자컴퓨터가 동원되어야 하므로, 현재로서는 가능성이 낮아 보입니다.
+```  
