@@ -37,3 +37,19 @@ use_math: true
 - `OPENAI_FUNCTIONS` : `OpenAI` 함수 사용에 최적화된 에이전트이다. `OpenAI` 의 다양한 기능을 화룡ㅇ해야 하는 경우 사용하기 좋다. 
 - `OPENAI_MULTI_FUNCTIONS` : 여러 `OpenAI` 함수를 사용하는 에이전트이다. 여러 `OpenAI` 기능을 동시에 활용해야 하는 경우 사용하기 좋다. 
 
+
+## LangChain Tool calling
+`LangChain Tool calling` 은 `LLM` 이 특정 기능을 실행하도록 설게된 도구를 호출하는 방식을 의미한다. 
+사용자가 입력한 질문에 따라 `LLM` 이 적절한 `Tool` 을 선택하고 실행해 최적의 결과를 제공한다. 
+`LLM` 이 단순히 답변을 생성하는 것이 아니라 `API` 호출, 데이터베이스, 계산기 등 활용 가능한 다양한 `Tool` 을 직접 실행해 결과를 생성하는 것을 의미한다.  
+
+`Tool Calling` 을 활용하면 아래와 같은 장점을 얻을 수 있다. 
+
+- 기능 확장 : `LLM` 의 능력을 크게 확장할 수 있다. 모델이 자체적으로 가지고 있지 않은 정보나 기능에 접근하도록 할 수 있다. 
+- 실시간 정보 : 웹 검색 등을 통해 모델이 학습하지 못한 최신 정보를 얻을 수 있어, 답변의 최신성을 제공할 수 있다. 
+- 적확성 향상 : 계산기, 전문성 있는 정보를 직접 모델에 제공해 정확한 수치나 정보의 신뢰성을 높일 수 있다. 
+- 다양한 작업 : 코드 실행, 파일 조장, API 호출 등 작업의 범위를 확장할 수 있다. 
+
+[Tools](https://python.langchain.com/docs/integrations/tools/)
+를 보면 `LangChain` 에서 기본으로 제공하는 `built-in tools/toolkit` 를 확인할 수 있다.  
+
