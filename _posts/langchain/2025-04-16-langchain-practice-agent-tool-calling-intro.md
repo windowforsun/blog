@@ -53,3 +53,34 @@ use_math: true
 [Tools](https://python.langchain.com/docs/integrations/tools/)
 를 보면 `LangChain` 에서 기본으로 제공하는 `built-in tools/toolkit` 를 확인할 수 있다.  
 
+
+## Agent Demo
+다음은 `OpenWeather API` 를 사용해 날씨를 조회하고, 
+그 결과를 바탕으로 날씨를 요약한느 `Agent` 구현 예시이다.
+`LLM` 모델로는 `groq` 를 사용해 `llama-3.3-70b-versatile` 모델을 사용한다.  
+
+### 환경 설정
+본 예제를 구현 및 실행하기 위해 필요한 파이썬 패키지는 아래와 같다.
+
+```text
+# requirements.txt
+
+langchain==0.3.20
+langchain-core==0.3.20
+langchain-community==0.3.20
+langchain-groq
+requests
+```  
+
+코드 실행에 필요한 전체 `import` 구문은 아래와 같다.  
+
+```python
+import os
+import getpass
+import requests
+from langchain_core.tools import tool
+from langchain.chat_models import init_chat_model
+from langchain.agents import initialize_agent, AgentType
+from typing import Annotated, List
+from datetime import datetime, timedelta
+```  
