@@ -84,3 +84,213 @@ from langchain.agents import initialize_agent, AgentType
 from typing import Annotated, List
 from datetime import datetime, timedelta
 ```  
+
+### API Key
+`API` 사용에 필요한 `API Key` 를 설정하는 단계이다.  
+
+```python
+os.environ["GROQ_API_KEY"] = getpass.getpass("Groq API Key")
+weather_api_key = getpass.getpass("OpenWeather API Key")
+```  
+
+### Custom Tool
+`OpenWeather API` 를 사용해 날씨 정보를 조회하는 `Tool` 을 구현한다. 
+`Tool` 의 구성은 총 5개로 아래와 같다.  
+
+- `get_lat_lon` : 지역명을 입력받아 위도, 경도를 반환하는 함수이다. 
+- `get_current_weather` : 위도, 경도를 입력받아 현재 날씨 정보를 반환하는 함수이다.
+- `get_tomorrow_weather` : 위도, 경도를 입력받아 내일 날씨 정보를 반환하는 함수이다.
+- `get_today_weather` : 위도, 경도를 입력받아 오늘 날씨 정보를 반환하는 함수이다.
+- `get_statistics` : 뒤도, 경도를 입력받아 해당 위치의 과거 통계 정보를 반환하는 함수이다. 
+
+```python
+def get_lat_lon(location: str):
+    location_url = "http://api.openweathermap.org/geo/1.0/direct"
+
+    location = location.strip("'\"")
+
+    params = {
+        "q" : location,
+        "appid" : weather_api_key,
+        "limit" : 1
+    }
+
+    try:
+        response = requests.get(location_url, params=params)
+        response.raise_for_status()
+
+        data = response.json()
+        lat = data[0]['lat']
+        lon = data[0]['lon']
+        return f"{lat},{lon}"
+    except requests.exception.RequestException as e:
+        print(f"위치 정보를 가져오는데 실패했습니다. 오류: {str(e)}")
+        return ""
+
+def get_current_weather(lat_lon: str):
+  lat, lon = map(float, lat_lon.split(","))
+  current_url = "https://api.openweathermap.org/data/2.5/weather"
+
+  params = {
+    "lat" : lat,
+    "lon" : lon,
+    "appid": weather_api_key,
+    "units": "metric",
+    "lang" : "kr"
+  }
+
+  try:
+    response = requests.get(current_url, params=params)
+    response.raise_for_status()
+
+    data = response.json()
+
+    return {
+      "기온" : data["main"]["temp"],
+      "체감기온" : data["main"]["feels_like"],
+      "습도" : data["main"]["humidity"],
+      "날씨" : data["weather"][0]["description"],
+      '풍속' : data['wind']['speed'],
+      '풍향' : data['wind']['deg'],
+      '강수량' : data.get('rain', {}).get('1h', 0),
+      '적설량' : data.get('snow', {}).get('1h', 0),
+    }
+  except:
+    return None
+
+def get_tomorrow_weather(lat_lon: str):
+  lat, lon = map(float, lat_lon.split(","))
+  hourly_url = "https://api.openweathermap.org/data/2.5/forecast"
+
+  params = {
+    "lat" : lat,
+    "lon" : lon,
+    "appid": weather_api_key,
+    "units": "metric",
+    "lang" : "kr"
+  }
+
+  try:
+    response = requests.get(hourly_url, params=params)
+    response.raise_for_status()
+
+    result_data = []
+    for item in response.json()["list"]:
+      today = datetime.now()
+      date_str = item['dt_txt']
+      delta_days = (datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").replace(hour=0, minute=0, second=0, microsecond=0) - today.replace(hour=0, minute=0, second=0, microsecond=0)).days
+
+      if delta_days == 1:
+        result_data.append({
+          '기온' : item['main']['temp'],
+          '체감기온' : item['main']['feels_like'],
+          '습도' : item['main']['humidity'],
+          '날씨' : item['weather'][0]['description'],
+          '풍속' : item['wind']['speed'],
+          '풍향' : item['wind']['deg'],
+          '예보시간' : item['dt_txt'],
+          '강수량' : item.get('rain', {}).get('1h', 0),
+          '적설량' : item.get('snow', {}).get('1h', 0),
+        })
+
+    return result_data
+  except:
+    return None
+
+def get_today_weather(lat_lon):
+  lat, lon = map(float, lat_lon.split(","))
+  hourly_url = "https://api.openweathermap.org/data/2.5/forecast"
+
+  params = {
+    "lat" : lat,
+    "lon" : lon,
+    "appid": weather_api_key,
+    "units": "metric",
+    "lang" : "kr"
+  }
+
+  try:
+    response = requests.get(hourly_url, params=params)
+    response.raise_for_status()
+
+    result_data = []
+    for item in response.json()["list"]:
+      today = datetime.now()
+      date_str = item['dt_txt']
+      delta_days = (datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").replace(hour=0, minute=0, second=0, microsecond=0) - today.replace(hour=0, minute=0, second=0, microsecond=0)).days
+
+      if delta_days == 0:
+        result_data.append({
+          '기온' : item['main']['temp'],
+          '체감기온' : item['main']['feels_like'],
+          '습도' : item['main']['humidity'],
+          '날씨' : item['weather'][0]['description'],
+          '풍속' : item['wind']['speed'],
+          '풍향' : item['wind']['deg'],
+          '예보시간' : item['dt_txt'],
+          '강수량' : item.get('rain', {}).get('1h', 0),
+          '적설량' : item.get('snow', {}).get('1h', 0),
+        })
+
+    return result_data
+  except:
+    return None
+
+def get_statistics(lat_lon):
+  return {
+    '최근 6시간 평균 기온' : 6,
+    '최근 6시간 최저 기온' : 4,
+    '최근 6시간 최고 기온' : 8,
+    '최근 6시간 평균 강수' : 100,
+    '최근 6시간 최저 강수' : 40,
+    '최근 6시간 최고 강수' : 150,
+    '최근 6시간 평균 풍속' : 10,
+    '최근 6시간 최저 풍속' : 8,
+    '최근 6시간 최고 풍속' : 15,
+  }
+
+@tool
+def tool_lat_lon(
+        location: Annotated[str, "사용자 질문에서 대표할 수 있는 지역명"]
+) -> str:
+  """
+  지역명에 해당하는 좌표인 lat(위도), lon(경도) 을 반환한다.
+  """
+  return get_lat_lon(location)
+
+@tool
+def tool_current_weather(
+        lat_lon: Annotated[str, "위도와 경도"]
+) -> dict:
+  """
+  현재 날씨 정보를 반환한다.
+  """
+  return get_current_weather(lat_lon)
+
+@tool
+def tool_tomorrow_weather(
+        lat_lon: Annotated[str, "위도와 경도"]
+) -> List[dict]:
+  """
+  내일 날씨 정보를 반환한다.
+  """
+  return get_tomorrow_weather(lat_lon)
+
+@tool
+def tool_today_weather(
+        lat_lon: Annotated[str, "위도와 경도"]
+) -> List[dict]:
+  """
+  오늘 날씨 정보를 반환한다.
+  """
+  return get_today_weather(lat_lon)
+
+@tool
+def tool_statistics(
+        lat_lon: Annotated[str, "위도와 경도"]
+) -> dict:
+  """
+  날씨 통계 정보를 반환한다.
+  """
+  return get_statistics(lat_lon)
+```  
