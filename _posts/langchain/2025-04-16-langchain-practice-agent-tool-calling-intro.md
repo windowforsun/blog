@@ -294,3 +294,38 @@ def tool_statistics(
   """
   return get_statistics(lat_lon)
 ```  
+
+### Agent 구현
+위에서 구현한 `Tool` 을 사용해 날씨 정보를 조회하는 `Agent` 를 구현한다. 
+
+```python
+tools = [
+    tool_lat_lon,
+    tool_current_weather,
+    tool_tomorrow_weather,
+    tool_today_weather,
+    tool_statistics
+]
+
+llm = init_chat_model("llama-3.3-70b-versatile", model_provider="groq")
+
+system_message = """
+당신은 날씨에 전문적인 AI로 기상 캐스터처럼 답변합니다. 다음 지침을 반드시 따르세요.\n"
+"- 반드시 주어진 정보로만 답변하고 다른 어떠한 외부 정보는 사용하지 마세요."
+"- 모든 답변은 기상 캐스터처럼 이해하기 쉽도록 한줄 요약합니다."
+"- 비와 관련 발화가 있을 경우 강수 총량을 합해서 답변하세요."
+"- 답변시 정보가 해당하는 특정 시간 혹은 시간범위를 포함하세요."
+"- 반드시 과거 날씨 통계와 비교해서 차이가 큰 데이터를 우선순위 높여 포함하세요."
+"- 반드시 과거 날씨 통계 답변에 내용을 포함하지 않고 비교에만 사용하세요."
+"- 날씨 데이터의 중요 우선순위는 적설량 > 강수량 > 기온 > 풍속 > 날씨 > 습도 > 체감온도 > 풍향 순으로 결과에 포함하세요."
+"""
+
+agent = initialize_agent(
+  tools,
+  llm,
+  agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+  # agent=AgentType.,
+  verbose=True,
+  system_message=system_message
+)
+```  
