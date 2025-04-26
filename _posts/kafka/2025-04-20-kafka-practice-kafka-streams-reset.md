@@ -51,3 +51,26 @@ use_math: true
 - 버그 수정 : 버그 수정 후, 잘못 처리된 데이터를 바로잡기 위해 전체 데이터를 재처리해야 할 때 사용한다. 
 - 스키마 변경 : 입력/출력 데이터의 스키마가 크게 변경되어 기존 처리 결과와 호환되지 않을 때 사용한다. 
 - 설정 변경 : 주요 설정(상태 저장소 구성)을 적용한 후 애플리케이션을 리셋해야 할 때 사용한다. 
+
+### Before Reset
+`Reset Tool` 을 사용하기 전 리셋 대상인 `application.id` 에 해당하는 모든 인스턴스는 중지돼야 한다. 
+실행된 상태에서는 `Reset Tool` 이 에러를 출력한다. 
+이는 `kafka-consumer-groups.sh` 을 사용해 리셋 대상인 `application.id` 이 조회되는 지로 확인 할 수 있다.  
+
+`Intermdiate Topics` 의 경우 이를 구독하는 `downstream` 이 있는 경우 혹은 개발환경과 같이 테스트인 경우를 제외하고는 
+삭제 및 재생성을 해주는 것이 좋다.  
+
+
+### Topology Changes
+`Kafka Streams Reset` 관점에서 `Compatible` 과 `Incompatible` 의 의미는 아래와 같다. 
+여기서 호환 된다는 것은 스트림 데이터의 관점에서 변경된 토폴로지로 리셋 후 재시작을 수행 했을 때, 
+데이터의 호환성과 일관성 관점에서 문제가 없다는 것을 의미한다. 
+
+
+#### Compatible Topology Changes
+`Kafka Streams Reset Tool` 의 호환성은 주로 토폴로지 변경 후 데이터의 처리의 일관성과 정확성을 유지할 수 있는지에 관한 것이다. 
+
+1. 필터 조건 변경
+2. 새로운 필터 추가(레코드별 작업)
+3. 데이터 타입이 호환되는 새로운 `map()` 연산 추가 (`repartition` 이 발생하지 않는 상황)
+4. 값 타입을 변경하지 않는 `mapValues()` 연산 추가
