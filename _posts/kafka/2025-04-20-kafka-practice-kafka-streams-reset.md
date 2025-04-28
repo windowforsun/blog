@@ -129,3 +129,95 @@ use_math: true
 --internal-topics|- 모든 내부 토픽(application.id로 시작)이 자동으로 삭제 대상이 된다.|- 삭제할 내부 토픽을 명시적으로 지정 가능 하다. 
 all|- 입력 토픽과 중간 토픽의 오프셋이 변경되지 않는다.<br>- 모든 내부 토픽이 삭제된다.<br>- 애플리케이션의 내부 상태는 초기화되지만, 입력 데이터의 처리 위치는 유지된다.|- 입력 토픽 오프셋이 리셋된다<br>- 중간 토픽의 오프셋이 끝으로 이동해, 기준 중간 데이터는 건너 뛴다.<br>- 지정된 내부 토픽들이 삭제되어, 해당하는 내부 상태가 초기화된다.<br>- 입력 데이터 전체를 다시 처리하고 새로운 내부 상태를 구축한다. 중간 데이터는 무시하고 새로운 처리 결과로 시작한다. 
 
+
+### How to use
+> 전체 코드 내용은 [여기](https://github.com/windowforsun/kafka-streams-reset-exam)
+> 에서 확인할 수 있다.
+`Kafka Streams Reset Tool` 을 사용해 `Streams Application` 을 리셋하는 방법에 대해 알아본다. 
+간략하게 수행이 필요한 스텝을 나열하면 아래와 같다.  
+
+1. 리셋 대상인 `Streams Application` 인스턴스 모두 종료(`application.id` 기준)
+2. `Reset Tool` 을 사용해서 리셋 수행 
+3. 리셋 대상인 `Streams Application` 재시작(`KafkaStreams.clear()` 호출 필요)
+
+예제로 사용할 `Streams Application` 의 변경 전 스트림 처리는 아래와 같고 `application.id` 는 `dem-app` 을 사용한다.  
+
+```java
+public KStream<String, String> origin(StreamsBuilder builder) {
+    KStream<String, String> inputStream = builder.<String, String>stream("input-topic").peek((k, v) -> log.info("input {} {}", k, v));
+
+    return inputStream.mapValues((k, v) -> String.valueOf(v.length())).peek((k, v) -> log.info("length {} {}", k, v));
+}
+
+public KStream<String, String> filterByLengthGT5(KStream<String, String> valueLengthStream) {
+	return valueLengthStream.filter((k, v) -> Integer.parseInt(v) > 5).peek((k, v) -> log.info("filterByLengthGT5 {} {}", k, v));
+}
+
+
+public KStream<String, String> countKeyKeyValueStore(KStream<String, String> valueLengthStream) {
+	KGroupedStream<String, String> keyGroupedStream = valueLengthStream.peek((k, v) -> log.info("countKeyKeyValueStore {} {}", k, v)).groupByKey();
+	KTable<String, Long> keyValueLengthSumTable = keyGroupedStream
+		.count(Materialized.<String, Long>as(Stores.persistentKeyValueStore("my-store"))
+			.withKeySerde(Serdes.String())
+			.withValueSerde(Serdes.Long()));
+
+	return keyValueLengthSumTable.toStream().map((k, v) -> KeyValue.pair(k, String.valueOf(v)));
+}
+
+resultStream = this.countKeyKeyValueStore(this.filterByLengthGT5(this.origin(builder)));
+
+resultStream
+    .peek((k, v) -> log.info("output {} {}", k, v))
+    .to("output-topic", Produced.with(Serdes.String(), Serdes.String()));
+```  
+
+`inpu-topic` 으로 들어오는 레코드 값 중 문자열 길이가 5이상인 레코드만 필터링해 중간 토픽인 `value-length-gt5` 토픽에 저장한다. 
+그리고 `KTable.count()` 를 사용해 키별 레코드의 수를 카운트해 결과 토픽인 `output-topic` 으로 전송한다.  
+애플리케이션을 실행 후 아래와 같은 데이터를 `input-topic` 으로 넣으면 스트림 처리 결과인 `output-topic` 으로 결과가 전송된다.  
+
+```bash
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic input-topic \
+> --from-beginning 
+a-desktop
+b-mouse
+c-keyboard
+d-graphics card
+a-hello world
+b-kafka
+c-desktop
+d-mouse
+a-keyboard
+
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic value-length-gt5 \
+> --from-beginning 
+a-7
+c-8
+d-13
+a-11
+c-7
+a-8
+
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic output-topic \
+> --from-beginning 
+a-1
+c-1
+d-1
+a-2
+c-2
+a-3
+```  
