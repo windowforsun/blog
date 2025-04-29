@@ -221,3 +221,57 @@ a-2
 c-2
 a-3
 ```  
+
+스트림 처리 중간 필터링 결과인 `value-length-gt5` 에는 레코드 값의 문자열 길이가 5보다 작은 `b-mouse`, `d-mouse` 만 제외된 상태로 문자열 길이의 레코드가 담긴 것을 확인 할 수 있다. 
+그리고 결과 토픽인 `output-topic` 에는 필터링된 레코드를 바탕으로 키별 레코드 수를 카운트한 결과가 담겨있다.  
+
+변경할 스트림 처리는 `filter()` 를 추가하는 것으로 5 이상 문자열 길이만 필터린 된 것에 추가해 문자열 길이가 홀수인 조건을 추가한다. 
+그리고 이전에 전송된 데이터들도 처리가 필요한 상황이라는 가정을 두고 `Reset Tool` 을 사용해 스트림 애플리케이션을 리셋한다. 
+변경되는 스트림 처리 코드는 아래와 같다.  
+
+```java
+public KStream<String, String> origin(StreamsBuilder builder) {
+    KStream<String, String> inputStream = builder.<String, String>stream("input-topic").peek((k, v) -> log.info("input {} {}", k, v));
+
+    return inputStream.mapValues((k, v) -> String.valueOf(v.length())).peek((k, v) -> log.info("length {} {}", k, v));
+}
+
+public KStream<String, String> filterByLengthGT5(KStream<String, String> valueLengthStream) {
+    return valueLengthStream.filter((k, v) -> Integer.parseInt(v) > 5).peek((k, v) -> log.info("filterByLengthGT5 {} {}", k, v));
+}
+
+public KStream<String, String> filterByLengthOdd(KStream<String, String> valueLengthStream) {
+    return valueLengthStream.filter((k, v) -> Integer.parseInt(v) % 2 != 0).peek((k, v) -> log.info("filterByLengthOdd {} {}", k, v));
+}
+
+public KStream<String, String> countKeyKeyValueStore(KStream<String, String> valueLengthStream) {
+	KGroupedStream<String, String> keyGroupedStream = valueLengthStream.peek((k, v) -> log.info("countKeyKeyValueStore {} {}", k, v)).groupByKey();
+	KTable<String, Long> keyValueLengthSumTable = keyGroupedStream
+		.count(Materialized.<String, Long>as(Stores.persistentKeyValueStore("my-store"))
+			.withKeySerde(Serdes.String())
+			.withValueSerde(Serdes.Long()));
+
+	return keyValueLengthSumTable.toStream().map((k, v) -> KeyValue.pair(k, String.valueOf(v)));
+}
+
+resultStream = this.countKeyKeyValueStore(this.filterByLengthOdd(this.filterByLengthGT5(this.origin(builder))));
+
+resultStream
+	.peek((k, v) -> log.info("output {} {}", k, v))
+	.to("output-topic", Produced.with(Serdes.String(), Serdes.String()));
+```  
+
+스트림 애플리케이션을 리셋하기 위해 `application.id` 가 `demo-app` 인 모든 인스턴스를 종료해야 한다. 
+실행 중인 인스턴스가 있는 지는 아래와 같이 확인 가능하다.  
+
+```bash
+$  docker exec -it myKafka \
+> kafka-consumer-groups.sh \
+> --bootstrap-server localhost:9092 \
+> --group demo-app \
+> --describe
+
+GROUP           TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                                                                                HOST            CLIENT-ID
+demo-app        value-length-gt5 0          6               6               0               demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer-83d1b37f-70b0-46db-8e01-bbb2b5169a12 /172.21.0.1     demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer
+demo-app        input-topic      0          9               9               0               demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer-83d1b37f-70b0-46db-8e01-bbb2b5169a12 /172.21.0.1     demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer
+```  
