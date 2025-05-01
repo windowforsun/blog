@@ -275,3 +275,142 @@ GROUP           TOPIC            PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG 
 demo-app        value-length-gt5 0          6               6               0               demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer-83d1b37f-70b0-46db-8e01-bbb2b5169a12 /172.21.0.1     demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer
 demo-app        input-topic      0          9               9               0               demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer-83d1b37f-70b0-46db-8e01-bbb2b5169a12 /172.21.0.1     demo-app-aa9bfd37-5066-414c-8f92-d8bc0179b115-StreamThread-1-consumer
 ```  
+
+`demo-app` 에서 `input-topic` 과 `value-length-gt5` 토픽을 사용 중이고 `client_id` 가 동일한 것으로 보아 1개의 인스턴스가 실행 중인 것을 확인 할 수 있다. 
+해당하는 인스턴스를 종료한다. 
+그리고 `Reset Tool` 에서 애플리케이션에서 사용 중인 중간 토픽인 `value-length-gt5` 와 입력 토픽인 `input-topic` 옵션에 명시하고 
+`--dry-run` 함께 옵션을 주면 대략적인 리셋 처리 과정과 함께 해당 애플리케이션과 관계가 있는 내부토픽도 알려준다.  
+
+```bash
+$  docker exec -it myKafka \
+> kafka-streams-application-reset.sh \
+> --bootstrap-servers localhost:9092 \
+> --application-id demo-app \
+> --input-topics input-topic \
+> --intermediate-topics value-length-gt5 \
+> --dry-run
+----Dry run displays the actions which will be performed when running Streams Reset Tool----
+Reset-offsets for input topics [input-topic]
+Seek-to-end for intermediate topics [value-length-gt5]
+Following input topics offsets will be reset to (for consumer group demo-app)
+Topic: input-topic Partition: 0 Offset: 0
+Following intermediate topics offsets will be reset to end (for consumer group demo-app)
+Topic: value-length-gt5
+Done.
+Deleting all internal/auto-created topics for application demo-app
+Topic: demo-app-my-store-changelog
+Done.
+```  
+
+애플리케이션과 관계있는 내부 토픽은 전체 리셋을 할 예정이므로 따로 명시하지 않으면 전체를 리셋 톨에서 삭제한다. 
+그러므로 `--dry-run` 만 제외된 상태로 리셋 툴을 실행한다.  
+
+```bash
+$  docker exec -it myKafka \
+> kafka-streams-application-reset.sh \
+> --bootstrap-servers localhost:9092 \
+> --application-id demo-app \
+> --input-topics input-topic \
+> --intermediate-topics value-length-gt5
+Reset-offsets for input topics [input-topic]
+Seek-to-end for intermediate topics [value-length-gt5]
+Following input topics offsets will be reset to (for consumer group demo-app)
+Topic: input-topic Partition: 0 Offset: 0
+Following intermediate topics offsets will be reset to end (for consumer group demo-app)
+Topic: value-length-gt5
+Done.
+Deleting all internal/auto-created topics for application demo-app
+Done.
+```  
+
+스트림 애플리케이션이 종료된 상태에서 재시작만 해주면 되는데, 
+이때 애플리케이션의 로컬 상태를 초기화 하는 처리가 필요하다. 
+초기화 하는 방법으로는 아래와 같은 3가지 방법이 있다.  
+
+1. `KafkaStreams.clear()` 를 명시적으로 호출
+2. `application.yaml` 에서 `spring.kafka.streams.cleanup.on-startup=true` 혹은 `spring.kafka.streams.cleanup.on-shutdown=true` 와 같이 프로퍼티로 지정
+3. 로컬 상태 디렉토리를 수동으로 삭제(`state.dir` 에 설정된 경로)
+
+한가지 주의점은 애플리케이션 시작시마다 로컬 상태를 초기화하는 것은 바람직하지 못하다. 
+스트림 처리에는 문제가 없을 수 있지민, 재시작마다 `Kafka Streams` 에서 로컬 상태를 다시 구축해야 하는 추가 비용이 들기 때문이다. 
+그러므로 필요한 경우에만 로컬 상태를 초기화하는 처리가 필요하다.  
+
+
+예제에서는 `application.yaml` 에서 `on-startup=true` 로 주어 애플리케이션 시작시점에 로컬 상태를 초기화하도록 설정했다. 
+이제 변경된 스트림 토폴로지로 애플리케이션을 시작한다. 
+그리고 각 토픽별 레코드를 확인하면 아래와 같다.  
+
+```bash
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic input-topic \
+> --from-beginning 
+a-desktop
+b-mouse
+c-keyboard
+d-graphics card
+a-hello world
+b-kafka
+c-desktop
+d-mouse
+a-keyboard
+
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic value-length-gt5 \
+> --from-beginning 
+a-7
+c-8
+d-13
+a-11
+c-7
+a-8
+.. 리셋 후 ..
+a-7
+c-8
+d-13
+a-11
+c-7
+a-8
+
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic value-length-odd \
+> --from-beginning 
+a-7
+d-13
+a-11
+c-7
+
+$  docker exec -it myKafka \
+> kafka-console-consumer.sh \
+> --bootstrap-server localhost:9092 \
+> --property print.key=true \
+> --property key.separator="-" \
+> --topic output-topic \
+> --from-beginning 
+a-1
+c-1
+d-1
+a-2
+c-2
+a-3
+.. 리셋 후 ..
+a-1
+d-1
+a-2
+c-1
+```  
+
+모든 토픽에 대한 확인은 `--from-begining` 옵션을 주어 토픽의 처음부터 레코드를 출력하도록 했다. 
+`input-topic` 에 리셋 후 추가적인 레코드는 들어오지 않았지만, 
+스트림 처리는 `input-topic` 의 처음 레코드 부터 다시 시작해 변경된 토폴로지를 바탕으로 기존 모든 레코드에 대해 재처리가 정상 수행된 것을 확인 할 수 있다.  
