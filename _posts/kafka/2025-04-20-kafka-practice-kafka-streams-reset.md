@@ -414,3 +414,39 @@ c-1
 모든 토픽에 대한 확인은 `--from-begining` 옵션을 주어 토픽의 처음부터 레코드를 출력하도록 했다. 
 `input-topic` 에 리셋 후 추가적인 레코드는 들어오지 않았지만, 
 스트림 처리는 `input-topic` 의 처음 레코드 부터 다시 시작해 변경된 토폴로지를 바탕으로 기존 모든 레코드에 대해 재처리가 정상 수행된 것을 확인 할 수 있다.  
+
+
+### Incompatible Changes Example
+`Input Topic` 에 있는 데이터들 만으로 스트림 애플리케이션의 재처리에 문제가 없고 애플리케이션과 관계있는 전체 토픽을 리셋이 가능한 상황이라면, 
+리셋 과정이 호환되지 않는 상황은 아주 크게 줄어들 수 있다. (downstream 에 대한 고려는 제외하고)
+만약 `downstream` 에 대한 고려까지 포함한다면 호환성에 대한 고민은 결과 토픽의 유형과 각 레코드의 일관성 등 고민이 깊어 질 수 있다.  
+
+즉 `Kafka Streams Reset Tool` 로 호환되지 않는 리셋 상황은 다양한 옵션이 있을 때, 
+애플리케이션 비지니스 혹은 요구사항 따라 다양한 옵션을 선택적으로 설정했을 때 초기화 과정에서 발생할 수 있는 다양한 상황을 가정한 것이다. 
+특저 옵션 및 과정을 필요에 의해 제외했을 떄 발생할 수 있는 호환성 문제는 아래와 같다.  
+
+`로컬 상태 초기화` 를 초기화 하지 않는 경우 로컬 상태 저장소가 남아있는 상태에서 재시작된 애플리케이션이 실행될 수 있다. 
+이는 새로운 상태와 일관되지 않게 동작하는 주요한 원인이다. 
+상태 저장소의 데이터 타입이 `String` 에서 `Integer` 로 변경된 후, 기존 로컬 상태에 `String` 타입 데이터가 남아있다면 새로운 설정과 호환되지 않는다. 
+또한 상태 저장소 설정 변경의 경우의 예시로 윈도우 크기를 5분에서 10분으로 변경하면, 이전 로컬 상태가 남아 있는 경우 새로운 윈도우 설정과 맞지 않아 오류가 발생할 수 있다.  
+
+`Internal Topic` 을 초기화하지 않는 경우 상태 저장소의 `changelog` 토픽과 `repartition` 토픽을 포함해서, 
+이전 상태가 그대로 유지되거나 기존 파티셔닝 설정과 일지하지 않아 문제가 발생 할 수 있다. 
+상태 저장 연산에서 사용되는 저장소의 데이터 타입이 변경돤 상황에서 `changelog` 토픽이 초기화되지 않으면 이전 데이터가 복원되면서 데이터 타입 불일치가 발생 할 수 있다. 
+또한 `groupBy()` 등 `repartition` 을 유발하는 연산에서 파티션 수가 변경됐으나, 토픽이 초기화되지 않으면 이전 파티션 설정과 마지 않아 데이터 불일치가 발생할 수 있다.  
+
+`Intermediate Topic` 을 초기화하지 않는 경우 `through()` 로 생성되는 명시적인 토픽에 이전 데이터가 남아 있어 새로운 설정과 일치하지 않는 상태로 애플리케이션 실행될 수 있다. 
+`through()` 를 통해 중간 토픽에 데이터를 분배하는데 초기화 되지 않는 경우 이전 데이터가 중복으로 처리되거나, 데이터 불일치가 발생할 가능성이 있다.  
+
+`Input Topic` 의 경우 초기화하지 않거나 잘못된 오프셋으로 초기화를 진행하면 기대한 동작과 처리 결과가 달라질 수 있다. 
+초기화 오프셋을 잘못 지정한 경우 재처리가 모두 수행되지 않거나, 충분한 데이터를 재처리하지 못해 누락 혹은 새로운 처리 결과에 불일치가 발생할 수 있다.  
+
+
+
+---  
+## Reference
+[Kafka Streams Memory Management for Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/memory-mgmt.html#record-caches-in-the-dsl)  
+[Data Reprocessing with the Streams API in Kafka: Resetting a Streams Application](https://www.confluent.io/blog/data-reprocessing-with-kafka-streams-resetting-a-streams-application/)  
+
+
+
