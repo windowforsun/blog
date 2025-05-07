@@ -314,3 +314,156 @@ await answer
 # ['HBM(Human Brain Mapping)은 인간의 뇌 구조 및 기능을 조사하기 위해 사용하는 기술입니다. HBM은 Functional Magnetic Resonance Imaging (fMRI), Electroencephalography (EEG), Magnetoencephalography (MEG), Functional Near-Infrared Spectroscopy (fNIRS), 및 other techniques를 포함하는 broad field입니다.\n\nHBM의 목표는 인간의 뇌 기능을 이해하고, 이를 통해 정신 건강 질환, 학습 및记忆, 언어 및 감정 조절, 및 다른 cognitve processes에 대한 이해를 도울 수 있습니다. HBM은 또한 신경이상, 뇌손상, 및 뇌질환의 diagnose 및 평가를 도와 줄 수 있습니다.\n\nHBM을 사용하는 방법은 다음과 같습니다.\n\n1. fMRI: 뇌의 기능을 조사하기 위해 Blood oxygenation level-dependent (BOLD) signaling을 사용합니다.\n2. EEG: 뇌의 전기적 활동을 조사하기 위해 전기 신호를 측정합니다.\n3. MEG: 뇌의 전자磁気적 활동을 조사하기 위해 전자磁気 신호를 측정합니다.\n4. fNIRS: 뇌의 기능을 조사하기 위해 near-infrared 빛을 사용하여 뇌의 산소 농도를 측정합니다.\n\nHBM은 다양한 field, including neuroscience, psychology, medicine, engineering, 및 computer science에서 사용됩니다. HBM을 통해 얻는 정보를 사용하여 새로운 치료법, 예방책, 및 생명공학 제품을 개발할 수 있습니다.',
 # "Here's an explanation of a common cold in Korean:\n\n감기는 일반적으로 바이러스에 의해 일으켜지는 질병입니다. 감기는 Респиратор계통 감염증으로, 해열, 인후통, 호흡곤란 등의 증세를 보입니다. 감기는 일반적으로 7-14일 동안 지속되는 경우가 많습니다.\n\n감기는 다양한 유형이 있습니다. 가장 흔한 유형은 Rhinovirus, Coronaviruses, Adenoviruses, Para-influenza viruses,와 Respiratory syncytial virus입니다. 감기는 감기 바이러스에 의해 일으켜진 경우가 가장 일반적입니다.\n\n감기는 일반적으로 다음과 같은 방법으로 전염됩니다.\n\n* 공기 중에 바이러스가 있는 경우, 호흡을 통해 바이러스가 몸 속으로 들어옵니다.\n* 바이러스가 있는 물체에 접촉하여 바이러스가 몸 속으로 들어옵니다.\n* 바이러스가 있는 사람과 접촉하여 바이러스가 몸 속으로 들어옵니다.\n\n감기는 다음과 같은 방법으로 예방할 수 있습니다.\n\n* 손을 자주 씻어 바이러스가 있는 물체와 접촉을 최소화합니다.\n* 기침이나 통증할 때는 마스크를 쓰고, 방금 기침하거나 통증한 후에는 방금 사용한 마스크를 세척하여 바이러스가 있는 물체와 접촉을 최소화합니다.\n* 바이러스가 있는 사람과 접촉을 최소화합니다.\n* 매일 잘 생활하고, 면역을 강화하여 감기를 예방할 수 있습니다.\n\n감기는 일반적으로 치료가 필요하지 않습니다. 하지만, 감기 증세가 심하거나 호흡곤란 등의 증세가 있을 경우에는 의사에게 방문하여 치료를 받는 것이 좋습니다."]
 ```
+
+### Runnable
+`Runnable` 은 `LangChain` 에서 제공하는 다양한 작업을 실행할 수 있는 구성 요소이다. 
+체인내에서 실행 가능한 단위로, 입력을 받아 처리하고 결과를 반환하는 역할을 한다. 
+
+
+#### RunnablePassthrough
+`RunnablePassthrough` 는 입력을 수정하지 않고 다음 구성 요소로 전달하는 `Runnable` 이다. 
+
+```python
+from langchain_core.runnables import RunnablePassthrough
+
+RunnablePassthrough().invoke({"num": 4})
+# {'num': 4}
+```  
+
+체인과 함께 사용하면 아래와 같다. 
+
+```python
+from langchain_core.runnables import RunnablePassthrough
+
+template = "{num}의 제곱근은?"
+prompt = PromptTemplate.from_template(template)
+
+runnable_chain = {"num" : RunnablePassthrough()} | prompt | model
+
+runnable_chain.invoke(4)
+
+# AIMessage(content='4의 제곱근은 2입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 12, 'prompt_tokens': 18, 'total_tokens': 30, 'completion_time': 0.01, 'prompt_time': 0.002557211, 'queue_time': 0.018841138, 'total_time': 0.012557211}, 'model_name': 'llama3-8b-8192', 'system_fingerprint': 'fp_a97cfe35ae', 'finish_reason': 'stop', 'logprobs': None}, id='run-2f76e25c-0f99-44a4-9dbe-845865f0e4e3-0', usage_metadata={'input_tokens': 18, 'output_tokens': 12, 'total_tokens': 30})
+```  
+
+`RunnablePassthrough.assign()` 을 사용하면 입력 값으로 들어온 `key-value` 쌍과 새롭게 할당된 `key-value` 쌍을 합친다.  
+
+```python
+runnable_chain = {"num" : (RunnablePassthrough.assign(new_num=lambda x: x["num"] * 3))} | prompt | model
+
+runnable_chain.invoke({"num" :4})
+
+# AIMessage(content="A nice math question! 😊\n\nGiven the dictionary `{'num': 4, 'new_num': 12}`, we can calculate the square root of each value:\n\n* `num`: sqrt(4) = 2\n* `new_num`: sqrt(12) = √12 ≈ 3.46\n\nSo, the square roots are 2 and approximately 3.46. 👍", additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 83, 'prompt_tokens': 30, 'total_tokens': 113, 'completion_time': 0.069166667, 'prompt_time': 0.004079745, 'queue_time': 0.021964935, 'total_time': 0.073246412}, 'model_name': 'llama3-8b-8192', 'system_fingerprint': 'fp_179b0f92c9', 'finish_reason': 'stop', 'logprobs': None}, id='run-f72e875e-3c33-4009-ae1d-78b532a5fb01-0', usage_metadata={'input_tokens': 30, 'output_tokens': 83, 'total_tokens': 113})
+```  
+
+
+#### RunnableParallel
+`RunnableParallel` 은 여러 `Runnable` 구성 요소를 병렬로 실행하고 결과를 수집하는 `Runnable` 이다.  
+
+```python
+from langchain_core.runnables import RunnableParallel
+
+runnable = RunnableParallel(
+    # 입력 그대로 전달
+    passed = RunnablePassthrough(),
+    # 입력된 값에 3을 곱한 값을 추가로 전달
+    extra = RunnablePassthrough.assign(mult=lambda x : x["num"] * 3),
+    # 입력된 값에 1을 더한 값을 반환
+    modified=lambda x : x["num"] + 1
+)
+
+runnable.invoke({"num":1})
+
+# {'passed': {'num': 1}, 'extra': {'num': 1, 'mult': 3}, 'modified': 2}
+```  
+
+체인과 함께 사용하면 아래와 같다.  
+
+```python
+chain1 = (
+    {"num": RunnablePassthrough()}
+    | PromptTemplate.from_template("{num} 의 제곱근은?")
+    | model
+)
+chain2 = (
+    {"num": RunnablePassthrough()}
+    | PromptTemplate.from_template("{num} 의 제곱은?")
+    | model
+)
+
+runnable_parallel_chain = RunnableParallel(sqrt=chain1, square=chain2)
+
+runnable_parallel_chain.invoke(4)
+# {'sqrt': AIMessage(content='4의 제곱근은 2입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 12, 'prompt_tokens': 18, 'total_tokens': 30, 'completion_time': 0.01, 'prompt_time': 0.002575389, 'queue_time': 0.021647529999999998, 'total_time': 0.012575389}, 'model_name': 'llama3-8b-8192', 'system_fingerprint': 'fp_179b0f92c9', 'finish_reason': 'stop', 'logprobs': None}, id='run-a6b08b96-4653-49aa-847d-59c4a6b4a485-0', usage_metadata={'input_tokens': 18, 'output_tokens': 12, 'total_tokens': 30}),
+# 'square': AIMessage(content='4의 제곱은 16입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 11, 'prompt_tokens': 17, 'total_tokens': 28, 'completion_time': 0.009166667, 'prompt_time': 0.006663523, 'queue_time': 0.24887254199999997, 'total_time': 0.01583019}, 'model_name': 'llama3-8b-8192', 'system_fingerprint': 'fp_a97cfe35ae', 'finish_reason': 'stop', 'logprobs': None}, id='run-d1e3aef2-9e18-4158-a130-dd285d005e7b-0', usage_metadata={'input_tokens': 17, 'output_tokens': 11, 'total_tokens': 28})}
+```  
+
+#### RunnableLambda
+`RunnableLambda` 는 사용자 정의 함수를 실행할 수 있는 `Runnable` 이다. 
+이는 기본 제공되는 `Runnable` 유형으로 처리되지 않는 특정 작업을 수행해야 할 떄 유요하다.  
+
+
+```python
+from datetime import datetime
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
+
+def get_today_str(a):
+  return datetime.today().strftime("%Y-%m-%d")
+
+prompt = PromptTemplate.from_template("{today} 에 세계 주요한 이슈 {num}개 한글로 소개해 주세요.")
+
+chain = (
+    {"today" : RunnableLambda(get_today_str), "num" : RunnablePassthrough()} | prompt | model | StrOutputParser()
+)
+
+chain.invoke(2)
+
+# Here are two major global issues as of March 22, 2025, introduced in Korean:
+# 
+# **1. 코로나19 9년째, 재유행 가능성 점검**
+# 
+# As of March 2025, the world is still dealing with the aftermath of the COVID-19 pandemic, which has lasted for nearly 9 years. The virus continues to evolve, and there is a growing concern about the possibility of a new wave of infections. Governments and health organizations around the world are closely monitoring the situation and taking measures to prevent the spread of the virus. The World Health Organization (WHO) has warned that the virus is still a major threat to global public health and that complacency could lead to a resurgence of cases.
+# 
+# **2. 우크라이나-러시아 전쟁, 유럽안보 위기**
+# 
+# The conflict between Ukraine and Russia, which began in 2022, continues to escalate, posing a significant threat to European security. The war has caused widespread humanitarian suffering, displacement, and economic devastation, and has also led to a significant increase in tensions between NATO member countries and Russia. The United States, Europe, and other countries have imposed severe economic sanctions on Russia, while Russia has retaliated by cutting off gas supplies to Europe. The situation remains uncertain, and there is a growing concern about the potential for further escalation and the impact on global stability.
+```  
+
+`operator` 패키지의 `itemgetter` 를 사용하면 특정 키를 추출해 좀 더 다양한 커스텀한 작업을 수행할 수 있다.  
+
+```python
+from operator import itemgetter
+
+def str_to_length(str):
+  return len(str)
+
+def multiply_multiple_str_length(_dict):
+  return str_to_length(_dict["text1"]) * str_to_length(_dict["text2"])
+
+prompt = PromptTemplate.from_template("{num1} + {num2} 의 계산 결과는?")
+
+chain = (
+    {
+        "num1" : itemgetter("str1") | RunnableLambda(str_to_length),
+        "num2" : {"text1" : itemgetter("str2"), "text2" : itemgetter("str3")} 
+        | RunnableLambda(multiply_multiple_str_length),
+    }
+    | prompt
+    | model
+)
+
+
+chain.invoke({"str1": "My", "str2": "name is", "str3" : "Jack"})
+# AIMessage(content='2 + 28 = 30', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 8, 'prompt_tokens': 20, 'total_tokens': 28, 'completion_time': 0.006666667, 'prompt_time': 0.00303913, 'queue_time': 0.02161509, 'total_time': 0.009705797}, 'model_name': 'llama3-8b-8192', 'system_fingerprint': 'fp_179b0f92c9', 'finish_reason': 'stop', 'logprobs': None}, id='run-37b6acf1-4dfb-4740-8b3e-f8f1366ac510-0', usage_metadata={'input_tokens': 20, 'output_tokens': 8, 'total_tokens': 28})
+```
+
+
+
+
+
+---  
+## Reference
+[Trace with LangChain (Python and JS/TS)](https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langchain)  
+[LangChain 시작하기](https://wikidocs.net/233341)  
+
+
