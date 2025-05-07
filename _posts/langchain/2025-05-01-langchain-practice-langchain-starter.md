@@ -4,7 +4,7 @@ classes: wide
 title: "[LangChain] LangChain 환경 구성 및 기본 사용법"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'LangChain 을 활용한 LLM 환경 구성 및 기본 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
