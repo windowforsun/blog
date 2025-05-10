@@ -40,3 +40,121 @@ use_math: true
 
 이후 소개하는 예제의 전체 코드 내용과 결과에 대한 테스트 코드는 [여기]()
 에서 확인 할 수 있다.  
+
+### Aggregating
+`Aggregating` 은 레코드의 키를 기준으로 그룹화된 데이터에 대한 연산을 수행하여 결과를 출적하는 과정이다. 
+`Kafka Streams` 에서는 `groupByKey()` ,`groupBy()` 를 통해 데이터를 `KGroupedStreams` 혹은 
+`KGroupedTable` 로 변환한 후 집계 연산을 적용할 수 있다. 
+그리고 이러한 집계 연산은 경우에 따라 `Windowed`(윈도우 기반), `Non-Windowed`(비윈도우 기반)에 대해 수행될 수 있다.  
+
+레코드를 키를 기준으로 집계해 결과를 만들어내는 연산인 만큼 `초기화 함수` 와 `집계 함수` 를 별도로 구현해야 한다. 
+여기서 `fault-tolerance` 를 지원하고 예기치 않는 결과를 방지하기 위해서는 초기화 함수와 집계 함수는 상태를 가지지 않아야 한다. 
+이는 초기화 함수와 집계 함수가 외부 상태값에 대한 의존성 없이 연산의 반환 값으로 전달되야 한다는 것을 의미한다. 
+예를 들어 이들이 외부에 정의된 클래스 멤버 변수를 사용해 반환 값이 결정된다면 장애 발생시 데이터가 손실될 수 있다.  
+
+
+#### aggregate
+`aggregate()` 는 `Rolling Aggregation` 을 의미한다. 
+이는 그룹화된 키에 따라(윈도우 X) 레코드의 값을 집계하는 방식이다. 
+`Aggregate` 는 `Reduce` 의 좀 더 일반화된 형태로, 입력 값과 다른 타입의 결과를 가질 수 있다. 
+`aggregate()` 는 `KGroupedStream`, `CogroupedKStream`, `KGroupedTable` 을 통해 사용할 수 있다.  
+
+먼저 `KGroupedStream` 은 그룹화된 스트림을 집계할 떄 사용 가능한데 초기 값을 제공해야하고, 
+`aggregator` 라는 집계 함수를 정의해야 한다. 
+그리고 `CogroupedKStream` 은 다수의 그룹화된 스크림을 집계 할때 사용 가능하고, 
+초기 값만 제공하면 된다. 이는 `CogroupedKStream` 을 구성하는 시점에 이미 `cogroup()` 을 통해 `aggregator` 가 제공됐기 때문이다. 
+마지막으로 `KGroupedTable` 은 그룹화된 테이블을 집계할 떄 사용 가능하고, 
+초기 값과 집계의 더하는 연산 `aggregator` 와 집계의 빼는 연산 `aggregator(adder)` 와 같이 2개의 `aggregator(subtractor)` 함수를 정의해야 한다.  
+
+그리고 `KGroupedStream` 과 `CogroupedKStream` 에서 `aggregate()` 의 주요 특징은 아래와 같다. 
+
+- `null` 키가 있는 레코드는 무시된다. 
+- 키가 처음 수신되면 정의한 초기값이 호출 된다. 
+- `null` 이 아닌 값의 레코드가 수신되면 `aggregator` 가 호출된다. 
+
+`KGroupedTable` 에서 `aggregator()` 의 주요 특징은 아래와 같다. 
+
+- `null` 키가 있는 레코드는 무시된다. 
+- 키가 처음 수신되면 정의한 초기값이 호출 된다. `KGroupedTable` 는 `tombstone record` 처리를 위해 초기값이 여러번 호출 될 수 있다.  
+- 처음 `null` 이 아닌 값이 수신되면, `adder` 만 호출된다. 
+- 이후 `null` 이 아닌 값이 수신되면, 먼저 기존 값에 `subtractor` 가 호출되고 그 다음 새로 수신된 값에 `adder` 가 호출된다. 
+- `null` 값을 가진 레코드(`tombstone record`)를 수신하면 `subtractor` 만 호출된다. `subtractor` 가 `null` 을 반환하면 해당 키는 `KTable` 에서 제거되고, 다음에 해당 키가 다시 수신되면 초기값을 다시 호출한다. 
+
+```
+KGroupedStream -> KTable
+CogroupedKStream -> KTable
+KGroupedTable -> KTable
+```  
+
+예제는 `KGroupedStream` 을 사용해 수신된 레코드의 값과 동일한 레코드의 수를 카운트하는 스트림이다. 
+
+
+```java
+public void aggregatingKGroupedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic",
+        Consumed.with(Serdes.String(), Serdes.String()));
+
+    KGroupedStream<String, String> kGroupedStream = inputStream.groupBy((key, value) -> value);
+
+    KTable<String, Long> kTable = kGroupedStream
+        .aggregate(
+            () -> 0L,
+            (key, value, agg) -> agg + 1L,
+            Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("aggregating-kgroupedstream-store")
+                .withKeySerde(Serdes.String())
+                .withValueSerde(Serdes.Long())
+        );
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
+다음은 예제는 `CogroupedKStream` 을 사용해 여러 토픽에서 수신된 레코드의 값과 동일한 레코드의 수를 카운트하는 스트림이다.
+
+```java
+public void aggregatingCoGroupedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> input1Topic = streamsBuilder.stream("input1-topic");
+    KStream<String, String> input2Topic = streamsBuilder.stream("input2-topic");
+
+    KGroupedStream<String, String> input1GroupedStream = input1Topic.groupBy((key, value) -> value,
+        Grouped.with("group1", Serdes.String(), Serdes.String()));
+    KGroupedStream<String, String> input2GroupedStream = input2Topic.groupBy((key, value) -> value,
+        Grouped.with("group2", Serdes.String(), Serdes.String()));
+
+    CogroupedKStream<String, Long> cogroupedKStream = input1GroupedStream.<Long>cogroup((key, value, agg) -> agg + 1L)
+        .cogroup(input2GroupedStream, (key, value, agg) -> agg + 1L);
+
+    KTable<String, Long> ktable = cogroupedKStream.aggregate(
+        () -> 0L,
+        Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("aggregating-cogroupstream-store")
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long())
+    );
+
+    ktable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
+
+다음은 예제는 `KGroupedTable` 을 사용해 여러 토픽에서 수신된 레코드의 값과 동일한 레코드의 수를 카운트하는 스트림이다. 
+
+```java
+public void aggregatingKGroupedTable(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+    KTable<String, String> inputTable = inputTopic.toTable();
+
+    KGroupedTable<String, String> kGroupedTable = inputTable.groupBy((key, value) -> KeyValue.pair(value, value));
+
+    KTable<String, Long> kTable = kGroupedTable.aggregate(
+        () -> 0L,
+        (key, value, agg) -> agg + 1L,
+        (key, value, agg) -> agg - 1L,
+        Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("aggregating-kgroupedtable-store")
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Long())
+    );
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
