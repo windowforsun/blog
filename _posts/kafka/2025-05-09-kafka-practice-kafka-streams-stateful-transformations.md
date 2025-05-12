@@ -306,3 +306,48 @@ public void aggregatingSessionWindowedCogroupedStream(StreamsBuilder streamsBuil
         .to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
 }
 ```  
+
+#### count
+`count()` 는 `Rolling Aggregation` 으로 `aggregation()` 과 비슷한 특성을 지니며 그룹화된 키에 따라 레코드의 수를 세는 연산이다. 
+`KGroupedStream` 과 `KGroupedTable` 에서 사용 가능한데 각 주요 특징은 아래와 같다.  
+
+`KGroupedStream` 의 경우 `null` 키/값이 존재하는 경우 레코드는 무시된다. 
+그리고 `KGroupedTable` 은 `null` 키인 레코드는 무시되고, 
+값이 `null` 인 경우 무시되진 않지만 해당 키에 대한 삭제로 해석해 키를 삭제한다.  
+
+```
+KGroupedStream -> KTable
+KGroupedTable -> KTable
+```  
+
+예제는 `KGroupedStream` 을 사용해 수신된 레코드의 값과 동일한 레코드의 수를 카운트하는 스트림이다.
+
+```java
+public void countKGroupedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic",
+        Consumed.with(Serdes.String(), Serdes.String()));
+
+    KGroupedStream<String, String> kGroupedStream = inputStream.groupBy((key, value) -> value);
+
+    KTable<String, Long> kTable = kGroupedStream
+        .count();
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
+다음 예제는 `KGroupedTable` 을 사용해 수신된 레코드의 값과 동일한 레코드의 수를 카운트하는 스트림이다.
+
+```java
+public void countKGroupedKTable(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+    KTable<String, String> inputTable = inputTopic.toTable();
+
+    KGroupedTable<String, String> kGroupedTable = inputTable.groupBy((key, value) -> KeyValue.pair(value, value));
+
+    KTable<String, Long> kTable = kGroupedTable
+        .count();
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
