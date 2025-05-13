@@ -351,3 +351,57 @@ public void countKGroupedKTable(StreamsBuilder streamsBuilder) {
     kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
 }
 ```  
+
+#### count(windowed)
+`count(windowed)` 는 `Windowed Aggregation` 으로 `aggregation(windowed)` 와 비슷한 특성을 지닌다. 
+그룹화된 키에 따라 윈도우 별로 레코드 수를 카운트하는 연산이다. 
+이는 `TimeWindowedKStream` 과 `SessionWindowedKStream` 에서 사용 가능하다.  
+
+주요 특징으로는 `null` 키 또는 값을 갖는 레코드는 무시된다.  
+
+```
+KGroupedStream -> TimeWindowedKStream -> KTable
+KGroupedStream -> SessionWindowedKStream -> KTable
+```  
+
+예제는 `TimeWindowedKStream` 을 사용해 수신된 레코드의 값과 동일한 레코드의 수를 윈도우별로 카운트하는 스트림이다.
+
+```java
+public void countTimeWindowedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+
+    KGroupedStream<String, String> kGroupedStream = inputTopic.groupBy((key, value) -> value);
+
+    TimeWindowedKStream<String, String> timeWindowedKStream = kGroupedStream.windowedBy(TimeWindows.ofSizeWithNoGrace(
+        Duration.ofMillis(10)));
+
+    KTable<Windowed<String>, Long> kTable = timeWindowedKStream.
+        count();
+
+    kTable
+        .toStream()
+        .map((key, value) -> KeyValue.pair(key.key(), value))
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
+예제는 `SessionWindowedKStream` 을 사용해 수신된 레코드의 값과 동일한 레코드의 수를 윈도우별로 카운트하는 스트림이다.
+
+```java
+public void countSessionWindowedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+
+    KGroupedStream<String, String> kGroupedStream = inputTopic.groupBy((key, value) -> value);
+
+    SessionWindowedKStream<String, String> sessionWindowedKStream = kGroupedStream.windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(10)));
+
+    KTable<Windowed<String>, Long> kTable = sessionWindowedKStream
+        .count();
+
+    kTable
+        .toStream()
+        .map((key, value) -> KeyValue.pair(key.key(), value))
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.Long()));
+}
+```  
+
