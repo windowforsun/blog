@@ -405,3 +405,63 @@ public void countSessionWindowedStream(StreamsBuilder streamsBuilder) {
 }
 ```  
 
+
+#### reduce
+`reduce()` 는 `Rolling Aggregation` 동작으로 그룹화된 키에 따라 레코드의 값을 결합하는 연산이다. 
+현재 레코드 값은 마지막으로 결합된 값과 결합되어 새로운 값이 반환된다. 
+결과의 반환값 유형은 `aggregate()` 와 달리 변경이 불가해 입력 유형과 결과 유형이 같아야 한다. 
+`KGroupedStream` 과 `KGroupedTable` 에서 사용 가능하다. 
+
+`KGroupedStream` 을 사용할 때는 `reducer(adder)` 를 제공해야 한다. 
+그리고 `KGroupedTable` 을 사용할 때는 더하기 연산인 `reducer(adder)` 와 빼기 연산 `reducer(subtractor)` 를 제공해야 한다.  
+
+`KGroupedStream` 에서 `reduce()` 를 수행할 때 주요 특징은 아래와 같다.  
+
+- `null` 키가 있는 레코드는 무시된다. 
+- 처음 수신한 레코드의 키는 해당 레코드의 값이 초기 집계값으로 사용한다. 
+- `null` 이 아닌 값을 가진 레코드를 수신하면 `reducer(adder)` 가 호출된다. 
+
+`KGroupedTable` 에서 `reduce()` 를 수행할 때 주요 특징은 아래와 같다.  
+
+- `null` 키가 있는 레코드는 무시된다. 
+- 처음 수신한 레코드의 키는 해당 레코드의 값이 초기 집계값으로 사용된다. 해당 동작은 `tombstone record` 수신 후에도 동일하게 발생한다. 
+- 키에 대해 `null` 이 아닌 값을 가진 레코드를 수신하면 `reducer(adder)` 만 호출된다. 
+- 키에 대해 다음 `null` 이 아닌 값을 수신하면, 테이블에 저장된 이전 값으로 `reducer(subtractor)` 가 호출되고, 새로운 값으로 `reducer(adder)` 가 호출된다. 
+- 키에 대해 `null` 인 레코드를 받으면 `tombstone record` 이므로 `reducer(subtractor)` 만 호출된다. 빼기 연산에서 `null` 을 반환하면 해당 키는 `KTable` 에서 제거되고 이후 다시 동일한 키가 수신되면 초기화 과정을 거치게된다.  
+
+
+```
+KGroupedStream -> KTable
+KGroupedTable -> KTable
+```  
+
+예제는 `KGroupedStream` 을 사용해 수신된 레코드의 값을 키가 동일한 것들과 결합하는 스트림이다.  
+
+```java
+public void reduceKGroupedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputStream = streamsBuilder.stream("input-topic",
+        Consumed.with(Serdes.String(), Serdes.String()));
+
+    KGroupedStream<String, String> kGroupedStream = inputStream.groupBy((key, value) -> value);
+
+    KTable<String, String> kTable = kGroupedStream.reduce((aggValue, newValue) -> aggValue + newValue);
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
+
+다음 예제는 `KGroupedStream` 을 사용해 수신된 레코드의 값을 키가 동일한 것들과 결합하는 스트림이다.
+
+```java
+public void reduceKGroupedTable(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+    KTable<String, String> inputTable = inputTopic.toTable();
+
+    KGroupedTable<String, String> kGroupedTable = inputTable.groupBy((key, value) -> KeyValue.pair(value, value));
+
+    KTable<String, String> kTable = kGroupedTable.reduce((aggValue, newValue) -> aggValue + newValue, (aggValue, newValue) -> aggValue.replaceFirst(newValue, ""));
+
+    kTable.toStream().to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
+
