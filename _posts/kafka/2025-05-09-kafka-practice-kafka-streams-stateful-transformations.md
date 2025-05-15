@@ -465,3 +465,57 @@ public void reduceKGroupedTable(StreamsBuilder streamsBuilder) {
 }
 ```  
 
+
+#### reduce(windowed)
+`reduce(windowed)` 는 `Windowed Aggregation` 동작으로 그룹화된 키에 따라 각 윈도우별로 레코드의 값을 결합한다. 
+대부분 특징은 앞선 `reduce()` 외 비슷하고, `null` 인 키 또는 값을 가진 레코드가 수신되면 무시된다는 특징이 있다. 
+`TimeWindowedKStream` 과 `SessionWindowedKStream` 에서 사용할 수 있다.  
+
+- `reduce()` 와 비슷하지만 결합 연산이 윈도우 별로 적용된다. 
+- `null` 키인 레코드는 무시된다. 
+- 특정 윈도우에서 처음 수신한 키는 해당 레코드의 값이 초기 집계 값으로 사용된다. 
+- 특정 윈도우에서 `null` 값이 아닌 레코드를 받으면 `reducer(adder)` 가 호출된다.  
+
+```
+KGroupedStream -> TimeWindowedKStream -> KTable
+KGroupedStream -> SessionWindowedKStream -> KTable
+```  
+
+예제는 `TimeWindowedKStream` 을 사용해 수신된 레코드의 값을 키가 동일한 것들과 윈도우별로 결합하는 스트림이다.
+
+```java
+public void reduceTimeWindowedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+
+    KGroupedStream<String, String> kGroupedStream = inputTopic.groupBy((key, value) -> value);
+
+    TimeWindowedKStream<String, String> timeWindowedKStream = kGroupedStream.windowedBy(TimeWindows.ofSizeWithNoGrace(
+        Duration.ofMillis(10)));
+
+    KTable<Windowed<String>, String> kTable = timeWindowedKStream.reduce((aggValue, newValue) -> aggValue + newValue);
+
+    kTable
+        .toStream()
+        .map((key, value) -> KeyValue.pair(key.key(), value))
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
+
+다음 예제는 `SessionWindowedKStream` 을 사용해 수신된 레코드의 값을 키가 동일한 것들과 윈도우별로 결합하는 스트림이다.
+
+```java
+public void reduceSessionWindowedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.stream("input-topic");
+
+    KGroupedStream<String, String> kGroupedStream = inputTopic.groupBy((key, value) -> value);
+
+    SessionWindowedKStream<String, String> sessionWindowedKStream = kGroupedStream.windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMillis(10)));
+
+    KTable<Windowed<String>, String> kTable = sessionWindowedKStream.reduce((aggValue, newValue) -> aggValue + newValue);
+
+    kTable
+        .toStream()
+        .map((key, value) -> KeyValue.pair(key.key(), value))
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
