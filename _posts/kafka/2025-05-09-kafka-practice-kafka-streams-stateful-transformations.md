@@ -519,3 +519,315 @@ public void reduceSessionWindowedStream(StreamsBuilder streamsBuilder) {
         .to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
 }
 ```  
+
+#### Impact of record caches
+`Kafka Streams DSL` 에서 `record cache` 는 상태 저장소에서 사용되는 일시적인 메모리 공간을 의미한다. 
+이는 성능은 향상시킬 수 있지만 테이블 변경사항을 바로 스트림을 통해 전달 받을 수 없는 특징이 있어 이부분을 집고 넘어가고자 한다. 
+하지만 그렇다고 해서 기본으로 활성화돼 있는 `record cache` 를 비활성화하는 것은 위험할 수 있다. 
+테스트 목적이 아닌 이상 `record cache` 는 활성화를 권장한다. 
+
+`KGroupedStream -> KTable` 로 변환하는 경우에서 `record cache` 가 어떤 영향을 미치는지 알아본다. 
+테스트를 위해 입력으로 들어오는 동일한 키의 레코드를 카운트하는 스트림을 사용한다.  
+
+```java
+public void cacheImpactKGroupedStream(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.<String, String>stream("input-topic");
+
+    KGroupedStream<String, String> kGroupedStream = inputTopic
+        .groupByKey(Grouped.with(Serdes.String(), Serdes.String()));
+
+    KTable<String, String> ktable = kGroupedStream.aggregate(
+        () -> "0",
+        (key, value, agg) -> String.valueOf(Integer.parseInt(agg) + Integer.parseInt(value)),
+        Materialized.<String, String, KeyValueStore<Bytes, byte[]>>as("kGroupedStream-cache")
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.String())
+    );
+
+    ktable.toStream()
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
+
+위 스트림 처리가 수행되는 과정을 표현하면 아래와 같다.  
+
+| Timestamp | Input record<br>(KStream) | Grouping<br>(KStream) | Initializer<br>(KGroupedStream) | Adder<br>(KGroupedStream) | State<br>(KTable)                  |
+|-----------|---------------------------|-----------------------|---------------------------------|---------------------------|------------------------------------|
+| 1         | (hello, 1)                | (hello, 1)            | 0 (for hello)                   | (hello, 0 + 1)            | (hello, 1)                         |
+| 2         | (kafka, 1)                | (kafka, 1)            | 0 (for kafka)                   | (kafka, 0 + 1)            | (hello, 1) (kafka, 1)              |
+| 3         | (streams, 1)              | (streams, 1)          | 0 (for streams)                 | (streams, 0 + 1)          | (hello, 1) (kafka, 1) (streams, 1) |
+| 4         | (kafka, 1)                | (kafka, 1)            |                                 | (kafka, 1 + 1)            | (hello, 1) (kafka, 2) (streams, 1) |
+| 5         | (kafka, 1)                | (kafka, 1)            |                                 | (kafka, 2 + 1)            | (hello, 1) (kafka, 3) (streams, 1) |
+| 6         | (streams, 1)              | (streams, 1)          |                                 | (streams, 1 + 1)          | (hello, 1) (kafka, 3) (streams, 2) |
+
+아래 테스트 코드와 같이 강제로 캐시를 비활성화 한 경우(`statestore.cache.max.bytes=0, commit.interval.ms=0`)는 업데이트 되는 모든 결과가 결과 스트림으로 전달되는 것을 확인 할 수 있다.  
+
+```java
+@Test
+public void no_cacheImpactKGroupedStream() throws InterruptedException {
+    AggregatingTransforms aggregatingTransforms = new AggregatingTransforms();
+
+    aggregatingTransforms.cacheImpactKGroupedStream(this.streamsBuilder);
+
+    Properties props = new Properties();
+    props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test22");
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-state");
+    props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
+    props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 0);
+
+    Topology topology = this.streamsBuilder.build();
+    KafkaStreams kafkaStreams1 = new KafkaStreams(topology, props);
+    kafkaStreams1.start();
+
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams1.state() == KafkaStreams.State.RUNNING);
+
+
+    this.kafkatemplate.send("input-topic",0, 100L, "hello", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 200L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 300L, "stream", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 400L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 500L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 600L, "stream", "1");
+    Thread.sleep(3000);
+
+    assertThat(TestConsumerConfig.LISTEN_LIST, hasSize(6));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).key(), is("hello"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).key(), is("kafka"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).key(), is("stream"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).key(), is("kafka"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).value(), is("2"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).key(), is("kafka"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).key(), is("stream"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).value(), is("2"));
+}
+```  
+
+하지만 `record cache` 를 활성화하면 동일한 키가 연속으로 사용되는 4, 5번의 타임스템프의 결과가 압축되는 것을 볼 수 있다.  
+
+```java
+@Test
+public void cacheImpactKGroupedStream() throws InterruptedException {
+    AggregatingTransforms aggregatingTransforms = new AggregatingTransforms();
+
+    aggregatingTransforms.cacheImpactKGroupedStream(this.streamsBuilder);
+
+    Properties props = new Properties();
+    props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test22");
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-state");
+    props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 100);
+    props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+
+    Topology topology = this.streamsBuilder.build();
+    KafkaStreams kafkaStreams1 = new KafkaStreams(topology, props);
+    kafkaStreams1.start();
+
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams1.state() == KafkaStreams.State.RUNNING);
+
+    this.kafkatemplate.send("input-topic",0, 100L, "hello", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 200L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 300L, "stream", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 400L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 500L, "kafka", "1");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 600L, "stream", "1");
+    Thread.sleep(3000);
+
+    assertThat(TestConsumerConfig.LISTEN_LIST, hasSize(5));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).key(), is("hello"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).key(), is("stream"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).key(), is("kafka"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).value(), is("1"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).key(), is("kafka"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).key(), is("stream"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).value(), is("2"));
+}
+```  
+
+다음은 `KGroupedTable -> KTable` 로 변환하는 경우에서 `record cache` 가 어떤 영향을 미치는지 알아본다.
+테스트를 위해 입력으로 들어오는 레코드 키의 문자열 길이를 값을 기준으로 그룹화해 카운트하는 스트림을 사용한다.  
+
+```java
+public void cacheImpactKGroupedTable(StreamsBuilder streamsBuilder) {
+    KStream<String, String> inputTopic = streamsBuilder.<String, String>stream("input-topic");
+    KTable<String, String> inputTable = inputTopic.<String, String>toTable();
+
+    KGroupedTable<String, Integer> kGroupedTable = inputTable
+        .groupBy((s, s2) -> KeyValue.pair(s2, s.length()), Grouped.with(Serdes.String(), Serdes.Integer()));
+
+    KTable<String, Integer> kTable = kGroupedTable.aggregate(
+        () -> 0,
+        (key, newValue, aggValue) -> aggValue + newValue,
+        (key, newValue, aggValue) -> aggValue - newValue,
+        Materialized.<String, Integer, KeyValueStore<Bytes, byte[]>>as("kGroupedTable-cache")
+            .withKeySerde(Serdes.String())
+            .withValueSerde(Serdes.Integer())
+    );
+
+    kTable.toStream().mapValues((s, integer) -> String.valueOf(integer))
+        .to("output-result-topic", Produced.with(Serdes.String(), Serdes.String()));
+}
+```  
+
+위 스트림 처리가 수행되는 과정을 표현하면 아래와 같다.
+
+| Timestamp | Input record<br>(KTable) | Interpreted as<br>(KTable) | Grouping<br>(KTable) | Initializer<br>(KGroupedTable) | Adder<br>(KGroupedTable)  | Subtractor<br>(KGroupedTable)  | State<br>(KTable) |
+|-----------|--------------------------|----------------|----------|--------------------------------|---------------------------|-------------|-------------------|
+| 1         | (alice, E)               | INSERT alice   | (E, 5)   | 0 (for E)                      | (E, 0 + 5)                |             | (E, 5)            |
+| 2         | (bob, A)                 | INSERT bob     | (A, 3)   | 0 (for A)                      | (A, 0 + 3)                |             | (A, 3) (E, 5)     |
+| 3         | (charlie, A)             | INSERT charlie | (A, 7)   |                                | (A, 3 + 7)                |             | (A, 10) (E, 5)    |
+| 4         | (alice, A)               | UPDATE alice   | (A, 5)   |                                | (A, 10 + 5)               | (E, 5 - 5)  | (A, 15) (E, 0)    |
+| 5         | (charlie, null)          | DELETE charlie | (null, 7)|                                |                           | (A, 15 - 7) | (A, 8) (E, 0)     |
+| 6         | (null, E)                | ignored        |          |                                |                           |             | (A, 8) (E, 0)     |
+| 7         | (bob, E)                 | UPDATE bob     | (E, 3)   |                                | (E, 0 + 3)                | (A, 8 - 3)  | (A, 5) (E, 3)     |
+
+
+아래 테스트 코드와 같이 강제로 캐시를 비활성화 한 경우(`statestore.cache.max.bytes=0, commit.interval.ms=0`)는 업데이트 되는 모든 `KTable` 변경이 결과 스트림으로 전달되는 것을 확인 할 수 있다.
+
+```java
+@Test
+public void no_cacheImpactKGroupedTable() throws InterruptedException {
+    AggregatingTransforms aggregatingTransforms = new AggregatingTransforms();
+
+    aggregatingTransforms.cacheImpactKGroupedTable(this.streamsBuilder);
+
+    Properties props = new Properties();
+    props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test22");
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-state");
+    props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
+    props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 0);
+
+    Topology topology = this.streamsBuilder.build();
+    KafkaStreams kafkaStreams1 = new KafkaStreams(topology, props);
+    kafkaStreams1.start();
+
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams1.state() == KafkaStreams.State.RUNNING);
+
+    this.kafkatemplate.send("input-topic",0, 100L, "alice", "E");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 200L, "bob", "A");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 300L, "charlie", "A");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 400L, "alice", "A");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 500L, "charlie", null);
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 600L, null, "E");
+    Thread.sleep(50);
+    this.kafkatemplate.send("input-topic", 0, 700L, "bob", "E");
+    Thread.sleep(3000);
+
+    TestConsumerConfig.LISTEN_LIST.forEach(System.out::println);
+
+    assertThat(TestConsumerConfig.LISTEN_LIST, hasSize(8));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).value(), is("5"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).value(), is("10"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).value(), is("0"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).value(), is("15"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).value(), is("8"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(6).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(6).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(7).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(7).value(), is("5"));
+}
+```  
+
+하지만 `record cache` 를 활성화하면 동일한 키가 연속으로 사용되는 4, 5번의 타임스템프의 결과가 압축되는 것을 볼 수 있다. 
+
+```java
+@Test
+public void cacheImpactKGroupedTable() throws InterruptedException, ExecutionException {
+    AggregatingTransforms aggregatingTransforms = new AggregatingTransforms();
+
+    aggregatingTransforms.cacheImpactKGroupedTable(this.streamsBuilder);
+
+    Properties props = new Properties();
+    props.put(StreamsConfig.APPLICATION_ID_CONFIG, "test22");
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-state");
+    props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 200);
+    props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 100);
+
+    Topology topology = this.streamsBuilder.build();
+    KafkaStreams kafkaStreams1 = new KafkaStreams(topology, props);
+    kafkaStreams1.start();
+
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams1.state() == KafkaStreams.State.RUNNING);
+
+    this.kafkatemplate.send("input-topic",0, 100L, "alice", "E").get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 200L, "bob", "A").get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 300L, "charlie", "A").get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 400L, "alice", "A").get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 500L, "charlie", null).get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 600L, null, "E").get();
+    Thread.sleep(40);
+    this.kafkatemplate.send("input-topic", 0, 700L, "bob", "E").get();
+    Thread.sleep(3000);
+
+    TestConsumerConfig.LISTEN_LIST.forEach(System.out::println);
+
+    assertThat(TestConsumerConfig.LISTEN_LIST, hasSize(7));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(0).value(), is("5"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(1).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(2).value(), is("10"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(3).value(), is("0"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(4).value(), is("8"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).key(), is("E"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(5).value(), is("3"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(6).key(), is("A"));
+    assertThat(TestConsumerConfig.LISTEN_LIST.get(6).value(), is("5"));
+}
+```  
+
