@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Stateful Transformations"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 에서 Stateful Transformations 의 종류와 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,13 @@ tags:
     - Practice
     - Kafka
     - Kafka Streams
+    - Stateful Transformations
+    - Aggregation
+    - Joining
+    - Windowing
+    - Custom Processors
+    - State Store
+    - Record cache
 toc: true
 use_math: true
 ---  
@@ -889,5 +896,48 @@ KTable-GlobalKTable|-|X|X|X
   - `KTable` 인 경우 `KTable.toStream.repartition(Repartitioned.numberOfPartitions(..).toTable())` 을 사용한다. 
 3. 스트림 애플리케이션 내에서 두 입력간 조인을 수행한다. 
 
-`Kafka Streams` 의 `Joining` 에 대한 상세한 내용은 [여기]()
+`Kafka Streams` 의 `Joining` 에 대한 상세한 내용은 [여기]({{site.baseurl}}{% link _posts/kafka/2024-12-02-kafka-practice-kafka-streams-join.md %})
 에서 확인 할 수 있다.  
+
+
+### Windowing
+`Windowing` 은 시간 기반으로 데이터를 그룹화하여 처리하는 것을 의미한다. 
+스트림 데이터는 지속적으로 흘러들어오기 때문에, 특정 시간 간격으로 데이터를 구분해 처리할 필요가 있다. 
+윈도우 연산은 스트림의 무한한 데이터를 시간 창(`window`)으로 나누어 집계하거나 조인할 수 있다.  
+
+`Joining` 작업을 하면 정의된 윈도우 경계 내에서 레코드를 저장하기 위해 `Windowing State Store` 를 사용 한다. 
+그리고 해당 저장소를 사용해 `Aggregating` 동작에서 최신 윈도우에 대한 집계를 수행하게 된다.  
+
+`Windowing State Store` 에 있는 오래된 레코드는 `window retention period` 이후에는 제거된다. 
+`Kafka Streams` 는 최소 설정된 시간 동안 윈도우 데이터를 유지하는데, 해당 기본 값은 1일이다. 
+이 설정은 `Materialized.withRetention()` 을 통해 변경 가능하다.  
+
+관련 연산으로는 `Grouping` 이 있다. 
+`Grouping` 을 수행하면 동일한 키를 가진 모든 레코드를 그룹화해 후속 작업을 위해 데이터가 적절하게 `partitioning` 되었는지 확인할 수 있다. 
+이후 그룹화된 것을 바탕으로 `Windowing` 을 수행하면 각 키별 레코드를 윈도우 별로 `sub-group` 할 수 있다.  
+
+아래는 `Streams DSL` 을 사용했을 때 구현할 수 있는 윈도우의 종류이다.  
+
+
+Window name|Behavior|Desc
+---|---|---
+Tumbling Window|Time-based|고정 크기, 윈도우간 겹치지 않음, 윈도우간 공백 시간 없음
+Hopping Window|Time-based|고정 크기, 윈도우간 겹침
+Sliding time Window|Time-based|고정 크기, 레코드 타임스탬프를 기준으로 겹치거나 겹치지 않음
+Session Window|Session-based|동적 크기, 윈도우간 겹치지 않음, 레코드 기반 윈도우
+
+
+`Kafka Streams` 의 `Windowing` 에 대한 상세한 내용은 [여기]({{site.baseurl}}{% link _posts/kafka/2024-06-20-kafka-practice-kafka-streams-windowing.md %})
+에서 확인 할 수 있다.
+
+
+
+---  
+## Reference
+[Stateful transformations](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#stateful-transformations)  
+[co-partition](https://docs.confluent.io/platform/current/streams/developer-guide/dsl-api.html#streams-developer-guide-dsl-joins-co-partitioning)  
+[record cache](https://docs.confluent.io/platform/current/streams/developer-guide/memory-mgmt.html#streams-developer-guide-memory-management-record-cache)  
+[Fault tolerance](https://docs.confluent.io/platform/current/streams/architecture.html#streams-architecture-fault-tolerance)  
+
+
+
