@@ -831,3 +831,63 @@ public void cacheImpactKGroupedTable() throws InterruptedException, ExecutionExc
 }
 ```  
 
+
+### Joining
+`Joining` 은 서로 다른 스트림 또는 테이블의 데이터를 결합하거나 하나의 출력 데이터를 만드는 연산이다. 
+스트림간 또한 테이블간의 관계를 정의하고, 이를 통해 데이터의 상관관계를 파악하는데 사용될 수 있다. 
+조인을 사용하면 원격 데이터베이스에 접근하는 대신, `Kafka Streams` 의 로컬 상태 저장소에서 저장된 테이블을 이용해 
+매우 빠른 조인 연산을 수행할 수 있다. 즉 `CDC` 를 통해 데이터베이스의 내용을 `Kafka` 로 옮기는 등 해서 
+스트림 처리과정에서 원격 호출을 최소화해 부하를 줄이고 성능은 높일 수 있다.  
+
+조인을 수행할 때도 `Aggregating` 과 마찬가지로 `Windowed` 와 `Non-Windowed` 기반 조인이 있다. 
+이는 조인하려는 두 소스가 어떤 유형이냐에 따라 달리질 수 있다. 
+조인은 다양한 유형의 조인을 지원하는데 이를 표로 정리하면 아래와 같다.  
+
+Join operands|Type|(Inner)JOIN|LEFT JOIN|OUTER JOIN
+---|---|---|---|---
+KStream-KStream|Windowed|O|O|O
+KTable-KTable|Non-Windowed|O|O|O
+KTable-KTable FK|Non-Windowed|O|O|X
+KStream-KTable|Non-Windowed|O|O|X
+KStream-GlobalKTable|Non-Windowed|O|O|X
+KTable-GlobalKTable|-|X|X|X
+
+`Kafka Streams` 간 `Joining` 을 수행할 떄, 
+`Co-partitioning` 이라는 특징이 있다. 
+`Co-partitioning` 은 두 개 이상의 스트림이나 테이블이 조인될 떄, 
+동일한 키를 가진 레코드들이 동일한 파티션에 존재해야 한다는 요구사항을 의미한다. 
+이는 `Kafka Streams` 가 분산 환경에서 데이터를 효율적으로 처리하고 조인 작업을 수행하기 위핸 핵심 매커니즘이다.  
+`KTable-KTable FK` 조인과 `GlobalKTable` 과의 조인 외에 모든 조인 연산에서는 `Co-partitioning` 이 요구된다.  
+
+`Kafka Streams` 에서 조인은 레코드의 키를 기반으로 수행되는데, 
+`leftRecord.key == rightRecord.key` 와 같이 조인 조건을 설정하기 때문에 
+스트림/테이블이 동일한 키로 파티셔닝돼야 한다. 
+`Kafka Streams` 에서 조인 연산시 소스 스트림/테이블의 파티션 수가 같은지 확인하지만, 
+파티셔닝 전략이 동일한지는 확인하지 않기 때문에 이는 개발자가 보장해야 한다. 
+
+`Co-partitioning` 의 요구 사항은 아래와 같다. 
+
+1. 조인에 사용되는 두 입력 토픽(좌측, 우측)은 동일한 파티션 수를 가져야 한다. 
+2. 두 입력 토픽은 동일한 파티셔닝 전략을 시용해야 한다. 이를 통해 동일한 키를 가진 레코드가 동일한 파티션 번호로 전달되도록 해야 한다. 
+
+`Kafka Client` 를 사용하는 `Kafka Producer API` 를 사용하는 애플리케이션은 동일한  `partitioner.class`(`ProducerConfig.PARTITIONER_CLASS_CONFIG`) 를 사용해야 하고, 
+`Kafka Streams API` 를 사용하는 애플리케이션은 `KStream.to()` 를 사용할 때 동일한 `StreamPartitioner` 를 사용해야 한다. 
+만약 별도로 설정을 해주지 않고 모든 애플리케이션이 기본 파티셔너를 사용한다면 파티셔닝 전략에 대해서는 고려할 필요 없다.  
+
+`Co-partitioning` 이 돼있지 않다면 이는 수동으로 데이터를 `repartitioning` 해야 한다. 
+이는 일반적으로 병목현상을 방지하기 위해 아래와 같은 조건을 기준으로 하는게 좋다. 
+
+- 파티션 수가 적은 토픽을 더 큰 파티션 수로 `repartitioning` 한다. (반대로 하는 것도 가능하다.)
+- `KStream-KTable` 조인의 경우 `KStream` 의 소스 토픽을 `repartitioning` 하는 것이 좋다. (`KTable` 을 할 경우 `State Store` 가 다시 생성될 수 있다.)
+- `KTable-KTable` 조인의 경우 각 `KTable` 의 크기를 고려해 더 작은 `KTable` 을 `repartitioning` 하는 것이 좋다.  
+
+`Co-partitioning` 을 위해 수동으로 `repartitioning` 을 진행한다면 아래와 같은 절차를 따를 수 있다.  
+
+1. 조인에서 사용하는 두 입력 토픽 중 토픽의 파티션 수가 더 적은 쪽을 확인한다. (`bin/kafka-topics --describe` 를 통해 확인 가능)
+2. 애플리케이션 내에서 파티션이 적은 토픽을 사용하는 소스를 대상으로 `repartitioning` 을 수행한다. 수행할 때는 파티션이 더 큰 쪽의 수와 동일하게 맞춘다. 
+  - `KStream` 인 경우 `KStream.repartition(Repartitioned.numberOfPartitions(..))` 을 사용한다. 
+  - `KTable` 인 경우 `KTable.toStream.repartition(Repartitioned.numberOfPartitions(..).toTable())` 을 사용한다. 
+3. 스트림 애플리케이션 내에서 두 입력간 조인을 수행한다. 
+
+`Kafka Streams` 의 `Joining` 에 대한 상세한 내용은 [여기]()
+에서 확인 할 수 있다.  
