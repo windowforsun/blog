@@ -45,7 +45,7 @@ use_math: true
 
 ![그림 1]({{site.baseurl}}/img/kafka/kafka-streams-stateful-transformations.drawio.png)
 
-이후 소개하는 예제의 전체 코드 내용과 결과에 대한 테스트 코드는 [여기]()
+이후 소개하는 예제의 전체 코드 내용과 결과에 대한 테스트 코드는 [여기](https://github.com/windowforsun?tab=repositories)
 에서 확인 할 수 있다.  
 
 ### Aggregating
