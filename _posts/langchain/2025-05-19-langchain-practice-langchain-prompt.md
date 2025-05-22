@@ -48,3 +48,31 @@ use_math: true
 
 `LangChain` 에서 `Prompt` 는 몇 클래스와 방법을 사용해 구현할 수 있다. 
 예제를 통해 생성 및 사용법에 대해 알아본다. 
+
+### PromptTemplate
+`PromptTemplate` 은 언어 모델과 상호작용하기 위한 구조화된 템플릿을 생성한다. 
+고정된 텍스트와 변수 자리표시자로 구성된 문자열 템플릿을 정의하고, 
+실행 시점에 변수에 실제 값을 주입하여 완성된 프롬프트를 생성할 수 있다. 
+이를 통해 일관된 형식으로 언어 모델에 입력을 제공할 수 있게 한다.  
+
+`from_template()` 메서드를 사용하면 템플릿을 기반으로 프롬프트를 생성할 수 있다.  
+
+```python
+from langchain_core.prompts import PromptTemplate
+
+template = "당신은 계산기입니다. {exp} 의 결과를 알려주세요"
+
+prompt = PromptTemplate.from_template(template)
+# PromptTemplate(input_variables=['exp'], input_types={}, partial_variables={}, template='당신은 계산기입니다. {exp} 의 결과를 알려주세요')
+
+prompt.format(exp="1 + 1")
+# 당신은 계산기입니다. 1 + 1 의 결과를 알려주세요
+
+chain = prompt | model
+
+# 변수가 1개인 경우 별도로 딕셔너리로 값을 전달하지 않아도 된다. 
+chain.invoke("1 + 1").content
+# 😊
+# 
+# 1 + 1 = 2
+```  
