@@ -76,3 +76,71 @@ chain.invoke("1 + 1").content
 # 
 # 1 + 1 = 2
 ```  
+
+`PrompteTemplate` 객체 생성과 동시에 템플릿을 정의할 수 있다. 
+생성자의 인자로는 `input_variables` 가 있는데, 
+이는 프롬프트 템플릿에서 사용되는 변수를 정의한다. 
+템플릿에서 실행횔 때 반드시 값이 제공되어야 하는 변수들의 목록을 의미한다. 
+`from_template()` 을 사용할 때 자동으로 감지되지만, 직접 지정하는 것도 가능하다. 
+
+```python
+prompt = PromptTemplate(
+    template = template,
+    input_variables = ["exp"]
+)
+# PromptTemplate(input_variables=['exp'], input_types={}, partial_variables={}, template='당신은 계산기입니다. {exp} 의 결과를 알려주세요')
+
+prompt.format(exp="2 * 2")
+# 당신은 계산기입니다. 2 * 2 의 결과를 알려주세요
+```  
+
+다음으로 사용할 수 있는 생성자 인자는 `partial_variables` 가 있다. 
+이는 미리 값이 할당된 변수를 정의할 수 있다.
+템플릿을 사용할 때마다 제공할 필요가 없는 고정된 값을 가진 변수나 
+혹은 반복적으로 사용되는 값이나 다른 함수의 결과값을 미리 저장할 때 유용하다.  
+
+```python
+template = "당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요"
+
+prompt = PromptTemplate(
+    template = template,
+    input_variables=["exp1"],
+    partial_variables={
+        "exp2" : "2 * 2"
+    }
+)
+# PromptTemplate(input_variables=['exp1'], input_types={}, partial_variables={'exp2': '2 * 2'}, template='당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요')
+
+prompt.format(exp1="1 + 1")
+# 당신은 계산기입니다. 1 + 1 + 2 * 2 의 결과를 알려주세요
+
+prompt_partial = prompt.partial(exp2="3 * 3")
+# PromptTemplate(input_variables=['exp1'], input_types={}, partial_variables={'exp2': '3 * 3'}, template='당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요')
+
+prompt_partial.format(exp1="1 + 1")
+# 당신은 계산기입니다. 1 + 1 + 3 * 3 의 결과를 알려주세요
+
+chain = prompt_partial | model
+
+chain.invoke("1 + 1").content
+# Let's calculate!
+# 
+# First, we need to follow the order of operations (PEMDAS):
+# 
+# 1. Multiply 3 and 3: 3 * 3 = 9
+# 2. Add 1 + 1: 1 + 1 = 2
+# 3. Add 2 and 9: 2 + 9 = 11
+# 
+# So, the result is: 11 
+
+chain.invoke({"exp1" : "2 + 3", "exp2" : "3 * 2"}).content
+# I'd be happy to calculate the result for you! 😊
+# 
+# First, let's follow the order of operations (PEMDAS):
+# 
+# 1. Multiply 3 and 2: 3 * 2 = 6
+# 2. Add 2 and 3: 2 + 3 = 5
+# 3. Add 5 and 6: 5 + 6 = 11
+# 
+# So, the result is: 11! 🎉
+```  
