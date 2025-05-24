@@ -144,3 +144,73 @@ chain.invoke({"exp1" : "2 + 3", "exp2" : "3 * 2"}).content
 # 
 # So, the result is: 11! 🎉
 ```  
+
+앞서 언급한 것처럼 `partial_variables` 를 사용하면 함수를 호출해 변수 값을 지정할 수 있다. 
+가장 대표적인 것이 바로 실시간 반영이 필요한 날짜나 시간이다.  
+
+```python
+from datetime import datetime
+
+template = "당신은 세계의 모든 뉴스를 모니터링하는 전문가입니다. 오늘 날짜 {today}의 가장 대표적인 키워드만 {num}개 한글로 나열하세요. 설명은 제외하세요."
+
+def get_today():
+  return datetime.now().strftime("%Y-%m-%d")
+
+prompt = PromptTemplate(
+    template = template,
+    input_variables = ["num"],
+    partial_variables = {
+        "today" : get_today
+    }
+)
+
+prompt.format(num=3)
+# 당신은 세계의 모든 뉴스를 모니터링하는 전문가입니다. 오늘 날짜 2025-03-23의 가장 대표적인 키워드만 3개 한글로 나열하세요. 설명은 제외하세요.
+
+chain = prompt | model
+chain.invoke(3).content
+# 1. 인공지능
+# 2. 우주개발
+# 3. 기후변화
+
+chain.invoke({"today" : "2018-12-31", "num" : 4}).content
+# 1. 연말
+# 2. 불법주차
+# 3. 세이브더칠드런
+# 4. 아시아나항공
+```  
+
+프롬프트의 템플릿을 파일에서 로드하는 방법도 제공한다. 
+앞서 사용한 계산기를 예제로 예를 들면 아래와 같은 형식들로 작성해 사용할 수 있다.  
+
+- 일반 텍스트
+
+```text
+당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요
+```
+
+- `yaml` 파일
+
+```yaml
+_type: prompt
+template: |
+  당신은 계산기입니다. 
+  {exp1} + {exp2} 의 결과를 알려주세요
+input_variables:
+  - exp1
+partial_variables:
+  exp2: 2 * 2
+```  
+
+- `json` 파일
+
+```json
+{
+  "_type": "prompt",
+  "template": "당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요",
+  "input_variables": ["exp1"],
+  "partial_variables": {
+    "exp2": "2 * 2"
+  }
+}
+```  
