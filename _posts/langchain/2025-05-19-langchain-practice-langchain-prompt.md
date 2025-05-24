@@ -214,3 +214,98 @@ partial_variables:
   }
 }
 ```  
+
+`json` 프롬프트 파일을 읽고 체인을 생성해 실행하는 예제는 아래와 같다.  
+
+```python
+from langchain_core.prompts import load_prompt
+
+prompt = load_prompt("calculator.json")
+# PromptTemplate(input_variables=['exp1'], input_types={}, partial_variables={'exp2': '2 * 2'}, template='당신은 계산기입니다. {exp1} + {exp2} 의 결과를 알려주세요')
+
+prompt.format(exp1="1 - 1")
+# 당신은 계산기입니다. 1 - 1 + 2 * 2 의 결과를 알려주세요
+
+chain = prompt | model
+chain.invoke("1 - 1").content
+# 1 - 1 + 2 * 2 의 결과를 계산해 보겠습니다.
+# 
+# 1. 먼저, 곱셈을 계산합니다: 2 * 2 = 4
+# 2. 다음, 뺄셈과 덧셈을 계산합니다: 1 - 1 = 0
+# 3. 마지막으로, 결과를 더합니다: 0 + 4 = 4
+# 
+# 따라서, 1 - 1 + 2 * 2 의 결과는 4입니다.
+```
+
+### ChatPromptTemplate
+`ChatPromptTemplate` 은 대화형 언어 모델(`ChatGPT`, `Claude` 등) 과 상호작용하기 위해 특별히 설계된 `LangChain` 의 프롬프트 클래스이다. 
+`PromptTemplate` 은 단일 문자열 템플릿을 다룬다면, 
+`ChatPromptTemplate` 은 각기 다른 역할을 가진 여러 메시지로 구성된 대화 구조를 관리한다. 
+
+- 역할 기반 메시지 : `system`, `user`, `assistant` 등 역할 구분
+- 대화 시퀀스 : 여러 메시지의 순차적 배열
+- 변수 삽입 : 각 메시지 내용에 동적 변수 삽입 가능
+
+주요 메시지 타입으로는 아래와 같은 것들이 있다. 
+
+- `SystemMessage` : 시스템 메시지로, 사용자에게 보이지 않는 모델의 전반적인 동작과 성격을 정의하는 정보를 전달한다.
+- `HumanMessage` : 사용자 메시지로, 사용자의 입력을 나타낸다.
+- `AIMessage` : `AI` 메시지로, 모델의 응답을 나타낸다.
+
+`PrompteTemplate` 과 차이를 정리하면 아래와 같다. 
+
+- 구조적 차이로는 `ChatPromptTemplate` 은 여러 역할을 가진 시퀀스를 사용한다느 점이 있다. 
+- 출력의 차이로는 단일 문자열이 아닌 메시지 객체 리스트를 반환한다. 
+- 용도의 차이로는 대화형 모델에 최적화 되어 있다. 
+
+이렇게 `ChatPromptTemplate` 을 사용하면 대화 흐름을 더 자연스럽게 설계하고 모델의 페르소나와 대화 맥락을 효과적으로 제어할 수 있다.  
+`ChatPromptTemplate` 의 생성은 메시지 클래스를 직업 사용하는 방법이 있고, 문자열 튜플로 간단하게 생성하는 방법이 있다. 
+사용 예시는 아래와 같다. 
+
+```python
+
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, AIMessagePromptTemplate
+
+chat_prompt = ChatPromptTemplate.from_template("당신은 계산기입니다. {exp} 의 결과를 알려주세요.")
+# ChatPromptTemplate(input_variables=['exp'], input_types={}, partial_variables={}, messages=[HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['exp'], input_types={}, partial_variables={}, template='당신은 계산기입니다. {exp} 의 결과를 알려주세요.'), additional_kwargs={})])
+
+chat_prompt.format(exp="1 + 1")
+# Human: 당신은 계산기입니다. 1 + 1 의 결과를 알려주세요.
+
+chat_template = ChatPromptTemplate.from_messages(
+    [
+        ("system", "당신은 유능한 계산기입니다. 결과에 무조건 {num}을 더하세요."),
+        ("human", "가능한 연산의 종류는 무엇인가요 ?"),
+        ("ai", "덧셈, 뺄셈, 곱셈, 나눗셈 입니다."),
+        ("human", "{exp}의 결과를 알려주세요.")
+    ]
+)
+# or
+chat_template = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template("당신은 유능한 계산기입니다. 결과에 무조건 {num}을 더하세요."),
+        HumanMessagePromptTemplate.from_template("가능한 연산의 종류는 무엇인가요 ?"),
+        AIMessagePromptTemplate.from_template("덧셈, 뺄셈, 곱셈, 나눗셈 입니다."),
+        HumanMessagePromptTemplate.from_template("{exp}의 결과를 알려주세요.")
+    ]
+)
+
+
+message = chat_template.format_messages(
+    num="1", exp="1 + 1"
+)
+# [SystemMessage(content='당신은 유능한 계산기입니다. 결과에 무조건 1을 더하세요.', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='가능한 연산의 종류는 무엇인가요 ?', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='덧셈, 뺄셈, 곱셈, 나눗셈 입니다.', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='1 + 1의 결과를 알려주세요.', additional_kwargs={}, response_metadata={})]
+
+model.invoke(message).content
+# 1 + 1 = 2에 1을 더하면 3입니다.
+
+chain = chat_template | model
+chain.invoke({
+    "num" : "2",
+    "exp" : "1 + 1"
+}).content
+# 1 + 1 = 2에 2를 더하면 4입니다.
+```  
