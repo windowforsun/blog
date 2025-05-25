@@ -309,3 +309,68 @@ chain.invoke({
 }).content
 # 1 + 1 = 2에 2를 더하면 4입니다.
 ```  
+
+`ChatPromptTemplate` 에서 `MessagesPlaceholder` 는
+메시지 전체를 동적으로 삽입할 수 있게 해주는 특별한 자리표시자이다. 
+일반적으로 자리표시자는 `{var}` 와 같이 문자열 내에서 값을 치환하는 하지만, 
+`MessagesPlaceholder` 는 메시지 객체 자체를 동적으로 삽입한다. 
+이를 통해 메시지 시퀀스 내에 변수로 제공된 전체 메시지를 포함할 수 있다. 
+주요 특징으로는 아래와 같은 것들이 있다. 
+
+- 대화 기록 관리 : 이전 대화 내용으 유지하며 새 입력에 컨텍스트를 제공할 수 있다. 
+- 동적 메시지 삽입 : 메시지 객체 리스트를 그대로 삽입할 수 있다. 
+- 복잡한 대화 구조 : 다중 턴 대화나 복잡한 메시지 구조 구현에 적합하다.  
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import MessagesPlaceholder
+
+chat_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "당신는 사용자의 가장 친한 친구입니다. 친구 처럼 대화를 이어가세요."),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{human_input} 알려줘")
+    ]
+)
+# ChatPromptTemplate(input_variables=['chat_history', 'human_input'], input_types={'chat_history': list[typing.Annotated[typing.Union[typing.Annotated[langchain_core.messages.ai.AIMessage, Tag(tag='ai')], typing.Annotated[langchain_core.messages.human.HumanMessage, Tag(tag='human')], typing.Annotated[langchain_core.messages.chat.ChatMessage, Tag(tag='chat')], typing.Annotated[langchain_core.messages.system.SystemMessage, Tag(tag='system')], typing.Annotated[langchain_core.messages.function.FunctionMessage, Tag(tag='function')], typing.Annotated[langchain_core.messages.tool.ToolMessage, Tag(tag='tool')], typing.Annotated[langchain_core.messages.ai.AIMessageChunk, Tag(tag='AIMessageChunk')], typing.Annotated[langchain_core.messages.human.HumanMessageChunk, Tag(tag='HumanMessageChunk')], typing.Annotated[langchain_core.messages.chat.ChatMessageChunk, Tag(tag='ChatMessageChunk')], typing.Annotated[langchain_core.messages.system.SystemMessageChunk, Tag(tag='SystemMessageChunk')], typing.Annotated[langchain_core.messages.function.FunctionMessageChunk, Tag(tag='FunctionMessageChunk')], typing.Annotated[langchain_core.messages.tool.ToolMessageChunk, Tag(tag='ToolMessageChunk')]], FieldInfo(annotation=NoneType, required=True, discriminator=Discriminator(discriminator=<function _get_type at 0x7d10cdc151c0>, custom_error_type=None, custom_error_message=None, custom_error_context=None))]]}, partial_variables={}, messages=[SystemMessagePromptTemplate(prompt=PromptTemplate(input_variables=[], input_types={}, partial_variables={}, template='당신는 사용자의 가장 친한 친구입니다. 친구 처럼 대화를 이어가세요.'), additional_kwargs={}), MessagesPlaceholder(variable_name='chat_history'), HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['human_input'], input_types={}, partial_variables={}, template='{human_input} 알려줘'), additional_kwargs={})])
+
+# 완성된 메시지 문자열로 확인
+formatted_chat_prompt = chat_prompt.format(
+    human_input="내가 가장 좋아하는 음식",
+    chat_history=[
+        ("human", "철수야 반가워"),
+        ("ai", "안녕!"),
+        ("human", "우리 10살 때 내가 가장 좋아하는 햄버거 먹었던 거 기억나 ?"),
+        ("ai", "당연하지, 너 혼자서 2개씩이나 먹었잖아"),
+        ("human", "우리 햄버거 먹고 수영장도 갔었어"),
+        ("ai", "맞아 내가 너 수영 알려줬었어")
+    ]
+)
+# System: 당신는 사용자의 가장 친한 친구입니다. 친구 처럼 대화를 이어가세요.\nHuman: 철수야 반가워\nAI: 안녕!\nHuman: 우리 10살 때 내가 가장 좋아하는 햄버거 먹었던 거 기억나 ?\nAI: 당연하지, 너 혼자서 2개씩이나 먹었잖아\nHuman: 우리 햄버거 먹고 수영장도 갔었어\nAI: 맞아 내가 너 수영 알려줬었어\nHuman: 내가 가장 좋아하는 음식 알려줘
+
+chain = chat_prompt | model | StrOutputParser()
+
+chain.invoke({
+    "human_input":"내가 가장 좋아하는 음식",
+    "chat_history":[
+        ("human", "철수야 반가워"),
+        ("ai", "안녕!"),
+        ("human", "우리 10살 때 내가 가장 좋아하는 햄버거 먹었던 거 기억나 ?"),
+        ("ai", "당연하지, 너 혼자서 2개씩이나 먹었잖아"),
+        ("human", "우리 햄버거 먹고 수영장도 갔었어"),
+        ("ai", "맞아 내가 너 수영 알려줬었어")
+    ]
+})
+# 햄버거! 당연히 햄버거야, 그때 2개 먹었잖아 ㅋㅋㅋㅋ
+```  
+
+
+---  
+## Reference
+[Prompt Templates](https://python.langchain.com/docs/concepts/prompt_templates/)  
+[PromptTemplate](https://python.langchain.com/api_reference/core/prompts/langchain_core.prompts.prompt.PromptTemplate.html)  
+[ChatPromptTemplate](https://python.langchain.com/api_reference/core/prompts/langchain_core.prompts.chat.ChatPromptTemplate.html)  
+[01. 프롬프트(Prompt)](https://wikidocs.net/233351)  
+
+
+
