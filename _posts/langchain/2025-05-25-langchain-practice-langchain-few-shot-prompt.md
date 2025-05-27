@@ -110,3 +110,25 @@ chain = few_shot_prompt | model | StrOutputParser()
 chain.invoke("지금 비가 쏟아져요")
 # 부정적
 ```  
+
+### ExampleSelector
+`ExampleSelector` 는 `FewShotPromptTemplate` 에서 상황에 가장 적합한 예시를 동적으로 선택하는 메커니즘이다. 
+모든 예시를 사용하는 대신 특정 기준에 따라 최적의 예시만 선택하여 효율성과 효과를 높일 수 있다. 
+
+`ExampleSelector` 를 사용하면 아래와 같은 장점이 있다. 
+
+- 토큰 절약 : 모든 예시를 포함하면 토큰 한도를 초과할 수 있다. 
+- 관련성 향상 : 현재 입력과 관련 있는 예시만 선택하여 모델 성능을 개선할 수 있다. 
+- 동적 적용 : 입력에 따라 다른 예시를 선택하여 상활별로 최적화할 수 있다. 
+
+주요한 `ExampleSelector` 유형에는 아래와 같은 것들이 있다. 
+
+- `SemanticSimilarityExampleSelector` : 입력과 의미적으로 가장 유사한 예시를 선택한다. 문맥 이해가 중요한 태크스에 적합하다. 
+- `LengthBasedExampleSelector` : 최대 토큰 수를 고려하여 예시를 선택한다. 많은 예시가 있지만 모드 포함할 수 없는 경우에 적합하다. 
+- `NGramOverlapExampleSelector` : 입력과 가장 많은 n-gram을 공유하는 예시를 선택한다. 임베딩 모델이 없을 떄 간단한 유사도를 측정해 사용할 수 있다. 
+- `MaxMarginalRelevanceExampleSelector` : 쿼리와의 관련성이 높으면서 동시에 선택된 다른 예시들과는 다양성을 유지하는 예시를 선택한다. 다양하면서 중복되는 예시를 피하고 싶은 경우 적합하다. 
+- `CustomExampleSelector` : 사용자 정의 로직에 따라 예시를 선택한다. 특수한 선택 로직이 필요하거나, 기준 선택를 조합 및 확장하는 경우 적합하다. 
+
+앞선 감정 분석 예제를 `ExampleSelector` 를 사용해 최적화할 수 있는데, 
+이를 위해 임베딩과 벡터 저장소를 활용한다. 
+
