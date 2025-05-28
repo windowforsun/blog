@@ -132,3 +132,41 @@ chain.invoke("지금 비가 쏟아져요")
 앞선 감정 분석 예제를 `ExampleSelector` 를 사용해 최적화할 수 있는데, 
 이를 위해 임베딩과 벡터 저장소를 활용한다. 
 
+
+```python
+from langchain_community.vectorstores import Chroma
+from langchain_nomic import NomicEmbeddings
+from langchain_core.example_selectors import (MaxMarginalRelevanceExampleSelector, SemanticSimilarityExampleSelector)
+
+chroma = Chroma("example_selector", embedding_function=NomicEmbeddings(model="nomic-embed-text-v1.5"))
+
+example_selector = MaxMarginalRelevanceExampleSelector.from_examples(
+    examples,
+    NomicEmbeddings(model="nomic-embed-text-v1.5"),
+    chroma,
+    # 선택할 예시 수
+    k=3
+)
+
+selected_examples = example_selector.select_examples({"input" : "친구와 조금 싸웠지만 잘 화해해서 더욱 친해지는 기회였어요"})
+# [{'input': '친구와 더욱 친해진 것 같아요', 'output': '긍정적'},
+# {'input': '친구와 너무 즐거운 시간을 보냈어요', 'output': '긍정적'},
+# {'input': '친구와 다퉜어요', 'output': '부정적'}]
+
+# 프롬프트 생성 및 확인
+prompt = FewShotPromptTemplate(
+    example_selector = example_selector,
+    example_prompt = example_prompt,
+    prefix="다음은 텍스트 감정 분석의 예시입니다:",
+    suffix="입력 : {input}\n출력:",
+    input_variables = ["input"]
+)
+
+example_selector_prompt = prompt.format(input="친구와 싸웠어요")
+# 다음은 텍스트 감정 분석의 예시입니다:\n\n\n입력 : 친구와 싸웠어요.\n출력 : 부정적\n\n\n\n입력 : 친구와 다퉜어요\n출력 : 부정적\n\n\n\n입력 : 친구와 너무 즐거운 시간을 보냈어요\n출력 : 긍정적\n\n\n입력 : 친구와 싸웠어요\n출력:
+
+chain = prompt | model
+
+chain.invoke("친구와 조금 싸웠지만 잘 화해해서 더욱 친해지는 기회였어요").content
+#  긍정적
+```
