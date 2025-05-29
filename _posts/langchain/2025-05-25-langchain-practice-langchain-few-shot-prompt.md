@@ -170,3 +170,11 @@ chain = prompt | model
 chain.invoke("친구와 조금 싸웠지만 잘 화해해서 더욱 친해지는 기회였어요").content
 #  긍정적
 ```
+
+### FewShotChatMessagePromptTemplate
+`FewShotChatMessagePromptTemplate` 은 `LangChain` 에서 제공하는 특수한 프롬프트 템플릿으로, 
+채팅 모델에 최적화된 방식으로 `few-shot learning` 을 적용할 수 있다. 
+`FewShotPromptTemplate` 과 유사하지만, 채팅 모델의 메시지 형식에 맞게 설계됐다는 점에서 차이가 있다. 
+
+채팅 기반 언어 모델에 여러 예시를 메시지 형식으로 제공하여 특정 패턴을 학십시키는데 사용된다. 
+일반 텍스트 대신 채팅 메시지 형식(`human/ai')으로 예시를 제공한다. 
