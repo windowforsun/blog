@@ -178,3 +178,59 @@ chain.invoke("친구와 조금 싸웠지만 잘 화해해서 더욱 친해지는
 
 채팅 기반 언어 모델에 여러 예시를 메시지 형식으로 제공하여 특정 패턴을 학십시키는데 사용된다. 
 일반 텍스트 대신 채팅 메시지 형식(`human/ai')으로 예시를 제공한다. 
+
+```python
+from langchain_core.prompts.few_shot import FewShotChatMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+
+# 예시 형식 정의
+example_prompt = ChatPromptTemplate.from_messages([
+    ("human", "{input}"),
+    ("ai", "{output}")
+])
+
+# 벡터 저장소
+chroma = Chroma("chat_example_selector", embedding_function=NomicEmbeddings(model="nomic-embed-text-v1.5"))
+
+# 예시 선택기 생성
+example_selector = MaxMarginalRelevanceExampleSelector.from_examples(
+    examples,
+    NomicEmbeddings(model="nomic-embed-text-v1.5"),
+    chroma,
+    k=3
+)
+
+# FewShotChatMessagePromptTemplate 생성
+few_shot_prompt = FewShotChatMessagePromptTemplate(
+    example_selector=example_selector,
+    example_prompt = example_prompt
+)
+
+# 최종 프롬프트 생성
+final_prompt = ChatPromptTemplate.from_messages([
+    ("system", "당신은 대화의 감정을 분석해 긍정적/부정적으로 답변합니다."),
+    few_shot_prompt,
+    ("human", "{input}")
+])
+
+final_prompt.invoke("비가 쏟아 진다")
+# ChatPromptValue(messages=[SystemMessage(content='당신은 대화의 감정을 분석해 긍정적/부정적으로 답변합니다.', additional_kwargs={}, response_metadata={}), HumanMessage(content='길 가다가 비 맞았어요', additional_kwargs={}, response_metadata={}), AIMessage(content='부정적', additional_kwargs={}, response_metadata={}), HumanMessage(content='길 가다가 비 맞았어요', additional_kwargs={}, response_metadata={}), AIMessage(content='부정적', additional_kwargs={}, response_metadata={}), HumanMessage(content='길 가다가 비 맞았어요', additional_kwargs={}, response_metadata={}), AIMessage(content='부정적', additional_kwargs={}, response_metadata={}), HumanMessage(content='비가 쏟아 진다', additional_kwargs={}, response_metadata={})])
+
+chain = final_prompt | model
+
+chain.invoke("친구와 조금 싸웠지만 잘 화해해서 친해지는 기회였어요").content
+# 긍정적
+```  
+
+
+
+
+---  
+## Reference
+[How to use few shot examples](https://python.langchain.com/docs/how_to/few_shot_examples/)  
+[How to use few shot examples in chat models](https://python.langchain.com/docs/how_to/few_shot_examples_chat/)  
+[ExampleSelectors](https://python.langchain.com/docs/how_to/#example-selectors)  
+[02. 퓨샷 프롬프트(FewShotPromptTemplate)](https://wikidocs.net/233348)  
+
+
+
