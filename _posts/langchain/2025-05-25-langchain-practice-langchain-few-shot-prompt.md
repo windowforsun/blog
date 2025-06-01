@@ -4,7 +4,7 @@ classes: wide
 title: "[LangChain] LangChain FewShotPrompt"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: ''
+excerpt: 'LangChain 에서 예시를 통해 모델에게 작업 방법을 알려주는 FewShotPrompt 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
