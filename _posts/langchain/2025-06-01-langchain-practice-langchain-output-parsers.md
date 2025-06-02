@@ -231,3 +231,58 @@ output = model2.invoke(movie_review)
 # MovieReviewAnalysis(title_korean='올드보이', title_english='Oldboy', director='박찬욱', release_year=2003, genres=['스릴러', '액션', '드라마'], plot_summary='15년간 이유도 모른 채 감금된 오대수가 자신을 가둔 이유와 사람을 찾아가는 여정', pros=['최민식의 압도적인 연기력', '미장센과 색감 활용', '스토리텔링과 완벽한 조화'], cons=['일부 잔인한 장면과 충격적인 반전', '서사의 복잡성'], rating=9.3, recommendation='심리 스릴러와 예술영화를 동시에 즐기고 싶은 성인 관객, 한국 영화의 예술성을 경험하고 싶은海外 영화 팬')
 ```  
 
+
+### CommaSeparatedListOutputParser
+`CommaSeparatedListOutputParser` 는 출력을 쉼표로 구분된 항목들의 리스트로 변환하는 간단하지만 실용적인 파서이다. 
+복잡한 구조가 필요하지 않고 단순히 여러 항목을 리스트 형태로 얻고 싶을 때 유용하다. 
+
+작동 방식은 아래와 같다. 
+
+- 텍스트 추출 : `LLM` 의 응답에서 텍스트를 가져온다. 
+- 파싱 처리 : 텍스트를 쉽표를 구분자로 사용하여 분리한다. 
+- 정제 작업 : 각 항목의 앞뒤 공백을 제거한다. 
+- 리스트 생성 : 정제된 항목들을 `Python` 리스트로 반환한다. 
+
+해당 파서의 장점은 다음과 같다. 
+
+- 단순성 : 구현화 사용성이 매우 간단함
+- 직관적 : `LLM` 에게 `쉽포로 구분된 목록을 생성해` 달라고 요청하는 것은 직관적임
+- 가벼움 : 복잡한 파싱 로직이 필요하지 않음
+- 실패 가능성이 낮음 : 단순한 형식으로 피상 실패 확률이 매우 낮음
+
+단점은 아래와 같다. 
+
+- 타입 제한 : 모든 항목이 문자열로 처리됨
+- 복잡한 구조 불가 : 중첩 구조나 `키-값` 쌍을 표현할 수 없음
+- 쉽표 포함 항목 처리 어려움 : 항목 자체에 쉼표가 포함된 경우 파싱이 복잡해짐
+- 검증 부재 : 항목의 형식이나 유효성을 검증하지 않음
+
+다음은 영화 리뷰를 분석해 주요 키워드 최대 5개를 추출하는 예제이다. 
+
+```python
+from langchain_core.output_parsers import CommaSeparatedListOutputParser
+
+output_parser = CommaSeparatedListOutputParser()
+
+format_instructions = output_parser.get_format_instructions()
+# Your response should be a list of comma separated values, eg: `foo, bar, baz` or `foo,bar,baz`
+
+prompt = PromptTemplate(
+    template = """
+    당신은 영화 리뷰 분석가입니다. 다음 영화 리뷰를 분석하여 주요 키워드 최대 5개를 추출해 나열하세요:
+
+    {review}
+
+    결과는 요청된 아래 형식으로 정확히 제공해주세요.
+
+    {format_instructions}
+    """,
+    input_variables=['review'],
+    partial_variables={'format_instructions' : format_instructions}
+)
+
+chain = prompt | model | output_parser
+
+chain.invoke({'review' : movie_review})
+# ['올드보이', '박찬욱', '복수', '스릴러', '최민식']
+```  
