@@ -286,3 +286,101 @@ chain = prompt | model | output_parser
 chain.invoke({'review' : movie_review})
 # ['올드보이', '박찬욱', '복수', '스릴러', '최민식']
 ```  
+
+### StructuredOutputParser
+`StructuredOutputParser` 는 `PydanticOutputParser` 와 유사하지만, `Pydantic` 모델을 사용하지 않고 직접 구조화된 객체를 정의하는 파서이다. 
+사전에 정의한 `카-값` 구조로 변환해주는 파서로 이해하면 쉽다. 
+해당 파서는 `JSON` 형식의 출력을 생성하도록 `LLM` 에 지시하고, 이를 파싱하여 구조화된 딕셔너리 형태로 변환한다. 
+
+작동 방식은 아래와 같다. 
+
+- 구조 정의 : 원하는 출력 형식을 필드와 설명으로 정의
+- 파서 생성 : 정의된 구조를 기반으로 `StructuredOutputParser` 인스턴스 생성
+- 형식 지침 제공 : 파서가 `LLM` 에게 특정 `JSON` 구조로 응답하도록 안내하는 지침 제공
+- `LLM` 응답 파싱 : `LLM` 의 출력을 파싱하여 `Python` 딕셔너리로 변환
+
+주요 특징으로는 아래와 같은 것들이 있다. 
+
+- 유연한 구조 정의 : 필드와 설명만으로 구조 정의 가능
+- 간단한 사용법 : `Pydantic` 모델 정의 없이도 빠르게 구조화 가능
+- 명확한 지침 생성 : `LLM` 에 제공할 명확한 형식 지침 자동 생성
+- 중첩 구조 지춴 : 복잡한 중첩 `JSON` 구조도 정의 가능
+
+`Pydantic/JSON` 파서가 좀 더 강력하지만, 해당 파서는 조금 더 간단한 모델(파라미터가 `GPT`, `Claude` 보다 적은) 에 유용하다.   
+
+
+`StructuredOutputParser` 의 예제로 영화 리뷰를 분석해 출력 구조로 변환하는 방법을 살펴본다. 
+이를 위해서는 스키마 정의가 필요한데, 
+스키마 정의는 `JSON` 형식을 사용사거나 `ResponseSchema` 를 사용할 수 있다.  
+
+```python
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain_core.prompts import PromptTemplate
+
+# 원하는 출력 구조 정의
+response_schemas = [
+    {
+        "name": "title",
+        "description": "영화의 제목"
+    },
+    {
+        "name": "director",
+        "description": "영화 감독의 이름"
+    },
+    {
+        "name": "year",
+        "description": "영화 개봉 연도 (숫자)"
+    },
+    {
+        "name": "rating",
+        "description": "영화 평점 (1-10 사이의 숫자)"
+    },
+    {
+        "name": "summary",
+        "description": "영화의 짧은 요약"
+    },
+    {
+        "name": "review_summary",
+        "description":"리뷰 짧은 요약"
+    }
+]
+# response_schemas = [
+#     ResponseSchema(name="title", description="영화의 제목"),
+#     ResponseSchema(name="director", description="영화 감독의 이름"),
+#     ResponseSchema(name="year", description="영화 개봉 연도 (숫자)"),
+#     ResponseSchema(name="rating", description="영화 평점 (1-10 사이의 숫자)"),
+#     ResponseSchema(name="summary", description="영화의 짧은 요약"),
+#     ResponseSchema(name="review_summary", description="리뷰 짧은 요약")
+# ]
+
+# 파서 생성
+parser = StructuredOutputParser.from_response_schemas(response_schemas)
+
+# 형식 지침 확인
+format_instructions = parser.get_format_instructions()
+# The output should be a markdown code snippet formatted in the following schema, including the leading and trailing "```json" and "```":\n\n```json\n{\n\t"title": string  // 영화의 제목\n\t"director": string  // 영화 감독의 이름\n\t"year": string  // 영화 개봉 연도 (숫자)\n\t"rating": string  // 영화 평점 (1-10 사이의 숫자)\n\t"summary": string  // 영화의 짧은 요약\n}\n```
+
+# 프롬프트 생성
+prompt = PromptTemplate(
+    template = """
+    당신은 영화 리뷰 분석가입니다. 다음 영화 리뷰를 분석하여 구조화된 정보로 변환해주세요:
+
+    {review}
+
+    결과는 요청된 아래 형식으로 정확히 제공해주세요.
+
+    {format_instructions}
+    """,
+    input_variables=['review'],
+    partial_variables={'format_instructions' : format_instructions}
+)
+
+chain = prompt | model | parser
+chain.invoke({'review' : movie_review})
+# {'title': '올드보이 (Oldboy)',
+#  'director': '박찬욱',
+#  'year': '2003',
+#  'rating': '9.3/10',
+#  'summary': '15년간 이유도 모른 채 감금된 오대수(최민식)가 갑자기 풀려난 후 자신을 가둔 이유와 사람을 찾아가는 여정을 그린 영화',
+#  'review_summary': '최민식의 압도적인 연기력, 원테이크 촬영의 긴장감, 영화의 미장센과 색감 활용이 스토리텔링과 조화를 이루며 시각적 충격을 선사하는 영화로,스토리 측면에서는 복선과 반전이 절묘하게 배치되어 마지막까지 관객을 긴장시키며, 그리스 비극을 연상케 하는 결말은 오랫동안 여운을 남깁니다.'}
+```  
