@@ -384,3 +384,127 @@ chain.invoke({'review' : movie_review})
 #  'summary': '15년간 이유도 모른 채 감금된 오대수(최민식)가 갑자기 풀려난 후 자신을 가둔 이유와 사람을 찾아가는 여정을 그린 영화',
 #  'review_summary': '최민식의 압도적인 연기력, 원테이크 촬영의 긴장감, 영화의 미장센과 색감 활용이 스토리텔링과 조화를 이루며 시각적 충격을 선사하는 영화로,스토리 측면에서는 복선과 반전이 절묘하게 배치되어 마지막까지 관객을 긴장시키며, 그리스 비극을 연상케 하는 결말은 오랫동안 여운을 남깁니다.'}
 ```  
+
+### JsonOutputParser
+`JsonOutputParser` 는 `LLM` 의 텍스트 출력을 `JSON` 형식으로 파싱하는 간단하면서도 강력한 파서이다. 
+해당 파서는 `LLM` 에게 `JSON` 형식으로 응답하도록 지시하고, 해당 응답을 `Python` 딕셔너리나 리스트로 변환한다. 
+
+작동 방식은 아래와 같다.
+
+- 형식 지침 제공: LLM에게 유효한 JSON 형식으로 응답하도록 안내하는 지침 생성
+- 응답 수신: LLM으로부터 JSON 형식의 텍스트 응답 수신
+- 마크다운 코드 블록 처리: JSON을 감싸고 있는 마크다운 코드 블록(````json`)이 있다면 제거
+- 파싱 처리: 응답을 Python의 json.loads()를 사용하여 파싱
+- 객체 변환: 파싱된 JSON을 Python 딕셔너리 또는 리스트로 변환
+
+주요 특징으로는 아래와 같은 것들이 있다.
+
+- 단순성: 별도의 스키마 정의나 Pydantic 모델 없이도 사용 가능
+- 유연성: 동적으로 변화하는 JSON 구조도 처리 가능
+- 자연스러운 지시: 대부분의 LLM은 JSON 형식 요청에 잘 반응함
+- 중첩 구조 지원: 복잡한 중첩 JSON 객체도 쉽게 처리
+- 오류 처리: JSON 파싱 오류 발생 시 명확한 에러 메시지 제공
+
+`JsonOutputParser` 의 예제로 먼저 영화 리뷰를 분석해 형식에 맞게 출력하는 방법을 알아본다. 
+먼저 `Pydantic` 모델을 사용하는 경우를 알아본다.  
+
+```python
+from typing import List, Optional
+from pydantic import BaseModel, Field, validator
+from langchain_core.output_parsers import JsonOutputParser
+
+
+class MovieReviewAnalysis(BaseModel):
+    title_korean: str = Field(description="영화의 한글 제목")
+    title_english: str = Field(description="영화의 영문 제목")
+    director: str = Field(description="영화 감독의 이름")
+    release_year: int = Field(description="영화 개봉 연도 (숫자만)")
+    genres: List[str] = Field(description="영화 장르 목록")
+    plot_summary: str = Field(description="영화의 줄거리 요약")
+    pros: List[str] = Field(description="영화의 장점 목록")
+    cons: List[str] = Field(description="영화의 단점 목록")
+    rating: float = Field(description="영화 평점 (10점 만점)")
+    recommendation: Optional[str] = Field(description="영화 추천 대상")
+    
+    @validator("rating")
+    def validate_rating(cls, value):
+        if value < 0 or value > 10:
+            raise ValueError("평점은 0과 10 사이여야 합니다")
+        return value
+
+parser = JsonOutputParser(pydantic_object=MovieReviewAnalysis)
+# format_instructions = parser.get_format_instructions()
+# The output should be formatted as a JSON instance that conforms to the JSON schema below.
+# 
+# As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+# the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+# 
+# Here is the output schema:
+# ```
+# {"properties": {"title_korean": {"description": "영화의 한글 제목", "title": "Title Korean", "type": "string"}, "title_english": {"description": "영화의 영문 제목", "title": "Title English", "type": "string"}, "director": {"description": "영화 감독의 이름", "title": "Director", "type": "string"}, "release_year": {"description": "영화 개봉 연도 (숫자만)", "title": "Release Year", "type": "integer"}, "genres": {"description": "영화 장르 목록", "items": {"type": "string"}, "title": "Genres", "type": "array"}, "plot_summary": {"description": "영화의 줄거리 요약", "title": "Plot Summary", "type": "string"}, "pros": {"description": "영화의 장점 목록", "items": {"type": "string"}, "title": "Pros", "type": "array"}, "cons": {"description": "영화의 단점 목록", "items": {"type": "string"}, "title": "Cons", "type": "array"}, "rating": {"description": "영화 평점 (10점 만점)", "title": "Rating", "type": "number"}, "recommendation": {"anyOf": [{"type": "string"}, {"type": "null"}], "description": "영화 추천 대상", "title": "Recommendation"}}, "required": ["title_korean", "title_english", "director", "release_year", "genres", "plot_summary", "pros", "cons", "rating", "recommendation"]}
+# ```
+
+
+prompt = PromptTemplate(
+    template = """
+    당신은 영화 리뷰 분석가입니다. 다음 영화 리뷰를 분석하여 구조화된 정보로 변환해주세요:
+
+    {review}
+
+    결과는 요청된 아래 형식으로 정확히 제공해주세요.
+
+    {format_instructions}
+    """,
+    input_variables=['review'],
+    partial_variables={'format_instructions' : format_instructions}
+)
+
+chain = prompt | model | parser
+
+chain.invoke({'review' : movie_review})
+# {'title_korean': '올드보이',
+# 'title_english': 'Oldboy',
+# 'director': '박찬욱',
+# 'release_year': 2003,
+# 'genres': ['스릴러', '액션', '드라마'],
+# 'plot_summary': '15년간 이유도 모른 채 감금된 오대수가 갑자기 풀려난 후 자신을 가둔 이유와 사람을 찾아가는 여정을 그린 영화',
+# 'pros': ['최민식의 압도적인 연기력',
+#          '유명한 복도 액션 시퀀스의 긴장감과 리얼리티',
+#          '영화의 미장센과 색감 활용이 스토리텔링과 완벽하게 조화를 이루며 시각적 충격을 선사하는 것'],
+# 'cons': ['일부 잔인한 장면들과 충격적인 반전이 모든 관객에게 적합하지 않을 수 있음',
+#          '서사의 복잡성으로 인해 첫 관람에서는 모든 복선과 의미를 파악하기 어려울 수 있음'],
+# 'rating': 9.3,
+# 'recommendation': '심리 스릴러와 예술영화를 동시에 즐기고 싶은 성인 관객, 한국 영화의 예술성을 경험하고 싶은 해외 영화 팬'}
+```  
+
+다음은 `Pydnatic` 을 사용하지 않는 경우이다. 
+사용하지 않을 때는 `JSON` 을 응답하도록은 하지만, 스키마가 구체적으로 어떻게 되어야 하는지에 대한 구체적인 종보는 제공하지 않는다. 
+
+```python
+parser = JsonOutputParser()
+
+prompt = PromptTemplate(
+    template = """
+    당신은 영화 리뷰 분석가입니다. 다음 영화 리뷰를 분석하여 JSON 형태의 구조화된 정보로 변환해주세요:
+
+    {review}
+
+    결과는 요청된 아래 필드를 정확히 제공해주세요.
+    영화 제목은 `title`,
+    영화 감독은 `director`,
+    영화 개봉 연도는 `year`,
+    영화 평점은 `rating`,
+    영화 리뷰 요약은 `summary`
+    """,
+    input_variables=['review'],
+)
+
+chain = prompt | model | parser
+
+chain.invoke({'review' : movie_review})
+# {'title': '올드보이 (Oldboy)',
+# 'director': '박찬욱',
+# 'year': 2003,
+# 'rating': 9.3,
+# 'summary': "박찬욱 감독의 복수 3부작 중 두 번째 작품인 '올드보이'는 한국 영화사에 큰 획을 그은 걸작입니다. 15년간 이유도 모른 채 감금된 오대수(최민식)가 갑자기 풀려난 후 자신을 가둔 이유와 사람을 찾아가는 여정을 그립니다. 이 영화의 가장 큰 장점은 최민식의 압도적인 연기력입니다. 특히 유명한 복도 액션 시퀀스는 원테이크로 촬영되어 그 긴장감과 리얼리티가 극대화되었습니다. 또한 영화의 미장센과 색감 활용이 스토리텔링과 완벽하게 조화를 이루며 시각적 충격을 선사합니다."}
+```  
