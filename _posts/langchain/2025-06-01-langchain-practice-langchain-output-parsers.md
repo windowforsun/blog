@@ -508,3 +508,92 @@ chain.invoke({'review' : movie_review})
 # 'rating': 9.3,
 # 'summary': "박찬욱 감독의 복수 3부작 중 두 번째 작품인 '올드보이'는 한국 영화사에 큰 획을 그은 걸작입니다. 15년간 이유도 모른 채 감금된 오대수(최민식)가 갑자기 풀려난 후 자신을 가둔 이유와 사람을 찾아가는 여정을 그립니다. 이 영화의 가장 큰 장점은 최민식의 압도적인 연기력입니다. 특히 유명한 복도 액션 시퀀스는 원테이크로 촬영되어 그 긴장감과 리얼리티가 극대화되었습니다. 또한 영화의 미장센과 색감 활용이 스토리텔링과 완벽하게 조화를 이루며 시각적 충격을 선사합니다."}
 ```  
+
+### PandasDataFrameOutputParser
+`PandasDataFrameOutputParser` 는 `LLM` 의 출력을 `Pandas` 의 `DataFrame` 으로 변환하는 전문화된 파서이다. 
+`LLM` 에게 표 형태의 데이터를 요청하고, 반환된 결과를 바로 데이터 분석에 사용할 수 있는 `DataFrame` 으로 변환한다. 
+
+작동 방식은 아래와 같다.
+
+- 데이터 형식 지정 : 표 형태(`CSV` 등) 의 출력을 요청
+- 텍스트 응답 수신 : `LLM` 으로부터 구조화된 텍스트 응답 수신
+- 표 구조 인식 : 응답에서 표 구조 식별
+- `DataFrame` 변환 : 파싱된 데이터를 `Pandas` 의 `DataFrame` 으로 구성
+- 데이터 타입 추론 : 가능한 경우 열의 데이터 타입을 자동으로 추론
+
+주요 특징으로는 아래와 같은 것들이 있다.
+
+- 표 형태 데이터 처리 : 행과 열로 구성된 테이블 데이터에 최적화
+- 데이터 분석 통합 : 파싱 즉싱 `Pandas` 의 강력한 분석 기능을 사용 가능
+- 헤더 인식 : 테이블 헤더를 자동으로 인식하여 열 이름으로 설정
+- 마크다운 표 지원 : 마크다운 형식의 표도 처리 가능
+- 데이터 변환 : 텍스트 데이터를 적절한 숫자, 날짜 등으로 변환 시도 
+
+
+
+`PandasDataFrameOutputParser` 의 예제로 주요 기업정보를 바탕으로 `DataFrame` 에 대해 분석하는 방법을 살펴본다. 
+
+```python
+import pandas as pd
+from langchain.output_parsers import PandasDataFrameOutputParser
+from langchain_core.prompts import PromptTemplate
+
+data = {
+    "Company": ["Apple", "Microsoft", "Amazon", "Google", "Tesla"],
+    "Employees": [164000, 221000, 1608000, 190000, 127855],
+    "Revenue": [387.5, 211.9, 524.9, 279.8, 81.5]  # 단위: billion USD
+}
+df = pd.DataFrame(data)
+
+parser = PandasDataFrameOutputParser(dataframe=df)
+# dataframe=     Company  Employees  Revenue
+# 0      Apple     164000    387.5
+# 1  Microsoft     221000    211.9
+# 2     Amazon    1608000    524.9
+# 3     Google     190000    279.8
+# 4      Tesla     127855     81.5
+
+prompt = PromptTemplate(
+    template="쿼리에 대한 답을 찾아주세요. 최종 답변은 반드시 아래 포맷을 따르세요.\n{format_instructions}\n{query}\n",
+    input_variables=["query"],
+    partial_variables={"format_instructions": parser.get_format_instructions()},
+)
+
+chain = prompt | model | parser
+
+output = chain.invoke({"query" : "첫 행을 조회해 주세요."})
+# {'0': Company       Apple
+#     Employees    164000
+#      Revenue       387.5
+#      Name: 0, dtype: object}
+df.iloc[0]
+# Company       Apple
+# Employees    164000
+# Revenue       387.5
+# Name: 0, dtype: object
+
+output = chain.invoke({"query" : "주어진 기업들의 평균 직원 수를 구해줘"})
+# {'mean': np.float64(462171.0)}
+df['Employees'].mean()
+# 462171.0
+
+output = chain.invoke({"query" : "주어진 기업들 중 가장 많은 직원을 가진 기업알려줘"})
+# {'max': 1608000}
+df['Employees'].max()
+# 1608000
+
+output = chain.invoke({"query" : "3번째까지 평균 매출 구해줘"})
+# {'mean': np.float64(374.76666666666665)}
+df['Revenue'].head(3).mean()
+# 374.76666666666665
+
+output = chain.invoke({"query" : "주어진 기업들의 총 수익 알려줘"})
+# {'sum': np.float64(1485.6)}
+df['Revenue'].sum()
+# 1485.6
+```  
+
+사용해 봤을 때 느낀 점은 `LLM` 의 종류에 따라 활용도가 크게 달라질 것 같다. 
+무료 모델로 사용했을 떄는 위와 같은 아주 간단한 통계식 질문의 답변을 얻을 수 있었고, 
+복잡한 질문에 대해서는 답변을 얻기 어려웠다.  
+
