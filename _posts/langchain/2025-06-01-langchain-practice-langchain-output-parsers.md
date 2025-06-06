@@ -597,3 +597,48 @@ df['Revenue'].sum()
 무료 모델로 사용했을 떄는 위와 같은 아주 간단한 통계식 질문의 답변을 얻을 수 있었고, 
 복잡한 질문에 대해서는 답변을 얻기 어려웠다.  
 
+
+### DatetimeOutputParser
+`DatetimeOutputParser` 는 `LLM` 의 출력을 `Python` 의 `datetime` 객체로 변환하는 파서이다.
+
+주요 특징으로는 아래와 같은 것들이 있다.
+
+- 유연한 날짜 형식 인식 : 다양한 형식의 날짜/시간 표현을 인식
+- 시간대 지원 : 시간대 정보가 포함된 `datetime` 객체 생성 가능
+- 상대 시간 처리 : `내일`, `다음 주 금요일` 등의 상대적 표현 처리
+- 예외 처리 : 잘못된 형식에 대한 명확한 오류 메시지 제공
+
+
+아래는 `DatetimeOutputParser` 를 사용해서 날짜/시간에 대한 질문에 대한 답변을 얻는 예제이다. 
+
+```python
+from langchain.output_parsers import DatetimeOutputParser
+
+parser = DatetimeOutputParser()
+# 년 월 일까지만 결과에 표기하도록 설정
+parser.format = '%Y-%m-%d'
+
+prompt = PromptTemplate(
+    template="사용자 질의에 다음 포맷에 맞게 답변하세요.: {query}\n\n{format_instructions}",
+    input_variables=["query"],
+    partial_variables={"format_instructions": parser.get_format_instructions()},
+)
+# PromptTemplate(input_variables=['query'], input_types={}, partial_variables={'format_instructions': "Write a datetime string that matches the following pattern: '%Y-%m-%d'.\n\nExamples: 1101-12-19, 1582-10-13, 1899-01-08\n\nReturn ONLY this string, no other words!"}, template='사용자 질의에 다음 포맷에 맞게 답변하세요.: {query}\n\n{format_instructions}')
+
+chain = prompt | model | parser
+
+output = chain.invoke({"query": "Apple 의 창업 연도는?"})
+# datetime.datetime(1976, 4, 1, 0, 0)
+output.strftime(parser.format)
+# 1976-04-01
+
+output = chain.invoke({"query": "빌게이츠의 생일은?"})
+# datetime.datetime(1955, 10, 28, 0, 0)
+output.strftime(parser.format)
+# 1955-10-28
+
+output = chain.invoke({"query": "오늘은 2002년 6월 10일 이야. 1년 하고도 3일 뒤 날짜 알려줘"})
+# datetime.datetime(2003, 6, 13, 0, 0)
+output.strftime(parser.format)
+# 2003-06-13
+```  
