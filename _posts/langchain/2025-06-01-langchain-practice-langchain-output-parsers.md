@@ -642,3 +642,47 @@ output = chain.invoke({"query": "오늘은 2002년 6월 10일 이야. 1년 하�
 output.strftime(parser.format)
 # 2003-06-13
 ```  
+
+### EnumOutputParser
+`EnumOutputParser` 는 `LLM` 의 출력을 `Python` 의 `Enum` 객체로 변환하는 특수 파서이다. 
+정의된 `Enum` 의 값 중 하나로 매핑해 텍스트 응답을 제한된 옵션 세트로 제약할 수 있다. 
+
+주요 특징으로는 아래와 같은 것들이 있다.
+
+- 제한된 출력 볌위 : `LLM` 의 응답을 미리 정의된 값들로 제한
+- 타입 안전성 : `Python` 의 `Enum` 타입을 활용하여 타입 안전성 확보
+- 명확한 지침 제공 : `LLM` 에게 가능한 응답 옵션을 명확히 안내
+- 대소문자 및 공백 처리 : 응답 텍스트를 정규화하여 매핑 성공률 향상
+- 오류 처리 : 지정된 `Enum` 값과 일치하지 않는 경우 적절한 오류 메시지 제공 
+
+아래는 `EnumOutputParser` 를 사용해서 문장의 감정을 분석하는 예제이다. 
+
+```python
+from langchain.output_parsers import EnumOutputParser
+from enum import Enum
+
+class Sentiment(Enum):
+    POSITIVE = "긍정적"
+    NEUTRAL = "중립적"
+    NEGATIVE = "부정적"
+
+parser = EnumOutputParser(enum=Sentiment)
+
+prompt = PromptTemplate(
+    template="사용자가 입력한 다음 문장의 감정을 분석하세요.: {query}\n\n최종 결과는 반드시 다음 출력 포맷:{format_instructions}",
+    input_variables=["query"],
+    partial_variables={"format_instructions": parser.get_format_instructions()},
+)
+# PromptTemplate(input_variables=['query'], input_types={}, partial_variables={'format_instructions': 'Select one of the following options: 긍정적, 중립적, 부정적'}, template='사용자가 입력한 다음 문장의 감정을 분석하세요.: {query}\n\n최종 결과는 반드시 다음
+
+chain = prompt | model | parser
+
+output = chain.invoke({"query" : "오늘 돈을 잃어버렸어"})
+# <Sentiment.NEGATIVE: '부정적'>
+
+output = chain.invoke({"query" : "오늘 좋아하는 여자와 밥을 먹었어"})
+# <Sentiment.POSITIVE: '긍정적'>
+
+output = chain.invoke({"query" : "이런저런 일들이 많은 하루였어"})
+# output = chain.invoke({"query" : "이런저런 일들이 많은 하루였어"})
+```  
