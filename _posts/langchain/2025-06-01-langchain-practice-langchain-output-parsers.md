@@ -686,3 +686,154 @@ output = chain.invoke({"query" : "오늘 좋아하는 여자와 밥을 먹었어
 output = chain.invoke({"query" : "이런저런 일들이 많은 하루였어"})
 # output = chain.invoke({"query" : "이런저런 일들이 많은 하루였어"})
 ```  
+
+
+### OutputFixingParser
+`OutputFixingParser` 는 `LLM` 의 특수한 래퍼 파서로, 
+다른 파서가 실패할 때 자동으로 문제를 해결하는 역할을 한다. 
+이는 파서 식패 복구 매커니즘으로 작동하며, 
+원래 파서가 `LLM` 응답을 처리하지 못할 때 오류를 `LLM` 에게 다시 전달하여 올바른 형식으로 수정하도록 요청하는 방식이다. 
+
+작동 방식은 아래와 같다. 
+
+- 기본 파싱 시도 : 우선 래핑된 원본 파서로 `LLM` 출력을 파싱
+- 오류 감지 : 파싱 실패 시 오류 메시지 캡쳐
+- 오류 설명 및 재시도 : 오류와 함께 원본 출력을 `LLM` 에 다시 전달
+- 수정된 출력 : `LLM` 이 올바른 형식으로 응답을 수정
+- 재파싱 : 수정된 응답으로 다시 원본 파서 실행
+
+주요 특징으로는 아래와 같은 것들이 있다.
+
+- 자동 오류 복구 : 파서 오류를 자동으로 감지하고 해결
+- 형식 오류 수정 : `JSON` 문법 오류, 날짜 형식 오류 등 자동 수정
+- 사용자 경험 향샹 : 최종 사용자에게 오류 대신 올바른 결과 제공 가능
+- 개발 부담 감소 : 엄격한 파싱 로직을 유지하면서도 실패 처리 자동화
+- 적응형 파싱 : 다양한 `LLM` 응답 변형에 유연하게 대응
+
+아래는 `OutputFixingParser` 의 몇 사용 예제이다. 
+
+```python
+from langchain_core.output_parsers import JsonOutputParser
+from langchain.output_parsers import OutputFixingParser
+
+json_parser = JsonOutputParser()
+
+fixing_parser = OutputFixingParser.from_llm(parser=json_parser, llm=model)
+
+# " 와 , 누락
+incorrect_json = """
+{
+  name: 철수,
+  age: 20
+  job: "공무원"
+}
+"""
+
+try:
+  json_parser.parse(incorrect_json)
+except Exception as e:
+  print(e)
+# Invalid json output: {
+#     name: 철수,
+#     age: 20
+#     job: "공무원"
+# }
+# For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE
+
+fixing_parser.parse(incorrect_json)
+# {'name': '철수', 'age': 20, 'job': '공무원'}
+
+
+# { 와 " 그리고 , 누락
+incorrect_json = """
+
+  name: 철수,
+  age: 20
+  job: "공무원"
+
+"""
+
+try:
+    json_parser.parse(incorrect_json)
+except Exception as e:
+    print(e)
+# Invalid json output: name: 철수,
+# age: 20
+# job: "공무원"
+# For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE
+
+fixing_parser.parse(incorrect_json)
+# {'name': '철수', 'age': 20, 'job': '공무원'}
+
+
+
+class Employee(BaseModel):
+    id: int = Field(description="직원 번호")
+    name: str = Field(description="직원 이름")
+    projects: List[str] = Field(description="참여 중 인 1개 이상")
+
+
+model_json_parser = JsonOutputParser(pydantic_object=Employee)
+
+model_json_fixing_parser = OutputFixingParser.from_llm(parser=model_json_parser, llm=model)
+
+# " 와 , 누락 및 배열 타입
+incorrect_json = """
+{
+  id : 1
+  name : 철수
+  projects : "AI, DEV"
+}
+"""
+
+
+
+try:
+    model_json_parser.parse(incorrect_json)
+except Exception as e:
+    print(e)
+# Invalid json output: {
+#     id : 1
+#     name : 철수
+#     projects : "AI, DEV"
+# }
+# For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE
+
+model_json_fixing_parser.parse(incorrect_json)
+# {'id': 1, 'name': '철수', 'projects': ['AI', 'DEV']}
+
+
+
+# { 와 " 그리고 , 누락 및 배열 타입
+incorrect_json = """
+
+  id : 1
+  name : 철수
+  projects : "AI", "DEV"
+
+"""
+
+
+try:
+    model_json_parser.parse(incorrect_json)
+except Exception as e:
+    print(e)
+# Invalid json output: id : 1
+# name : 철수
+# projects : "AI", "DEV"
+# For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/OUTPUT_PARSING_FAILURE
+
+model_json_fixing_parser.parse(incorrect_json)
+# {'id': 1, 'name': '철수', 'projects': ['AI', 'DEV']}
+```
+
+
+
+---  
+## Reference
+[Output parsers](https://python.langchain.com/docs/concepts/output_parsers/)  
+[출력파서(Output Parser)](https://wikidocs.net/233771)  
+
+
+
+
