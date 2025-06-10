@@ -122,3 +122,110 @@ chain.invoke({
     "chat_history" : memory.chat_memory.messages
 })
 ```  
+
+
+
+### ConversationBufferMemory
+`ConversationBufferMemory` 는 가장 기본적이면서 직관적인 메모리 유형이다. 
+대화 내용을 버퍼처럼 저장하는 메모리 컴포넌트이다. 
+이는 모든 대화의 턴을 순서대로 저장한다. 
+간단히 설명하면 모든 대화 내용을 그대로 기억하는 메모리인 것이다. 
+
+- 작동방식 : 사용자 입력과 `AI` 응답 쌍을 순새대로 저장한다. 
+- 접근방식 : 새로운 대화 차례마다 이전의 모든 대화 내용을 불러온다. 
+- 형식 : 기본적으로 문자열 형태로 대화 내용을 관리하며, `return_messages=True` 옵션을 통해 메시지 객체 형태로도 반환할 수 있다.  
+
+장점으로는 아래와 같은 것들이 있다. 
+
+- 가장 직관적인 메모리 방식이기 때문에 구현이 간단하다. 
+- 대화의 모든 부분을 기억하기 때문에 컨텍스트 손실이 없어 완전한 컨텍스트를 유지할 수 있다.
+- 대화 흐름을 쉽게 추적할 수 있어 디버깅에 용이하다. 
+
+단점으로는 아래와 같은 것들이 있다. 
+
+- 대화가 길어질수록 컨텍스트 크기가 계속 커져 토큰 소비가 증가한다. 
+- 언어 모델의 컨텍스트 창 크기를 초과하면 오류가 발생할 수 있다. 
+- 오래된 대화도 모두 포함되므로 현재 대화와 관련 없는 내용까지 포함된다. 
+
+
+```python
+from langchain.memory import ConversationBufferMemory
+
+memory = ConversationBufferMemory()
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+
+memory.load_memory_variables({})
+# <ipython-input-4-64aee8a38692>:3: LangChainDeprecationWarning: Please see the migration guide at: https://python.langchain.com/docs/versions/migrating_memory/
+# memory = ConversationBufferMemory()
+# {'history': 'Human: 안녕하세요, 제품 A/S를 받고 싶습니다.\nAI: 안녕하세요! 어떤 문제가 발생했나요?'}
+
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.load_memory_variables({})['history']
+# Human: 안녕하세요, 제품 A/S를 받고 싶습니다.\nAI: 안녕하세요! 어떤 문제가 발생했나요?\nHuman: 제품이 작동하지 않습니다.\nAI: 어떤 제품인가요?\nHuman: 스마트폰입니다.\nAI: 스마트폰 모델명을 알려주시겠어요?\nHuman: 모델명은 XYZ123입니다.\nAI: 언제 구매하셨나요?
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+memory.load_memory_variables({})['history']
+# Human: 안녕하세요, 제품 A/S를 받고 싶습니다.\nAI: 안녕하세요! 어떤 문제가 발생했나요?\nHuman: 제품이 작동하지 않습니다.\nAI: 어떤 제품인가요?\nHuman: 스마트폰입니다.\nAI: 스마트폰 모델명을 알려주시겠어요?\nHuman: 모델명은 XYZ123입니다.\nAI: 언제 구매하셨나요?\nHuman: 6개월 전에 구매했습니다.\nAI: 보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.\nHuman: 서비스 센터 위치를 알려주세요.\nAI: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
+
+
+
+# or memory = ConversationBufferMemory(return_messages=True)
+memory.return_messages = True
+
+memory.load_memory_variables({})['history']
+# [HumanMessage(content='안녕하세요, 제품 A/S를 받고 싶습니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='안녕하세요! 어떤 문제가 발생했나요?', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='제품이 작동하지 않습니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='어떤 제품인가요?', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='스마트폰입니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='스마트폰 모델명을 알려주시겠어요?', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='모델명은 XYZ123입니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='언제 구매하셨나요?', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='6개월 전에 구매했습니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='서비스 센터 위치를 알려주세요.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.', additional_kwargs={}, response_metadata={})] 
+```
