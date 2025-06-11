@@ -229,3 +229,82 @@ memory.load_memory_variables({})['history']
 # HumanMessage(content='서비스 센터 위치를 알려주세요.', additional_kwargs={}, response_metadata={}),
 # AIMessage(content='고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.', additional_kwargs={}, response_metadata={})] 
 ```
+
+### ConversationBufferWindowMemory
+`ConversationBufferWindowMemory` 는 슬라이딩 윈도우처럼 작동해 모든 대화를 저장하는 것이 아니라, 가장 최근의 일정 수(`K`)의 대화 턴만 유지한다. 
+그리고 오래된 대화는 자동으로 메모리에서 제거된다. 
+
+- 윈도우 크기 설정 : `K` 매개변수를 통해 기억할 대화 턴 수를 지정한다. 
+- 저장 방식 : 입력과 `AI` 응답을 쌍으로 저장한다. 
+- 슬라이딩 윈도우 : 새로운 대화가 추가되면 가장 오래된 대화가 메모리에서 제거된다. 
+- 메모리 유지 : 항상 최근 `K` 개의 대화 턴만 유지한다. 
+
+장점으로는 아래와 같은 것들이 있다. 
+
+- 이전 대화의 일부만 유지하므로 토큰 소비가 줄어든다. 
+- 가장 관련성 높은 최근 대화만 포함하여 현재 맥락에 집중한다. 
+- 모델의 컨텍스트 창 크기 제한 내에서 작동하기 쉽다.
+- 사용자가 수동으로 컨텍스트를 관리할 필요가 없다. 
+
+단점으로는 아래와 같은 것들이 있다. 
+
+- 윈도우 크기를 넘어서는 이전 대화는 완전히 손실된다.
+- 윈도우 외부의 중요한 정보가 필요한 경우 문제가 발생할 수 있다. 
+- 최적의 윈도우 크기를 결정하는 것이 어려울 수 있다. 
+
+
+```python
+from langchain.memory import ConversationBufferWindowMemory
+
+memory = ConversationBufferWindowMemory(k=2, return_message=True)
+
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+memory.load_memory_variables({})['history']
+# Human: 6개월 전에 구매했습니다.\nAI: 보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.\nHuman: 서비스 센터 위치를 알려주세요.\nAI: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
+```  
+
