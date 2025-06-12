@@ -308,3 +308,91 @@ memory.load_memory_variables({})['history']
 # Human: 6개월 전에 구매했습니다.\nAI: 보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.\nHuman: 서비스 센터 위치를 알려주세요.\nAI: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
 ```  
 
+
+### ConversationTokenBufferMemory
+`ConversationTokenBufferMemory` 는 대화 기록을 토큰 수를 기준으로 관리하는 메모리이다. 
+`ConversationBufferMemory` 의 확장 버전으로 대화 턴 수가 아닌 토큰 수를 기준으로 대화를 제한한다. 
+이는 마치 토큰 기반 윈도우처럼 직동한다. 
+대화 기록의 토큰 수가 설정한 최대 토큰 수를 초과하면, 
+가장 오래된 대화부터 제거하여 토큰 수를 제한 이내로 유지할 수 있다. 
+
+- 토큰 제한 설정 : `max_token_limit` 매개변수를 통해 기억할 최대 토큰 수를 지정한다. 
+- 저장 방식 : 사용자 입력과 `AI` 응답을  쌍으로 저장한다. 
+- 토큰 계산 : 저장된 대화의 토큰 수를 계산한다. 
+- 토큰 관리 : 대화 토큰 수가 제한을 초과하여 오래된 대화부터 제거한다. 
+- 효율적 맥락 유지 : 토큰 기반으로 제한하여 모델의 컨텍스트 창을 효율적으로 사용한다.  
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 토큰 수를 직접 제어하여 모델의 컨텍스트 창 사용을 최적화한다. 
+- 대화 턴 수가 아닌 실제 토큰 수를 기준으로 메모리를 관리하여 더 세밀한 제어가 가능하다. 
+- 토큰 수를 정확히 제한하여 `API` 비용을 효율적으로 관리할 수 있다. 
+- 모델의 컨텍스트 창 크기에 맞게 정확히 메모리를 조절할 수 있다. 
+
+단점으로는 아래와 같은 것들이 있다. 
+
+- 토큰 계산을 위해 `LLM` 객체가 필요하므로 설정이 더 복잡하다. 
+- 토큰 제한을 초과하는 과거 대화는 손실된다. 
+- 토큰 계산을 위한 추가 처리가 필요하여 리소스 사용이 증가할 수 있다.  
+
+```python
+from langchain.memory import ConversationTokenBufferMemory
+
+memory = ConversationTokenBufferMemory(
+    llm = model,
+    max_token_limit=300,
+    return_messages=True
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+memory.load_memory_variables({})['history']
+# [HumanMessage(content='6개월 전에 구매했습니다.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.', additional_kwargs={}, response_metadata={}),
+# HumanMessage(content='서비스 센터 위치를 알려주세요.', additional_kwargs={}, response_metadata={}),
+# AIMessage(content='고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.', additional_kwargs={}, response_metadata={})]
+```  
