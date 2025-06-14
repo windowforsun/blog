@@ -396,3 +396,74 @@ memory.load_memory_variables({})['history']
 # HumanMessage(content='서비스 센터 위치를 알려주세요.', additional_kwargs={}, response_metadata={}),
 # AIMessage(content='고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.', additional_kwargs={}, response_metadata={})]
 ```  
+
+### ConversationEntityMemory
+`ConversationEntityMemory` 는 대화 중 언급된 특정 엔티티들을 추적하고 기억하는 메모리이다. 
+일반적인 대화 메모리와 달리, 
+대화에서 등장하는 중요한 개체나 주제를 식별하고 각각에 대한 정보를 별도로 저장한다. 
+대화에서 나타나는 사람, 장소, 제품 등과 같은 엔티티를 자동으로 추출하고, 각 엔티티에 대한 정보를 지속적으로 업데이트한다. 
+이는 마치 대화 중에 언급된 각 주제에 대한 별도의 메모장을 유지하는 것과 같다.  
+
+- 엔티티 추출 : 대화에서 중요한 엔티티를 자동으로 식별한다. 
+- 엔티티별 요약 저장 : 각 엔티티에 대한 정보를 별도로 저장하고 업데이트한다. 
+- 컨텍스트 제공 : 측정 엔티티가 다시 언급될 때 해당 엔티티에 대한 저장된 정보를 프롬프트에 포함시킨다. 
+- 요약 및 업데이트 : 엔티티에 대한 새로운 정보가 추가되면 요약을 업데이트한다.  
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 특정 엔티티에 대한 정보를 누적하여 저장하므로 대화의 맥락을 더 깊게 이해할 수 있다. 
+- 모든 대화를 저장하는 대신 중요한 엔티티와 정보만 추출하여 저장한다. 
+- 사용자나 주제에 대한 정보를 기억하여 더 개인화된 응답을 제공할 수 있다. 
+- 대화 내용을 엔티티별로 구조화하여 저장하므로 필요한 정보를 더 효율적으로 검색할 수 있다.  
+
+단점으로는 아래와 같은 것들이 있다.
+
+- 설정과 사용이 다른 메모리 유형보다 복잡하다.
+- 엔티티 추출과 요약에 `LLM` 을 사용하므로 추가적인 `API` 호출이 필요하다. 
+- 엔티티 추출 과정에서 오류가 발생할 수 있어 잘못된 정보가 저장될 수 있다. 
+- 다수의 엔티티를 추적할 경우 메모리 사용량이 증가할 수 있다.  
+
+```python
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationEntityMemory
+from langchain.memory.prompt import ENTITY_MEMORY_CONVERSATION_TEMPLATE
+
+print(ENTITY_MEMORY_CONVERSATION_TEMPLATE.template)
+# You are an assistant to a human, powered by a large language model trained by OpenAI.
+# 
+# You are designed to be able to assist with a wide range of tasks, from answering simple questions to providing in-depth explanations and discussions on a wide range of topics. As a language model, you are able to generate human-like text based on the input you receive, allowing you to engage in natural-sounding conversations and provide responses that are coherent and relevant to the topic at hand.
+# 
+# You are constantly learning and improving, and your capabilities are constantly evolving. You are able to process and understand large amounts of text, and can use this knowledge to provide accurate and informative responses to a wide range of questions. You have access to some personalized information provided by the human in the Context section below. Additionally, you are able to generate your own text based on the input you receive, allowing you to engage in discussions and provide explanations and descriptions on a wide range of topics.
+# 
+# Overall, you are a powerful tool that can help with a wide range of tasks and provide valuable insights and information on a wide range of topics. Whether the human needs help with a specific question or just wants to have a conversation about a particular topic, you are here to assist.
+# 
+# Context:
+# {entities}
+# 
+# Current conversation:
+# {history}
+# Last line:
+# Human: {input}
+# You:
+
+
+conversation = ConversationChain(
+    llm=model,
+    prompt=ENTITY_MEMORY_CONVERSATION_TEMPLATE,
+    memory=ConversationEntityMemory(llm=model)
+)
+
+conversation.predict(input="철수와 영희는 한 회사에서 일하는 동료입니다.")
+conversation.predict(input="철수는 부장이고, 영희는 사원입니다.")
+conversation.predict(input="철수는 현재 새로운 프로젝트에 대한 고민이 많습니다.")
+conversation.predict(input="영희는 오늘 점심 메뉴가 가장 큰 고민입니다.")
+conversation.predict(input="철수는 오늘 퇴근 후 운동을 할 계획을 가지고 있습니다.")
+conversation.predict(input="영희는 야근으로 모임에는 가지 못할 것 같습니다.")
+
+conversation.memory.entity_store
+# InMemoryEntityStore(store={'철수': '철수는 회사에서 부장으로 일하고 있으며, 오늘 퇴근 후 운동을 할 계획을 가지고 있습니다.', '영희': '영희는 사원이며 야근으로 모임에 가지 못할 예정입니다.'})
+
+conversation.predict(input="영희의 고민은 무엇인가요?")
+# 영희의 고민은 오늘 점심 메뉴가 가장 큰 고민인 것으로 보입니다. 그러나 영희 사원은 사원이며 야근으로 모임에 가지 못할 예정입니다. 이는 영희 사원이 업무에 대한 부담을 느끼고 있고, 오늘의 점심 메뉴를 결정하는 것 외에도 업무적인 문제들에 대한 고민을 하고 있을 가능성이 있습니다. 영희 사원은 중요한 업무를 처리해야 하기 때문에 야근을 하게 된 모양입니다. 이러한 상황에서 영희 사원의 고민은 업무적인 문제들에 대한 스트레스와 야근으로 인한 피로, 그리고 점심 메뉴를 결정하는 것 등 다양한 요인으로 인해 복잡할 수 있습니다.
+```  
+
