@@ -467,3 +467,89 @@ conversation.predict(input="영희의 고민은 무엇인가요?")
 # 영희의 고민은 오늘 점심 메뉴가 가장 큰 고민인 것으로 보입니다. 그러나 영희 사원은 사원이며 야근으로 모임에 가지 못할 예정입니다. 이는 영희 사원이 업무에 대한 부담을 느끼고 있고, 오늘의 점심 메뉴를 결정하는 것 외에도 업무적인 문제들에 대한 고민을 하고 있을 가능성이 있습니다. 영희 사원은 중요한 업무를 처리해야 하기 때문에 야근을 하게 된 모양입니다. 이러한 상황에서 영희 사원의 고민은 업무적인 문제들에 대한 스트레스와 야근으로 인한 피로, 그리고 점심 메뉴를 결정하는 것 등 다양한 요인으로 인해 복잡할 수 있습니다.
 ```  
 
+
+
+### ConversationKGMemory
+`ConversationKGMemory` 는 대화 내용을 지식 그래프(`Knowledge Graph`) 형태로 저장하는 메모리이다. 
+이 메모리는 대화에서 언급된 개체들 간의 관계를 추출하여 구조화된 형태로 기억한다. 
+대화 내용에서 트리플(`Triple`) 형태의 정보를 추출한다. 트래플은 주어, 서술어, 목적어 형태로 구성되며, 
+이를 통해 대화에서 언급된 개체들과 그 관계를 명확하게 표현할 수 있다. 
+
+- 트리플 추출 : 대화 내용에서 주어, 서술어, 목적어 형태의 관계를 추출한다. 
+- 지식 그래프 추출 : 추출된 트리플을 바탕으로 지식 그래프를 구성한다. 
+- 관련 정보 검색 : 새로운 대화에서 특정 개체가 언급되면, 그래프에서 관련된 정보를 검색한다. 
+- 맥락 강화 : 검색된 정보를 바탕으로 응답 생성 시 맥락을 강화한다.  
+
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 단순한 텍스트가 아닌 구조화된 형태로 정보를 저장하여 관계를 명확히 표현한다. 
+- 대화에서 언급된 개체들 간의 관계를 중점적으로 기억한다. 
+- 특정 개체에 관련된 정보만 빠르게 검색할 수 있다. 
+- 관계 기반 지식을 통해 더 풍부한 맥락을 제공한다. 
+- 전체 대화를 저장하는 대신 중요한 관계만 추출하여 저장하므로 토큰 사용이 효율적이다. 
+
+단점으로는 아래와 같은 것들이 있다.
+
+- 모든 대화 내용을 저장하는 것이 아니라 관계만 추출하므로 일부 정보가 손실될 수 있다. 
+- 트리플 추출 과정에서 오류가 발생할 수 있어 관계가 정확하게 표현되지 않을 수 있다. 
+- 다른 메모리 유형에 비해 설정과 관리가 복잡하다. 
+- 트리플 추출에 `LLM` 을 사용하므로 추가적인 `API` 호출이 필요하다.  
+
+
+```python
+from langchain.memory import ConversationKGMemory
+
+memory = ConversationKGMemory(llm=model, return_messages=True)
+memory.save_context(
+    {"input" : "영희님 반가워요. 오늘부터 함께 업무하게 되는 철수 부장이라고 합니다."},
+    {"output" : "철수님 반가워요. 잘 부탁드리겠습니다. 고민이 많아 보이시는데 어떤 고민이 있으신가요 ?"}
+)
+memory.save_context(
+    {"input" : "다음 달부터 시작하는 신규 프로젝트에 대해서 고민이 있습니다. 영희님은 어떠신가요 ?"},
+    {"output" : "전 오늘 점심이 가장 큰 고민이네요 하하하 맛있는 걸로 한번 골라보겠습니다."}
+)
+memory.load_memory_variables({"input" : "철수는 누구입니까?"})
+# {'history': [SystemMessage(content='On 철수: 철수 는 부장. 철수 는 영희님과 함께 업무하게 됩니다.', additional_kwargs={}, response_metadata={})]}
+
+
+# ConversationChain 과 함께 활용
+
+from langchain.prompts.prompt import PromptTemplate
+
+template = """The following is a friendly conversation between a human and an AI. 
+The AI is talkative and provides lots of specific details from its context. 
+If the AI does not know the answer to a question, it truthfully says it does not know. 
+The AI ONLY uses information contained in the "Relevant Information" section and does not hallucinate.
+
+Relevant Information:
+
+{history}
+
+Conversation:
+Human: {input}
+AI:"""
+
+prompt = PromptTemplate(
+    input_variables=["history", "input"],
+    template=template
+)
+
+conversation_kg = ConversationChain(
+    llm=model,
+    memory=ConversationKGMemory(llm=model)
+)
+conversation_kg.predict(input="철수와 영희는 한 회사에서 일하는 동료입니다.")
+conversation_kg.predict(input="철수는 부장이고, 영희는 사원입니다.")
+conversation_kg.predict(input="철수는 현재 새로운 프로젝트에 대한 고민이 많습니다.")
+conversation_kg.predict(input="영희는 오늘 점심 메뉴가 가장 큰 고민입니다.")
+conversation_kg.predict(input="철수는 오늘 퇴근 후 운동을 할 계획을 가지고 있습니다.")
+conversation_kg.predict(input="영희는 야근으로 모임에는 가지 못할 것 같습니다.")
+
+conversation_kg.memory.load_memory_variables({"input" : "철수는 누구입니까?"})
+# {'history': 'On 철수: 철수 는 한 회사에서 일하는 동료. 철수 is a 부장.'}
+
+conversation_kg.predict(input="철수는 누구입니까?")
+# 철수는 한 회사에서 일하는 동료입니다. 그는 현재 부장으로서 중요한 역할을 맡고 있습니다. 철수는 매우 친절하고 능력 있는 사람으로, 그의 업무에 대한 열정과 전문성을 항상 보여줍니다. 그는 회사 내에서 중요한 프로젝트를 맡고 있으며, 그의 팀과 함께优秀한 성과를 내고 있습니다. 철수와 함께 일하는 것은 매우 즐겁고 배우는 기회가 많은 것 같습니다.
+```  
+
