@@ -553,3 +553,193 @@ conversation_kg.predict(input="철수는 누구입니까?")
 # 철수는 한 회사에서 일하는 동료입니다. 그는 현재 부장으로서 중요한 역할을 맡고 있습니다. 철수는 매우 친절하고 능력 있는 사람으로, 그의 업무에 대한 열정과 전문성을 항상 보여줍니다. 그는 회사 내에서 중요한 프로젝트를 맡고 있으며, 그의 팀과 함께优秀한 성과를 내고 있습니다. 철수와 함께 일하는 것은 매우 즐겁고 배우는 기회가 많은 것 같습니다.
 ```  
 
+
+### ConversationSummaryMemory
+`ConversationSummaryMemory` 는 대화 내용을 요약하여 저장하는 메모리이다. 
+모든 대화를 그대로 저장하는 대신 `LLM` 을 사용하여 대화를 지속적으로 요약하고 요약본만 저장한다. 
+대화가 진행됨에 따라 증가하는 컨텍스트 크기 문제를 해결하기 위해 설계되었고, 
+전체 대화를 저장하지 않고 대화의 핵심 내용만 담은 요약을 유지한다.  
+
+작동 방식은 다음과 같다.
+
+- 오약 생성 : 새로운 대화가 추가될 때마다 `LLM` 을 사용하여 이전 요약과 새 대화를 통합한 새로운 요약을 생성한다. 
+- 간결한 컨텍스트 유지 : 대화 전체 대신 요약만 저장하여 컨텍스트 크기를 제한한다. 
+- 핵심 정보 보존 : 일반적인 대화의 흐름과 중요한 정보만 요약에 포함한다. 
+- 동적 요약 업데이트 : 대화가 진행됨에 따라 요약이 계속 업데이트된다.  
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 전체 대화 내용 대신 요약만 저장하므로 토큰 사용에 효율적이다. 
+- 중요한 정보와 맥락을 보존하면서 불필요한 세부 사항은 제거한다. 
+- 대화가 길어져도 컨텍스트 크기가 일정하게 유지된다. 
+- 매우 긴 데화에서도 효과적으로 사용할 수 있다. 
+- 요약을 통해 대화의 주요 흐름과 중요 정보를 유지한다. 
+
+단점으로는 아래와 같은 것들이 있다. 
+
+- `LLM` 의 요약 품질에 의존하므로 중요한 세부 정보가 손실될 수 있다. 
+- 요약 생성을 위해 추가 `LLM` 호출이 필요하므로 비용이 증가할 수 있다. 
+- 요약 과정에서 일부 세부 정보가 손실될 수 있다. 
+- 요약 생성에 시간이 소요되어 응답 시간이 길어질 수 있다. 
+- 설정과 관리가 다른 메모리 유형보다 복잡할 수 있다.  
+
+
+```python
+from langchain.memory import ConversationSummaryMemory
+
+memory = ConversationSummaryMemory(
+    llm = model,
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+# 이전의 모든 대화를 압축적으로 요약한 내용
+memory.load_memory_variables({})['history']
+# <ipython-input-5-c06b86128c76>:3: LangChainDeprecationWarning: Please see the migration guide at: https://python.langchain.com/docs/versions/migrating_memory/
+# memory = ConversationSummaryMemory(
+#    The human greets the AI and expresses their desire to receive product A/S (after-sales service), and the AI responds with a greeting and asks about the nature of the problem that has occurred. The human reports that the product is not working, and the AI inquires about which specific product is malfunctioning. The human states that the malfunctioning product is a smartphone, and the AI requests the model name of the smartphone. The human responds that the model name of the smartphone is XYZ123, and the AI then asks when the smartphone was purchased. The human replies that the smartphone was purchased 6 months ago, and the AI informs the human that since it is still under warranty, a free repair is possible, and advises the human to visit a nearby service center. The human asks for the location of the service center, and the AI responds by asking for the human's current location so it can provide the location of the nearest service center.
+```  
+
+
+### ConversationSummaryBufferMemory
+`ConversationSummaryBufferMemory` 는 하이브리드 메모리 유형으로, 
+`ConversationBufferMemory` 와 `ConversationSummaryMemory` 의 장점을 결합한 메모리이다. 
+최근 대화는 버퍼에 저장하고, 오래된 대화는 요약하여 저장하는 방식으로 작동한다.  
+
+토큰 제한이 있는 환경에서 장기 대화의 먁락을 유지하기 위해 설계되었다. 
+최대 토큰 수를 설정하고 해당 제한에 도달하면 가장 오래된 대화를 요약하여 공간을 확보한다.  
+
+작동 방식은 아래와 같다. 
+
+- 버퍼와 요약 방법 : 최근 대화는 버퍼에 그대로 저장하고, 오래된 대화는 요약으로 변환한다. 
+- 토큰 기반 관리 : 설정된 `max_token_limi` 에 따라 버퍼 크기를 조잘한다. 
+- 동적 메모리 관리 : 버퍼가 토큰 제한에 도달하면, 가장 오래된 대화가 요약에 병합된다. 
+- 맥락 유지 : 요약과 최근 대화를 모두 유지하여 완전한 맥락을 제공한다. 
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 중요한 최근 대화는 버퍼에 유지하고, 오래된 대화는 요약하여 토큰을 절약한다. 
+- 최근 대화의 세부 사항과 과거 대화의 핵심 내용을 모두 유지한다. 
+- 토큰 제한에 따라 자동으로 버퍼와 요약 간 균형을 조절한다. 
+- 긴 대화에서도 효과적으로 맥락을 유지할 수 있다. 
+- 최근 대화의 세부 정보와 과거 대화의 핵심 요약을 모두 활용한다. 
+
+단점으로는 아래와 같은 것들이 있다.
+
+- 다른 메모리 유형보다 설정과 튜닝이 복잡할 수 있다. 
+- 요약 생성을 위해 추가 `LLM` 호출이 필요하므로 비용이 증가한다. 
+- 절절한 `max_token_limit` 값을 찾는 것이 어려울 수 있다. 
+- 오래된 대화의 경우 `LLM` 의 요약 품질에 의존한다. 
+- 요약 작업으로 인해 응답 시간이 길어질 수 있다.  
+
+
+```python
+from langchain.memory import ConversationSummaryBufferMemory
+
+memory = ConversationSummaryBufferMemory(llm=model, max_token_limit=200)
+
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+
+# max_token_limit 를 초과하지 않아 내용이 그대로 저장된다. 
+memory.load_memory_variables({})['history']
+# Human: 안녕하세요, 제품 A/S를 받고 싶습니다.\nAI: 안녕하세요! 어떤 문제가 발생했나요?\nHuman: 제품이 작동하지 않습니다.\nAI: 어떤 제품인가요?
+
+
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+
+# max_token_limit 를 초과하여 요약된 내용이 저장된다.
+memory.load_memory_variables({})['history']
+# System: The human greets and expresses their desire to receive product A/S (after-sales service). The AI responds with a greeting and asks what problem has occurred. The human reports that the product is not working, and the AI inquires about the type of product, which the human identifies as a smartphone. The AI then requests the specific model of the smartphone. The human provides the model number as XYZ123, and the AI asks when the purchase was made. The human replies that the purchase was made 6 months ago. The AI informs the human that since it is within the warranty period, free repair is possible, and advises the human to visit a nearby service center.
+# Human: 서비스 센터 위치를 알려주세요.
+# AI: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
+```  
+
