@@ -743,3 +743,119 @@ memory.load_memory_variables({})['history']
 # AI: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
 ```  
 
+
+### VectorStoreRetrieverMemory
+`VectorStoreRetrieverMemory` 는 벡터 검색 기반 메모리이다. 
+이전 대화 내용을 벡터 형태로 저장하고, 현재 쿼리와 의미적으로 유사한 과거 대화만 선택적으로 검색하여 제공한다. 
+
+모든 대화를 순차적으로 기억하는 다른 메모리 유형과 달리, 현재 질문과 관련성이 높은 과거 대화만 검색하는 의미 기반 검색 방식을 사용한다. 
+이는 마치 대화 내용을 의미 기반으로 인덱싱하는 검색 엔진처럼 작동한다.  
+
+작동 방식은 아래와 같다.  
+
+- 벡터 변환 : 대화의 각 부분을 임베딩 모델을 사용해 벡터로 변환한다. 
+- 벡터 저장 : 변환된 벡터와 원본 텍스트를 벡터 스토어에 저장한다. 
+- 유사성 검색 : 새 질문이 들어오면 이를 벡터로 변환하고, 가장 유사한 과거 대화를 검색한다. 
+- 관련 정보 제공 : 현재 질문과 가장 관련성 높은 과거 대화만 컨텍스트로 제공한다.  
+
+장점으로는 아래와 같은 것들이 있다.
+
+- 모든 대화가 아닌 현재 질문과 관련된 과거 대화만 검색한다. 
+- 관련 정보만 제공하므로 토큰 사용을 최적화할 수 있다. 
+- 대화가 매우 질어져도 관련 정보만 검색하므로 호율적이다. 
+- 키워드가 아닌 의미 기반으로 검색하여 더 정확한 정보를 제공한다. 
+- 오래된 대화라도 관련성이 높으면 검색할 수 있다. 
+
+단점으로는 아래와 같은 것들이 있다.
+
+- 임베딩 모델과 벡터 스토어 설정이 필요하여 구현이 비교적 복잡하다. 
+- 벡터 변환과 검색에 추가 계산 리소스가 필요하다. 
+- 검색 품질이 사용하는 임베딩 모델의 성능에 크게 의존한다. 
+- 대화의 순차적 흐름보다 관련성에 초점을 맞추므로 연속성이 떨어질 수 있다. 
+- 임베딩 생성을 위한 추가 `API` 호출이 필요하다.  
+
+
+```python
+from langchain.docstore import InMemoryDocstore
+from langchain.vectorstores import FAISS
+from langchain_nomic import NomicEmbeddings
+import faiss
+import os
+
+
+os.environ["NOMIC_API_KEY"] = getpass.getpass("Enter your Nomic API key: ")
+embeddings = NomicEmbeddings(model="nomic-embed-text-v1.5")
+vectorstore = FAISS.from_texts([""], embeddings)
+
+from langchain.memory import VectorStoreRetrieverMemory
+
+retriever = vectorstore.as_retriever(search_kargs={'k': 1})
+memory = VectorStoreRetrieverMemory(retriever=retriever)
+
+memory.save_context(
+    inputs = {
+        "human" : "안녕하세요, 제품 A/S를 받고 싶습니다."
+    },
+    outputs = {
+        "ai" : "안녕하세요! 어떤 문제가 발생했나요?"
+    }
+)
+memory.save_context(
+    inputs = {
+        "human" : "제품이 작동하지 않습니다."
+    },
+    outputs = {
+        "ai" : "어떤 제품인가요?"
+    }
+)
+
+memory.save_context(
+    inputs = {
+        "human" : "스마트폰입니다."
+    },
+    outputs = {
+        "ai" : "스마트폰 모델명을 알려주시겠어요?"
+    }
+)
+
+memory.save_context(
+    inputs={"human": "모델명은 XYZ123입니다."},
+    outputs={
+        "ai": "언제 구매하셨나요?"
+    },
+)
+
+memory.save_context(
+    inputs={"human": "6개월 전에 구매했습니다."},
+    outputs={
+        "ai": "보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요."
+    },
+)
+memory.save_context(
+    inputs={"human": "서비스 센터 위치를 알려주세요."},
+    outputs={
+        "ai": "고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다."
+    },
+)
+
+memory.load_memory_variables({"prompt": "고객의 모델명은 무엇인가요?"})['history']
+# human: 서비스 센터 위치를 알려주세요.
+# ai: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
+# human: 6개월 전에 구매했습니다.
+# ai: 보증 기간 내에 있으므로 무상 수리가 가능합니다. 가까운 서비스 센터를 방문해 주세요.
+# human: 모델명은 XYZ123입니다.
+# ai: 언제 구매하셨나요?
+# human: 안녕하세요, 제품 A/S를 받고 싶습니다.
+# ai: 안녕하세요! 어떤 문제가 발생했나요?
+
+memory.load_memory_variables({"human": "제품은 무엇인가요?"})['history']
+# human: 제품이 작동하지 않습니다.
+# ai: 어떤 제품인가요?
+# human: 서비스 센터 위치를 알려주세요.
+# ai: 고객님의 위치를 알려주시면 가장 가까운 서비스 센터를 안내해 드리겠습니다.
+# human: 안녕하세요, 제품 A/S를 받고 싶습니다.
+# ai: 안녕하세요! 어떤 문제가 발생했나요?
+# human: 스마트폰입니다.
+# ai: 스마트폰 모델명을 알려주시겠어요?
+```  
+
