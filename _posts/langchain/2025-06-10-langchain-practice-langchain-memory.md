@@ -859,3 +859,68 @@ memory.load_memory_variables({"human": "제품은 무엇인가요?"})['history']
 # ai: 스마트폰 모델명을 알려주시겠어요?
 ```  
 
+
+### Adding Memory to LCEL Chain(MessagesPlaceholder)
+`LCEL Chain` 에 모미를 추가하는 것은 대화형 `AI` 애플리케이션에서 맥락을 유지하기 위해 중요한 기능이다. 
+`LCEL` 은 프롬프트, 모델, 출력 파서 등 여러 컴포넌트를 함수형 프로그래밍 방식으로 연겨하는 방법을 제공한다. 
+여기에 메모리 컴포넌트를 `LCEL Chain` 에 추가하면 이전 대화를 기억하고 새로운 응답에 활용할 수 있다.  
+
+먼저 메시지 히스토리를 수동으로 연결하고 관리하는 방법에 대해 알아본다. 
+이는 `MessagesPlaceholder` 를 사용하여 메시지 히스토리를 직접 관리하는 방식이다.  
+
+```python
+from operator import itemgetter
+from langchain.memory import ConversationBufferMemory
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain.schema.output_parser import StrOutputParser
+from langchain_core.runnables import Runnable
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "you are a helpful assistant"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ]
+)
+
+memory = ConversationBufferMemory(return_messages=True, memory_key="chat_history")
+
+class MyConversationChain(Runnable):
+    def __init__(self, llm, prompt, memory, input_key="input"):
+        self.prompt = prompt
+        self.memory = memory
+        self.input_key = input_key
+
+        self.chain = (
+                RunnablePassthrough.assign(
+                    chat_history=RunnableLambda(self.memory.load_memory_variables) | itemgetter(memory.memory_key)
+                ) | prompt | llm | StrOutputParser()
+        )
+
+    def invoke(self, query, configs=None, **kwargs):
+        answer = self.chain.invoke({self.input_key : query})
+        self.memory.save_context(inputs={"human": query}, outputs={"ai" : answer})
+        return answer
+
+conversation_chain = MyConversationChain(model, prompt, memory)
+
+conversation_chain.invoke("안녕하세요? 반갑습니다. 제 이름은 철수123이에요.")
+# 안녕하세요 철수123님, 반가워요. 도와드릴 일이 있으신가요?
+
+conversation_chain.invoke("저는 초밥, 회, 삼겹살을 좋아하는데 오늘 뭘 먹어야 좋을까요?")
+# 음식 중에 하나를 선택하실 때는 여러 가지 요소를 고려해 보세요.
+# 
+# 1. **기분**: 오늘 기분이 어때요? 기분 전환을 원한다면 새로운 음식을 시도해 볼 수 있습니다. 하지만 평소에 좋아하는 음식을 먹는 것이 기분 전환에도 도움이 될 수 있습니다.
+# 
+# 2. **식욕**: 음식의 양과 종류를 생각해 보세요. 삼겹살은 양이 많고, 회는 양이 적을 수 있습니다. 초밥은 여러 가지 종류가 있기 때문에 선택의 폭이 넓습니다.
+# 
+# 3. **시간과 일상**: 오늘의 일상과 시간을 고려하세요. 삼겹살은 시간이 걸리고, 초밥이나 회는 상대적으로 빠르게 먹을 수 있습니다.
+# 
+# 4. **건강**: 건강을 생각해 보세요. 삼겝살은 고칼로리 음식이지만, 회는 프로틴과 오메가3 지방산이 풍부합니다. 초밥도 다양한 재료로 건강한 선택을 할 수 있습니다.
+# 
+# 이러한 요소를 고려해 보시고, 오늘의 기분과 필요에 따라 선택해 보세요. 혹시 오늘은 삼겹살이 먹고 싶으신가요? 아니면 회나 초밥을 드시고 싶으신가요?
+
+conversation_chain.invoke("제 이름과 좋아하는 음식이 뭐였죠?")
+# 철수123님은 초밥, 회, 삼겹살을 좋아하신다고 했어요.
+```  
