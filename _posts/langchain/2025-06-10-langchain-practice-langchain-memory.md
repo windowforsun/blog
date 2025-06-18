@@ -924,3 +924,109 @@ conversation_chain.invoke("저는 초밥, 회, 삼겹살을 좋아하는데 오�
 conversation_chain.invoke("제 이름과 좋아하는 음식이 뭐였죠?")
 # 철수123님은 초밥, 회, 삼겹살을 좋아하신다고 했어요.
 ```  
+
+### Adding Memory to LCEL Chain(RunnableWithMessageHistory)
+다음은 `LCEL` 에서 가장 일반적인 메모리 추가 방법으로 `RunnableWithMessageHistory` 를 사용하는 방법이다. 
+`RunnableWithMessageHistory` 는 `LCEL Chain` 에 메시지 기록 기능을 추가하는 래퍼 클래스이다. 
+그리고 추가로 대화 히스토리를 `SQLAlchemy` 를 사용하여 데이터베이스에 저장하는 방법도 함께 알아본다.  
+
+```python
+from langchain_community.chat_message_histories import SQLChatMessageHistory
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder
+)
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables.utils import ConfigurableFieldSpec
+
+chat_message_history = SQLChatMessageHistory(
+    session_id="sql_history", connection="sqlite:///sqlite.db"
+)
+
+chat_message_history.add_user_message(
+    "안녕하세요? 반갑습니다. 제 이름은 철수123이에요."
+)
+chat_message_history.add_ai_message(
+    "안녕하세요 철수123님, 반가워요. 도와드릴 일이 있으신가요?"
+)
+# [HumanMessage(content='안녕하세요? 반갑습니다. 제 이름은 철수123이에요.', additional_kwargs={}, response_metadata={}),
+#  AIMessage(content='안녕하세요 철수123님, 반가워요. 도와드릴 일이 있으신가요?', additional_kwargs={}, response_metadata={})]
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", "you are a helpful assistant"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ]
+)
+
+chain = prompt | model | StrOutputParser()
+
+# 대화 내용을 db 에서 가져오는 함수
+def get_chat_history(user_id, conversation_id):
+    return SQLChatMessageHistory(
+        table_name=user_id,
+        session_id=conversation_id,
+        connection="sqlite:///sqlite.db"
+    )
+
+# 대화 내용을 db에서 조회할 때 참고하는 정보
+config_fields = [
+    ConfigurableFieldSpec(
+        id="user_id",
+        annotation=str,
+        name="User ID",
+        description="Unique identifier for a user",
+        default="",
+        is_shared=True
+    ),
+    ConfigurableFieldSpec(
+        id="conversation_id",
+        annotation=str,
+        name="Conversation ID",
+        description="Unique identifier for a conversation",
+        default="",
+        is_shared=True
+    )
+]
+
+chain_with_history = RunnableWithMessageHistory(
+    chain,
+    # 대화 내용을 db 에서 가져오는 함수
+    get_chat_history,
+    # 입력 메시지 키
+    input_messages_key="input",
+    # 대화 기록 메시지 키
+    history_messages_key="chat_history",
+    # 대회 기록 조회 참고 정보
+    history_factory_config=config_fields
+)
+
+config = {
+    "configurable" : {
+        "user_id" : "user1",
+        "conversation_id" : "conversation1"
+    }
+}
+
+chain_with_history.invoke({"input" : "안녕하세요? 반갑습니다. 제 이름은 철수 123이에요"}, config)
+# 안녕하세요 철수 123님. 반갑습니다. 저는 도움이 필요하신 경우 언제든지 지원해드릴 수 있는 도우미입니다. 오늘은 어떤 도움이 필요하신가요?
+
+chain_with_history.invoke({"input" : "내가 제일 좋아하는 음식은 회야"}, config)
+# 회는 한국의 대표적인 음식 중 하나입니다. 신선하고 담백한 맛이 많은 사람들에게 사랑받는 음식이죠. 회를 특히 좋아하신다면, 회専門점이나 해산물 식당에서 다양한 종류의 회를 맛보실 수 있을 것입니다. 회를 드실 때는 소금에 절인 생강이나 와사비와 함께 드시면 더욱 풍미를 느낄 수 있습니다. 철수 123님, 가장 좋아하는 회의 종류는 무엇인가요?
+
+chain_with_history.invoke({"input": "내 이름과 가장 좋아하는 음식이 뭐라고?"}, config)
+# 당연하죠. 철수 123님의 이름은 "철수 123"이고, 가장 좋아하는 음식은 "회"입니다.
+
+config2 = {
+    "configurable" : {
+        "user_id" : "user1",
+        "conversation_id" : "conversation2"
+    }
+}
+
+chain_with_history.invoke({"input": "내 이름과 가장 좋아하는 음식이 뭐라고?"}, config2)
+# 안녕하세요. 저는 사용자의 개인 정보를 가지고 있지 않기 때문에, 사용자의 이름과 가장 좋아하는 음식을 알 수 없습니다. 사용자와의 대화를 통해 사용자의 정보를 알 수 있는 경우가 아니면 사용자의 개인 정보를 알 수 없습니다.
+```  
+
