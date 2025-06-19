@@ -1030,3 +1030,61 @@ chain_with_history.invoke({"input": "내 이름과 가장 좋아하는 음식이
 # 안녕하세요. 저는 사용자의 개인 정보를 가지고 있지 않기 때문에, 사용자의 이름과 가장 좋아하는 음식을 알 수 없습니다. 사용자와의 대화를 통해 사용자의 정보를 알 수 있는 경우가 아니면 사용자의 개인 정보를 알 수 없습니다.
 ```  
 
+
+### Adding Memory to LCEL Chain(RunnableWithMessageHistory, ChatMessageHistory)
+앞서 알아본 `RunnableWithMessageHistory` 를 사용하는 방법에서 `ChatMessageHistory` 를 추가로 함께 사용하는 방법에 대해 알아본다. 
+`ChatMessageHistory` 는 대화 메시지를 저장하고 관리하는 인터페이스를 구현한 클래스이다. 
+
+```python
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
+
+# 간단한 예제 구성을 위해 메모리 저장소를 딕셔너리로 사용
+store = {}
+
+def get_session_history(session_ids):
+  print(f"session: {session_ids}")
+
+  if session_ids not in store:
+    store[session_ids] = ChatMessageHistory()
+
+  return store[session_ids]
+
+chain_with_history = RunnableWithMessageHistory(
+    chain,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="chat_history"
+)
+
+chain_with_history.invoke(
+    {"input" : "안녕하세요? 반갑습니다. 제 이름은 철수 123이에요."},
+    config={"configurable" : {"session_id": "1"}}
+)
+# session: 1
+# 안녕하세요, 철수 123님. 반갑습니다. 저는 도움이 필요하시면 언제든지 편하게 물어보세요. 오늘은 어떤 도움이 필요하신가요?
+
+chain_with_history.invoke(
+    {"input" : "내 이름이 뭐야?"},
+    config={"configurable" : {"session_id": "1"}}
+)
+# session: 1
+# 당신의 이름은 철수 123입니다.
+
+chain_with_history.invoke(
+    {"input" : "내 이름이 뭐야?"},
+    config={"configurable" : {"session_id": "2"}}
+)
+# session: 2
+# 미안합니다, 이름을 알려주지 않았으니까 이름을 모르겠어요. 이름이 뭐냐고 물어보신 건가요?
+```
+
+
+---  
+## Reference
+[LangChain Memory](https://python.langchain.com/api_reference/langchain/memory.html)  
+[How to add memory to chatbots](https://python.langchain.com/docs/how_to/chatbots_memory/)  
+[메모리(Memory)](https://wikidocs.net/233773)  
+
+
+
