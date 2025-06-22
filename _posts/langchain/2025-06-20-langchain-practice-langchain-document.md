@@ -116,3 +116,124 @@ document.metadata
 - AudioTranscriptionLoader: 오디오 파일을 텍스트로 변환하여 로드합니다.  
 
 많은 `Document Loader` 중 몇 가지에 대해 간단히 살펴본다.  
+
+### TextLoader
+`TextLoader` 는 가장 기본적인 문서 로더로 일반 텍스트(`.txt`) 파일을 읽어 `Document` 로 반환하는 역할을 한다. 
+텍스트 파일 내용을 읽어서 `Document` 객체의 `page_content` 필드에 저장하고, 
+파일 경로 등의 정보는 `metadata` 에 저장한다. 
+
+사용 가능한 주요 매개변수는 아래와 같다. 
+
+```python
+TextLoader(
+    # 로드할 텍스트 파일 경로
+    file_path: str,
+    # 파일을 읽을 때 사용할 인코딩 형식, 기본값은 None(시스템 기본 인코딩 사용)
+    encoding: Optional[str] = None,
+    # 인코딩을 자동으로 감지할지 여부 (기본값: False)
+    autodetect_encoding: bool = False
+)
+```  
+
+
+아래와 같은 영화관련 정보가 담긴 `TXT` 파일을 로드해 사용한다.
+
+
+<details><summary>JSON 내용</summary>
+<div markdown="1">
+
+```txt
+Movies:
+1. Title: Inception
+   Director: Christopher Nolan
+   Release Year: 2010
+   Genre: Action, Sci-Fi, Thriller
+   Rating: 8.8
+   Cast:
+    - Leonardo DiCaprio as Dom Cobb
+    - Joseph Gordon-Levitt as Arthur
+    - Elliot Page as Ariadne
+
+2. Title: The Shawshank Redemption
+   Director: Frank Darabont
+   Release Year: 1994
+   Genre: Drama
+   Rating: 9.3
+   Cast:
+    - Tim Robbins as Andy Dufresne
+    - Morgan Freeman as Ellis Boyd 'Red' Redding
+
+3. Title: The Matrix
+   Director: The Wachowskis
+   Release Year: 1999
+   Genre: Action, Sci-Fi
+   Rating: 8.7
+   Cast:
+    - Keanu Reeves as Neo
+    - Laurence Fishburne as Morpheus
+    - Carrie-Anne Moss as Trinity
+
+4. Title: Parasite
+   Director: Bong Joon-ho
+   Release Year: 2019
+   Genre: Drama, Thriller
+   Rating: 8.5
+   Cast:
+    - Song Kang-ho as Kim Ki-taek
+    - Lee Sun-kyun as Park Dong-ik
+    - Cho Yeo-jeong as Park Yeon-kyo
+
+5. Title: Avengers: Endgame
+   Director: Anthony Russo, Joe Russo
+   Release Year: 2019
+   Genre: Action, Adventure, Sci-Fi
+   Rating: 8.4
+   Cast:
+    - Robert Downey Jr. as Tony Stark / Iron Man
+    - Chris Evans as Steve Rogers / Captain America
+    - Scarlett Johansson as Natasha Romanoff / Black Widow
+
+6. Title: Spirited Away
+   Director: Hayao Miyazaki
+   Release Year: 2001
+   Genre: Animation, Adventure, Fantasy
+   Rating: 8.6
+   Cast:
+    - Rumi Hiiragi as Chihiro Ogino (voice)
+    - Miyu Irino as Haku (voice)
+    - Mari Natsuki as Yubaba / Zeniba (voice)
+
+7. Title: The Godfather
+   Director: Francis Ford Coppola
+   Release Year: 1972
+   Genre: Crime, Drama
+   Rating: 9.2
+   Cast:
+    - Marlon Brando as Don Vito Corleone
+    - Al Pacino as Michael Corleone
+    - James Caan as Sonny Corleone
+
+8. Title: Interstellar
+   Director: Christopher Nolan
+   Release Year: 2014
+   Genre: Adventure, Drama, Sci-Fi
+   Rating: 8.6
+   Cast:
+    - Matthew McConaughey as Cooper
+    - Anne Hathaway as Brand
+    - Jessica Chastain as Murph
+```  
+
+</div>
+</details>  
+
+
+```python
+from langchain_community.document_loaders import TextLoader
+
+loader = TextLoader("./movies.txt")
+
+docs = loader.load()
+# [Document(metadata={'source': './movies.txt'}, page_content="Movies:\n1. Title: Inception\n   Director: Christopher Nolan\n   Release Year: 2010\n   Genre: Action, Sci-Fi, Thriller\n   Rating: 8.8\n   Cast:\n     - Leonardo DiCaprio as Dom Cobb\n     - Joseph Gordon-Levitt as Arthur\n     - Elliot Page as Ariadne\n\n2. Title: The Shawshank Redemption\n   Director: Frank Darabont\n   Release Year: 1994\n   Genre: Drama\n   Rating: 9.3\n   Cast:\n     - Tim Robbins as Andy Dufresne\n     - Morgan Freeman as Ellis Boyd 'Red' Redding\n\n3. Title: The Matrix\n   Director: The Wachowskis\n   Release Year: 1999\n   Genre: Action, Sci-Fi\n   Rating: 8.7\n   Cast:\n     - Keanu Reeves as Neo\n     - Laurence Fishburne as Morpheus\n     - Carrie-Anne Moss as Trinity\n\n4. Title: Parasite\n   Director: Bong Joon-ho\n   Release Year: 2019\n   Genre: Drama, Thriller\n   Rating: 8.5\n   Cast:\n     - Song Kang-ho as Kim Ki-taek\n     - Lee Sun-kyun as Park Dong-ik\n     - Cho Yeo-jeong as Park Yeon-kyo\n\n5. Title: Avengers: Endgame\n   Director: Anthony Russo, Joe Russo\n   Release Year: 2019\n   Genre: Action, Adventure, Sci-Fi\n   Rating: 8.4\n   Cast:\n     - Robert Downey Jr. as Tony Stark / Iron Man\n     - Chris Evans as Steve Rogers / Captain America\n     - Scarlett Johansson as Natasha Romanoff / Black Widow\n\n6. Title: Spirited Away\n   Director: Hayao Miyazaki\n   Release Year: 2001\n   Genre: Animation, Adventure, Fantasy\n   Rating: 8.6\n   Cast:\n     - Rumi Hiiragi as Chihiro Ogino (voice)\n     - Miyu Irino as Haku (voice)\n     - Mari Natsuki as Yubaba / Zeniba (voice)\n\n7. Title: The Godfather\n   Director: Francis Ford Coppola\n   Release Year: 1972\n   Genre: Crime, Drama\n   Rating: 9.2\n   Cast:\n     - Marlon Brando as Don Vito Corleone\n     - Al Pacino as Michael Corleone\n     - James Caan as Sonny Corleone\n\n8. Title: Interstellar\n   Director: Christopher Nolan\n   Release Year: 2014\n   Genre: Adventure, Drama, Sci-Fi\n   Rating: 8.6\n   Cast:\n     - Matthew McConaughey as Cooper\n     - Anne Hathaway as Brand\n     - Jessica Chastain as Murph")]
+```  
+
