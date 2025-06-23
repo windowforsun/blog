@@ -237,3 +237,53 @@ docs = loader.load()
 # [Document(metadata={'source': './movies.txt'}, page_content="Movies:\n1. Title: Inception\n   Director: Christopher Nolan\n   Release Year: 2010\n   Genre: Action, Sci-Fi, Thriller\n   Rating: 8.8\n   Cast:\n     - Leonardo DiCaprio as Dom Cobb\n     - Joseph Gordon-Levitt as Arthur\n     - Elliot Page as Ariadne\n\n2. Title: The Shawshank Redemption\n   Director: Frank Darabont\n   Release Year: 1994\n   Genre: Drama\n   Rating: 9.3\n   Cast:\n     - Tim Robbins as Andy Dufresne\n     - Morgan Freeman as Ellis Boyd 'Red' Redding\n\n3. Title: The Matrix\n   Director: The Wachowskis\n   Release Year: 1999\n   Genre: Action, Sci-Fi\n   Rating: 8.7\n   Cast:\n     - Keanu Reeves as Neo\n     - Laurence Fishburne as Morpheus\n     - Carrie-Anne Moss as Trinity\n\n4. Title: Parasite\n   Director: Bong Joon-ho\n   Release Year: 2019\n   Genre: Drama, Thriller\n   Rating: 8.5\n   Cast:\n     - Song Kang-ho as Kim Ki-taek\n     - Lee Sun-kyun as Park Dong-ik\n     - Cho Yeo-jeong as Park Yeon-kyo\n\n5. Title: Avengers: Endgame\n   Director: Anthony Russo, Joe Russo\n   Release Year: 2019\n   Genre: Action, Adventure, Sci-Fi\n   Rating: 8.4\n   Cast:\n     - Robert Downey Jr. as Tony Stark / Iron Man\n     - Chris Evans as Steve Rogers / Captain America\n     - Scarlett Johansson as Natasha Romanoff / Black Widow\n\n6. Title: Spirited Away\n   Director: Hayao Miyazaki\n   Release Year: 2001\n   Genre: Animation, Adventure, Fantasy\n   Rating: 8.6\n   Cast:\n     - Rumi Hiiragi as Chihiro Ogino (voice)\n     - Miyu Irino as Haku (voice)\n     - Mari Natsuki as Yubaba / Zeniba (voice)\n\n7. Title: The Godfather\n   Director: Francis Ford Coppola\n   Release Year: 1972\n   Genre: Crime, Drama\n   Rating: 9.2\n   Cast:\n     - Marlon Brando as Don Vito Corleone\n     - Al Pacino as Michael Corleone\n     - James Caan as Sonny Corleone\n\n8. Title: Interstellar\n   Director: Christopher Nolan\n   Release Year: 2014\n   Genre: Adventure, Drama, Sci-Fi\n   Rating: 8.6\n   Cast:\n     - Matthew McConaughey as Cooper\n     - Anne Hathaway as Brand\n     - Jessica Chastain as Murph")]
 ```  
 
+
+### DirectoryLoader
+`DirectoryLoader` 는 디렉토리 내의 여러 파일을 한 번에 로드하여 `Document` 객체로 변환하는 역할을 한다. 
+디렉토리에 있는 파일들을 필터링하고, 지정된 로드를 사용하여 각 파일을 `Document` 객체로 변환한다. 
+
+주요 매개변수는 아래와 같다.  
+
+
+```python
+DirectoryLoader(
+    # 로드할 파일이 있는 디렉토리 경로
+    path: str,
+    # 파일 필터링을 위한 패턴, 기본값 **/*
+    glob: str = "**/*",
+    # 각 파일을 로드하는데 사용할 로더 클래스
+    loader_cls: Optional[Type[BaseLoader]] = None,
+    # 로더 클래스에 전달할 추가 인자
+    loader_kwargs: Optional[Dict[str, Any]] = None,
+    # 하위 디렉토리까지 검색할지 여부, 기분값 False
+    recursive: bool = False,
+    # 진행 상황 표시 여부, 기본값 False
+    show_progress: bool = False,
+    # 멀티스레딩 사용 여부, 기본값 False
+    use_multithreading: bool = False,
+    # 최대 동시 실행 스레드 수
+    max_concurrency: Optional[int] = None,
+    # 오류 발생 시 건너뛸지 여부, 기본값 False
+    silent_errors: bool = False
+)
+```  
+
+예제는 앞서 `TextLoader` 에서 사용한 영화에 대한 내용을 `movies` 라는 디렉토리에 각 영화별로 분리해 저장해 진행한다.  
+
+
+```python
+from langchain_community.document_loaders import DirectoryLoader
+
+loader = DirectoryLoader(
+    path='./movies/', 
+    glob="**/*.txt", 
+    loader_cls=TextLoader,
+    loader_kwargs = {'autodetect_encoding': True}
+)
+docs = loader.load()
+# [Document(metadata={'source': 'movies/4.txt'}, page_content='Title: Parasite\n   Director: Bong Joon-ho\n   Release Year: 2019\n   Genre: Drama, Thriller\n   Rating: 8.5\n   Cast:\n     - Song Kang-ho as Kim Ki-taek\n     - Lee Sun-kyun as Park Dong-ik\n     - Cho Yeo-jeong as Park Yeon-kyo'),
+#  Document(metadata={'source': 'movies/3.txt'}, page_content='Title: The Matrix\n   Director: The Wachowskis\n   Release Year: 1999\n   Genre: Action, Sci-Fi\n   Rating: 8.7\n   Cast:\n     - Keanu Reeves as Neo\n     - Laurence Fishburne as Morpheus\n     - Carrie-Anne Moss as Trinity'),
+#  Document(metadata={'source': 'movies/1.txt'}, page_content='Title: Inception\n   Director: Christopher Nolan\n   Release Year: 2010\n   Genre: Action, Sci-Fi, Thriller\n   Rating: 8.8\n   Cast:\n     - Leonardo DiCaprio as Dom Cobb\n     - Joseph Gordon-Levitt as Arthur\n     - Elliot Page as Ariadne'),
+#  Document(metadata={'source': 'movies/2.txt'}, page_content="Title: The Shawshank Redemption\n   Director: Frank Darabont\n   Release Year: 1994\n   Genre: Drama\n   Rating: 9.3\n   Cast:\n     - Tim Robbins as Andy Dufresne\n     - Morgan Freeman as Ellis Boyd 'Red' Redding")]
+```
+
