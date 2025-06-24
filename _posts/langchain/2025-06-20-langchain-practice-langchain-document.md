@@ -287,3 +287,268 @@ docs = loader.load()
 #  Document(metadata={'source': 'movies/2.txt'}, page_content="Title: The Shawshank Redemption\n   Director: Frank Darabont\n   Release Year: 1994\n   Genre: Drama\n   Rating: 9.3\n   Cast:\n     - Tim Robbins as Andy Dufresne\n     - Morgan Freeman as Ellis Boyd 'Red' Redding")]
 ```
 
+
+### JSONLoader
+`JSONLoader` 는 `JSON` 형식 파일을 로드하여 `Document` 객체로 변환하는 로더이다. 
+복잡한 구조의 `JSON` 데이터에서 특정 정보를 추출하는데 유용하다. 
+
+주요 특징은 아래와 같다.  
+
+- `JSON` 파일에서 특정 필드나 경로의 데이터를 추출할 수 있다. 
+- `jq` 와 유사한 표현식을 사용하여 복잡한 `JSON` 구조를 탐색할 수 있다. 
+- 추출된 데이터를 `Document` 객체로 변환한다. 
+- 메타 데이터 추출 기능을 제공한다.  
+
+
+주요 매개변수는 아래와 같다. 
+
+```python
+JSONLoader(
+    # 로드할 `JSON` 파일 경로
+    file_path: str,
+    # JSON 데이터를 탐색하기 위한 jq 스타일 표현식, 기본값 .[]
+    jq_schema: str = '.[]',
+    # 문서 내용으로 사용할 JSON 필드의 키
+    content_key: Optional[str] = None,
+    # 메타데이터를 추출하기 위한 사용자 정의 변수
+    metadata_func: Optional[Callable[[Dict, Dict], Dict]] = None
+)
+```  
+
+아래와 같은 영화관련 정보가 담긴 `JSON` 파일을 로드해 사용한다.  
+
+<details><summary>JSON 내용</summary>
+<div markdown="1">
+
+```json
+{
+  "movies": [
+    {
+      "title": "Inception",
+      "director": "Christopher Nolan",
+      "release_year": 2010,
+      "genre": ["Action", "Sci-Fi", "Thriller"],
+      "rating": 8.8,
+      "cast": [
+        {
+          "name": "Leonardo DiCaprio",
+          "role": "Dom Cobb"
+        },
+        {
+          "name": "Joseph Gordon-Levitt",
+          "role": "Arthur"
+        },
+        {
+          "name": "Elliot Page",
+          "role": "Ariadne"
+        }
+      ]
+    },
+    {
+      "title": "The Shawshank Redemption",
+      "director": "Frank Darabont",
+      "release_year": 1994,
+      "genre": ["Drama"],
+      "rating": 9.3,
+      "cast": [
+        {
+          "name": "Tim Robbins",
+          "role": "Andy Dufresne"
+        },
+        {
+          "name": "Morgan Freeman",
+          "role": "Ellis Boyd 'Red' Redding"
+        }
+      ]
+    },
+    {
+      "title": "The Matrix",
+      "director": "The Wachowskis",
+      "release_year": 1999,
+      "genre": ["Action", "Sci-Fi"],
+      "rating": 8.7,
+      "cast": [
+        {
+          "name": "Keanu Reeves",
+          "role": "Neo"
+        },
+        {
+          "name": "Laurence Fishburne",
+          "role": "Morpheus"
+        },
+        {
+          "name": "Carrie-Anne Moss",
+          "role": "Trinity"
+        }
+      ]
+    },
+    {
+      "title": "Parasite",
+      "director": "Bong Joon-ho",
+      "release_year": 2019,
+      "genre": ["Drama", "Thriller"],
+      "rating": 8.5,
+      "cast": [
+        {
+          "name": "Song Kang-ho",
+          "role": "Kim Ki-taek"
+        },
+        {
+          "name": "Lee Sun-kyun",
+          "role": "Park Dong-ik"
+        },
+        {
+          "name": "Cho Yeo-jeong",
+          "role": "Park Yeon-kyo"
+        }
+      ]
+    },
+    {
+      "title": "Avengers: Endgame",
+      "director": "Anthony Russo, Joe Russo",
+      "release_year": 2019,
+      "genre": ["Action", "Adventure", "Sci-Fi"],
+      "rating": 8.4,
+      "cast": [
+        {
+          "name": "Robert Downey Jr.",
+          "role": "Tony Stark / Iron Man"
+        },
+        {
+          "name": "Chris Evans",
+          "role": "Steve Rogers / Captain America"
+        },
+        {
+          "name": "Scarlett Johansson",
+          "role": "Natasha Romanoff / Black Widow"
+        }
+      ]
+    },
+    {
+      "title": "Spirited Away",
+      "director": "Hayao Miyazaki",
+      "release_year": 2001,
+      "genre": ["Animation", "Adventure", "Fantasy"],
+      "rating": 8.6,
+      "cast": [
+        {
+          "name": "Rumi Hiiragi",
+          "role": "Chihiro Ogino (voice)"
+        },
+        {
+          "name": "Miyu Irino",
+          "role": "Haku (voice)"
+        },
+        {
+          "name": "Mari Natsuki",
+          "role": "Yubaba / Zeniba (voice)"
+        }
+      ]
+    },
+    {
+      "title": "The Godfather",
+      "director": "Francis Ford Coppola",
+      "release_year": 1972,
+      "genre": ["Crime", "Drama"],
+      "rating": 9.2,
+      "cast": [
+        {
+          "name": "Marlon Brando",
+          "role": "Don Vito Corleone"
+        },
+        {
+          "name": "Al Pacino",
+          "role": "Michael Corleone"
+        },
+        {
+          "name": "James Caan",
+          "role": "Sonny Corleone"
+        }
+      ]
+    },
+    {
+      "title": "Interstellar",
+      "director": "Christopher Nolan",
+      "release_year": 2014,
+      "genre": ["Adventure", "Drama", "Sci-Fi"],
+      "rating": 8.6,
+      "cast": [
+        {
+          "name": "Matthew McConaughey",
+          "role": "Cooper"
+        },
+        {
+          "name": "Anne Hathaway",
+          "role": "Brand"
+        },
+        {
+          "name": "Jessica Chastain",
+          "role": "Murph"
+        }
+      ]
+    }
+  ]
+}
+```
+
+</div>
+</details>  
+
+아래 예제는 `JSON` 내용 중 주요 출연진(`cast`) 정보만을 추출하는 예제이다.  
+
+
+```python
+from langchain_community.document_loaders import JSONLoader
+
+loader = JSONLoader(
+    file_path="movies.json",
+    jq_schema='.movies[].cast',
+    text_content=False
+)
+
+docs = loader.load()
+# [Document(metadata={'source': '/content/movies.json', 'seq_num': 1}, page_content='[{"name": "Leonardo DiCaprio", "role": "Dom Cobb"}, {"name": "Joseph Gordon-Levitt", "role": "Arthur"}, {"name": "Elliot Page", "role": "Ariadne"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 2}, page_content='[{"name": "Tim Robbins", "role": "Andy Dufresne"}, {"name": "Morgan Freeman", "role": "Ellis Boyd \'Red\' Redding"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 3}, page_content='[{"name": "Keanu Reeves", "role": "Neo"}, {"name": "Laurence Fishburne", "role": "Morpheus"}, {"name": "Carrie-Anne Moss", "role": "Trinity"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 4}, page_content='[{"name": "Song Kang-ho", "role": "Kim Ki-taek"}, {"name": "Lee Sun-kyun", "role": "Park Dong-ik"}, {"name": "Cho Yeo-jeong", "role": "Park Yeon-kyo"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 5}, page_content='[{"name": "Robert Downey Jr.", "role": "Tony Stark / Iron Man"}, {"name": "Chris Evans", "role": "Steve Rogers / Captain America"}, {"name": "Scarlett Johansson", "role": "Natasha Romanoff / Black Widow"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 6}, page_content='[{"name": "Rumi Hiiragi", "role": "Chihiro Ogino (voice)"}, {"name": "Miyu Irino", "role": "Haku (voice)"}, {"name": "Mari Natsuki", "role": "Yubaba / Zeniba (voice)"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 7}, page_content='[{"name": "Marlon Brando", "role": "Don Vito Corleone"}, {"name": "Al Pacino", "role": "Michael Corleone"}, {"name": "James Caan", "role": "Sonny Corleone"}]'),
+# Document(metadata={'source': '/content/movies.json', 'seq_num': 8}, page_content='[{"name": "Matthew McConaughey", "role": "Cooper"}, {"name": "Anne Hathaway", "role": "Brand"}, {"name": "Jessica Chastain", "role": "Murph"}]')]
+```  
+
+그리고 다음은 영화 제목과 감독을 메타정보로 추가하는 예제이다.  
+
+
+```python
+from langchain_community.document_loaders import JSONLoader
+
+def metadata_func(record: dict, metadata: dict) -> dict:
+    metadata["title"] = record.get("title", "")
+    metadata["director"] = record.get("director", "")
+    return metadata
+
+loader = JSONLoader(
+    file_path="movies.json",
+    jq_schema='.movies[]',
+    text_content=False,
+    # jq_schema 의 전체 내용을 로드하고 싶다면 None 으로 설정하면 된다. 
+    content_key='cast',
+    metadata_func=metadata_func
+)
+
+docs = loader.load()
+# [Document(metadata={'source': '/content/movies.json', 'seq_num': 1, 'title': 'Inception', 'director': 'Christopher Nolan'}, page_content='[{"name": "Leonardo DiCaprio", "role": "Dom Cobb"}, {"name": "Joseph Gordon-Levitt", "role": "Arthur"}, {"name": "Elliot Page", "role": "Ariadne"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 2, 'title': 'The Shawshank Redemption', 'director': 'Frank Darabont'}, page_content='[{"name": "Tim Robbins", "role": "Andy Dufresne"}, {"name": "Morgan Freeman", "role": "Ellis Boyd \'Red\' Redding"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 3, 'title': 'The Matrix', 'director': 'The Wachowskis'}, page_content='[{"name": "Keanu Reeves", "role": "Neo"}, {"name": "Laurence Fishburne", "role": "Morpheus"}, {"name": "Carrie-Anne Moss", "role": "Trinity"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 4, 'title': 'Parasite', 'director': 'Bong Joon-ho'}, page_content='[{"name": "Song Kang-ho", "role": "Kim Ki-taek"}, {"name": "Lee Sun-kyun", "role": "Park Dong-ik"}, {"name": "Cho Yeo-jeong", "role": "Park Yeon-kyo"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 5, 'title': 'Avengers: Endgame', 'director': 'Anthony Russo, Joe Russo'}, page_content='[{"name": "Robert Downey Jr.", "role": "Tony Stark / Iron Man"}, {"name": "Chris Evans", "role": "Steve Rogers / Captain America"}, {"name": "Scarlett Johansson", "role": "Natasha Romanoff / Black Widow"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 6, 'title': 'Spirited Away', 'director': 'Hayao Miyazaki'}, page_content='[{"name": "Rumi Hiiragi", "role": "Chihiro Ogino (voice)"}, {"name": "Miyu Irino", "role": "Haku (voice)"}, {"name": "Mari Natsuki", "role": "Yubaba / Zeniba (voice)"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 7, 'title': 'The Godfather', 'director': 'Francis Ford Coppola'}, page_content='[{"name": "Marlon Brando", "role": "Don Vito Corleone"}, {"name": "Al Pacino", "role": "Michael Corleone"}, {"name": "James Caan", "role": "Sonny Corleone"}]'),
+#  Document(metadata={'source': '/content/movies.json', 'seq_num': 8, 'title': 'Interstellar', 'director': 'Christopher Nolan'}, page_content='[{"name": "Matthew McConaughey", "role": "Cooper"}, {"name": "Anne Hathaway", "role": "Brand"}, {"name": "Jessica Chastain", "role": "Murph"}]')]
+```  
+
+
+`JSONLoader` 는 표준 `JSON` 파일을 처리하는 로더이다. 
+만약 각 줄이 독립적인 `JSON` 객체인 `JSONL` 형식 파일 처리가 필요하다면 `JSONLinesLoader` 를 사용하면 된다.  
+
