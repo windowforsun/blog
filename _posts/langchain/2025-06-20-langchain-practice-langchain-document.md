@@ -552,3 +552,116 @@ docs = loader.load()
 `JSONLoader` 는 표준 `JSON` 파일을 처리하는 로더이다. 
 만약 각 줄이 독립적인 `JSON` 객체인 `JSONL` 형식 파일 처리가 필요하다면 `JSONLinesLoader` 를 사용하면 된다.  
 
+
+### CSVLoader
+`CSVLoader` 는 `CSV` 형식 파일을 로드해 `Document` 객체로 변환하는 문서 로더이다. 
+`CSV` 파일의 각 행(`row`)을 별도의 `Document` 객체로 변환하고, 
+헤더와 값을 결합하여 구조화된 텍스트로 변환할 수 있다. 
+그리고 특정 열만 선택해 로드하는 것도 가능하다. 
+또한 사용자 정의 구분자를 지원해 쉽표 외의 구분자도 사용 가능하다.  
+
+주요 매개변수는 아래와 같다. 
+
+```python
+CSVLoader(
+    # 로드할 CSV 파일 경로
+    file_path: str,
+    # 메타데이터의 source 필드에 사용할 열이름
+    source_column: Optional[str] = None,
+    # csv 모듈의 reader 에 전달할 인자(delimiter, quotechar 등)
+    csv_args: Optional[Dict] = None,
+    # 파일을 읽을 때 사용할 인코딩, 기본값 None(시스템 기본값 사용)
+    encoding: Optional[str] = None,
+    # 인코딩을 자동으로 감지할지 여부, 기본값 False
+    autodetect_encoding: bool = False,
+    # 메타데이터로 추출할 열 목록
+    metadata_columns: List[str] = []
+)
+```  
+
+예제는 아래와 같은 `CSV` 형식으로 작성된 영화관련 정보를 사용한다.  
+
+<details><summary>CSV 내용</summary>
+<div markdown="1">
+
+```csv
+title,director,release_year,genre,rating,cast_name,cast_role
+Inception,Christopher Nolan,2010,"Action|Sci-Fi|Thriller",8.8,Leonardo DiCaprio,Dom Cobb
+Inception,Christopher Nolan,2010,"Action|Sci-Fi|Thriller",8.8,Joseph Gordon-Levitt,Arthur
+Inception,Christopher Nolan,2010,"Action|Sci-Fi|Thriller",8.8,Elliot Page,Ariadne
+The Shawshank Redemption,Frank Darabont,1994,"Drama",9.3,Tim Robbins,Andy Dufresne
+The Shawshank Redemption,Frank Darabont,1994,"Drama",9.3,Morgan Freeman,Ellis Boyd 'Red' Redding
+The Matrix,The Wachowskis,1999,"Action|Sci-Fi",8.7,Keanu Reeves,Neo
+The Matrix,The Wachowskis,1999,"Action|Sci-Fi",8.7,Laurence Fishburne,Morpheus
+The Matrix,The Wachowskis,1999,"Action|Sci-Fi",8.7,Carrie-Anne Moss,Trinity
+Parasite,Bong Joon-ho,2019,"Drama|Thriller",8.5,Song Kang-ho,Kim Ki-taek
+Parasite,Bong Joon-ho,2019,"Drama|Thriller",8.5,Lee Sun-kyun,Park Dong-ik
+Parasite,Bong Joon-ho,2019,"Drama|Thriller",8.5,Cho Yeo-jeong,Park Yeon-kyo
+Avengers: Endgame,"Anthony Russo, Joe Russo",2019,"Action|Adventure|Sci-Fi",8.4,Robert Downey Jr.,Tony Stark / Iron Man
+Avengers: Endgame,"Anthony Russo, Joe Russo",2019,"Action|Adventure|Sci-Fi",8.4,Chris Evans,Steve Rogers / Captain America
+Avengers: Endgame,"Anthony Russo, Joe Russo",2019,"Action|Adventure|Sci-Fi",8.4,Scarlett Johansson,Natasha Romanoff / Black Widow
+Spirited Away,Hayao Miyazaki,2001,"Animation|Adventure|Fantasy",8.6,Rumi Hiiragi,Chihiro Ogino (voice)
+Spirited Away,Hayao Miyazaki,2001,"Animation|Adventure|Fantasy",8.6,Miyu Irino,Haku (voice)
+Spirited Away,Hayao Miyazaki,2001,"Animation|Adventure|Fantasy",8.6,Mari Natsuki,Yubaba / Zeniba (voice)
+The Godfather,Francis Ford Coppola,1972,"Crime|Drama",9.2,Marlon Brando,Don Vito Corleone
+The Godfather,Francis Ford Coppola,1972,"Crime|Drama",9.2,Al Pacino,Michael Corleone
+The Godfather,Francis Ford Coppola,1972,"Crime|Drama",9.2,James Caan,Sonny Corleone
+Interstellar,Christopher Nolan,2014,"Adventure|Drama|Sci-Fi",8.6,Matthew McConaughey,Cooper
+Interstellar,Christopher Nolan,2014,"Adventure|Drama|Sci-Fi",8.6,Anne Hathaway,Brand
+Interstellar,Christopher Nolan,2014,"Adventure|Drama|Sci-Fi",8.6,Jessica Chastain,Murph
+```  
+
+
+</div>
+</details>  
+
+
+```python
+from langchain_community.document_loaders.csv_loader import CSVLoader
+
+loader = CSVLoader(
+    file_path="./movies.csv",
+    csv_args={
+        "delimiter" : ",",
+        "quotechar" : '"',
+        "fieldnames" : ["title", "director", "cast_name", "cast_role"]
+    },
+    source_column="title"
+)
+
+docs = loader.load()
+# [Document(metadata={'source': 'title', 'row': 0}, page_content='title: title\ndirector: director\ncast_name: release_year\ncast_role: genre\nNone: rating,cast_name,cast_role'),
+# Document(metadata={'source': 'Inception', 'row': 1}, page_content='title: Inception\ndirector: Christopher Nolan\ncast_name: 2010\ncast_role: Action|Sci-Fi|Thriller\nNone: 8.8,Leonardo DiCaprio,Dom Cobb'),
+# Document(metadata={'source': 'Inception', 'row': 2}, page_content='title: Inception\ndirector: Christopher Nolan\ncast_name: 2010\ncast_role: Action|Sci-Fi|Thriller\nNone: 8.8,Joseph Gordon-Levitt,Arthur'),
+# Document(metadata={'source': 'Inception', 'row': 3}, page_content='title: Inception\ndirector: Christopher Nolan\ncast_name: 2010\ncast_role: Action|Sci-Fi|Thriller\nNone: 8.8,Elliot Page,Ariadne'),
+# Document(metadata={'source': 'The Shawshank Redemption', 'row': 4}, page_content='title: The Shawshank Redemption\ndirector: Frank Darabont\ncast_name: 1994\ncast_role: Drama\nNone: 9.3,Tim Robbins,Andy Dufresne'),
+# Document(metadata={'source': 'The Shawshank Redemption', 'row': 5}, page_content="title: The Shawshank Redemption\ndirector: Frank Darabont\ncast_name: 1994\ncast_role: Drama\nNone: 9.3,Morgan Freeman,Ellis Boyd 'Red' Redding"),
+# Document(metadata={'source': 'The Matrix', 'row': 6}, page_content='title: The Matrix\ndirector: The Wachowskis\ncast_name: 1999\ncast_role: Action|Sci-Fi\nNone: 8.7,Keanu Reeves,Neo'),
+# ...
+```  
+
+그리고 `UnstrcuturedCSVLoader` 를 사용하면 `CSV` 파일의 내용을 [Unstructured](https://github.com/Unstructured-IO/unstructured)
+라이브러리를 기반으로 `Document` 객체를 생성할 수 있다. 
+`CSVLoader` 를 사용하는 것보다 좀 더 강력한 `Unstructured` 라이브러리르 사용하기 때문에 자동으로 구조를 인식한다던가 풍부한 메타정보를 제공 및 유연한 처리에 장점이 있다. 
+
+```python
+from langchain_community.document_loaders.csv_loader import UnstructuredCSVLoader
+
+loader = UnstructuredCSVLoader(
+    file_path='./movies.csv',
+    csv_args={
+        'delimiter': ',',
+        'quotechar': '"',
+        'fieldnames': ['title', 'director', 'cast_name', 'cast_role']
+    },
+    mode='elements'
+)
+
+docs = loader.load()
+
+docs[0].metadata.keys()
+# dict_keys(['source', 'file_directory', 'filename', 'last_modified', 'text_as_html', 'languages', 'filetype', 'category', 'element_id'])
+docs[0].metadata['text_as_html']
+# <table><tr><td>title</td><td>director</td><td>release_year</td><td>genre</td><td>rating</td><td>cast_name</td><td>cast_role</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Leonardo DiCaprio</td><td>Dom Cobb</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Joseph Gordon-Levitt</td><td>Arthur</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Elliot Page</td><td>Ariadne</td></tr><tr><td>The Shawshank Redemption</td><td>Frank Darabont</td><td>1994</td><td>Drama</td><td>9.3</td><td>Tim Robbins</td><td>Andy Dufresne</td></tr><tr><td>The Shawshank Redemption</td><td>Frank Darabont</td><td>1994</td><td>Drama</td><td>9.3</td><td>Morgan Freeman</td><td>Ellis Boyd 'Red' Redding</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Keanu Reeves</td><td>Neo</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Laurence Fishburne</td><td>Morpheus</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Carrie-Anne Moss</td><td>Trinity</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Song Kang-ho</td><td>Kim Ki-taek</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Lee Sun-kyun</td><td>Park Dong-ik</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Cho Yeo-jeong</td><td>Park Yeon-kyo</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Robert Downey Jr.</td><td>Tony Stark / Iron Man</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Chris Evans</td><td>Steve Rogers / Captain America</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Scarlett Johansson</td><td>Natasha Romanoff / Black Widow</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Rumi Hiiragi</td><td>Chihiro Ogino (voice)</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Miyu Irino</td><td>Haku (voice)</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Mari Natsuki</td><td>Yubaba / Zeniba (voice)</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>Marlon Brando</td><td>Don Vito Corleone</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>Al Pacino</td><td>Michael Corleone</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>James Caan</td><td>Sonny Corleone</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Matthew McConaughey</td><td>Cooper</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Anne Hathaway</td><td>Brand</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Jessica Chastain</td><td>Murph</td></tr></table>
+```  
+
