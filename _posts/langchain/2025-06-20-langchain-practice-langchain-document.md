@@ -665,3 +665,39 @@ docs[0].metadata['text_as_html']
 # <table><tr><td>title</td><td>director</td><td>release_year</td><td>genre</td><td>rating</td><td>cast_name</td><td>cast_role</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Leonardo DiCaprio</td><td>Dom Cobb</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Joseph Gordon-Levitt</td><td>Arthur</td></tr><tr><td>Inception</td><td>Christopher Nolan</td><td>2010</td><td>Action|Sci-Fi|Thriller</td><td>8.8</td><td>Elliot Page</td><td>Ariadne</td></tr><tr><td>The Shawshank Redemption</td><td>Frank Darabont</td><td>1994</td><td>Drama</td><td>9.3</td><td>Tim Robbins</td><td>Andy Dufresne</td></tr><tr><td>The Shawshank Redemption</td><td>Frank Darabont</td><td>1994</td><td>Drama</td><td>9.3</td><td>Morgan Freeman</td><td>Ellis Boyd 'Red' Redding</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Keanu Reeves</td><td>Neo</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Laurence Fishburne</td><td>Morpheus</td></tr><tr><td>The Matrix</td><td>The Wachowskis</td><td>1999</td><td>Action|Sci-Fi</td><td>8.7</td><td>Carrie-Anne Moss</td><td>Trinity</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Song Kang-ho</td><td>Kim Ki-taek</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Lee Sun-kyun</td><td>Park Dong-ik</td></tr><tr><td>Parasite</td><td>Bong Joon-ho</td><td>2019</td><td>Drama|Thriller</td><td>8.5</td><td>Cho Yeo-jeong</td><td>Park Yeon-kyo</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Robert Downey Jr.</td><td>Tony Stark / Iron Man</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Chris Evans</td><td>Steve Rogers / Captain America</td></tr><tr><td>Avengers: Endgame</td><td>Anthony Russo, Joe Russo</td><td>2019</td><td>Action|Adventure|Sci-Fi</td><td>8.4</td><td>Scarlett Johansson</td><td>Natasha Romanoff / Black Widow</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Rumi Hiiragi</td><td>Chihiro Ogino (voice)</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Miyu Irino</td><td>Haku (voice)</td></tr><tr><td>Spirited Away</td><td>Hayao Miyazaki</td><td>2001</td><td>Animation|Adventure|Fantasy</td><td>8.6</td><td>Mari Natsuki</td><td>Yubaba / Zeniba (voice)</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>Marlon Brando</td><td>Don Vito Corleone</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>Al Pacino</td><td>Michael Corleone</td></tr><tr><td>The Godfather</td><td>Francis Ford Coppola</td><td>1972</td><td>Crime|Drama</td><td>9.2</td><td>James Caan</td><td>Sonny Corleone</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Matthew McConaughey</td><td>Cooper</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Anne Hathaway</td><td>Brand</td></tr><tr><td>Interstellar</td><td>Christopher Nolan</td><td>2014</td><td>Adventure|Drama|Sci-Fi</td><td>8.6</td><td>Jessica Chastain</td><td>Murph</td></tr></table>
 ```  
 
+
+### DataFrameLoader
+`DataFrameLoader` 는 `Pandas DataFrame` 을 `Document` 객체로 변환하는 역할을 한다. 
+파일에서 데이터를 읽어오는 대신 이미 메모리에 로드된 `DataFrame` 객체를 직접 처리하 수 있어 데이터 분석과 같은 워크플로우 통합에 유용하다.  
+
+주요한 특징으로는 아래와 같다. 
+
+- 열 이름과 값을 결합하여 구조화된 텍스트를 생성한다. 
+- 특정 열만 선택적으로 `Document` 내용에 포함할 수 있다. 
+- 메타데이터 열을 지정하여 `Document` 객체에 메타데이터로 저장할 수 있다. 
+- 페이지 내용 형식을 사용자가 지정할 수 있다.
+
+다음은 `CSVLoader` 에서 사용했던 영화 정보를 `Pandas` 를 사용해 `DataFrame` 으로 변환한 후
+`DataFrameLoader` 를 사용해 `Document` 객체로 변환하는 예제이다.  
+
+```python
+import pandas as pd
+from langchain_community.document_loaders import DataFrameLoader
+
+df = pd.read_csv('./movies.csv')
+
+loader = DataFrameLoader(
+    data_frame=df,
+    page_content_column='cast_name'
+)
+
+docs = loader.load()
+# [Document(metadata={'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010, 'genre': 'Action|Sci-Fi|Thriller', 'rating': 8.8, 'cast_role': 'Dom Cobb'}, page_content='Leonardo DiCaprio'),
+#  Document(metadata={'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010, 'genre': 'Action|Sci-Fi|Thriller', 'rating': 8.8, 'cast_role': 'Arthur'}, page_content='Joseph Gordon-Levitt'),
+#  Document(metadata={'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010, 'genre': 'Action|Sci-Fi|Thriller', 'rating': 8.8, 'cast_role': 'Ariadne'}, page_content='Elliot Page'),
+#  Document(metadata={'title': 'The Shawshank Redemption', 'director': 'Frank Darabont', 'release_year': 1994, 'genre': 'Drama', 'rating': 9.3, 'cast_role': 'Andy Dufresne'}, page_content='Tim Robbins'),
+#  Document(metadata={'title': 'The Shawshank Redemption', 'director': 'Frank Darabont', 'release_year': 1994, 'genre': 'Drama', 'rating': 9.3, 'cast_role': "Ellis Boyd 'Red' Redding"}, page_content='Morgan Freeman'),
+#  Document(metadata={'title': 'The Matrix', 'director': 'The Wachowskis', 'release_year': 1999, 'genre': 'Action|Sci-Fi', 'rating': 8.7, 'cast_role': 'Neo'}, page_content='Keanu Reeves'),
+#  ...
+```  
+
