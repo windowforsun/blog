@@ -701,3 +701,90 @@ docs = loader.load()
 #  ...
 ```  
 
+
+### WebBaseLoader
+`WebBaseLoader` 는 웹에서 콘텐츠를 가져와 `Document` 객체로 변환하는 역할을 한다. 
+웹 페이지의 `HTML` 내용을 추출하고 처리하여 텍스트 형태로 변환함으로써 `LLM` 이 웹 정보를 활용할 수 있게 한다.  
+
+주요 특징은 아래와 같다.
+
+- 하나 또는 여러 개의 `URL` 에서 콘텐츠를 로드한다. 
+- `HTTP` 요청을 통해 웹 페이지 내용을 가져온다. 
+- `HTML` 태그를 제거하고 텍스트 내용만 추출한다. 
+- 각 웹 페이지를 별도의 `Document` 객체로 변환한다. 
+- 오쳥 헤더 및 기타 `HTTP` 욥선을 사용자 정의할 수 있다.  
+- `BeautifulSoup` 를 사용해 웹 페이지를 파싱하고 처리한다.
+
+주요 매개변수는 아래와 같다.  
+
+```python
+WebBaseLoader(
+    # 로드할 웹 URL 또는 URL 목록
+    web_paths: Union[str, List[str]],
+    # 요청에 사용할 헤더
+    header_template: Optional[Dict[str, str]] = None,
+    # SSL 인증서 검증 여부
+    verify_ssl: bool = True,
+    # 초당 최대 요청 수 제한
+    requests_per_second: Optional[int] = None,
+    # requests 라이브러리에 전달할 추가 인자
+    requests_kwargs: Optional[Dict[str, Any]] = None,
+    # BeautifulSoup에 전달할 추가 인자
+    bs_kwargs: Optional[Dict[str, Any]] = None,
+    # HTTP 에러 발생 시 예외를 발생시킬지 여부
+    raise_for_status: bool = True,
+    # 페이지 인코딩 방식 지정
+    encoding: Optional[str] = None
+)
+```  
+
+`WebBaseLoader` 는 기본적으로 `Javascript` 로 렌더링되는 콘텐츠는 가져올 수 없다. 
+이런 경우 `SeleniumURLLoader` 를 고려해야 한다.  
+
+다음은 뉴스기사를 가져와 `Document` 객체로 변환하는 예제이다.  
+
+```python
+from ast import parse
+import bs4
+from langchain_community.document_loaders import WebBaseLoader
+
+path_list = [
+    "https://n.news.naver.com/mnews/article/021/0002701072?sid=104",
+    "https://n.news.naver.com/mnews/article/015/0005115365?sid=105",
+    "https://n.news.naver.com/mnews/article/092/0002369364?sid=105",
+    "https://n.news.naver.com/mnews/article/421/0008170130?sid=105",
+    "https://n.news.naver.com/mnews/article/001/0015304353?sid=104"
+]
+
+loader = WebBaseLoader(
+    web_paths=path_list,
+    bs_kwargs=dict(
+        parse_only=bs4.SoupStrainer(
+            'div',
+            attrs={'class': ["newsct_article _article_body", "media_end_head_title"]}
+        )
+    ),
+    header_template={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36",
+    },
+    # ssl 인증 우회가 필요한 경우
+    # requests_kwargs={'verify':False}
+)
+
+
+docs = loader.load()
+
+len(docs)
+# 5
+docs[0]
+# Document(metadata={'source': 'https://n.news.naver.com/mnews/article/021/0002701072?sid=104'}, page_content='\n전세계 ‘지브리 프샤‘ 열풍…오픈AI, 연 매출 20조 가능할까\n\n\n\t\t\tGPT-4o 기반 이미지 생성 기술 바탕 ‘지브리 프샤’ 돌풍1분기 말 오픈AI 챗GPT 유료 가입자 전 분기 대비 30% 증가올해 목표 127억 달러 달성 가능 분석 제기돼\n\n\n\n다운로드 샘 올트만 오픈AI  CEO의 소셜미디어 X 프로필 이미지.                                              X 제공  1분기 말 유료 구독자 수가 전 분기 대비 30% 가까이 증가하는 등 오픈AI 챗GPT 유료 가입자 수가 빠르게 증가하고 있다. 지난달 말 출시한 이미지 생성 기술이 온라인 상에서 입소문을 타며 이용자 유입에 견인차 역할을 했다는 분석이 나온다. 오픈AI는 올해 매출 목표를 전년 대비 3배 증가한 127억 달러(약 18조3000억 원)를 정한 바 있는데 이를 달성할 수 있을지 주목된다.4일(현지 시간) 디 인포메이션 등에 따르면 오픈AI는 지난 1분기에 12억4500만 달러의 수익을 거둔 것으로 추정된다. 유료 멤버십 구독료, API 사용 수익 등을 종합한 수치로 3개월 만에 분기 수익을 약 30% 끌어올린 셈이다. 오픈AI의 챗GPT 주간이용자수(WAU)와 유료 구독자 수도 지난달 말 기준 각각 5억명, 2000만명을 돌파했다. 지난해 말 대비 WAU는 1억5000만 명, 유료 구독자 수는 450만 명 늘었다. 지난해 12월 출시된 동영상 생성 인공지능(AI) ‘소라(Sora)’와 챗GPT 고급 음성 모드(AVM) 실시간 영상 이해 기능 등이 이용자 증가에 일부 영향을 줬지만 업계에선 지난달 25일 공개한 GPT-4o 기반 이미지 생성 기술이 가장 큰 성장 동력이었다는 평가가 나온다.GPT-4o 기반 이미지 생성 기술은 일본 애니메이션 제작사 ‘스튜디오 지브리’ 화풍으로 이미지를 만들어줄 수 있다는 점에서 대중적 관심을 끌었다. 특정 사진을 게재한 뒤 "지브리 화풍으로 그려줘"라고 요청하면 마치 지브리 애니메이션에 나올 법한 그림을 제공하는데 이용자 호응이 높은 편이다. 이용자들은 챗GPT로 만든 지브리 화풍 그림을 카카오톡, 인스타그램, 엑스 등의 프로필 사진으로 설정했다. 국내외 커뮤니티에는 후기와 생성 사례가 빠르게 퍼지고 있다.샘 올트먼 오픈AI 최고경영자(CEO)도 밈 확산에 동참했다. 그도 자신의 얼굴을 지브리 화풍을 모사한 그림을 엑스 프로필 사진으로 설정했다. 이어 지브리 스타일은 아니지만 아들과 함께 있는 사진을 AI로 제작한 이미지, 인도 크리켓 선수로 가장한 애니메이션 캐릭터 등 다양한 이미지를 선보이면서 챗GPT 사용을 독려했다.그는 지난달 31일 엑스를 통해 "챗GPT를 출시했을 때 100만 이용자를 확보하는 데 5일이 걸렸지만 지금은 단 한 시간 만에 이용자 100만명이 추가됐다"며 이미지 생성 기술 파급력을 강조했다. 브래드 라이트캡 오픈AI 최고운영책임자(COO)도 3일 엑스를 통해 "(출시 후 1주일 동안) 1억3000만명 이상의 사용자가 7억 장 이상의 이미지를 생성했다"며 흥행 성과를 전했다.\n\n')
+```  
+
+추가로 `WebBaseLoader` 외 웹 콘텐츠 처리를 위한 아래와 같은 로더들이 있다. 
+
+- `SeleniumURLLoader` : `Selenium` 을 사용해 `Javascript` 렌더링이 필요한 페이지에 사용할 수 있는 로더이다.
+- `PlaywrightURLLoader` : `Playwright` 를 사용한 로더이다. 
+- `RecursiveUrlLoader` : `WebBaseLoader` 를 사용해 웹 페이지를 재귀적으로 탐색하는 로더이다.
+- `SitemapLoader` : 웹사이트의 사이트맵을 활용한 로드이다. 
+- `ArxivLoader` : `arxiv` 에서 논문을 로드하는 로더이다.  
+
