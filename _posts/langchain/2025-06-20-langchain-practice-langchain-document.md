@@ -788,3 +788,93 @@ docs[0]
 - `SitemapLoader` : 웹사이트의 사이트맵을 활용한 로드이다. 
 - `ArxivLoader` : `arxiv` 에서 논문을 로드하는 로더이다.  
 
+
+### SQLDatabaseLoader
+`SQLDatabaseLoader` 는 다양한 `SQL` 데이터베이스에서 데이터를 쿼리하여 `Document` 객체로 변환하는 역할을 한다. 
+`MySQL`, `PostgreSQL`, `SQLite` 등 다양한 데이터베이스를 지원하며, 
+여러 종류를 단일 인터페이스로 처리할 수 있는 범용적인 로더이다. 
+
+주요 특징은 아래와 같다.
+
+- 다양한 `SQL` 데이터베이스 시스텀에 연결할 수 있다. 
+- `SQL` 쿼리를 사용하여 데이터베이스에서 데이터를 추출할 수 있다. 
+- 쿼리 결과의 각 행을 별도의 `Document` 객체로 변환한다 
+- `SQLAlchemy` 를 사용하여 데이터베이스와 상호작용한다.
+- 특정 열을 문서 내용으로, 다른 열은 메타데이터로 처리할 수 있다. 
+
+
+```python
+import sqlite3
+from langchain.utilities import SQLDatabase
+from langchain_community.document_loaders import SQLDatabaseLoader
+
+conn = sqlite3.connect('movies.db')
+cursor = conn.cursor()
+
+# 테이블 생성
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS movies (
+    id INTEGER PRIMARY KEY,
+    title TEXT,
+    director TEXT,
+    release_year INTEGER,
+    genre TEXT,
+    rating REAL
+)
+''')
+
+# 데이터 삽입
+movies_data = [
+    (1, 'Inception', 'Christopher Nolan', 2010, 'Action|Sci-Fi|Thriller', 8.8),
+    (2, 'The Shawshank Redemption', 'Frank Darabont', 1994, 'Drama', 9.3),
+    (3, 'The Matrix', 'The Wachowskis', 1999, 'Action|Sci-Fi', 8.7),
+    (4, 'Parasite', 'Bong Joon-ho', 2019, 'Drama|Thriller', 8.5),
+    (5, 'Avengers: Endgame', 'Anthony Russo, Joe Russo', 2019, 'Action|Adventure|Sci-Fi', 8.4)
+]
+
+
+cursor.executemany('INSERT OR REPLACE INTO movies VALUES (?, ?, ?, ?, ?, ?)', movies_data)
+
+
+conn.commit()
+conn.close()
+
+# SQLDatabase 객체 생성
+db = SQLDatabase.from_uri("sqlite:///movies.db")
+
+# 기본 쿼리를 사용한 SQLDatabaseLoader
+query = "SELECT title, director, release_year, genre, rating FROM movies"
+
+def page_content(record: dict) -> str:
+    return f"타이틀:{record.get('title','')},장르:{record.get('genre','')}"
+
+def metadata(record: dict) -> dict:
+  metadata = {}
+  metadata["title"] = record.get("title", "")
+  metadata["director"] = record.get("director", "")
+  return metadata
+
+loader = SQLDatabaseLoader(
+    db=db,
+    query=query,
+    page_content_mapper=page_content,
+    metadata_mapper=metadata 
+)
+
+docs = loader.load()
+# [Document(metadata={'title': 'Inception', 'director': 'Christopher Nolan'}, page_content='타이틀:Inception,장르:Action|Sci-Fi|Thriller'),
+# Document(metadata={'title': 'The Shawshank Redemption', 'director': 'Frank Darabont'}, page_content='타이틀:The Shawshank Redemption,장르:Drama'),
+# Document(metadata={'title': 'The Matrix', 'director': 'The Wachowskis'}, page_content='타이틀:The Matrix,장르:Action|Sci-Fi'),
+# Document(metadata={'title': 'Parasite', 'director': 'Bong Joon-ho'}, page_content='타이틀:Parasite,장르:Drama|Thriller'),
+# Document(metadata={'title': 'Avengers: Endgame', 'director': 'Anthony Russo, Joe Russo'}, page_content='타이틀:Avengers: Endgame,장르:Action|Adventure|Sci-Fi')]
+```
+
+
+---  
+## Reference
+[Document](https://python.langchain.com/api_reference/core/documents/langchain_core.documents.base.Document.html)  
+[Document](https://wikidocs.net/253706)  
+[Document Loader](https://python.langchain.com/docs/integrations/document_loaders/)  
+
+
+
