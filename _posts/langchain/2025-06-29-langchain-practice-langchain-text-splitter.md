@@ -183,3 +183,77 @@ texts[0]
 # 
 # 첫 번째 문단은
 ```  
+
+### RecursiveCharacterTextSplitter
+`RecursiveCharacterTextSplitter` 는 여러 구분자를 계측정으로 적용하여 텍스트를 의미있는 청크로 분할한다. 
+이는 청크가 충분히 작아질 때까지 주어진 문자 목록 순서대로 텍스트를 분할하려고 시도한다. 
+기분 문자 목록은 `["\n\n", "\n", " ", ""]` 로 단락, 문장, 단어 순으로 재귀적으로 분할한다.  
+
+`CharacterTextSplitter` 와 차이점은 다음과 같다. 
+
+- 문맥 보존 향상 : 의미 있는 구조를 더 잘 보존한다. 
+- 다중 구분자 : 단일 구분자가 아닌 여러 구분자를 우선순위에 따라 사용한다. 
+- 적응형 분할 : 문서 구조에 따라 자동으로 적절한 분할 방식을 선택한다. 
+- 지능적 분할 : 단순히 크기만 고려하는 것이 아니라 문서의 논리적 구조를 고려한다. 
+
+그러므로 `RecursiveCharacterTextSplitter` 는 문서의 논리적 구조 보존이 중요하거나, 
+다양한 형식의 문서를 처리해야 할 때 유용하다. 
+그리고 효과적인 정보 검색이 필요한 `RAG` 시스템 구축 혹은 문맥 유지가 중요한 질의응답 시스템에서 잘 활용할 수 있다.  
+
+
+`RecursiveCharacterTextSplitter` 예제 또한 `CharacterTextSplitter` 와 동일한 텍스트 파일을 사용한다. 
+
+```python
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# 문맥 유지가 여려울 정도로 작은 정크이면서 chunk_overlap 을 허용하는 경우 다음과 같이 중복이 발생할 수 있다. 
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=50,
+    chunk_overlap=30,
+    length_function=len,
+    is_separator_regex=False
+)
+
+texts = text_splitter.create_documents([file])
+
+print(texts[0])
+# page_content='안녕하세요. LangChain의 TextSplitter를 테스트하기 위한 예제'
+print(texts[1])
+# page_content='TextSplitter를 테스트하기 위한 예제 텍스트입니다.'
+print(texts[2])
+# page_content='이 문서는 다양한 문장과 문단으로 구성되어 있으며, 각 TextSplitter의 동작을'
+print(texts[3])
+# page_content='구성되어 있으며, 각 TextSplitter의 동작을 비교하는 데 사용됩니다.'
+
+
+# 충분한 청크 크기로 나눈다면 chunk_overlap 을 허용해도 겹치는 경우가 발생하지 않을 수 있다. 
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=250,
+    chunk_overlap=50,
+    length_function=len,
+    is_separator_regex=False
+)
+
+texts = text_splitter.create_documents([file])
+
+print(texts[0])
+# page_content='안녕하세요. LangChain의 TextSplitter를 테스트하기 위한 예제 텍스트입니다.
+# 
+# 이 문서는 다양한 문장과 문단으로 구성되어 있으며, 각 TextSplitter의 동작을 비교하는 데 사용됩니다.
+# 예를 들어, 단순히 문장 단위로 나누는 경우와 특정 길이로 나누는 경우의 결과를 확인할 수 있습니다.
+# 또한, 이 텍스트는 여러 종류의 데이터를 포함하고 있어 다양한 상황에서 Splitter의 성능을 평가할 수 있습니다.'
+print(texts[1])
+# page_content='첫 번째 문단은 간단한 문장들로 구성되어 있습니다.
+# 예를 들어, "안녕하세요."와 같은 짧은 문장부터, "이 문장은 조금 더 길어서 Splitter가 어떻게 처리하는지 확인할 수 있습니다."와 같은 문장까지 포함됩니다.
+# 이 문단은 Splitter가 문장 단위로 나누는 경우와 길이 기반으로 나누는 경우의 차이를 확인하는 데 유용합니다.'
+print(texts[2])
+# page_content='두 번째 문단은 조금 더 긴 문장과 함께, 쉼표(,)와 마침표(.)를 포함합니다.
+# 또한, 여러 줄로 구성된 문단입니다.
+# 예를 들어, "이 문장은 쉼표를 포함하고 있으며, 여러 문장으로 구성되어 있습니다.
+# 이 문장은 Splitter가 쉼표를 어떻게 처리하는지 확인할 수 있도록 설계되었습니다."와 같은 문장이 포함됩니다.
+# 이 문단은 Splitter가 문장 내부의 쉼표를 처리하는 방식을 평가하는 데 적합합니다.'
+print(texts[3])
+# page_content='세 번째 문단은 특수 문자와 공백을 포함합니다: @, #, $, %, &, *, ( ), -, _, +, =, 그리고 공백. 
+# 특수 문자는 Splitter가 텍스트를 나눌 때 어떤 영향을 미치는지 확인하는 데 유용합니다.
+# 예를 들어, "이 문장은 특수 문자를 포함하고 있습니다: @, #, $, %, &, *."와 같은 문장이 포함됩니다.'
+```  
