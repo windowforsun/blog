@@ -359,3 +359,166 @@ print(docs[0])
 print(docs[1])
 # page_content='예를 들어, 단순히 문장 단위로 나누는 경우와 특정 길이로 나누는 경우의 결과를 확인할 수 있습니다. 또한, 이 텍스트는 여러 종류의 데이터를 포함하고 있어 다양한 상황에서 Splitter의 성능을 평가할 수 있습니다. 첫 번째 문단은 간단한 문장들로 구성되어 있습니다. 예를 들어, "안녕하세요."와 같은 짧은 문장부터, "이 문장은 조금 더 길어서 Splitter가 어떻게 처리하는지 확인할 수 있습니다."와 같은 문장까지 포함됩니다. 이 문단은 Splitter가 문장 단위로 나누는 경우와 길이 기반으로 나누는 경우의 차이를 확인하는 데 유용합니다. 두 번째 문단은 조금 더 긴 문장과 함께, 쉼표(,)와 마침표(.)를 포함합니다.'
 ```  
+
+### CodeTextSplitter
+`CodeTextSplitter` 는 프로그래밍 코드를 분할하는 데 특화된 기능을 제공한다. 
+일반적인 텍스트 분할 도구와 달리, 
+`CodeTextSplitter` 는 코드와 구조적 특정(함수, 클래스 등)을 고려하여 코드를 의미있는 청크로 나눈다. 
+
+주요 특징은 다음과 같다.
+
+- 코드에 최적화된 분할 : 코드의 특성을 반영하여 함수, 클래스, 주석, 줄바꿈 등을 기준으로 코드를 분할한다. 단순히 고정된 길이로 나누는 것이 아니라, 코드의 문맥과 구조를 유지하면서 분할한다. 
+- 언어별 구분자 지원 : `Python`, `Javascript`, `HTML` 등 다양한 프로그래밍 언어에 맞는 구분자를 자동으로 설정한다. 언어별로 적합한 구분자를 사용하여, 코드의 의미를 최대한 유지한다. 
+- 문맥 유지 : 청크 간 중복을 허용하여, 문맥이 끊기지 않도록 분할한다. 이는 코드 분석, 요약, 검색 등에서 중요한 역할을 한다. 
+- 유연한 설정 : `chunk_size` 와 `chunk_overlap` 을 사용자 정의할 수 있다. 언어별로 구분자를 자동 설정하거나, 사용자 정의 구분자를 사용할 수도 있다.  
+
+```python
+from langchain_text_splitters import (
+    Language,
+    RecursiveCharacterTextSplitter
+)
+
+# 지원 언어 종류
+print([e.value for e in Language])
+# ['cpp', 'go', 'java', 'kotlin', 'js', 'ts', 'php', 'proto', 'python', 'rst', 'ruby', 'rust', 'scala', 'swift', 'markdown', 'latex', 'html', 'sol', 'csharp', 'cobol', 'c', 'lua', 'perl', 'haskell', 'elixir', 'powershell']
+
+# 언어별 구분자 확인
+RecursiveCharacterTextSplitter.get_separators_for_language(Language.PYTHON)
+# ['\nclass ', '\ndef ', '\n\tdef ', '\n\n', '\n', ' ', '']
+
+
+# Python 코드 예제
+python_code = """
+def add(a, b):
+    return a + b
+
+class Calculator:
+    def __init__(self):
+        self.result = 0
+
+    def multiply(self, a, b):
+        return a * b
+
+# Main function
+if __name__ == "__main__":
+    calc = Calculator()
+    print(calc.multiply(3, 4))
+"""
+
+python_splitter = RecursiveCharacterTextSplitter.from_language(
+    language=Language.PYTHON, chunk_size=200, chunk_overlap=0
+)
+
+python_docs = python_splitter.create_documents([python_code])
+# [Document(metadata={}, page_content='def add(a, b):\n    return a + b'),
+#  Document(metadata={}, page_content='class Calculator:\n    def __init__(self):\n        self.result = 0\n\n    def multiply(self, a, b):\n        return a * b'),
+#  Document(metadata={}, page_content='# Main function\nif __name__ == "__main__":\n    calc = Calculator()\n    print(calc.multiply(3, 4))')]
+
+
+# JavaScript 코드 예제
+js_code = """
+function add(a, b) {
+    return a + b;
+}
+
+class Calculator {
+    constructor() {
+        this.result = 0;
+    }
+
+    multiply(a, b) {
+        return a * b;
+    }
+}
+
+// Main execution
+const calc = new Calculator();
+console.log(calc.multiply(3, 4));
+"""
+
+js_splitter = RecursiveCharacterTextSplitter.from_language(
+    language=Language.JS, chunk_size=150, chunk_overlap=0
+)
+
+js_docs = js_splitter.create_documents([js_code])
+# [Document(metadata={}, page_content='function add(a, b) {\n    return a + b;\n}'),
+#  Document(metadata={}, page_content='class Calculator {\n    constructor() {\n        this.result = 0;\n    }\n\n    multiply(a, b) {\n        return a * b;\n    }\n}\n\n// Main execution'),
+#  Document(metadata={}, page_content='const calc = new Calculator();\nconsole.log(calc.multiply(3, 4));')]
+
+
+# 마크다운 예제
+md_text = """
+# LangChain 소개
+
+LangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다. 
+이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.
+
+## 주요 기능
+
+1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.
+2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.
+3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.
+
+## 코드 예제
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
+
+llm = ChatOpenAI()
+
+template = "{country}의 수도는 어디인가요?"
+prompt = PromptTemplate.from_template(template)
+print(chain.invoke("대한민국").content)
+# ```
+"""
+
+md_splitter = RecursiveCharacterTextSplitter.from_language(
+language=Language.MARKDOWN, chunk_size=250, chunk_overlap=0
+)
+
+md_docs = md_splitter.create_documents([md_text])
+# [Document(metadata={}, page_content='# LangChain 소개\n\nLangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다. \n이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.'),
+# Document(metadata={}, page_content='## 주요 기능\n\n1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.\n2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.\n3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.'),
+# Document(metadata={}, page_content='## 코드 예제\n\n```python\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\n\nllm = ChatOpenAI()'),
+# Document(metadata={}, page_content='template = "{country}의 수도는 어디인가요?"\nprompt = PromptTemplate.from_template(template)\nprint(chain.invoke("대한민국").content)'),
+# Document(metadata={}, page_content='```')]
+
+
+
+# HTML 코드 예제
+html_code = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LangChain Example</title>
+</head>
+<body>
+    <h1>Welcome to LangChain</h1>
+    <p>This is an example of HTML content.</p>
+    <div>
+        <p>LangChain is a framework for building applications with LLMs.</p>
+        <ul>
+            <li>Data Connection</li>
+            <li>Model Integration</li>
+            <li>Workflow Automation</li>
+        </ul>
+    </div>
+    <footer>
+        <p>Contact us at <a href="mailto:info@langchain.com">info@langchain.com</a></p>
+    </footer>
+</body>
+</html>
+"""
+
+html_splitter = RecursiveCharacterTextSplitter.from_language(
+    language=Language.HTML, chunk_size=300, chunk_overlap=0
+)
+
+html_docs = html_splitter.create_documents([html_code])
+# [Document(metadata={}, page_content='<!DOCTYPE html>\n<html>\n<head>\n    <title>LangChain Example</title>\n</head>'),
+#  Document(metadata={}, page_content='<body>\n    <h1>Welcome to LangChain</h1>\n    <p>This is an example of HTML content.</p>'),
+#  Document(metadata={}, page_content='<div>\n        <p>LangChain is a framework for building applications with LLMs.</p>\n        <ul>\n            <li>Data Connection</li>\n            <li>Model Integration</li>\n            <li>Workflow Automation</li>\n        </ul>\n    </div>\n    <footer>'),
+#  Document(metadata={}, page_content='<p>Contact us at <a href="info@langchain.com">info@langchain.com</a></p>\n    </footer>\n</body>\n</html>')]
+```  
+
