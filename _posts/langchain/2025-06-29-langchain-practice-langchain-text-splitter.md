@@ -522,3 +522,104 @@ html_docs = html_splitter.create_documents([html_code])
 #  Document(metadata={}, page_content='<p>Contact us at <a href="info@langchain.com">info@langchain.com</a></p>\n    </footer>\n</body>\n</html>')]
 ```  
 
+
+### MarkdownHeaderTextSplitter
+`MarkdownHeaderTextSplitter` 는 마크다운 문서의 헤더 구조를 기반으로 텍스트를 분할하는 데 특화된 분할기이다. 
+일반적인 텍스트 분할 도구와 달리, 마크다운 문서의 헤더 계층 구조(`#`, `##` 등)를 인식하여 문서를 의미 있는 청크로 나눈다. 
+이는 주로 문서 내에서 각각의 헤더 아래에 있는 내용을 기반으로 서로 연관된 정보 덩어리인 청크를 만들고 싶은 경우 유용하다. 
+이를 통해 텍스트의 맥락은 유지하면서 문서의 구조적인 요소를 효과적으로 활용할 수 있다.  
+
+
+```python
+from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+# 마크다운 예제
+md_text = """
+# LangChain 소개
+
+LangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다. 
+이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.
+
+## 주요 기능
+
+1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.
+2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.
+3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.
+
+### 데이터 연결
+LangChain은 외부 데이터 소스와의 연결을 지원합니다.
+
+### 체인 구성
+여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.
+
+### 모델 호출
+다양한 LLM과의 통합을 지원합니다.
+
+## 코드 예제
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
+
+llm = ChatOpenAI()
+
+template = "{country}의 수도는 어디인가요?"
+prompt = PromptTemplate.from_template(template)
+print(chain.invoke("대한민국").content)
+# ```
+"""
+
+headers_to_split_on = [
+    ("#", "Main Title"),
+    ("##", "Sub Title"),
+    ("###", "Main Feature"),
+]
+
+md_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+
+md_header_splits = md_splitter.split_text(md_text)
+# [Document(metadata={'Main Title': 'LangChain 소개'}, page_content='LangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다.\n이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능'}, page_content='1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.\n2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.\n3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '데이터 연결'}, page_content='LangChain은 외부 데이터 소스와의 연결을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '체인 구성'}, page_content='여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '모델 호출'}, page_content='다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='```python\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\n\nllm = ChatOpenAI()\n\ntemplate = "{country}의 수도는 어디인가요?"\nprompt = PromptTemplate.from_template(template)\nprint(chain.invoke("대한민국").content)\n```')]
+
+
+# 청크 내용에 헤더를 제거하지 않도록 설정
+md_splitter = MarkdownHeaderTextSplitter(
+    headers_to_split_on=headers_to_split_on,
+    strip_headers=False
+)
+
+md_header_splits = md_splitter.split_text(md_text)
+# [Document(metadata={'Main Title': 'LangChain 소개'}, page_content='# LangChain 소개  \nLangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다.\n이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능'}, page_content='## 주요 기능  \n1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.\n2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.\n3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '데이터 연결'}, page_content='### 데이터 연결\nLangChain은 외부 데이터 소스와의 연결을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '체인 구성'}, page_content='### 체인 구성\n여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '모델 호출'}, page_content='### 모델 호출\n다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='## 코드 예제  \n```python\nfrom langchain_openai import ChatOpenAI\nfrom langchain_core.prompts import PromptTemplate\n\nllm = ChatOpenAI()\n\ntemplate = "{country}의 수도는 어디인가요?"\nprompt = PromptTemplate.from_template(template)\nprint(chain.invoke("대한민국").content)\n```')]
+
+
+# 필요한 경우 해더로 분류한 청크 내용을 다시 목적에 맞는 텍스트 분할기를 사용할 수 있다. 
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=100,
+    chunk_overlap=30
+)
+
+md_docs = text_splitter.split_documents(md_header_splits)
+# [Document(metadata={'Main Title': 'LangChain 소개'}, page_content='# LangChain 소개  \nLangChain은 대규모 언어 모델(LLM)을 활용한 애플리케이션 개발을 위한 프레임워크입니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개'}, page_content='이 프레임워크는 데이터 연결, 모델 호출, 체인 구성 등 다양한 기능을 제공합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능'}, page_content='## 주요 기능  \n1. **데이터 연결**: LangChain은 외부 데이터 소스와의 연결을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능'}, page_content='2. **체인 구성**: 여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.\n3. **모델 호출**: 다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '데이터 연결'}, page_content='### 데이터 연결\nLangChain은 외부 데이터 소스와의 연결을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '체인 구성'}, page_content='### 체인 구성\n여러 작업을 체인으로 연결하여 복잡한 워크플로우를 구성할 수 있습니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '주요 기능', 'Main Feature': '모델 호출'}, page_content='### 모델 호출\n다양한 LLM과의 통합을 지원합니다.'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='## 코드 예제  \n```python\nfrom langchain_openai import ChatOpenAI'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='from langchain_core.prompts import PromptTemplate'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='llm = ChatOpenAI()'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='template = "{country}의 수도는 어디인가요?"\nprompt = PromptTemplate.from_template(template)'),
+#  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='print(chain.invoke("대한민국").content)\n```')]
+```
+
+
