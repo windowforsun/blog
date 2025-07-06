@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain Text Splitter"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 에서 큰 문서를 언어 모델이 처리할 수 있는 작은 단위로 나누는 Text Splitter 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,16 @@ tags:
     - LangChain
     - AI
     - LLM
+    - Text Splitter
+    - Chunk
+    - CharacterTextSplitter
+    - RecursiveCharacterTextSplitter
+    - SemanticChunker
+    - CodeTextSplitter
+    - MarkdownTextSplitter
+    - RecursiveJsonSplitter
+    - MarkdownHeaderTextSplitter
+    - HTMLHeaderTextSplitter
 toc: true
 use_math: true
 ---  
@@ -621,5 +631,206 @@ md_docs = text_splitter.split_documents(md_header_splits)
 #  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='template = "{country}의 수도는 어디인가요?"\nprompt = PromptTemplate.from_template(template)'),
 #  Document(metadata={'Main Title': 'LangChain 소개', 'Sub Title': '코드 예제'}, page_content='print(chain.invoke("대한민국").content)\n```')]
 ```
+
+
+
+### HTMLHeaderTextSplitter
+`HTMLHeaderTextSplitter` 는 `HTML` 문서의 헤더 태그를 기반으로 텍스트를 분할하는 데 특화된 분할기이다. 
+`HTML` 문서의 헤더 태그(`<h1>`, `<h2>` 등)를 인식하여 문서를 의미 있는 청크로 나눈다.  
+
+```python
+from langchain_text_splitters import HTMLHeaderTextSplitter
+
+html_code = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTMLHeaderTextSplitter Example</title>
+</head>
+<body>
+    <h1>Welcome to LangChain</h1>
+    <p>LangChain is a framework for building applications powered by large language models (LLMs).</p>
+
+    <h2>Features</h2>
+    <p>LangChain provides several key features to simplify application development:</p>
+
+    <h3>Data Connection</h3>
+    <p>LangChain supports connecting to external data sources, such as databases, APIs, and files.</p>
+
+    <h3>Chain Composition</h3>
+    <p>LangChain allows you to compose multiple tasks into a single workflow, enabling complex operations.</p>
+
+    <h3>Model Integration</h3>
+    <p>LangChain integrates seamlessly with various LLMs, including OpenAI, Hugging Face, and more.</p>
+
+    <h2>Code Example</h2>
+    <pre>
+        <code>
+        from langchain.chains import SimpleChain
+
+        chain = SimpleChain()
+        result = chain.run("Hello, LangChain!")
+        print(result)
+        </code>
+    </pre>
+
+    <h2>Conclusion</h2>
+    <p>LangChain simplifies the development of LLM-powered applications and provides powerful tools for developers.</p>
+</body>
+</html>
+"""
+
+headers_to_split_on = [
+    ('h1', "Main Title"),
+    ('h2', "Sub Title"),
+    ('h3', 'Feature')
+]
+
+
+html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+
+# HTML 문자열을 사용하는 경우
+html_header_splits = html_splitter.split_text(html_code)
+# [Document(metadata={'Main Title': 'Welcome to LangChain'}, page_content='Welcome to LangChain'),
+#  Document(metadata={'Main Title': 'Welcome to LangChain'}, page_content='LangChain is a framework for building applications powered by large language models (LLMs).'),
+#  Document(metadata={'Main Title': 'Welcome to LangChain', 'Sub Title': 'Features'}, page_content='Features'),
+#  Document(metadata={'Main Title': 'Welcome to LangChain', 'Sub Title': 'Features'}, page_content='LangChain provides several key features to simplify application development:'),
+#  Document(metadata={'Main Title': 'Welcome to LangChain', 'Sub Title': 'Features', 'Feature': 'Data Connection'}, page_content='Data Connection'),
+# ...
+
+
+
+url = 'https://edition.cnn.com/2025/04/04/health/dementia-depression-stroke-17-risk-factors-wellness/index.html'
+# 웹 URL 에서 로드하는 경우
+html_header_splits = html_splitter.split_text_from_url(url)
+
+```  
+
+`HTMLHeaderTextSplitter` 또한 `MarkdownHeaderTextSplitter` 와 마찬가지로 해당 분할기로 분류돤 문서를 다시 
+목적에 맞는 텍스트 분할기를 사용해 좀 더 세부적으로 나눌 수 있다. 
+
+
+
+
+### RecursiveJsonSplitter
+`RecursiveJsonSplitter` 는 `JSON` 데이터를 분할하는 데 특화된 분할기이다. 
+`JSON` 은 계층적이고 중첩된 구조를 가지는 데이터 형식으로,
+단순한 텍스트 분할 도구로 처리하기 어려울 수 있다. 
+그러므로 `JSON` 의 계층적 구조를 이해하고 데이터를 의미 있는 청크로 나누는데 최적화 돼있다. 
+
+주요 특징은 다음과 같다. 
+
+- 계층적 구조 유지 : `JSON` 데이터의 계층적 구조를 분석하여, 각 키와 값의 관계를 유지하면서 데이터를 분할한다. 중첩된 데이터도 적절히 처리하여, 의미 있는 청크로 나눈다. 
+- 유연한 분할 기준 : `JSON` 데이터의 크기와 복잡성에 따라 `chunk_size` 와 `chunk_overlap` 을 설정할 수 있다. 데이터를 단순히 길이로 나누는 것이 아니라, `JSON` 구조와 길이를 고려하여 분할한다. 
+- 문맥 유지 : 청크 간 중복을 허용하여, 문맥이 끊기지 않도록 데이터를 분할한다. 이를 통해 데이터 분석, 검색, 요약 등에서 중요한 역할을 한다. 
+- 다양한 JSON 구조 지원 : 단순한 카-값 쌍문만 아니라, 배열, 중첩된 객체 등 복잡한 `JSON` 구조도 처리할 수 있다. 
+
+```python
+from langchain_text_splitters import RecursiveJsonSplitter
+
+json = {
+  "company": "LangChain",
+  "description": "LangChain is a framework for building applications powered by large language models (LLMs).",
+  "features": [
+    {
+      "name": "Data Connection",
+      "details": "LangChain supports connecting to external data sources, such as databases, APIs, and files.",
+      "examples": [
+        "Connect to a SQL database",
+        "Fetch data from a REST API",
+        "Read data from a CSV file"
+      ]
+    },
+    {
+      "name": "Chain Composition",
+      "details": "LangChain allows you to compose multiple tasks into a single workflow, enabling complex operations.",
+      "examples": [
+        "Summarize a document and generate questions",
+        "Translate text and analyze sentiment",
+        "Extract entities and store them in a database"
+      ]
+    },
+    {
+      "name": "Model Integration",
+      "details": "LangChain integrates seamlessly with various LLMs, including OpenAI, Hugging Face, and more.",
+      "examples": [
+        "Use OpenAI's GPT models",
+        "Integrate with Hugging Face transformers",
+        "Leverage custom fine-tuned models"
+      ]
+    }
+  ],
+  "contact": {
+    "email": "info@langchain.com",
+    "phone": "+1-800-123-4567",
+    "address": {
+      "street": "123 LangChain St.",
+      "city": "AI City",
+      "state": "ML",
+      "zip": "12345"
+    }
+  }
+}
+
+
+
+
+json_splitter = RecursiveJsonSplitter(max_chunk_size=300)
+
+# JSON 데이터를 세부 JSON 으로 분할해 JSON List 로 반환
+json_chunks = json_splitter.split_json(json_data=json)
+# [{'company': 'LangChain',
+#   'description': 'LangChain is a framework for building applications powered by large language models (LLMs).'},
+#  {'features': [{'name': 'Data Connection',
+#                 'details': 'LangChain supports connecting to external data sources, such as databases, APIs, and files.',
+#                 'examples': ['Connect to a SQL database',
+#                              'Fetch data from a REST API',
+#                              'Read data from a CSV file']},
+#                {'name': 'Chain Composition',
+#                 'details': 'LangChain allows you to compose multiple tasks into a single workflow, enabling complex operations.',
+#                 'examples': ['Summarize a document and generate questions',
+#                              'Translate text and analyze sentiment',
+#                              'Extract entities and store them in a database']},
+#                {'name': 'Model Integration',
+#                 'details': 'LangChain integrates seamlessly with various LLMs, including OpenAI, Hugging Face, and more.',
+#                 'examples': ["Use OpenAI's GPT models",
+#                              'Integrate with Hugging Face transformers',
+#                              'Leverage custom fine-tuned models']}]},
+#  {'contact': {'email': 'info@langchain.com',
+#               'phone': '+1-800-123-4567',
+#               'address': {'street': '123 LangChain St.',
+#                           'city': 'AI City',
+#                           'state': 'ML',
+#                           'zip': '12345'}}}]
+
+
+# JSON 데이터를 세부 JSON 으로 분할해 문자열 List 로 반환
+json_texts = json_splitter.split_text(json_data=json)
+
+# JSON 데이터를 세부 JSON 으로 분할해 Document List 로 반환
+json_docs = json_splitter.create_documents(texts=[json])
+
+
+# convert_lists=True 인 경우, JSON 내 리스트를 key(index)=value 형태로 변환할 수 있다. 
+json_texts_2 = json_splitter.split_text(json_data=json, convert_lists=True)
+
+print(json_texts[1])
+# {"features": [{"name": "Data Connection", "details": "LangChain supports connecting to external data sources, such as databases, APIs, and files.", "examples": ["Connect to a SQL database", "Fetch data from a REST API", "Read data from a CSV file"]}, {"name": "Chain Composition", "details": "LangChain allows you to compose multiple tasks into a single workflow, enabling complex operations.", "examples": ["Summarize a document and generate questions", "Translate text and analyze sentiment", "Extract entities and store them in a database"]}, {"name": "Model Integration", "details": "LangChain integrates seamlessly with various LLMs, including OpenAI, Hugging Face, and more.", "examples": ["Use OpenAI's GPT models", "Integrate with Hugging Face transformers", "Leverage custom fine-tuned models"]}]}
+print(json_texts_2[1])
+# {"features": {"0": {"name": "Data Connection", "details": "LangChain supports connecting to external data sources, such as databases, APIs, and files.", "examples": {"0": "Connect to a SQL database", "1": "Fetch data from a REST API", "2": "Read data from a CSV file"}}}}
+```  
+
+
+
+
+
+---  
+## Reference
+[Text Splitters](https://python.langchain.com/docs/concepts/text_splitters/)  
+[langchain-text-splitters](https://python.langchain.com/api_reference/text_splitters/index.html)  
+[텍스트 분할(Text Splitter)](https://wikidocs.net/233776)  
+
 
 
