@@ -57,3 +57,42 @@ use_math: true
 - `Kafka Broker` 에서 토픽 자동 생성이 비활성화 돼 있을 수 있다. 
 - `auto.create.topics.enable=true` 로 설정된 경우 생성되는 토픽은 기본 토픽 설정을 바탕으로 구성된다. 기본 설정으로 토픽이 생성될 경우 필요한 설정과는 차이가 있으 수 있기 때문이다. 
 
+
+### Internal Topics
+`Internal Topics` 는 `Kafka Streams` 애플리케이션이 실행 중 내부적으로 필요에 의해 생성/사용하는 `Topic` 을 의미한다. 
+`State Store` 의 `changelog` 가 이에 해당한다. 
+이러한 `Internal Topics` 는 `Kafka Streams` 애플리케이션에 의해 생성되고, 내부에서만 사용하는 `Topic` 이다.  
+
+> 설명하는 `Internal Topics` 는 `Kafka Streams` 애플리케이션 관점에 대한 내용이다. 
+> `Kafka Broker` 관점에서는 `State Store` 의 `changelog` 토픽도 일반적인 토픽과 차이가 없다. 
+> 즉 `Kafka Broker` 관점에서 `Internal Topics` 라는 것은 `__consumer_offsets`, `__transaction_state` 과 같은 토픽을 의미한다.  
+
+`Kafka Broker` 에 보안 설정이 활성화 돼 있는 경우, `Kafka Streams` 애플리케이션은 `Internal Topics` 생성을 위해 
+관리자 권한을 부여해야 한다.  
+
+> `Kafka Streams` 애플리케이션에 관리자 권한을 부여하는 상세한 방법은 추후에 다시 알아보고 간단한 절차에 대해서만 알아본다. 
+> - `ACL` 설정 : `streams-app` 사용자에게 모든 토픽에 대한 `Create`, `Write`, `Read`, `Describe` 권한을 부여한다. 
+> 
+> ```bash
+> bin/kafka-acls.sh --bootstrap-server localhost:9092 --command-config admin.properties \
+> --add --allow-principal User:streams-app \
+> --operation Create --operation Write --operation Read --operation Describe \
+> --topic '*' --resource-pattern-type prefixed
+> ```  
+> 
+> - `Streams` 애플리케이션 설정
+> 
+> ```java
+> properties.put("security.protocol", "SASL_PLAINTEXT");
+> properties.put("sasl.mechanism", "PLAIN");
+> properties.put("sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"streams-app\" password=\"streams-password\";");
+> ```  
+> 
+> 자세한 내용은 [여기](https://kafka.apache.org/38/documentation/streams/developer-guide/security.html#streams-developer-guide-security)
+> 에서 확인 가능하다. 
+
+그리고 `Internal Topics` 의 이름은 `<application.id>-<operationName>-<suffix>` 와 같이 구성될 수 있다. 
+이는 추후 릴리즈에서 변경될 수 있다. 
+[여기](https://docs.confluent.io/platform/current/streams/developer-guide/config-streams.html#internal-topic-parameters)
+내용 처럼 필요에 따라 `Internal Topics` 에 대한 설정은 `topic.` 이라는 `prefix` 를 사용해 여타 다른 `Topic` 들과 동일하게 설정할 수 있다.  
+
