@@ -96,3 +96,36 @@ use_math: true
 [여기](https://docs.confluent.io/platform/current/streams/developer-guide/config-streams.html#internal-topic-parameters)
 내용 처럼 필요에 따라 `Internal Topics` 에 대한 설정은 `topic.` 이라는 `prefix` 를 사용해 여타 다른 `Topic` 들과 동일하게 설정할 수 있다.  
 
+
+```java
+// or StreamsConfig.TOPIC_PREFIX + StreamsConfig.TOPIC_PREFIX
+props.put(StreamsConfig.topicPrefix(StreamsConfig.TOPIC_PREFIX), "internal-topics");
+props.put(StreamsConfig.topicPrefix(StreamsConfig.REPLICATION_FACTOR_CONFIG), "10");
+```  
+
+`Kafka Broker` 의 `auto.create.topics.enable=false` 로 설정돼 토픽 자동 생성 기능이 비활성화 돼있더라도, 
+`Kafka Streams` 의 `Internal Topics` 는 자동 생성이 가능하다. 
+그 이유는 `Kafka Streams` 는 내부적으로 `Admin Client` 를 사용하기 때문이다. 
+자동 생성을 할 때는 `StreamsConfig` 에 설정된 값을 바탕으로 `Topic` 을 생성한다. 
+`Internal Topics` 를 생성할 때 기본으로 사용되는 주요 옵션은 아래와 같다.  
+
+
+| 토픽 유형                           | 설정 | 값 |
+|---------------------------------|------|-----|
+| Internal Topics                 | message.timestamp.type | CreateTime |
+| Repartition Topics              | 압축 정책 | delete |
+|                                 | 보존 시간 | -1 (무한) |
+| KeyValueStore Changelog Topics  | 압축 정책 | compact |
+| WindowStore Changelog Topics    | 압축 정책 | delete,compact |
+|                                 | 보존 시간 | 24시간 + 윈도우 저장소 설정 시간 |
+| VersionedStore Changelog Topics | 정리 정책 | compact |
+|                                 | min.compaction.lag.ms | 24시간 + 저장소의 historyRetentionMs 값 |
+
+
+---  
+## Reference
+[Confluent Kafka Manage Kafka Streams Application Topics in Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/manage-topics.html)  
+[Apache Kafka MANAGING STREAMS APPLICATION TOPICS](https://kafka.apache.org/38/documentation/streams/developer-guide/manage-topics.html)  
+
+
+
