@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[Kafka] "
+title: "[Kafka] Kafka Streams Topics"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams 애플리케이션에서 사용하는 Topic 의 종류와 특징에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,10 @@ tags:
     - Practice
     - Kafka
     - Kafka Streams
+    - Kafka Streams Topics
+    - Internal Topics
+    - User Topics
+    - Topic
 toc: true
 use_math: true
 ---  
