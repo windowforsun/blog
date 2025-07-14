@@ -352,3 +352,49 @@ hf_embeddings = HuggingFaceEmbeddings(
 
 - 대용량 데이터(수백만~수억 건)에는 적합하지 않다.
 - 분산 환경, 클라우드 기반 확장성은 제한적이다.
+
+#### from_documents
+`from_documents` 는 `Chroma` 에서 여러 개의 문서(`Document`) 객체를 임베딩하여 `Chroma` 벡터스토어에 저장하는 메서드이다. 
+각 문서는 텍스트와 함께 메타데이터도 함께 저장할 수 있다. 
+주로 문서 단위로 검색, 분류, 필터링이 필요한 경우 적합하게 사용할 수 있다. 
+
+`from_documents` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/chroma/vectorstores/langchain_chroma.vectorstores.Chroma.html#langchain_chroma.vectorstores.Chroma.from_documents)
+
+- `documents` : 저장할 문서 리스트
+- `embedding` : 문서 임베딩을 위한 임베딩 모델
+- `ids` : 문서 ID 리스트 (선택적)
+- `collection_name` : 저장할 컬렉션 이름 (선택적)
+- `persist_directory` : 벡터스토어를 저장할 디렉토리 (선택적)
+- `client_settings` : 클라이언트 설정 (선택적)
+- `client` : 클라이언트 객체 (선택적)
+- `collection_metadata` : 컬렉션 메타데이터 (선택적)
+
+인자중 `persist_directory` 를 지정하면, 벡터스토어를 디스크에 저장할 수 있다. 
+지정되지 않으면 데이터는 메모리에 임시로 저장된다. 
+
+아래는 메모리를 사용하는 임시 벡터스토어를 생성하는 예시이다. 
+
+```python
+memory_db = Chroma.from_documents(documents=split_computer_keywords, 
+                                  embedding=hf_embeddings, 
+                                  collection_name="computer_keywords_db")
+```  
+
+아래는 `persist_directory` 인자를 사용해 벡터스토어를 디스크에 저장하는 예시이다. 
+
+```python
+db_path = "./chroma_computer_keywords_db"
+
+persistent_db = Chroma.from_documents(documents=split_computer_keywords,
+                                      persist_directory=db_path,
+                                      embedding=hf_embeddings,
+                                      collection_name="computer_keywords_db")
+```  
+
+디스크에 저장된 벡터스토어는 아래와 같이 불러올 수 있다. 
+
+```python
+loaded_db = Chroma(persist_directory=db_path, 
+                   embedding_function=hf_embeddings,
+                   collection_name="computer_keywords_db")
+```  
