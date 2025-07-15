@@ -398,3 +398,28 @@ loaded_db = Chroma(persist_directory=db_path,
                    embedding_function=hf_embeddings,
                    collection_name="computer_keywords_db")
 ```  
+
+#### from_texts
+`from_texts` 는 `Chroma` 에서 어려 개의 텍스트(문장, 문단 등)을 임베딩하여 벡트 스토어에 저장하는 메서드이다. 
+`from_documents` 와 유사하지만, `Document` 객체가 아닌 일반 텍스트를 사용한다.  
+
+`from_texts` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/chroma/vectorstores/langchain_chroma.vectorstores.Chroma.html#langchain_chroma.vectorstores.Chroma.from_texts)
+
+- `texts` : 저장할 텍스트 리스트
+- `embedding` : 텍스트 임베딩을 위한 임베딩 모델
+- `metadatas` : 텍스트 메타데이터 리스트 (선택적)
+- `ids` : 텍스트 ID 리스트 (선택적)
+- `collection_name` : 저장할 컬렉션 이름 (선택적)
+- `persist_directory` : 벡터스토어를 저장할 디렉토리 (선택적)
+- `client_settings` : 클라이언트 설정 (선택적)
+- `client` : 클라이언트 객체 (선택적)
+- `collection_metadata` : 컬렉션 메타데이터 (선택적)
+
+아래는 `from_texts` 를 사용해서 메모리에 임시 벡터스토어를 생성하는 예시이다.  
+
+```python
+memory_db_2 = Chroma.from_texts(
+    ["안녕하세요.", "반갑습니다.", "오늘 점심은 제육입니다."],
+    embedding=hf_embeddings
+)
+``` 
