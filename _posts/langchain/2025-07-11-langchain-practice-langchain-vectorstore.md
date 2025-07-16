@@ -423,3 +423,44 @@ memory_db_2 = Chroma.from_texts(
     embedding=hf_embeddings
 )
 ``` 
+
+#### similarity_search
+`similarity_search` 는 `Chroma` 에서 입력한 쿼리(문장 등)와 의미적으로 가장 유사한 텍스트(문서, 문장 등)를 벡터 스토어에서 찾아주는 메서드이다. 
+
+`similarity_search` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/chroma/vectorstores/langchain_chroma.vectorstores.Chroma.html#langchain_chroma.vectorstores.Chroma.similarity_search)
+
+- `query` : 검색할 쿼리 텍스트
+- `k` : 검색할 유사 텍스트 개수 (기본값: 4)
+- `filter` : 메타데이터 필터링 조건 (선택적)
+
+아래는 `similarity_search` 를 사용해서 쿼리와 유사한 텍스트를 검색하는 예시이다. 
+
+```python
+memory_db.similarity_search("데이터를 임시로 저장하는 공간")
+# [Document(id='1633aea5-96d3-450c-b393-fe9afe181dee', metadata={'source': './computer-keywords.txt'}, page_content='RAM\n\n정의: RAM(Random Access Memory)은 컴퓨터가 현재 작업 중인 데이터와 프로그램을 임시로 저장하는 휘발성 메모리입니다.\n예시: 16GB DDR4 RAM을 장착한 노트북은 여러 프로그램을 동시에 실행할 때 더 나은 성능을 제공합니다.\n연관키워드: 메모리, 휘발성, DDR, 임시 저장\n\nGPU'),
+#  Document(id='0a709899-1d62-4578-9eec-b9b54abb9cd0', metadata={'source': './computer-keywords.txt'}, page_content='CPU\n\n정의: CPU(Central Processing Unit)는 컴퓨터의 두뇌 역할을 하는 하드웨어 구성 요소로, 연산과 명령어 실행을 담당합니다.\n예시: Intel Core i9, AMD Ryzen 9 같은 프로세서는 고성능 컴퓨팅을 위한 CPU입니다.\n연관키워드: 프로세서, 코어, 클럭 속도, 연산 처리\n\nRAM\n\n정의: RAM(Random Access Memory)은 컴퓨터가 현재 작업 중인 데이터와 프로그램을 임시로 저장하는 휘발성 메모리입니다.\n예시: 16GB DDR4 RAM을 장착한 노트북은 여러 프로그램을 동시에 실행할 때 더 나은 성능을 제공합니다.\n연관키워드: 메모리, 휘발성, DDR, 임시 저장\n\nGPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='d738cbfd-3bb3-4ea9-beb1-ad431888fbe8', metadata={'source': './computer-keywords.txt'}, page_content='SSD\n\n정의: SSD(Solid State Drive)는 기계적 부품 없이 플래시 메모리를 사용하는 저장 장치로, 기존 하드 디스크보다 빠른 읽기/쓰기 속도를 제공합니다.\n예시: 노트북에 1TB NVMe SSD를 설치하면 운영체제 부팅 시간이 크게 단축됩니다.\n연관키워드: 저장 장치, 플래시 메모리, NVMe, SATA\n\n운영체제'),
+#  Document(id='7f74c0c2-b95f-4d74-86ce-b52d986b1d93', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝')]
+
+memory_db.similarity_search("네트워크를 안전하게 보호하는 방법은?")
+# [Document(id='a1cf2bb7-d68f-4ed3-ae09-5af31b2cdf30', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅'),
+#  Document(id='a75d3510-0dad-4aee-b296-60d4ac6e0a0c', metadata={'source': './computer-keywords.txt'}, page_content='사이버 보안\n\n정의: 사이버 보안은 컴퓨터 시스템, 네트워크, 데이터를, 무단 접근과 공격으로부터 보호하는 기술, 프로세스 및 관행입니다.\n예시: 안티바이러스 소프트웨어, 암호화, 다중 인증은 모두 사이버 보안을 강화하는 방법입니다.\n연관키워드: 해킹, 멀웨어, 피싱, 암호화, 취약점\n\nIoT'),
+#  Document(id='50571672-ba99-48e3-bdfd-c9d160fc8bde', metadata={'source': './computer-keywords.txt'}, page_content='정의: SSD(Solid State Drive)는 기계적 부품 없이 플래시 메모리를 사용하는 저장 장치로, 기존 하드 디스크보다 빠른 읽기/쓰기 속도를 제공합니다.\n예시: 노트북에 1TB NVMe SSD를 설치하면 운영체제 부팅 시간이 크게 단축됩니다.\n연관키워드: 저장 장치, 플래시 메모리, NVMe, SATA\n\n운영체제\n\n정의: 운영체제는 컴퓨터의 하드웨어 자원을 관리하고 응용 프로그램과 사용자 간의 인터페이스를 제공하는 시스템 소프트웨어입니다.\n예시: Windows 11, macOS, Linux Ubuntu는 널리 사용되는 데스크톱 운영체제입니다.\n연관키워드: Windows, macOS, Linux, 시스템 소프트웨어\n\n방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅'),
+#  Document(id='62232cd2-17ba-4c73-b021-3f4c49935fa7', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능')]
+
+memory_db.similarity_search("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='9971eaa1-6772-4d42-bc7c-3441e6d7c49a', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='51b1a943-3f68-4888-ad91-015f0b35c517', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='81b1d8fa-53d8-4b59-98a2-cd64f4005689', metadata={'source': './computer-keywords.txt'}, page_content='정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화\n\n정의: 가상화는 물리적 컴퓨터 자원을 여러 가상 환경으로 나누어 효율적으로 사용할 수 있게 하는 기술입니다.\n예시: VMware, VirtualBox와 같은 소프트웨어는 하나의 물리적 서버에서 여러 운영체제를 동시에 실행할 수 있게 합니다.\n연관키워드: 하이퍼바이저, VM, 컨테이너, 리소스 최적화\n\n블록체인\n\n정의: 블록체인은 분산된 컴퓨터 네트워크에서 데이터 블록이 암호화 기술로 연결된 디지털 장부 시스템입니다.\n예시: 비트코인은 블록체인 기술을 활용하여 중앙 은행 없이 안전한 금융 거래를 가능하게 합니다.\n연관키워드: 암호화폐, 분산원장, 스마트 계약, 합의 알고리즘\n\n알고리즘'),
+#  Document(id='932d06f3-3c2f-44aa-b1fa-271539c07340', metadata={'source': './computer-keywords.txt'}, page_content='정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+
+memory_db.similarity_search("인터넷을 통한 소프트웨어 서비스 제공 방식")
+# [Document(id='5d3a2b60-8888-442e-bedf-5023dfb28117', metadata={'source': './computer-keywords.txt'}, page_content='클라우드 컴퓨팅\n\n정의: 클라우드 컴퓨팅은 인터넷을 통해 서버, 스토리지, 데이터베이스, 소프트웨어 등의 컴퓨팅 리소스를 제공하는 서비스입니다.\n예시: AWS, Microsoft Azure, Google Cloud Platform은 기업들이 자체 서버 인프라 구축 없이 필요한 만큼 IT 자원을 사용할 수 있게 해줍니다.\n연관키워드: IaaS, PaaS, SaaS, 서버리스, 확장성\n\nAPI'),
+#  Document(id='334c192c-1904-484b-bcdb-b2a61d11c6d4', metadata={'source': './computer-keywords.txt'}, page_content='정의: 클라우드 컴퓨팅은 인터넷을 통해 서버, 스토리지, 데이터베이스, 소프트웨어 등의 컴퓨팅 리소스를 제공하는 서비스입니다.\n예시: AWS, Microsoft Azure, Google Cloud Platform은 기업들이 자체 서버 인프라 구축 없이 필요한 만큼 IT 자원을 사용할 수 있게 해줍니다.\n연관키워드: IaaS, PaaS, SaaS, 서버리스, 확장성\n\nAPI\n\n정의: API(Application Programming Interface)는 서로 다른 소프트웨어 애플리케이션이 통신할 수 있게 해주는 인터페이스입니다.\n예시: 날씨 앱은 기상청 API를 통해 실시간 날씨 데이터를 가져와 사용자에게 표시합니다.\n연관키워드: REST, SOAP, 엔드포인트, JSON, 웹서비스\n\n빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝'),
+#  Document(id='5c4c0fa3-930a-4843-887d-15d967c0a215', metadata={'source': './computer-keywords.txt'}, page_content='API\n\n정의: API(Application Programming Interface)는 서로 다른 소프트웨어 애플리케이션이 통신할 수 있게 해주는 인터페이스입니다.\n예시: 날씨 앱은 기상청 API를 통해 실시간 날씨 데이터를 가져와 사용자에게 표시합니다.\n연관키워드: REST, SOAP, 엔드포인트, JSON, 웹서비스\n\n빅데이터'),
+#  Document(id='50571672-ba99-48e3-bdfd-c9d160fc8bde', metadata={'source': './computer-keywords.txt'}, page_content='정의: SSD(Solid State Drive)는 기계적 부품 없이 플래시 메모리를 사용하는 저장 장치로, 기존 하드 디스크보다 빠른 읽기/쓰기 속도를 제공합니다.\n예시: 노트북에 1TB NVMe SSD를 설치하면 운영체제 부팅 시간이 크게 단축됩니다.\n연관키워드: 저장 장치, 플래시 메모리, NVMe, SATA\n\n운영체제\n\n정의: 운영체제는 컴퓨터의 하드웨어 자원을 관리하고 응용 프로그램과 사용자 간의 인터페이스를 제공하는 시스템 소프트웨어입니다.\n예시: Windows 11, macOS, Linux Ubuntu는 널리 사용되는 데스크톱 운영체제입니다.\n연관키워드: Windows, macOS, Linux, 시스템 소프트웨어\n\n방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅')]
+```  
+
+`similarity_search` 는 점수 정보 없이 문서만 반환한다. 점수 정보도 필요한 경우 `similarity_search_with_score` 를 사용하면 된다.  
+
+
