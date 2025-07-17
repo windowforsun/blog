@@ -464,3 +464,61 @@ memory_db.similarity_search("인터넷을 통한 소프트웨어 서비스 제�
 `similarity_search` 는 점수 정보 없이 문서만 반환한다. 점수 정보도 필요한 경우 `similarity_search_with_score` 를 사용하면 된다.  
 
 
+
+#### add_documents
+`add_documents` 는 이미 생성된 `Chroma` 벡터 스토어에 새로운 문서(`Document`)들을 추가할 때 사용하는 메서드이다. 
+기존 데이터에 영향을 주지 않고, 추가로 문서를 임베딩하여 저장할 수 있다.  
+
+`add_documents` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/chroma/vectorstores/langchain_chroma.vectorstores.Chroma.html#langchain_chroma.vectorstores.Chroma.add_documents)
+
+- `documents` : 추가할 문서 리스트
+- `**kwargs` : 추가 키워드 인자
+- `ids` : 문서 ID 리스트 (선택적)
+
+아래는 사용 예시이다. 
+
+```python
+from langchain_core.documents import Document
+
+memory_db_2.add_documents(
+    [
+        Document(
+            page_content="계란 볶음밥 레시피 : 프라이팬에 기름을 두르고 풀어둔 계란을 스크램블 에그로 만든 후, 대파를 넣어 파 기름을 내고 밥과 스크램블 에그를 함께 볶습니다. 소금, 후추, 간장으로 간을 맞추면 간단하고 맛있는 계란 볶음밥이 완성됩니다.",
+            metadata={"source": "./recipes.txt"},
+            id="1",
+        )
+    ]
+)
+
+memory_db_2.get("1")
+# {'ids': ['1'],
+#  'embeddings': None,
+#  'documents': ['계란 볶음밥 레시피 : 프라이팬에 기름을 두르고 풀어둔 계란을 스크램블 에그로 만든 후, 대파를 넣어 파 기름을 내고 밥과 스크램블 에그를 함께 볶습니다. 소금, 후추, 간장으로 간을 맞추면 간단하고 맛있는 계란 볶음밥이 완성됩니다.'],
+#  'uris': None,
+#  'data': None,
+#  'metadatas': [{'source': './recipes.txt'}],
+#  'included': [<IncludeEnum.documents: 'documents'>,
+# <IncludeEnum.metadatas: 'metadatas'>]}
+```  
+
+`add_texts` 는 `add_documents` 와 유사하지만, `Document` 객체가 아닌 일반 텍스트를 사용한다.  
+
+
+#### delete
+`delete` 는 `Chroma` 벡터 스토어에서 특정 문서(`Document`)를 삭제하는 메서드이다. 
+
+`ids` 라는 인자를 받아 아이디에 해당하는 문서를 삭제한다.  
+
+```python
+memory_db_2.delete(['1'])
+
+memory_db_2.get("1")
+# {'ids': [],
+#  'embeddings': None,
+#  'documents': [],
+#  'uris': None,
+#  'data': None,
+#  'metadatas': [],
+#  'included': [<IncludeEnum.documents: 'documents'>,
+# <IncludeEnum.metadatas: 'metadatas'>]}
+```  
