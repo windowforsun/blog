@@ -522,3 +522,83 @@ memory_db_2.get("1")
 #  'included': [<IncludeEnum.documents: 'documents'>,
 # <IncludeEnum.metadatas: 'metadatas'>]}
 ```  
+
+
+#### reset_collection
+`reset_collection` 은 `Chroma` 벡터 스토어의 컬렉션을 초기화하는 메서드이다. 
+
+```python
+memory_db_2.reset_collection()
+
+# 전체 내용 조회
+memory_db_2.get()
+# {'ids': [],
+#  'embeddings': None,
+#  'documents': [],
+#  'uris': None,
+#  'data': None,
+#  'metadatas': [],
+#  'included': [<IncludeEnum.documents: 'documents'>,
+# <IncludeEnum.metadatas: 'metadatas'>]}
+```  
+
+
+#### as_retriever
+`as_retriever` 는 `Chroma` 벡터스토어를 `LangChain` 의 `Retriever` 인터페이스로 변환해주는 메서드이다. 
+이를 통해 `Chroma` 벡터스토어를 검색기처럼 사용할 수 있개 한다. 
+여기서 `Retriever` 는 `LLM` 기반 `RAG` 등에서 관련 문서 검색에 표준적으로 사용되는 인터페이스이다.  
+
+`as_retriever` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/chroma/vectorstores/langchain_chroma.vectorstores.Chroma.html#langchain_chroma.vectorstores.Chroma.as_retriever)
+
+- `search_kwargs` : 검색 관련 추가 인자 (선택적)
+    - `k` : 검색할 유사 텍스트 개수 (기본값: 4)
+    - `filter` : 메타데이터 필터링 조건 (선택적)
+    - `score_threshold` : 점수 임계값 (선택적)
+    - `fetch_k` : `MMR` 알고리즘에 전달할 문서 수
+    - `lambda_mult` : `MMR` 결과의 다양성 조절(0~1)
+- `**kwargs` : 추가 키워드 인자 (선택적)
+- `search_type` : 검색 유형(선택적)
+    - `similarity` : 유사도 검색
+    - `mmr` : 최대 다양성 검색
+    - `similarity_score_threshold` : 유사도 점수 임계값 검색
+
+기본 값으로 검색기로 전환하고 검색을 수행하면 아래와 같다.  
+
+```python
+retriever = memory_db.as_retriever()
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='9971eaa1-6772-4d42-bc7c-3441e6d7c49a', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='51b1a943-3f68-4888-ad91-015f0b35c517', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='81b1d8fa-53d8-4b59-98a2-cd64f4005689', metadata={'source': './computer-keywords.txt'}, page_content='정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화\n\n정의: 가상화는 물리적 컴퓨터 자원을 여러 가상 환경으로 나누어 효율적으로 사용할 수 있게 하는 기술입니다.\n예시: VMware, VirtualBox와 같은 소프트웨어는 하나의 물리적 서버에서 여러 운영체제를 동시에 실행할 수 있게 합니다.\n연관키워드: 하이퍼바이저, VM, 컨테이너, 리소스 최적화\n\n블록체인\n\n정의: 블록체인은 분산된 컴퓨터 네트워크에서 데이터 블록이 암호화 기술로 연결된 디지털 장부 시스템입니다.\n예시: 비트코인은 블록체인 기술을 활용하여 중앙 은행 없이 안전한 금융 거래를 가능하게 합니다.\n연관키워드: 암호화폐, 분산원장, 스마트 계약, 합의 알고리즘\n\n알고리즘'),
+#  Document(id='932d06f3-3c2f-44aa-b1fa-271539c07340', metadata={'source': './computer-keywords.txt'}, page_content='정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+```  
+
+`mmr` 알고리즘을 사용해 다양서이 높은 더 많은 문서를 검색할 수 있다.
+
+```python
+retriever = memory_db.as_retriever(
+    search_type="mmr", 
+    search_kwargs={"k": 6, "lambda_mult": 0.25, "fetch_k": 10}
+)
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='9971eaa1-6772-4d42-bc7c-3441e6d7c49a', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='51b1a943-3f68-4888-ad91-015f0b35c517', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='bc323886-2ae0-44d0-a55d-8498832bc22f', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='9013feb2-9f28-4d7c-ac96-0c9126f07493', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='7f74c0c2-b95f-4d74-86ce-b52d986b1d93', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝'),
+#  Document(id='62232cd2-17ba-4c73-b021-3f4c49935fa7', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능')]
+```  
+
+특정 임계값 이상의 유사도를 가진 문서만 검색할 수 있다. 
+
+```python
+retriever = memory_db.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={"score_threshold": 0.8}
+)
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [(Document(id='9971eaa1-6772-4d42-bc7c-3441e6d7c49a', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'), -72.78469796424702), 
+#  (Document(id='51b1a943-3f68-4888-ad91-015f0b35c517', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'), -80.91075062185922), 
+#  (Document(id='81b1d8fa-53d8-4b59-98a2-cd64f4005689', metadata={'source': './computer-keywords.txt'}, page_content='정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화\n\n정의: 가상화는 물리적 컴퓨터 자원을 여러 가상 환경으로 나누어 효율적으로 사용할 수 있게 하는 기술입니다.\n예시: VMware, VirtualBox와 같은 소프트웨어는 하나의 물리적 서버에서 여러 운영체제를 동시에 실행할 수 있게 합니다.\n연관키워드: 하이퍼바이저, VM, 컨테이너, 리소스 최적화\n\n블록체인\n\n정의: 블록체인은 분산된 컴퓨터 네트워크에서 데이터 블록이 암호화 기술로 연결된 디지털 장부 시스템입니다.\n예시: 비트코인은 블록체인 기술을 활용하여 중앙 은행 없이 안전한 금융 거래를 가능하게 합니다.\n연관키워드: 암호화폐, 분산원장, 스마트 계약, 합의 알고리즘\n\n알고리즘'), -89.72811409618568), 
+#  (Document(id='932d06f3-3c2f-44aa-b1fa-271539c07340', metadata={'source': './computer-keywords.txt'}, page_content='정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'), -90.10060322287792)]
+```  
