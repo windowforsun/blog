@@ -806,3 +806,26 @@ faiss_memory_db_2.add_documents(
 faiss_memory_db_2.similarity_search("달걀 밥 레시피", k=1)
 # [Document(id='1', metadata={'source': './recipes.txt'}, page_content='계란 볶음밥 레시피 : 프라이팬에 기름을 두르고 풀어둔 계란을 스크램블 에그로 만든 후, 대파를 넣어 파 기름을 내고 밥과 스크램블 에그를 함께 볶습니다. 소금, 후추, 간장으로 간을 맞추면 간단하고 맛있는 계란 볶음밥이 완성됩니다.')]
 ```  
+
+#### add_texts
+`add_texts` 는 기존 벡터 스토어에 새로운 텍스트를 추가하는 메서드이다.
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.add_texts)
+
+- `texts` : 추가할 텍스트 리스트
+- `metadatas` : 메타데이터 리스트
+- `ids` : 문서 ID 리스트
+- `**kwargs` : 추가 키워드 인자
+
+```python
+faiss_memory_db_2.add_texts(
+    [
+        "텍스트 추가1", "텍스트 추가 2"
+    ],
+    metadatas=[{"source": "novel1"}, {"source": "novel2"}],
+    ids=["txt1", "txt2"]
+)
+
+faiss_memory_db_2.index_to_docstore_id
+# {0: 'id1', 1: 'id2', 2: 'id3', 3: '1', 4: 'txt1', 5: 'txt2'}
+```  
