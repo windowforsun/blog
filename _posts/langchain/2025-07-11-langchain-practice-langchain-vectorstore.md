@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain VectorStore"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 에서 활용할 수 있는 VectorStore 와 사용법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,12 @@ tags:
     - LangChain
     - AI
     - LLM
+    - VectorStore
+    - Vector Database
+    - Embedding
+    - RAG
+    - Chroma
+    - FAISS
 toc: true
 use_math: true
 ---  
