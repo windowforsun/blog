@@ -829,3 +829,187 @@ faiss_memory_db_2.add_texts(
 faiss_memory_db_2.index_to_docstore_id
 # {0: 'id1', 1: 'id2', 2: 'id3', 3: '1', 4: 'txt1', 5: 'txt2'}
 ```  
+
+#### delete
+`delete` 는 기존 벡터 스토어에서 문서를 삭제하는 메서드이다.
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.delete)
+
+- `ids` : 삭제할 문서 ID 리스트
+- `**kwargs` : 추가 키워드 인자
+
+```python
+faiss_memory_db_2.delete(["txt1", "txt2"])
+
+faiss_memory_db_2.index_to_docstore_id
+# {0: 'id1', 1: 'id2', 2: 'id3', 3: '1'}
+```  
+
+
+#### save_local
+`save_local` 은 벡터 스토어를 로컬에 저장하는 메서드이다. 
+`pickle` 을 사용하기 때문에 보안 위험을 고려해야 한다.  
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.save_local)
+
+- `folder_path` : 저장할 폴더 경로
+- `index_name` : 저장할 인덱스 파일 이름
+
+
+```python
+faiss_memory_db.save_local("./faiss_computer_keywords_db")
+```  
+
+
+#### load_local
+`load_local` 은 로컬에 저장된 벡터 스토어를 불러오는 메서드이다. 
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.load_local)
+
+- `folder_path` : 저장된 폴더 경로
+- `embeddings` : 쿼리 생성에 사용할 임베딩
+- `index_name` : 저장된 인덱스 파일 이름
+- `allow_dangerous_deserialization` : `pickle` 파일 역질렬화 허용 여부
+
+```python
+faiss_load_db = FAISS.load_local(
+    folder_path="./faiss_computer_keywords_db", 
+    embeddings=hf_embeddings,
+    allow_dangerous_deserialization=True
+)
+
+faiss_load_db.index_to_docstore_id
+# {0: 'fce6349f-6fef-4e64-867c-5f62c297360e',
+#  1: 'c4fdfde2-bb8d-447d-9459-a85d2b54ec4e',
+#  2: '291bcaaf-e4e9-42f9-95ce-83d60c673404',
+#  3: 'b2e37732-bfd2-4e81-8cf3-c9084301c1b3',
+#  4: '0a4d8f8d-fa5e-4c3e-9dd8-3df92b393052',
+#  5: 'f82c59bc-ec75-4dd7-9c8b-0c801ebc5e26',
+#  6: '4736e631-14da-406c-a814-c2bab901034c',
+#  7: '77a60354-83bb-4d97-8b56-7c453e5d0e71',
+#  8: '2862c6c2-688a-4d01-b80f-25568a89bb62',
+#  9: 'c96d97b9-4030-438d-98a8-d905168ebb3a',
+#  10: '7b116d9b-a28d-4810-a40f-6f8bc41cd447',
+#  11: '5a458166-15ab-40a9-be5f-a5caea7f17eb',
+#  12: '453d04b2-b9ee-46e3-be3d-cd4e24f02962',
+#  13: '5748a9b4-04e2-496e-a06b-4fa3fba24b32',
+#  14: '9083e521-a16b-4c9d-abd8-c94e41e710e9',
+#  15: '1fc34536-b1c8-4c7d-a05f-eb6ecb7efe2c',
+#  16: 'cd2e189e-1ca6-435b-a0b1-af7c4aa58125',
+#  17: 'cbbeb767-f593-4cc0-96b3-f77ea2e8b655',
+#  18: 'd2321fc7-d687-451f-9bc2-fef172a071d5',
+#  19: '153bd462-e1da-4508-a206-b3e4777994e2'}
+```  
+
+#### merge_from
+`merge_from` 는 두 개의 벡터 스토어를 병합하는 메서드이다.  
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.merge_from)
+
+- `target` : 현재 객체에 병합할 벡터 스토어 객체
+
+병합할 벡터 스토어의 병합 가능 여부를 먼저 확인 한다. 
+그리고 기존 인덱스 길이를 기준으로 새로운 문서들의 인덱스를 다시 설정해 `FAISS` 인덱스를 병합한다. 
+그후 병합할 벡터 스토어의 문서와 `ID` 를 추출해고 현재 벡터 스토어의 매핑에 모두 추가하게 된다.  
+
+```python
+faiss_base_db = FAISS.load_local(
+    folder_path="./faiss_computer_keywords_db", 
+    embeddings=hf_embeddings,
+    allow_dangerous_deserialization=True
+)
+
+faiss_property_db = FAISS.from_documents(
+    documents=split_property_keywords,
+    embedding=hf_embeddings,
+)
+
+faiss_base_db.merge_from(faiss_property_db)
+
+faiss_base_db.similarity_search("부동산 세금과 컴퓨터 보안의 관계")
+# [Document(id='125eb733-6753-4e84-8785-697ce639bd57', metadata={'source': './property-keywords.txt'}, page_content='부동산 세금\n\n정의: 부동산 세금은 부동산의 취득, 보유, 양도 과정에서 발생하는 다양한 조세를 통칭합니다.\n예시: 9억 원 초과 주택을 구매할 경우 취득세율이 1~3%로 차등 적용됩니다.\n연관키워드: 취득세, 재산세, 종합부동산세, 양도소득세, 양도세 중과\n\n주택담보대출'),
+#  Document(id='cbbeb767-f593-4cc0-96b3-f77ea2e8b655', metadata={'source': './computer-keywords.txt'}, page_content='사이버 보안\n\n정의: 사이버 보안은 컴퓨터 시스템, 네트워크, 데이터를, 무단 접근과 공격으로부터 보호하는 기술, 프로세스 및 관행입니다.\n예시: 안티바이러스 소프트웨어, 암호화, 다중 인증은 모두 사이버 보안을 강화하는 방법입니다.\n연관키워드: 해킹, 멀웨어, 피싱, 암호화, 취약점\n\nIoT'),
+#  Document(id='f82c59bc-ec75-4dd7-9c8b-0c801ebc5e26', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅'),
+#  Document(id='234ca89e-6dd7-4f44-8c1f-954c1bf4a20a', metadata={'source': './property-keywords.txt'}, page_content='DTI\n\n정의: DTI(Debt to Income ratio)는 총부채상환비율로, 연간 소득 대비 연간 부채 상환액의 비율을 나타냅니다.\n예시: DTI 규제가 40%로 설정되어, 연소득 7천만 원인 사람은 연간 원리금 상환액이 2,800만 원을 넘는 주택담보대출을 받을 수 없습니다.\n연관키워드: 대출규제, 소득증빙, 원리금상환, 신용평가, 주택금융\n\n공시지가')]
+```  
+
+
+#### as_retriever
+`as_retriever` 는 벡터 스토어를 검색기로 변환하는 메서드이다.
+
+주요 인자는 아래와 같다. [참고](https://python.langchain.com/api_reference/community/vectorstores/langchain_community.vectorstores.faiss.FAISS.html#langchain_community.vectorstores.faiss.FAISS.as_retriever)
+
+- `search_kwargs` : 검색 함수에 전달할 추가 인자
+- `search_type` : 검색 방식(`similarity`, `mmr`, `similarity_score_threshold`)
+- `**kwargs` : 검색 함수에 전달할 추가 키워드 인자
+
+
+기본 값으로 검색기로 전환하고 검색을 수행하면 아래와 같다.
+
+```python
+retriever = faiss_memory_db.as_retriever()
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='153bd462-e1da-4508-a206-b3e4777994e2', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='c96d97b9-4030-438d-98a8-d905168ebb3a', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='453d04b2-b9ee-46e3-be3d-cd4e24f02962', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='291bcaaf-e4e9-42f9-95ce-83d60c673404', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD')]
+```  
+
+
+`mmr` 알고리즘을 사용해 다양서이 높은 더 많은 문서를 검색할 수 있다.
+
+```python
+retriever = faiss_memory_db.as_retriever(
+    search_type="mmr", 
+    search_kwargs={"k": 6, "lambda_mult": 0.25, "fetch_k": 10}
+)
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='153bd462-e1da-4508-a206-b3e4777994e2', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='453d04b2-b9ee-46e3-be3d-cd4e24f02962', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='fce6349f-6fef-4e64-867c-5f62c297360e', metadata={'source': './computer-keywords.txt'}, page_content='CPU\n\n정의: CPU(Central Processing Unit)는 컴퓨터의 두뇌 역할을 하는 하드웨어 구성 요소로, 연산과 명령어 실행을 담당합니다.\n예시: Intel Core i9, AMD Ryzen 9 같은 프로세서는 고성능 컴퓨팅을 위한 CPU입니다.\n연관키워드: 프로세서, 코어, 클럭 속도, 연산 처리\n\nRAM'),
+#  Document(id='2862c6c2-688a-4d01-b80f-25568a89bb62', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝'),
+#  Document(id='7b116d9b-a28d-4810-a40f-6f8bc41cd447', metadata={'source': './computer-keywords.txt'}, page_content='가상화\n\n정의: 가상화는 물리적 컴퓨터 자원을 여러 가상 환경으로 나누어 효율적으로 사용할 수 있게 하는 기술입니다.\n예시: VMware, VirtualBox와 같은 소프트웨어는 하나의 물리적 서버에서 여러 운영체제를 동시에 실행할 수 있게 합니다.\n연관키워드: 하이퍼바이저, VM, 컨테이너, 리소스 최적화\n\n블록체인'),
+#  Document(id='77a60354-83bb-4d97-8b56-7c453e5d0e71', metadata={'source': './computer-keywords.txt'}, page_content='API\n\n정의: API(Application Programming Interface)는 서로 다른 소프트웨어 애플리케이션이 통신할 수 있게 해주는 인터페이스입니다.\n예시: 날씨 앱은 기상청 API를 통해 실시간 날씨 데이터를 가져와 사용자에게 표시합니다.\n연관키워드: REST, SOAP, 엔드포인트, JSON, 웹서비스\n\n빅데이터')]
+```  
+
+특정 임계값 이상의 유사도를 가진 문서만 검색할 수 있다.
+
+```python
+retriever = faiss_memory_db.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={"score_threshold": 0.8}
+)
+retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [(Document(id='153bd462-e1da-4508-a206-b3e4777994e2', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'), np.float32(-72.78471)), 
+#  (Document(id='c96d97b9-4030-438d-98a8-d905168ebb3a', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'), np.float32(-80.91075)), 
+#  (Document(id='453d04b2-b9ee-46e3-be3d-cd4e24f02962', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'), np.float32(-110.89723)), 
+#  (Document(id='291bcaaf-e4e9-42f9-95ce-83d60c673404', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'), np.float32(-111.516136))]
+```  
+
+### ChromaDB vs FAISS
+
+| 구분             | Chroma                                             | FAISS                                         |
+|------------------|----------------------------------------------------|-----------------------------------------------|
+| 언어/환경      | Python 기반, 설치 및 사용이 매우 쉬움               | C++/Python, 설치(특히 GPU)는 다소 복잡        |
+| 지원 데이터    | 텍스트(주로), 멀티모달 일부 지원                   | 텍스트, 이미지 등 임베딩 벡터라면 모두 가능   |
+| 메타데이터     | 벡터와 함께 메타데이터 저장/검색 지원              | 벡터와 ID만 저장, 메타데이터는 별도 관리      |
+| 검색 알고리즘  | 내부적으로 효율적인 인덱스 사용                    | Flat, IVF, HNSW 등 다양한 인덱스 선택 가능   |
+| 확장성         | 소규모~중규모(수십~수백만 건)에 적합               | 대규모(수백만~수억 건) 데이터에 최적화        |
+| 분산/클라우드  | 로컬 파일 기반, 분산/클라우드 지원 제한적           | 분산 지원은 제한적, 주로 단일 서버            |
+| GPU 지원       | 공식적으로 지원하지 않음                           | GPU 지원(대용량, 고속 검색에 매우 유리)       |
+| 설치/운영      | pip로 간단 설치, 운영이 매우 쉬움                   | pip/conda로 설치, GPU는 별도 빌드 필요        |
+| LangChain 연동 | VectorStore, Retriever 등 완벽 지원                | VectorStore로 완벽 지원                       |
+| 필터/검색      | 메타데이터 기반 필터링, 다양한 검색 옵션            | 벡터 유사도 기반 검색(필터링은 별도 구현)     |
+| 라이선스       | 오픈소스(MIT)                                      | 오픈소스(MIT)                                 |
+
+
+---  
+## Reference
+[LangChain Chroma](https://python.langchain.com/docs/integrations/vectorstores/chroma/)  
+[LangChain Faiss](https://python.langchain.com/docs/integrations/vectorstores/faiss/)  
+[LangChain Vector stores](https://python.langchain.com/docs/concepts/vectorstores/)  
+[Chroma](https://www.trychroma.com/)  
+[Faiss](https://engineering.fb.com/2017/03/29/data-infrastructure/faiss-a-library-for-efficient-similarity-search/)  
+[벡터저장소(VectorStore)](https://wikidocs.net/233778)  
+
+
