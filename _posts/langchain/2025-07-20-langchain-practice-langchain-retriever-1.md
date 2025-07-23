@@ -228,3 +228,101 @@ print(len(split_computer_keywords))
 memory_db = Chroma.from_documents(documents=split_computer_keywords, embedding=hf_embeddings, collection_name="computer_keywords_db")
 ```  
 
+
+### VectorStoreRetriever
+`VectorStoreRetriever` 는 `VectorStore` 를 기반으로 문서와 사용자의 쿼리 간의 `Semantic Similarity` 를 계산해 관련 문서를 검색한다. 
+이는 전통적인 키워드 기반 검색 방식(`Sparse Retrieval`)과 달리, 문서와 쿼리를 벡터로 변환해 의미를 이해하고 검색하는 `Dense Retrieval` 방식을 따른다.
+
+
+#### as_retriever()
+`as_retriever` 메서드는 `VectorStore` 객체를 `VectorStoreRetriever` 객체로 변환하는 메서드이다. 
+해당 메서드를 사용해서 다양한 검색 옵션을 설정해 사용자의 요구사항에 맞는 문서 검색을 수행할 수 있다.  
+
+`add_documents` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/core/vectorstores/langchain_core.vectorstores.base.VectorStore.html#langchain_core.vectorstores.base.VectorStore.as_retriever)
+
+- `search_kwargs` : 검색 시 사용할 추가 인자들을 설정할 수 있다.
+  - `k` : 검색할 문서의 개수(기본값 4)
+  - `score_threshold` : `similarity_score_threshold` 검색에서 최소 유사도 임계값
+  - `fetch_k` : `MMR` 검색에서 전달할 문서 수(기본값 20)
+  - `lambda_mult` : `MMR` 검색의 다양성 조절(0~1 사이값, 기본값 0.5)
+  - `filter` : 메타데이터 기반 필터링
+- `**kwargs` : 검색 함수에 전달할 키워드 인자
+- `search_type` : 검색 유형
+  - `similarity` : 유사도 검색
+  - `mmr` : 최대 다양성 검색(유사도와 다양성을 동시에 고려하는 방식)
+  - `similarity_score_threshold` : 유사도 점수 임계값 검색
+
+참고/주의 사항으로는 아래와 같다. 
+
+- `search_type` : 단순한 의미적 유사성이 중요하다면 `similarity` 검색을 사용하고, 검색 결과가 유사한 항목으로 과도하게 치우치지 않게 하려면 `mmr` 사용을 고려할 수 있다. 
+- `search_kwargs`
+  - `k` 값을 너무 낮게 설명하면 관련 문서를 놓칠 수 있고, 너무 높게 설정하면 `LLM` 처리 비용이 증가할 수 있다. (일반적으로 3~10 사이의 값이 적절하다.)
+  - `MMR` 사용시 `lambda_mul` 값을 실험적으로 조정하여 최적의 검색 품질을 찾는 것이 좋다. 
+  - `score_threshold` : 너무 높은 임계값을 설정하면 결과가 반환되지 않을 수 있다. 일반적으로 `0.6~0.8` 사이의 값을 사용하여 적절한 결과를 얻도록 조절이 필요하다. 
+- `VectoreStoreRetriever` 검색 결과의 품질은 사용된 임베딩 품질에 크게 의존함을 기억해야 한다. 
+- `MMR` 검색은 검색 결과의 다양성을 높여줄 수 있지만, 계산 비용이 추가로 발생한다. 필요하지 않다면 기본 값인 `similarity` 를 사용하는 것이 효율작이다. 
+- `retriever.get_relevant_documents(query)` 를 호출해 반환된 문서와 유사도 점수를 확인하여 최적화/디버깅하는 것이 좋다.  
+
+```python
+vector_retriever = memory_db.as_retriever()
+```  
+
+
+#### invoke()
+`invoke` 메서드는 `Retriever` 객체에서 동기적으로 검색을 수행하는 메서드이다. 
+
+`invoke` 메서드는 아래와 같은 인자를 받는다. [참고](https://python.langchain.com/api_reference/core/vectorstores/langchain_core.vectorstores.base.VectorStoreRetriever.html#langchain_core.vectorstores.base.VectorStoreRetriever.invoke)
+
+- `input` : 검색할 쿼리
+- `config` : `Retriever` 구성 정보
+- `**kwargs` : `Retriever` 에 전달할 추가 인자
+
+```python
+vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='fe9306c1-cbbe-4889-be65-5c5cff58c211', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='b9c7972e-e484-4daa-a9e8-57ded0fabc0b', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='04b6978a-c99e-4447-bda5-90c1798054e3', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='8acab6b5-f194-4056-b061-fbc378633506', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD')]
+```  
+
+#### MMR
+`MMR`(Maximal Marginal Relevance) 검색은 `VectorStoreRetriever` 에서 제공하는 검색 방법 중 하나로,
+검색 결과를 정렬할 때 유사성과 다양성을 동시에 고려하는 방식이다.  
+
+- 유사성(`Similarity`) : 사용자의 쿼리와 문서간의 의미적 유사성을 최대화
+- 다양성(`Diversity`) : 반환된 문서들 간의 중복을 최소화하여 다양한 주제를 포함
+
+`MMR` 은 다음과 같은 절차로 동작한다. 
+
+1. 초기 후보군 선택 : `fetch_k` 개수의 문서 만큼 쿼리와 가장 유사한 문서를 초기 후보군으로 선정한다. 
+2. 유사성과 다양성 계산 : 각 문서의 쿼리와의 유사도를 계산하고(유사성 점수) 반환된 기존 문서들과의 중복도를(다양성 점수) 계산한다.
+3. 최적 문서 선택 : 유사성과 다양성 간의 균형을 고려하여 최적의 문서를 선택한다. 
+4. 반환된 문서 리스트의 수가 `k` 개에 도달할 때까지 과정을 반복한다. 
+
+`MMR` 검색을 사용하는 `Retriever` 를 생성하는 `as_retriever()` 의 인자 설정 예시는 아래와 같다. 
+
+- `search_type` : `mmr`
+- `search_kwargs` : 
+  - `k` : 최종 반환할 문서 수
+  - `fetch_k` : 후보군으로 검색할 문서의 수
+  - `lambda_mult` : 유사성과 다양성 간의 균형을 조절하는 값(0~1 사이값)
+    - 0(다양성↑, 유사성↓) : 다양성(`Diversity`)에 초점을 두고, 유사성은 무시한다. 검색 결과가 중복되지 않도록 다양한 주제와 내용을 가진 문서들이 선택된다. 
+    - 1(유사성↑, 다양성↓) : 유사성(`Similarity`)에 초점을 두고, 다양성은 무시한다. 사용자의 쿼리와 가장 유사한 문서들만 반환한다. 결과가 중복될 가능성이 높아진다. 
+
+```python
+mmr_vector_retriever = memory_db.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 4,
+        "fetch_k" : 20,
+        "lambda_mult": 0
+    }
+)
+
+mmr_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='fe9306c1-cbbe-4889-be65-5c5cff58c211', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='04b6978a-c99e-4447-bda5-90c1798054e3', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='ddf519a6-44a7-4477-a998-8e121a1dbeef', metadata={'source': './computer-keywords.txt'}, page_content='SSD\n\n정의: SSD(Solid State Drive)는 기계적 부품 없이 플래시 메모리를 사용하는 저장 장치로, 기존 하드 디스크보다 빠른 읽기/쓰기 속도를 제공합니다.\n예시: 노트북에 1TB NVMe SSD를 설치하면 운영체제 부팅 시간이 크게 단축됩니다.\n연관키워드: 저장 장치, 플래시 메모리, NVMe, SATA\n\n운영체제'),
+#  Document(id='176ee677-26e4-4720-a10e-912ac36f859f', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅')]
+```  
+
