@@ -326,3 +326,112 @@ mmr_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은
 #  Document(id='176ee677-26e4-4720-a10e-912ac36f859f', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅')]
 ```  
 
+
+#### similarity_score_threshold
+`similarity_score_threshold` 검색은 검색 결과의 유사도 점수를 기준으로 반환할 문서를 필터링 하는 방식이다. 
+쿼리와 문서간의 유사도를 계산하고, 설정된 임계값 이상을 만족하는 문서만 반환한다. 
+이를 통해 검색 결과의 품질을 높이고, 낮은 관련성의 문서를 걸러낼 수 있다.  
+
+유사도 점수는 쿼리의 임베딩과 문서 임베딩 간의 `코사인 유사도(Cosine Similarity)` 를 사용하여 계산한다. 
+`0~1` 사이의 값으로 표현되고, 1에 가까울 수록 유사성이 높고, 0에 가까울 수록 유사성이 낮다. 
+일반적으로 `0.6~0.8` 사이의 값이 적합하다고 알려져 있다. 
+하지만 도메인이나 데이터의 특성에 따라 적절한 임계값을 설정하는 것이 필요하다. 
+
+만약 `similarity_score_threshold` 를 만족하는 문서가 `k` 보다 적다면, 
+반환되는 결과의 개수가 줄어들 수 있다. 
+
+```python
+similarity_score_vector_retriever = memory_db.as_retriever(
+    search_type="similarity_score_threshold",
+    search_kwargs={
+        "score_threshold": 0.4
+    }
+)
+
+similarity_score_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='35c69bca-fbbc-4ff9-bb45-96f7d1453450', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+```  
+
+#### top_k
+`top_k` 는 쿼리에 대해 반환할 가장 관련성이 높은 검색 결과의 개수를 설정하는 매개변수이다. 
+검색 엔진에서 상위 `k` 개의 결과를 반환하는 것과 유사하다. 
+임베딩 기반 검섹에서는 쿼리 벡터와 저장소에 저장된 문서 벡터 간의 유사도를 계산하여, 
+이 유사도 값이 높은 상위 `k` 개의 결과를 반환한다.  
+
+`top_k` 를 사용해서 가장 유사도가 높은 검색 결과를 반환하는 예시는 아래와 같다.  
+
+```python
+top_1_retriever = memory_db.as_retriever(search_kwargs={"k" : 1})
+
+top_1_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='35c69bca-fbbc-4ff9-bb45-96f7d1453450', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+```
+
+#### Configurable Retriever
+`ConfigurableField` 를 사용하면 동적으로 조정 가능한 필드를 정의해 검색기를 사용할 수 있다. 
+외부 입력에 따라 동적으로 검색기의 구성을 변경하거나 미리 정의된 값을 상황에 따라 사용하도록 할 수 있다.
+즉 런타임에 검색기의 설정을 동적으로 변경할 수 있다.  
+
+`ConfigurableField` 는 검색 매세변수의 고유 식별자, 이름 등을 설정하는 역할을 하고, 
+검색 설정을 조정하기 위해서는 `config` 매개변수를 사용한다.  
+
+검색기에서 `search_type` 과 `search_kwargs` 필드를 동적 설정할 수 있도록 설정해 생성하면 아래와 같다.  
+
+```python
+from langchain_core.runnables import ConfigurableField
+
+configurable_retriever = memory_db.as_retriever(search_kwargs={"k":1}).configurable_fields(
+      search_type=ConfigurableField(
+          # 검색 매개변수의 식별자
+          id="search_type",
+          # 검색 매개변수의 이름
+          name="Search Type",
+          # 매개변수 설명
+          description="Type for Search"
+      ),
+      search_kwargs=ConfigurableField(
+          id="search_kwargs",
+          name="Search Kwargs",
+          description="Kwargs for Search",
+      ),
+  )
+```  
+
+런타임에 동적으로 `top_k` 설정을 변경해 검색을 수행하면 아래와 같다.  
+
+```python
+config = {
+    "configurable" : {
+        "search_kwargs" : {
+            "k": 3
+        }
+    }
+}
+
+configurable_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?", config=config)
+# [Document(id='35c69bca-fbbc-4ff9-bb45-96f7d1453450', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+# Document(id='764387b2-b8df-459f-88a8-10f9975511cc', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+# Document(id='91faf2d5-09af-4d17-81e2-3c891a5507d9', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS')]
+```  
+
+`MMR` 검색 방식을 사용해 최대 다양성으로 설정을 변경해 검색을 수행하면 아래와 같다.  
+
+```python
+config = {
+    "configurable" : {
+        "search_type" : "mmr",
+        "search_kwargs" : {
+          "k": 4,
+          "fetch_k" : 20,
+          "lambda_mult": 0
+        }
+    }
+}
+
+configurable_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?", config=config)
+# [Document(id='35c69bca-fbbc-4ff9-bb45-96f7d1453450', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(id='91faf2d5-09af-4d17-81e2-3c891a5507d9', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='96f22d03-317a-4e0d-8078-54af0003d4ee', metadata={'source': './computer-keywords.txt'}, page_content='SSD\n\n정의: SSD(Solid State Drive)는 기계적 부품 없이 플래시 메모리를 사용하는 저장 장치로, 기존 하드 디스크보다 빠른 읽기/쓰기 속도를 제공합니다.\n예시: 노트북에 1TB NVMe SSD를 설치하면 운영체제 부팅 시간이 크게 단축됩니다.\n연관키워드: 저장 장치, 플래시 메모리, NVMe, SATA\n\n운영체제'),
+#  Document(id='1a2e64a6-77c9-464b-8783-16aaa8213a22', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅')]
+```  
+
