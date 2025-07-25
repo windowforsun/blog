@@ -435,3 +435,114 @@ configurable_retriever.invoke("사람처럼 학습하고 추론하는 시스템�
 #  Document(id='1a2e64a6-77c9-464b-8783-16aaa8213a22', metadata={'source': './computer-keywords.txt'}, page_content='방화벽\n\n정의: 방화벽은 승인되지 않은 접근으로부터 컴퓨터 네트워크를 보호하는 보안 시스템으로, 들어오고 나가는 네트워크 트래픽을 모니터링하고 제어합니다.\n예시: 윈도우 기본 방화벽은 사용자의 컴퓨터를 외부 위협으로부터 보호하는 첫 번째 방어선입니다.\n연관키워드: 네트워크 보안, 패킷 필터링, 침입 방지, 포트 차단\n\n클라우드 컴퓨팅')]
 ```  
 
+
+### EnsembleRetriever
+`EnsembleRetriever` 는 다중 검색기를 조합하여 동작하는 메커니즘이다. 
+여러 개의 `Retriever` 를 동시에 사용하고, 각각의 검색 결과를 합치거나 가중치를 기반으로 결합하여 최종 결과를 반환한다. 
+이는 하나의 `Retriever` 는 벡터 임데딩 기반 검색을 사용하고, 다른 `Retriever` 는 키워드 기반 검색을 사용하므로 서로 보완적인 검색 결과를 제공할 수 있다. 
+그러므로 단일 알고리즘이 놓칠 수 있는 정보를 보완할 수 있다는 장점이 있어, 
+여러 검색기의 결과를 통합하여 더 정확하고 풍부한 문서를 반환할 수 있다.  
+
+`EnsembleRetriever` 는 하나의 `Retrievver` 는 벡터 임베딩 기반 검색을 사용하고, 
+다른 `Retriever` 는 키워드 기반 검색을 사용해 서로 보완적인 검색 결과를 제공할 수 있다.  
+
+동작원리는 다음과 같다. 
+1. 여러 개의 `Retriever` 를 생성한다.
+2. 각 `Retriever` 에 대해 쿼리를 실행하여 검색 결과를 얻는다. 
+3. 각 검색기의 검색결과의 점수와 매핑되 가중치를 곱해 최종 점수 산출
+3. 최종 점수를 기반으로 결과 정렬
+
+아래는 `Chroma` 검색기와 `BM25Retriever` 를 사용해 `EnsembleRetriever` 를 생성하는 예시이다. 
+`weights` 의 매개번수의 역할은 각 검색기가 반환하는 결과의 중요도를 나타낸다. 
+그러므로 가중치는 단순히 겨로가의 정렬 점수에 영향을 미치는 비율로 적용된다. 
+만약 가중치가 0인 검색기가 있다면, 해당 검색기의 결과는 여젼히 최종결과에 포함되지만 
+중요도가 아주 낮기 때문에 가장 마지막 부분에 위치할 것이다. 
+
+```python
+from langchain.retrievers import BM25Retriever, EnsembleRetriever
+
+bm25_retriever = BM25Retriever.from_documents(split_computer_keywords)
+bm25_retriever.k = 1
+
+chroma_vectorstore = Chroma.from_documents(documents=split_computer_keywords, embedding=hf_embeddings, collection_name="computer_keywords_db")
+
+chroma_retriever = chroma_vectorstore.as_retriever(search_kwargs={"k":1})
+
+ensemble_retriever = EnsembleRetriever(
+    retrievers=[bm25_retriever, chroma_retriever],
+    weights=[0.7, 0.3]
+)
+```  
+
+질의를 보내면 `BM25Retriever` 와 `Chroma` 검색기를 사용해 검색을 수행하고 이를 합쳐 최종 결과를 도출하는 것을 볼 수 있다. 
+
+
+```python
+query = "사람처럼 학습하고 추론하는 시스템은?"
+ensemble_result = ensemble_retriever.invoke(query)
+print(ensemble_result)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'), 
+# Document(id='aff2aa55-c67b-4915-8430-320bb163f464', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+
+bm_25_result = bm25_retriever.invoke(query)
+print(bm_25_result)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화')]
+
+chroma_result = chroma_retriever.invoke(query)
+print(chroma_result)
+# [Document(id='aff2aa55-c67b-4915-8430-320bb163f464', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전')]
+```  
+
+아래는 다른 질의의 예시이다. 
+
+```python
+query = "소프트웨어를 외부로 제공하는 방법은?"
+ensemble_result = ensemble_retriever.invoke(query)
+print(ensemble_result)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='운영체제\n\n정의: 운영체제는 컴퓨터의 하드웨어 자원을 관리하고 응용 프로그램과 사용자 간의 인터페이스를 제공하는 시스템 소프트웨어입니다.\n예시: Windows 11, macOS, Linux Ubuntu는 널리 사용되는 데스크톱 운영체제입니다.\n연관키워드: Windows, macOS, Linux, 시스템 소프트웨어\n\n방화벽'), 
+# Document(id='89990330-8114-4d8a-adc1-3915b08e767b', metadata={'source': './computer-keywords.txt'}, page_content='클라우드 컴퓨팅\n\n정의: 클라우드 컴퓨팅은 인터넷을 통해 서버, 스토리지, 데이터베이스, 소프트웨어 등의 컴퓨팅 리소스를 제공하는 서비스입니다.\n예시: AWS, Microsoft Azure, Google Cloud Platform은 기업들이 자체 서버 인프라 구축 없이 필요한 만큼 IT 자원을 사용할 수 있게 해줍니다.\n연관키워드: IaaS, PaaS, SaaS, 서버리스, 확장성\n\nAPI')]
+
+bm_25_result = bm25_retriever.invoke(query)
+print(bm_25_result)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='운영체제\n\n정의: 운영체제는 컴퓨터의 하드웨어 자원을 관리하고 응용 프로그램과 사용자 간의 인터페이스를 제공하는 시스템 소프트웨어입니다.\n예시: Windows 11, macOS, Linux Ubuntu는 널리 사용되는 데스크톱 운영체제입니다.\n연관키워드: Windows, macOS, Linux, 시스템 소프트웨어\n\n방화벽')]
+
+chroma_result = chroma_retriever.invoke(query)
+print(chroma_result)
+# [Document(id='89990330-8114-4d8a-adc1-3915b08e767b', metadata={'source': './computer-keywords.txt'}, page_content='클라우드 컴퓨팅\n\n정의: 클라우드 컴퓨팅은 인터넷을 통해 서버, 스토리지, 데이터베이스, 소프트웨어 등의 컴퓨팅 리소스를 제공하는 서비스입니다.\n예시: AWS, Microsoft Azure, Google Cloud Platform은 기업들이 자체 서버 인프라 구축 없이 필요한 만큼 IT 자원을 사용할 수 있게 해줍니다.\n연관키워드: IaaS, PaaS, SaaS, 서버리스, 확장성\n\nAPI')]
+```
+
+아래와 같이 `ConfigurableField` 를 사용하면 런타임에 `EnsembleRetriever` 의 `weights` 를 동적으로 변경할 수 있다.  
+
+
+```python
+from langchain_core.runnables import ConfigurableField
+
+ensemble_retriever = EnsembleRetriever(
+    retrievers=[bm25_retriever, chroma_retriever],
+).configurable_fields(
+    weights=ConfigurableField(
+        id="ensemble_weights",
+        name="Ensemble Weights",
+        description="Weights for Ensemble Retriever",
+    )
+)
+
+config = {"configurable" : {"ensemble_weights" : [1, 0]}}
+query = "서버 인증 방법"
+
+docs = ensemble_retriever.invoke(query, config=config)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD'),
+# Document(id='fcb059ef-db76-47ef-9106-cba4a8712d27', metadata={'source': './computer-keywords.txt'}, page_content='SSH\n\n정의: SSH(Secure Shell)는 네트워크를 통해 장치를 안전하게 관리하거나 명령어를 실행할 수 있도록 하는 암호화 프로토콜입니다.  \n예시: 서버 관리자는 SSH를 사용하여 원격 서버에 연결하여 작업을 수행합니다.  \n연관키워드: 원격 접속, 보안 프로토콜, 암호화, 터미널\n\nCDN')]
+``` 
+
+가중치를 런타임에 변경하면, 가중치가 변경된 설정으로 최종 검색 결과의 순서가 변경되는 것을 확인할 수 있다. 
+
+```python
+config = {"configurable" : {"ensemble_weights" : [0, 1]}}
+query = "서버 인증 방법"
+
+docs = ensemble_retriever.invoke(query, config=config)
+# [Document(id='fcb059ef-db76-47ef-9106-cba4a8712d27', metadata={'source': './computer-keywords.txt'}, page_content='SSH\n\n정의: SSH(Secure Shell)는 네트워크를 통해 장치를 안전하게 관리하거나 명령어를 실행할 수 있도록 하는 암호화 프로토콜입니다.  \n예시: 서버 관리자는 SSH를 사용하여 원격 서버에 연결하여 작업을 수행합니다.  \n연관키워드: 원격 접속, 보안 프로토콜, 암호화, 터미널\n\nCDN'),
+# Document(metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD')]
+```  
+
