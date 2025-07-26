@@ -546,3 +546,117 @@ docs = ensemble_retriever.invoke(query, config=config)
 # Document(metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD')]
 ```  
 
+
+
+### ParentDocumentRetriever
+`ParentDocumentRetriever` 는 문서를 작은 조각으로 나누면서도 원본 문서의 맥락을 유지해 두 가지 요구 사항을 균형있게 해결하는 검색기이다. 
+
+문서를 분할할 때 아래와 같은 내용을 고려해 균형을 고려해야 한다. 
+- 작은 조각으로 문서를 나누는 경우 임베딩이 의미를 가장 정확하게 반영할 수 있다. 하지만 문서의 맥락은 유지되기가 힘들다. 
+- 큰 조각으로 문서를 나누는 경우 문서의 전체적인 맥락은 유지될 수 있지만, 임베딩이 의미를 정확하게 파악하기 힘들다. 
+
+위와 같은 두 관점의 균형을 맞추기 위한 것이 바로 `ParentDocumentRetriever` 이다. 
+문서를 작은 조각으로 나누고, 검색을 진행할 때 먼저 작은 조각들을 찾는다. 
+그리고 각 작은 조각들이 속한 원본 문서(더 큰 조각)를 통해 전체적인 맥락을 유지할수 있도록 한다. 
+
+여기서 `Parent Document` 즉 부모 문서란 작은 조각이 나누어진 우너본 문서를 의미한다. 
+이는 문서 전체일 수도 있고, 더 큰 문서의 조각일 수도 있다.  
+
+이렇게 `ParentDocumentRetriever` 는 문서 검색의 효율을 높이기 위해 문서간 계층 구조를 활용하는 방법이다. 
+관련성이 높은 문서를 빠르고 좀 더 정확하게 찾을 수 있고, 검색 결과에 대한 맥락도 함께 유지할 수 있다.  
+
+`ParentDocumentRetriever` 는 검색시 사용하는 작은 조각을 위한 `child_splitter` 와 검색 결과에 사용하는 큰 조각을 위한 `parent_splitter` 설정이 필요하다. 
+가장 먼저 예시에서는 `parent_splitter` 는 사용하지 않고, 
+동작을 확인하기 위해 문서 검색은 `child_splitter` 로 진행하지만 결과는 전체 문서를 부모 문서로 사용해 반환하도록 하는 예시를 먼저 살펴본다.  
+
+```python
+from langchain.storage import InMemoryStore
+from langchain.retrievers.parent_document_retriever import ParentDocumentRetriever
+
+# 전체 문서
+docs = []
+docs.extend(computerKeywordLoader.load())
+
+# 작은 문서
+child_splitter = RecursiveCharacterTextSplitter(chunk_size=200)
+
+full_vectorstore = Chroma(
+    collection_name="full_docs",
+    embedding_function=hf_embeddings
+)
+
+# 검색기에서 사용할 부모 저장소
+full_store = InMemoryStore()
+
+# 검색시 생성
+full_parent_retriever = ParentDocumentRetriever(
+    vectorstore=full_vectorstore,
+    docstore=full_store,
+    child_splitter=child_splitter
+)
+
+# 검색기에 문서 추가해 검색기 구성
+full_parent_retriever.add_documents(docs, ids=None, add_to_docstore=True)
+
+# 부모 저장소에 생성된 문서 수 확인(전체 문서 내용을 부모로 사용하기 때문에 1개의 키만 존재)
+list(full_store.yield_keys())
+# ['960624d7-dc03-419c-83af-61dbb6dff20f']
+
+# 검색기에서 질의에 대한 검색으로 사용하는 벡터 스토어는 작은 청크를 사용
+sub_docs = full_vectorstore.similarity_search("사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 ?")
+# [Document(id='cb1773e1-2298-4a0c-be42-3ba7446e1778', metadata={'doc_id': '960624d7-dc03-419c-83af-61dbb6dff20f', 'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='04a4ea6e-8ceb-466d-abf4-4ac3928747b9', metadata={'doc_id': '960624d7-dc03-419c-83af-61dbb6dff20f', 'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='1a4c92f6-601e-41ff-a18a-5e44723ec992', metadata={'doc_id': '960624d7-dc03-419c-83af-61dbb6dff20f', 'source': './computer-keywords.txt'}, page_content='백업\n\n정의: 백업은 데이터 손실에 대비하여 데이터를 복사하고 저장하는 과정입니다.  \n예시: 클라우드 백업 솔루션은 중요한 데이터를 안전하게 저장하고 복구할 수 있는 방법을 제공합니다.  \n연관키워드: 데이터 보호, 복구, 스냅샷, 클라우드'),
+#  Document(id='68f68660-59b9-43fa-9b62-4cffdb079612', metadata={'doc_id': '960624d7-dc03-419c-83af-61dbb6dff20f', 'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화')]
+
+# 실제 검색기의 검색 결과는 부모 청크 즉 전체 문서를 반환
+search_docs = full_parent_retriever.get_relevant_documents("사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 ?")
+len(search_docs[0].page_content)
+# 6322
+```  
+
+부모 문서를 전체 문서로 하는 경우 어떠한 질의를 하든 전체 문서가 반환된다는 것을 확인했다. 
+이제 본격적으로 작은 청크와 큰 청크 개념을 사용해 구성하고 테스트하면 아래와 같다. 
+
+```python
+# 부모 문서(큰 청크)
+parent_splitter = RecursiveCharacterTextSplitter(chunk_size=1000)
+# 자식 문서(작은 청크)
+child_splitter = RecursiveCharacterTextSplitter(chunk_size=200)
+
+parent_vectorstore = Chroma(
+    collection_name="parent_docs",
+    embedding_function=hf_embeddings
+)
+
+parent_store = InMemoryStore()
+
+parent_retriever = ParentDocumentRetriever(
+    vectorstore=parent_vectorstore,
+    docstore=parent_store,
+    child_splitter=child_splitter,
+    parent_splitter=parent_splitter
+)
+
+# 청크가 부모, 자식 문서가 생성될 수 있도록 검색기에 문서 추가
+parent_retriever.add_documents(docs)
+# 생성된 문서 수 확인(큰 청크로 전체 문서를 나눈 수)
+len(list(parent_store.yield_keys()))
+# 9
+
+# 검색기에서 질의에 대한 검색으로 사용하는 벡터 스토어는 작은 청크를 사용
+sub_docs = parent_vectorstore.similarity_search("사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 ?")
+# [Document(id='272a1832-1154-407c-8bf1-80828e947d00', metadata={'doc_id': '5c7e9aaa-80b6-48de-a8ba-f1426b1e1821', 'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='d70ab21c-e0be-49b9-932d-8f366013329c', metadata={'doc_id': 'fb9e962d-e61e-4fdb-a640-f04b39dada36', 'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='97cc4e57-409c-481c-b3df-39f64e74a03c', metadata={'doc_id': 'c7bb8aef-c816-4c11-8f9b-a4825a7f9348', 'source': './computer-keywords.txt'}, page_content='백업\n\n정의: 백업은 데이터 손실에 대비하여 데이터를 복사하고 저장하는 과정입니다.  \n예시: 클라우드 백업 솔루션은 중요한 데이터를 안전하게 저장하고 복구할 수 있는 방법을 제공합니다.  \n연관키워드: 데이터 보호, 복구, 스냅샷, 클라우드'),
+#  Document(id='6c08026e-a43d-4276-815c-cb41861b14b7', metadata={'doc_id': 'c7bb8aef-c816-4c11-8f9b-a4825a7f9348', 'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화')]
+
+
+# 실제 검색기의 검색 결과는 부모 문서를 반환
+search_docs = parent_retriever.invoke("사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 ?")
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='사이버 보안\n\n정의: 사이버 보안은 컴퓨터 시스템, 네트워크, 데이터를, 무단 접근과 공격으로부터 보호하는 기술, 프로세스 및 관행입니다.\n예시: 안티바이러스 소프트웨어, 암호화, 다중 인증은 모두 사이버 보안을 강화하는 방법입니다.\n연관키워드: 해킹, 멀웨어, 피싱, 암호화, 취약점\n\nIoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치\n\n정의: 네트워크 스위치는 여러 장치들을 네트워크에 연결하고 데이터 패킷을 목적지로 효율적으로 전달하는 장치입니다.  \n예시: Cisco Catalyst 시리즈는 기업 네트워크 환경에서 사용되는 고성능 네트워크 스위치입니다.  \n연관키워드: 네트워크, 데이터 패킷, LAN, 포트, 트래픽 관리\n\nDNS 캐싱\n\n정의: DNS 캐싱은 도메인 이름과 IP 주소 매핑 데이터를 로컬에 저장하여 DNS 조회 시간을 단축하는 기술입니다.  \n예시: 웹 브라우저가 자주 방문한 웹사이트의 DNS 정보를 캐싱하여 연결 속도를 향상시킵니다.  \n연관키워드: DNS, 캐시 메모리, 네임서버, 성능 최적화\n\nRAID'), Document(metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화\n\n정의: 가상화는 물리적 컴퓨터 자원을 여러 가상 환경으로 나누어 효율적으로 사용할 수 있게 하는 기술입니다.\n예시: VMware, VirtualBox와 같은 소프트웨어는 하나의 물리적 서버에서 여러 운영체제를 동시에 실행할 수 있게 합니다.\n연관키워드: 하이퍼바이저, VM, 컨테이너, 리소스 최적화\n\n블록체인\n\n정의: 블록체인은 분산된 컴퓨터 네트워크에서 데이터 블록이 암호화 기술로 연결된 디지털 장부 시스템입니다.\n예시: 비트코인은 블록체인 기술을 활용하여 중앙 은행 없이 안전한 금융 거래를 가능하게 합니다.\n연관키워드: 암호화폐, 분산원장, 스마트 계약, 합의 알고리즘\n\n알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'), Document(metadata={'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화\n\n정의: 데이터 암호화는 데이터를 보호하기 위해 특정 알고리즘을 사용하여 데이터를 변환하는 기술입니다.  \n예시: AES-256 암호화는 금융 데이터와 같은 민감한 정보를 보호하는 데 자주 사용됩니다.  \n연관키워드: 보안, 암호 알고리즘, 키 관리, 데이터 보호\n\n백업\n\n정의: 백업은 데이터 손실에 대비하여 데이터를 복사하고 저장하는 과정입니다.  \n예시: 클라우드 백업 솔루션은 중요한 데이터를 안전하게 저장하고 복구할 수 있는 방법을 제공합니다.  \n연관키워드: 데이터 보호, 복구, 스냅샷, 클라우드')]
+
+len(search_docs[0].page_content)
+# 888
+```  
+
