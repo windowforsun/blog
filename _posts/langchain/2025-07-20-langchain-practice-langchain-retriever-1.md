@@ -660,3 +660,62 @@ len(search_docs[0].page_content)
 # 888
 ```  
 
+
+
+### MultiQueryRetriever
+`MultiQueryRetriever` 는 단순히 하나의 쿼리를 사용해 검색하는 기존 `Retriever` 와 달리,
+다양한 형태의 쿼리를 생성해 검색을 수행하는 검색기이다.
+이를 통해 동일한 검색 의도에 대해 보다 풍부하고 다양한 결과를 반환할 수 있다.
+
+거리 기반 벡터 데이터베이스 검색은 고차원 공간에서 쿼리 임베딩과 유사한 임베딩을 가진 문서를 `거리`를 기준으로 찾는 방식을 의미힌다.
+이런 방식은 쿼리의 세부 차이나 임베딩의 의미 포착이 부족하면 검색 결과가 달리질 수 있으며,
+이를 개선하기 위한 프롬프트 엔지니어링이나 튜닝 작업은 번거롭다.
+
+위와 같은 문제를 해결하기 위해 `MultiQueryRetriever` 는 `LLM` 을 활용해 사용자 쿼리를 다양한 관점에서 자동으로 생성하고 프롬프트 튜닝 과정을 자동화한다.
+이를 통해 각 쿼리로 검색된 문서들의 합집합을 추출하여 관련 문서 집합을 확장하며,
+거리 기반 검색의 한계를 극복하고 더 풍부한 결과를 제공하게 된다.
+
+`MultiQueryRetriever` 는 `LLM` 을 사용해 쿼리를 생성하기 때문에,
+`LLM` 의 성능에 따라 검색 결과의 품질이 달라질 수 있다.
+아래와 같이 `LLM` 모델을 사용해 `MultiQueryRetriever` 를 생성할 수 있다.
+
+```python
+from langchain.retrievers.multi_query import MultiQueryRetriever
+import logging
+
+multiquery_retriever = MultiQueryRetriever.from_llm(retriever=memory_db.as_retriever(), 
+                                                    llm=model)
+# 로거의 multi_query 로그레벨을 INFO로 설정해서 생성된 쿼리를 확인할 수 있다. 
+logging.basicConfig()
+logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
+```  
+
+질의는 좀더 다양한 맥락과 관점이 필요한 경우를 사용해 일반적인 벡터 검색과 비교하면 아래와 같다.
+
+```python
+query = "사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법"
+
+docs = multiquery_retriever.invoke(query)
+# INFO:langchain.retrievers.multi_query:Generated queries: ['사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 무엇인가요 ', '그 시스템의 효율적인 성능을 유지하는 방법 ', '인간과 유사한 지적 능력을 가진 시스템에서 안정적이고 높은 처리 능력을 갖추는 방법']
+# [Document(id='131e974a-3e3f-4a13-a44a-f7781efcca36', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='22fc0318-cfec-4bb4-bdec-e98bb8f72990', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='e9f68ee9-7a53-4945-b823-54407e5edcac', metadata={'source': './computer-keywords.txt'}, page_content='데이터 암호화\n\n정의: 데이터 암호화는 데이터를 보호하기 위해 특정 알고리즘을 사용하여 데이터를 변환하는 기술입니다.  \n예시: AES-256 암호화는 금융 데이터와 같은 민감한 정보를 보호하는 데 자주 사용됩니다.  \n연관키워드: 보안, 암호 알고리즘, 키 관리, 데이터 보호\n\n백업\n\n정의: 백업은 데이터 손실에 대비하여 데이터를 복사하고 저장하는 과정입니다.  \n예시: 클라우드 백업 솔루션은 중요한 데이터를 안전하게 저장하고 복구할 수 있는 방법을 제공합니다.  \n연관키워드: 데이터 보호, 복구, 스냅샷, 클라우드'),
+#  Document(id='24d93fad-ae5e-4282-b16d-9e5d978a72a7', metadata={'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화'),
+#  Document(id='83397a36-52cc-421f-81f9-c8bb86a6589f', metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD'),
+#  Document(id='1b3c9282-735d-4126-8172-b8a1129e582e', metadata={'source': './computer-keywords.txt'}, page_content='네트워크 스위치\n\n정의: 네트워크 스위치는 여러 장치들을 네트워크에 연결하고 데이터 패킷을 목적지로 효율적으로 전달하는 장치입니다.  \n예시: Cisco Catalyst 시리즈는 기업 네트워크 환경에서 사용되는 고성능 네트워크 스위치입니다.  \n연관키워드: 네트워크, 데이터 패킷, LAN, 포트, 트래픽 관리\n\nDNS 캐싱'),
+#  Document(id='4f8a740c-12bc-4497-8093-f4374751ae66', metadata={'source': './computer-keywords.txt'}, page_content='RAID\n\n정의: RAID(Redundant Array of Independent Disks)는 여러 하드 드라이브를 하나의 논리적 유닛으로 결합하여 성능 또는 데이터 보호를 향상시키는 기술입니다.  \n예시: RAID 1은 데이터를 두 개의 드라이브에 동일하게 복제하여 데이터 손실 방지에 사용됩니다.  \n연관키워드: 데이터 보호, 스토리지, 미러링, 스트라이핑\n\nNAT'),
+#  Document(id='57101948-0724-41b4-b7ff-3ae7863dbb98', metadata={'source': './computer-keywords.txt'}, page_content='CPU\n\n정의: CPU(Central Processing Unit)는 컴퓨터의 두뇌 역할을 하는 하드웨어 구성 요소로, 연산과 명령어 실행을 담당합니다.\n예시: Intel Core i9, AMD Ryzen 9 같은 프로세서는 고성능 컴퓨팅을 위한 CPU입니다.\n연관키워드: 프로세서, 코어, 클럭 속도, 연산 처리\n\nRAM'),
+#  Document(id='73831e29-2aef-4398-8d4a-51df1f7672b7', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능')]
+
+test_vector_retriever = memory_db.as_retriever(search_kwargs={"k":9 })
+test_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법")
+# [Document(id='15ea84e6-f27b-4017-b99f-dadd738f0b7c', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='67e5572a-2727-4fc0-b3db-02e73f04f83b', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='5910bb96-3a93-4bd9-947e-c729e57adb72', metadata={'source': './computer-keywords.txt'}, page_content='데이터 암호화\n\n정의: 데이터 암호화는 데이터를 보호하기 위해 특정 알고리즘을 사용하여 데이터를 변환하는 기술입니다.  \n예시: AES-256 암호화는 금융 데이터와 같은 민감한 정보를 보호하는 데 자주 사용됩니다.  \n연관키워드: 보안, 암호 알고리즘, 키 관리, 데이터 보호\n\n백업\n\n정의: 백업은 데이터 손실에 대비하여 데이터를 복사하고 저장하는 과정입니다.  \n예시: 클라우드 백업 솔루션은 중요한 데이터를 안전하게 저장하고 복구할 수 있는 방법을 제공합니다.  \n연관키워드: 데이터 보호, 복구, 스냅샷, 클라우드'),
+#  Document(id='4cc2ee9f-79e4-449b-989b-72977486c33d', metadata={'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화'),
+#  Document(id='aa07111a-b0b9-4fc0-ace7-bab00163da54', metadata={'source': './computer-keywords.txt'}, page_content='캐시 메모리\n\n정의: 캐시 메모리는 CPU와 메인 메모리 간 데이터 전송 속도를 높이기 위해 자주 사용하는 데이터를 임시로 저장하는 고속 메모리입니다.  \n예시: L1, L2, L3 캐시는 CPU 내부 또는 가까운 위치에 있는 캐시 계층입니다.  \n연관키워드: 고속 메모리, CPU, 데이터 접근, 성능 최적화\n\nDHCP'),
+#  Document(id='1f727ace-037a-49ff-92f7-5c7261a39905', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='70b31ec5-faad-47cd-b8ca-064251632409', metadata={'source': './computer-keywords.txt'}, page_content='SSH\n\n정의: SSH(Secure Shell)는 네트워크를 통해 장치를 안전하게 관리하거나 명령어를 실행할 수 있도록 하는 암호화 프로토콜입니다.  \n예시: 서버 관리자는 SSH를 사용하여 원격 서버에 연결하여 작업을 수행합니다.  \n연관키워드: 원격 접속, 보안 프로토콜, 암호화, 터미널\n\nCDN'),
+#  Document(id='aaca737a-982f-43d6-92dc-4609c37ea64b', metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD'),
+#  Document(id='06962a2b-f1fd-41da-92a3-70689e1395fe', metadata={'source': './computer-keywords.txt'}, page_content='사이버 보안\n\n정의: 사이버 보안은 컴퓨터 시스템, 네트워크, 데이터를, 무단 접근과 공격으로부터 보호하는 기술, 프로세스 및 관행입니다.\n예시: 안티바이러스 소프트웨어, 암호화, 다중 인증은 모두 사이버 보안을 강화하는 방법입니다.\n연관키워드: 해킹, 멀웨어, 피싱, 암호화, 취약점\n\nIoT')]
+```  
