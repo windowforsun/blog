@@ -719,3 +719,70 @@ test_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템�
 #  Document(id='aaca737a-982f-43d6-92dc-4609c37ea64b', metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD'),
 #  Document(id='06962a2b-f1fd-41da-92a3-70689e1395fe', metadata={'source': './computer-keywords.txt'}, page_content='사이버 보안\n\n정의: 사이버 보안은 컴퓨터 시스템, 네트워크, 데이터를, 무단 접근과 공격으로부터 보호하는 기술, 프로세스 및 관행입니다.\n예시: 안티바이러스 소프트웨어, 암호화, 다중 인증은 모두 사이버 보안을 강화하는 방법입니다.\n연관키워드: 해킹, 멀웨어, 피싱, 암호화, 취약점\n\nIoT')]
 ```  
+
+#### LCEL Chain for MultiQueryRetriever
+다음은 `LCEL Chain` 을 사용해서 좀 더 목적에 맞는 `MultiQueryRetriever` 를 직접 구현해 사용하는 방법이다.
+이렇게 직접 구현하면 특정 규칙, 데이터, 사용자 정의 함수 등 활용해 쿼리를 다양하게 생성할 수 있다.
+또한 특정 도메인이나 조건에 맞도록 쿼리 생성 방식을 다르게 설정할수 있다는 장점이 있다.
+
+```python
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+prompt = """
+당신은 AI 언어 모델 어시스턴트입니다.
+당신의 임무는 벡터 데이터베이스에서 관련 문서를 검색하기 위해 주어진 사용자 질문의 다섯 가지 버전을 생성하는 것입니다.
+사용자 질문에 대한 다양한 관점을 생성함으로써, 당신의 목표는 사용자가 거리 기반 유사성 검색의 한계를 극복하도록 돕는 것입니다.
+응답은 새 줄로 구분된 값 목록이어야 합니다. 예를 들어, 'foo\nbar\nbaz\n`
+
+# 사용자 질문
+{question}
+
+# 최종 답변은 반드시 한국어로 해야합니다. 
+"""
+
+prompt_template = PromptTemplate.from_template(prompt)
+
+custom_multiquery_chain = (
+    {"question" : RunnablePassthrough()} | prompt_template | model | StrOutputParser()
+)
+
+question = "사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법"
+
+multi_queries = custom_multiquery_chain.invoke(question)
+# 인공 지능에서 높은 처리 능력을 가진 시스템을 구축하는 방법\n
+# 인공지능 시스템에서 효율적인 데이터 처리를 위한 전략\n
+# 인공 지능 시스템의 성능을 최적화하는 방법\n
+# 데이터 처리 속도와 정확성을 높이는 인공 지능 기술\n
+# 인공 지능에서 효율적인 학습 및 추론을 위한 방법론
+```  
+
+구현된 `custom_multiquery_chain` 은 아래와 같이 사용할 수 있다.
+
+```python
+my_multiquery_retriever = MultiQueryRetriever.from_llm(
+    llm=custom_multiquery_chain, retriever=vector_retriever
+)
+
+results = my_multiquery_retriever.invoke(question)
+# INFO:langchain.retrievers.multi_query:Generated queries: ['인간과 유사한 학습 및 추론 능력을 가진 시스템에서 높은 처리 능력을 보장하는 방법', '인공지능 시스템에서 학습 및 추론 성능을 향상시키는 방법', '사람처럼 학습하고 추론하는 시스템에서 높은 성능을 유지하기 위한 전략', '인간과 같은 지능을 가진 시스템에서 가용량을 최적화하는 방법', '인공지능 기반 시스템에서 효율적인 학습 및 추론을 위한 방법']
+# [Document(id='b14e072d-4b5f-479b-8653-7e3726bba53c', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='41e3b137-4b06-48fc-888d-cfcc90a631e1', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='c0feb1a0-695c-472b-9288-97fb89913084', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='fe0ae883-8248-4296-b39b-1e68c76ad742', metadata={'source': './computer-keywords.txt'}, page_content='CPU\n\n정의: CPU(Central Processing Unit)는 컴퓨터의 두뇌 역할을 하는 하드웨어 구성 요소로, 연산과 명령어 실행을 담당합니다.\n예시: Intel Core i9, AMD Ryzen 9 같은 프로세서는 고성능 컴퓨팅을 위한 CPU입니다.\n연관키워드: 프로세서, 코어, 클럭 속도, 연산 처리\n\nRAM'),
+#  Document(id='62ad24af-6d0f-423a-b42d-65696e34dabe', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능'),
+#  Document(id='8dcc4ee2-1100-4def-ab5d-c825eab62614', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='e4643bbf-3dce-41c8-add6-fc388b6c3279', metadata={'source': './computer-keywords.txt'}, page_content='로드 밸런서\n\n정의: 로드 밸런서는 여러 서버 간에 네트워크 트래픽을 분산시켜 성능과 가용성을 향상시키는 장치 또는 소프트웨어입니다.  \n예시: Nginx는 웹 서버와 애플리케이션 서버 사이의 로드 밸런서로 자주 사용됩니다.  \n연관키워드: 트래픽 분산, 서버 관리, 성능 최적화, 고가용성\n\nCI/CD'),
+#  Document(id='e1dfb4e6-b933-4ae2-bac8-4b2b9fb674ee', metadata={'source': './computer-keywords.txt'}, page_content='클러스터링\n\n정의: 클러스터링은 여러 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만드는 기술입니다.  \n예시: Kubernetes는 컨테이너를 클러스터로 관리하여 애플리케이션의 확장성과 안정성을 제공합니다.  \n연관키워드: 서버 그룹, 분산 시스템, 고가용성, 확장성\n\n데이터 암호화')]
+```
+
+
+
+
+---  
+## Reference
+[Retrievers](https://python.langchain.com/docs/concepts/retrievers/)  
+[How to add scores to retriever results](https://python.langchain.com/docs/how_to/add_scores_retriever)  
+
+
