@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain Retriever 1st"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 에서 Retriever 의 역할과 종류에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,15 @@ tags:
     - LangChain
     - AI
     - LLM
+    - Retriever
+    - RAG
+    - Vector Store
+    - Chroma
+    - VectorStoreRetriever
+    - BM25Retriever
+    - EnsembleRetriever
+    - ParentDocumentRetriever
+    - MultiQueryRetriever
 toc: true
 use_math: true
 ---  
@@ -784,5 +793,7 @@ results = my_multiquery_retriever.invoke(question)
 ## Reference
 [Retrievers](https://python.langchain.com/docs/concepts/retrievers/)  
 [How to add scores to retriever results](https://python.langchain.com/docs/how_to/add_scores_retriever)  
+[retrievers](https://python.langchain.com/api_reference/langchain/retrievers.html)  
+[검색기(Retriever)](https://wikidocs.net/233779)  
 
 
