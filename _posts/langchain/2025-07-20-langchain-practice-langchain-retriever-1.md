@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangChain] LangChain Retriever 1st"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
+  overlay_image: /img/langchain-bg-2.png
 excerpt: 'LangChain 에서 Retriever 의 역할과 종류에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
