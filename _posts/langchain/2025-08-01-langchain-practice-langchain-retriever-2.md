@@ -90,3 +90,22 @@ filter_results = filter_compression_retriever.invoke(query)
 #  Document(id='968f2bec-f220-4bf4-bffc-04da45cfa383', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화')]
 ```  
 
+
+#### LLMListwiseRerank
+`LLMListwiseRerank` 는 `LLM` 을 사용해 검색된 문서들을 리스트 단위로 재정렬하는 방식으로 최적의 순서를 결정한다. 
+문서의 전체적인 맥락과 쿼리와의 관련성을 평가해 더 적합한 순서를 제공한다.  
+
+```python
+from langchain.retrievers.document_compressors import LLMListwiseRerank
+
+listwise_rerank_compressor = LLMListwiseRerank.from_llm(model, top_n=1)
+
+listwise_rerank_compression_retriever = ContextualCompressionRetriever(
+    base_retriever=vector_retriever,
+    base_compressor=listwise_rerank_compressor
+)
+
+listwise_rerank_results = listwise_rerank_compression_retriever.invoke(query)
+# [Document(id='ddc32905-8496-4700-b4dd-570ed8539642', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치')]
+```  
+
