@@ -133,3 +133,48 @@ embeddings_filter_results = embeddings_filter_compression_retriever.invoke(query
 #  _DocumentWithState(metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화', state={'embedded_doc': [0.032147958874702454, 0.000486963166622445, ... ], 'query_similarity_score': np.float64(0.5188017648577985)})]
 ```  
 
+
+#### DocumentCompressorPipeline
+`DocumentCompressorPipline` 은 여러 문서 압축 도구를 체계적으로 연결하여 검색된 문서를 단계적으로 압축하는 파이프라인이다. 
+이를 통해 대규모 검색 결과를 효율적으로 처리하고, `LLM` 컨텍스트 제한에 맞는 최적화된 데이터를 반환할 수 있다.  
+
+아래 예시는 `TextSplitter` 를 사용해 문서를 더 작은 조각으로 분할하고, 
+`EmbeddingsRedundantFilter` 를 사용해 문서 간 임베딩 유사도를 기분으로 중복 문서를 제거한다. 
+그리고 `EmbeddingsFilter` 를 통해 특정 유사도 이상인 문서만 포함시키고, 
+최종적으로 `LLMChainExtractor` 를 사용해 문서 내용 중 중요한 정보만 추출하는 파이프라인이다.  
+
+```python
+from langchain.retrievers.document_compressors import DocumentCompressorPipeline
+from langchain_community.document_transformers import EmbeddingsRedundantFilter
+from langchain.retrievers.document_compressors import LLMChainExtractor
+from langchain_text_splitters import CharacterTextSplitter
+
+splitter = CharacterTextSplitter(chunk_size=200, chunk_overlap=0)
+
+redundant_filter = EmbeddingsRedundantFilter(
+    embeddings=hf_embeddings
+)
+
+relevant_filter = EmbeddingsFilter(
+    embeddings=hf_embeddings,
+    similarity_threshold=0.5
+)
+
+extractor = LLMChainExtractor.from_llm(model)
+
+pipeline_compressor = DocumentCompressorPipeline(
+    transformers=[splitter, redundant_filter, relevant_filter, extractor]
+)
+
+compression_retriever = ContextualCompressionRetriever(
+    base_compressor=pipeline_compressor,
+    base_retriever=vector_retriever
+)
+
+pipeline_results = compression_retriever.invoke(query)
+# [Document(metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전'),
+#  Document(metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링')]
+```
+
+
+
