@@ -178,3 +178,67 @@ pipeline_results = compression_retriever.invoke(query)
 
 
 
+
+
+### MultiVectorRetriever
+`MultiVectorRetriever` 는 문서를 여러 벡터로 저장하고 관리하여 검색 정확도와 효율성을 향상시키는 검색기이다. 
+문서당 여러 벡터를 생성하는 방법은 아래와 같다. 
+
+- 작은 청크 생성 : 문서를 작은 단위로 나누고 각 청크에 임베딩을 생성하여 세부 정보를 더 잘 탐색
+- 요약 임베딩 : 문서의 요약을 기반으로 임베딩을 생성해 핵심 내용을 빠르게 파악
+- 가설 질문 활용 : 문서별 가설 질문을 생성하고 이를 기반으로 임베딩을 만들어 다양한 관점에서 접근
+- 수동 추가 : 사용자가 직접 질문이나 쿼리를 추가해 맞춤형 검색 구현 
+
+위와 같은 방식을 사용해서 좀 더 풍부한 검색 결과를 제공할 수 있다.
+기존의 단일 벡터 스토어를 사용하는 검새긱와 달리, 
+여러 벡터 스토어를 병렬로 처리하여 각 스토어에서 검색된 결과를 통합하거나 가중치를 부여해 최종 결과를 반환한다. 
+
+
+#### Large Chunk & Small Chunk
+대용량 문서에서 정보를 검색해야 하는 경우, 큰 청크와 작은 청크를 병렬로 사용하는 방식을 통해 정확도와 포괄성을 동시에 확보할 수 있다. 
+큰 청크는 데이터의 더 큰 단위로 주로 문백을 잘 보존하며, 전체적인 흐름과 의미를 이해하는데 적합하다. 
+그리고 작은 청크는 데이터의 세부적인 단위로 상세한 정보나 특정 키워드에 민감한 검색을 가능하게 한다. 
+이렇게 서로 다른 특성을 가지고 있기 때문에 이를 함께 사용하면, 
+큰 청크가 문맥을 제공하고 작은 청크가 세부 정보를 보강하여 더 나은 검색 결과를 기대할 수 있다.  
+
+앞서 알아본 `ParentDocumentRetriever` 와의 차이는 `MultiVectorRetriever` 는 
+벡터 스토어에 큰 청크, 작은 청크를 모두 벡터화해 병렬로 검색하고 두 결과를 통합해 최적의 검색 결과를 제공한다. 
+반면 `ParentDocumentRetriever` 는 작은 청크만 벡터화해 검색에 사용하고, 
+최종 결과는 검색 결과로 나온 작은 청크의 원본(큰 청크)를 반환한다는 차이가 있다.  
+
+이러한 방식은 주로 문서의 계층적 구조가 중요할 떄나 
+범률 문서와 같이 전체 볍률 조항과 세부 특정 조항이 모두 필요한 경우 유용하다.  
+
+
+예제 진행을 위해 `컴퓨터 키워드 문서` 와 `부동산 키워드 문서` 를 사용한다.  
+
+```python
+import uuid
+from langchain.storage import InMemoryStore
+from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.retrievers.multi_vector import MultiVectorRetriever
+
+multi_vectorstore = Chroma(
+    collection_name="small_bigger_chunks",
+    embedding_function=hf_embeddings
+)
+
+store = InMemoryStore()
+
+id_key = "doc_id"
+
+multi_vector_retriever = MultiVectorRetriever(
+    vectorstore=multi_vectorstore,
+    byte_store=store,
+    id_key=id_key
+)
+
+docs = computerKeywordLoader.load() + propertyKeywordLoader.load()
+
+doc_ids = [str(uuid.uuid4()) for _ in docs]
+
+doc_ids
+```
+
+
