@@ -242,3 +242,186 @@ doc_ids
 ```
 
 
+
+### SelfQueryRetriever
+`SelfQueryRetriever` 는 사용자의 자연어 질문을 자동으로 해석하여 구조화된 쿼리와 메타데이터 필터로 변환한다. 
+이를 통해 더 정확하고 관련성 높은 문서를 검색할 수 있다. 
+자연어 질문에서 메타데이터 필터링 조건과 의미 검색 쿼리를 자동으로 추출하여 정확한 검색 결과를 제공하는 검색기이다.  
+
+동작 방식은 아래와 같다. 
+
+1. 질문 분석 : 사용자의 자연어 질문을 받아 `LLM` 을 사용해 분석
+2. 필터 추출 : 질문에서 메타데이터 필터링 조건을 식별
+3. 쿼리 변환 : 필터링 조건을 제외한 실제 검색 의도를 추출
+4. 병합 실행 : 의미 검색과 메타데이터 피렅링을 함께 적용하여 결과 반환
+
+주요한 특징을 정리하면 다음과 같다. 
+
+- 메타데이터 기반 필터링 : 메타데이터의 필드를 다양한 조건으로 검색 가능하다. 숫자 범위, 문자열 일치, 불리언 조건 등 가능하다. 
+- 자연어 이해 : 자연어인 `최근 2년 이내` 를 `year >= 2023` 와 같이 자동으로 메타데이터 조건으로 변환할 수 있다. 
+- 결합된 검색 : 의미 기반 검색과 메타데이터 필터링을 단일 쿼리로 통합할 수 있다. 
+
+지원하는 필터 연산자를 정리하면 다음과 같다. (이는 벡터 저장소 구현에 따라 지원이 달라질 수 있다.)
+
+- `eq` : 같음
+- `ne` 같지 않음
+- `lt/gt` 작음/큼
+- `lte/gte` 작거나 같음/크거나 같음
+- `in` : 리스트에 포함됨
+- `nin` : 리스트에 포함되지 않음
+- `and/or/not` : 논리 연산자 
+
+예제는 컴퓨터 관련 제품에 대한 문서에 출시년도, 카테고리 등 메타정보를 추가해서 `Chroma` 벡터 저장소에 저장해 진행한다.  
+
+```python
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+
+docs = [
+    Document(
+        page_content="최신 M3 프로세서를 탑재한 고성능 노트북, 복잡한 작업도 빠르게 처리하고 배터리 효율성이 뛰어납니다.",
+        metadata={"year": 2024, "category": "hardware", "user_rating": 4.7},
+    ),
+    Document(
+        page_content="Adobe Photoshop 2025 버전, AI 기능이 강화되어 이미지 편집이 더욱 직관적이고 효율적으로 개선되었습니다.",
+        metadata={"year": 2025, "category": "software", "user_rating": 4.5},
+    ),
+    Document(
+        page_content="Wi-Fi 7 기술 지원 무선 공유기, 더 넓은 대역폭과 낮은 지연 시간으로 안정적인 네트워크 환경을 제공합니다.",
+        metadata={"year": 2023, "category": "netwoking", "user_rating": 4.8},
+    ),
+    Document(
+        page_content="엔비디아 RTX 4090 그래픽카드, 8K 게이밍과 딥러닝 작업에 최적화된 성능을 제공합니다.",
+        metadata={"year": 2023, "category": "hardware", "user_rating": 4.6},
+    ),
+    Document(
+        page_content="올인원 안티바이러스 솔루션, 실시간 모니터링과 AI 기반 위협 감지로 시스템을 안전하게 보호합니다.",
+        metadata={"year": 2024, "category": "security", "user_rating": 4.4},
+    ),
+    Document(
+        page_content="32인치 4K HDR 모니터, 넓은 색 영역과 높은 주사율로 생생한 디스플레이 환경을 제공합니다.",
+        metadata={"year": 2024, "category": "peripherals", "user_rating": 4.9},
+    ),
+    Document(
+        page_content="클라우드 기반 백업 솔루션, 자동 동기화와 버전 관리 기능으로 중요한 데이터를 안전하게 보관합니다.",
+        metadata={"year": 2023, "category": "cloud", "user_rating": 4.5},
+    ),
+    Document(
+        page_content="기계 학습 개발 키트, 코딩 경험이 적은 사용자도 쉽게 AI 모델을 훈련하고 배포할 수 있습니다.",
+        metadata={"year": 2025, "category": "ai", "user_rating": 4.7},
+    ),
+    Document(
+        page_content="인체공학적 무선 키보드, 손목 피로를 줄이고 장시간 타이핑에도 편안함을 제공합니다.",
+        metadata={"year": 2024, "category": "peripherals", "user_rating": 4.3},
+    ),
+    Document(
+        page_content="컨테이너 기반 가상화 플랫폼, 애플리케이션 개발과 배포를 간소화하여 DevOps 환경을 최적화합니다.",
+        metadata={"year": 2023, "category": "software", "user_rating": 4.8},
+    ),
+]
+
+self_query_store = Chroma.from_documents(
+    docs, hf_embeddings, collection_name="self_query_retriever"
+)
+
+```  
+
+`SelfQueryRetriever` 는 문서가 지원하는 메타데이터 필드와 문서 내용에 대한 간단한 설명을 제공해야 한다. 
+이는 `AttributeInfo` 를 사용해 제공할 수 있다. 
+
+```python
+from langchain.chains.query_constructor.base import AttributeInfo
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+
+
+metadata_field_info = [
+    AttributeInfo(
+        name="category",
+        description="The category of the cosmetic product. One of ['hardware', 'software', 'networking', 'security', 'peripherals', 'cloud', 'ai']",
+        type="string",
+    ),
+    AttributeInfo(
+        name="year",
+        description="The year the cosmetic product was released",
+        type="integer",
+    ),
+    AttributeInfo(
+        name="user_rating",
+        description="A user rating for the cosmetic product, ranging from 1 to 5",
+        type="float",
+    ),
+]
+```  
+
+위에 작성한 메타데이터 필드에 대한 정의를 사용해 `SelfQueryRetriever` 를 생성한다. 
+검색기가 실제로 사용하는 쿼리를 확인하기 위해 `verbose=True` 로 설정하고 로깅 레벨 설정도 추가한다.  
+
+```python
+from langchain.retrievers.self_query.base import SelfQueryRetriever
+import logging
+
+self_query_retriever = SelfQueryRetriever.from_llm(
+    llm=model,
+    vectorstore=self_query_store,
+    document_contents="컴퓨터 관련 제품 설명",
+    metadata_field_info=metadata_field_info,
+    verbose=True
+)
+
+logging.getLogger("langchain.retrievers.self_query").setLevel(logging.INFO)
+```  
+
+메타데이터 필터링과 관련된 쿼리를 테스트해 보면 아래와 같다.  
+
+```python
+self_query_result = self_query_retriever.invoke('별점이 4.5')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='user_rating', value=4.5) limit=None
+# [Document(id='65563f51-143d-4bfa-b1e8-4d67ced6e99e', metadata={'category': 'software', 'user_rating': 4.5, 'year': 2025}, page_content='Adobe Photoshop 2025 버전, AI 기능이 강화되어 이미지 편집이 더욱 직관적이고 효율적으로 개선되었습니다.'),
+#  Document(id='e06b8d92-e805-445b-a395-6716063aa2f0', metadata={'category': 'cloud', 'user_rating': 4.5, 'year': 2023}, page_content='클라우드 기반 백업 솔루션, 자동 동기화와 버전 관리 기능으로 중요한 데이터를 안전하게 보관합니다.')]
+
+self_query_result = self_query_retriever.invoke('별점이 4.5 이상인 것들')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Comparison(comparator=<Comparator.GTE: 'gte'>, attribute='user_rating', value=4.5) limit=None
+# [Document(id='7539eba0-8de4-45fd-91c2-8de33f978921', metadata={'category': 'peripherals', 'user_rating': 4.9, 'year': 2024}, page_content='32인치 4K HDR 모니터, 넓은 색 영역과 높은 주사율로 생생한 디스플레이 환경을 제공합니다.'),
+#  Document(id='2a0df170-2234-4cfd-a592-996c1af46c6a', metadata={'category': 'netwoking', 'user_rating': 4.8, 'year': 2023}, page_content='Wi-Fi 7 기술 지원 무선 공유기, 더 넓은 대역폭과 낮은 지연 시간으로 안정적인 네트워크 환경을 제공합니다.'),
+#  Document(id='85dc50d9-e8f1-40a9-97b0-d6b090654d52', metadata={'category': 'hardware', 'user_rating': 4.6, 'year': 2023}, page_content='엔비디아 RTX 4090 그래픽카드, 8K 게이밍과 딥러닝 작업에 최적화된 성능을 제공합니다.'),
+#  Document(id='d543fd69-2232-4f37-8de6-37fb0cfa9290', metadata={'category': 'hardware', 'user_rating': 4.7, 'year': 2024}, page_content='최신 M3 프로세서를 탑재한 고성능 노트북, 복잡한 작업도 빠르게 처리하고 배터리 효율성이 뛰어납니다.')]
+
+self_query_result = self_query_retriever.invoke('별점이 4.5 또는 4.9인 것들')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Operation(operator=<Operator.OR: 'or'>, arguments=[Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='user_rating', value=4.5), Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='user_rating', value=4.9)]) limit=None
+# [Document(id='7539eba0-8de4-45fd-91c2-8de33f978921', metadata={'category': 'peripherals', 'user_rating': 4.9, 'year': 2024}, page_content='32인치 4K HDR 모니터, 넓은 색 영역과 높은 주사율로 생생한 디스플레이 환경을 제공합니다.'),
+#  Document(id='65563f51-143d-4bfa-b1e8-4d67ced6e99e', metadata={'category': 'software', 'user_rating': 4.5, 'year': 2025}, page_content='Adobe Photoshop 2025 버전, AI 기능이 강화되어 이미지 편집이 더욱 직관적이고 효율적으로 개선되었습니다.'),
+#  Document(id='e06b8d92-e805-445b-a395-6716063aa2f0', metadata={'category': 'cloud', 'user_rating': 4.5, 'year': 2023}, page_content='클라우드 기반 백업 솔루션, 자동 동기화와 버전 관리 기능으로 중요한 데이터를 안전하게 보관합니다.')]
+
+self_query_result = self_query_retriever.invoke('카테고리가 하드웨어 인것')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='category', value='hardware') limit=None
+# [Document(id='85dc50d9-e8f1-40a9-97b0-d6b090654d52', metadata={'category': 'hardware', 'user_rating': 4.6, 'year': 2023}, page_content='엔비디아 RTX 4090 그래픽카드, 8K 게이밍과 딥러닝 작업에 최적화된 성능을 제공합니다.'),
+#  Document(id='d543fd69-2232-4f37-8de6-37fb0cfa9290', metadata={'category': 'hardware', 'user_rating': 4.7, 'year': 2024}, page_content='최신 M3 프로세서를 탑재한 고성능 노트북, 복잡한 작업도 빠르게 처리하고 배터리 효율성이 뛰어납니다.')]
+
+self_query_result = self_query_retriever.invoke('카테고리가 소프트웨어 인것')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='category', value='software') limit=None
+# [Document(id='e706c8a0-27a1-4f4e-84c0-43f4b633296c', metadata={'category': 'software', 'user_rating': 4.8, 'year': 2023}, page_content='컨테이너 기반 가상화 플랫폼, 애플리케이션 개발과 배포를 간소화하여 DevOps 환경을 최적화합니다.'),
+#  Document(id='65563f51-143d-4bfa-b1e8-4d67ced6e99e', metadata={'category': 'software', 'user_rating': 4.5, 'year': 2025}, page_content='Adobe Photoshop 2025 버전, AI 기능이 강화되어 이미지 편집이 더욱 직관적이고 효율적으로 개선되었습니다.')]
+
+self_query_result = self_query_retriever.invoke('카테고리가 소프트웨어 이면서 별점이 4.7 이상')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query=' ' filter=Operation(operator=<Operator.AND: 'and'>, arguments=[Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='category', value='software'), Comparison(comparator=<Comparator.GTE: 'gte'>, attribute='user_rating', value=4.7)]) limit=None
+# [Document(id='e706c8a0-27a1-4f4e-84c0-43f4b633296c', metadata={'category': 'software', 'user_rating': 4.8, 'year': 2023}, page_content='컨테이너 기반 가상화 플랫폼, 애플리케이션 개발과 배포를 간소화하여 DevOps 환경을 최적화합니다.')]
+```  
+
+좀 더 복합하게 자연어와 메타데이터 필터링을 결합한 질의를 수행하면 아래와 같다. 
+
+```python
+self_query_result = self_query_retriever.invoke('사람과 같이 학습하고 추론할 수 있는 것을 만드는데 필요한 제품 중 평점이 4.5 이상인 것에 대해 알려줘')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query='인공지능' filter=Operation(operator=<Operator.AND: 'and'>, arguments=[Comparison(comparator=<Comparator.GTE: 'gte'>, attribute='user_rating', value=4.5), Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='category', value='ai')]) limit=None
+# [Document(id='fdc258be-ec1e-42d8-9b6b-373467c23b72', metadata={'category': 'ai', 'user_rating': 4.7, 'year': 2025}, page_content='기계 학습 개발 키트, 코딩 경험이 적은 사용자도 쉽게 AI 모델을 훈련하고 배포할 수 있습니다.')]
+
+self_query_result = self_query_retriever.invoke('최근 3년 이내 제품 중 해킹 방어에 도움이 되는 제품을 알려줘')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query='해킹 방어' filter=Operation(operator=<Operator.AND: 'and'>, arguments=[Comparison(comparator=<Comparator.GTE: 'gte'>, attribute='year', value=2021), Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='category', value='security')]) limit=None
+# [Document(id='9649cd6d-6013-483f-8f40-04a8d7ee9e20', metadata={'category': 'security', 'user_rating': 4.4, 'year': 2024}, page_content='올인원 안티바이러스 솔루션, 실시간 모니터링과 AI 기반 위협 감지로 시스템을 안전하게 보호합니다.')]
+
+self_query_result = self_query_retriever.invoke('서버를 구성할 때 필요한 제품중 2023년에 출시한 제품을 알려줘')
+# INFO:langchain.retrievers.self_query.base:Generated Query: query='서버 구성' filter=Comparison(comparator=<Comparator.EQ: 'eq'>, attribute='year', value=2023) limit=None
+# [Document(id='eca8d856-5c98-4f8a-a281-c8b4528f63c1', metadata={'category': 'software', 'user_rating': 4.8, 'year': 2023}, page_content='컨테이너 기반 가상화 플랫폼, 애플리케이션 개발과 배포를 간소화하여 DevOps 환경을 최적화합니다.'),
+#  Document(id='4647e795-b8f9-49fd-96b4-f0896e8af69c', metadata={'category': 'netwoking', 'user_rating': 4.8, 'year': 2023}, page_content='Wi-Fi 7 기술 지원 무선 공유기, 더 넓은 대역폭과 낮은 지연 시간으로 안정적인 네트워크 환경을 제공합니다.'),
+#  Document(id='66e8b875-629f-4452-a1ef-a13a7f8e6620', metadata={'category': 'cloud', 'user_rating': 4.5, 'year': 2023}, page_content='클라우드 기반 백업 솔루션, 자동 동기화와 버전 관리 기능으로 중요한 데이터를 안전하게 보관합니다.'),
+#  Document(id='a6b14a4d-9ce1-485b-b17c-e0915c3eaa14', metadata={'category': 'hardware', 'user_rating': 4.6, 'year': 2023}, page_content='엔비디아 RTX 4090 그래픽카드, 8K 게이밍과 딥러닝 작업에 최적화된 성능을 제공합니다.')]
+```
