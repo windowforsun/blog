@@ -557,3 +557,113 @@ high_time_weighted_retriever.invoke("노트북")
 [mock_now](https://python.langchain.com/docs/how_to/time_weighted_vectorstore/#virtual-time) 
 함수는 `LangChain` 에서 제공하는 유틸리티로, 현재 시간을 `mock` 하는 역할을 수행한다.  
 
+
+### LongContextReorder
+`LongConextReorder` 는 대규모 문맥(`long context`)을 처리할 떄, 제공된 텍스트를 중요도에 따라 재정렬하여 보다 효율적으로 처리할 수 있도록 돕는 기능이다.
+이 기능은 모델에 입력하기 전에 데이터를 재구성하여 중요한 정보가 우선적으로 처리되도록 한다. 
+재구성된 결과는 가장 중요한 정보가 시작과 끝에 오도록 재배치한다.  
+
+- `LLM` 모델 주요 특징 : `LLM` 은 텍스트의 앞부분과 끝부분에 있는 정보를 더 잘 이애하고 반응하는 경향이 있다. [참고](https://arxiv.org/abs/2307.03172)
+- 중요 정보 우선 처리 : 대규모 문서나 데이터셋에서 중요한 정보를 우선적으로 모델에 전달할 수 있다.
+- 효율적 정보 전달 : 모델이 가장 중요한 정보부터 처리하도록 데이터의 순서를 재배치하여, 결과적으로 더 정확하고 유용한 응답을 얻을 수 있다.
+
+벡터 검색기의 결과를 `LongContextReorder` 를 사용해 재정렬하면 아래와 같다.  
+
+```python
+from langchain_community.document_transformers import LongContextReorder
+
+
+test_vector_retriever = memory_db.as_retriever(search_kwargs={"k":6 })
+docs = test_vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은 ?")
+# [Document(id='15ea84e6-f27b-4017-b99f-dadd738f0b7c', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='67e5572a-2727-4fc0-b3db-02e73f04f83b', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='1f727ace-037a-49ff-92f7-5c7261a39905', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='790e5d6c-5f54-438e-8811-f7e589df4604', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='029ac855-e8b0-4e89-9e31-55a638910217', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능'),
+#  Document(id='0f897f42-735c-4708-b2f2-9ebaf4494758', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝')]
+
+# 재정렬
+reordering = LongContextReorder()
+reordered_docs = reordering.transform_documents(docs)
+# [Document(id='67e5572a-2727-4fc0-b3db-02e73f04f83b', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='790e5d6c-5f54-438e-8811-f7e589df4604', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='0f897f42-735c-4708-b2f2-9ebaf4494758', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝'),
+#  Document(id='029ac855-e8b0-4e89-9e31-55a638910217', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능'),
+#  Document(id='1f727ace-037a-49ff-92f7-5c7261a39905', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='15ea84e6-f27b-4017-b99f-dadd738f0b7c', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치')]
+```  
+
+위 재정렬된 결과를 보면 질의 중에서 가장 중요한 인공지능과 머신러닝에 대한 문서가 시작과 끝에 위치한 것을 확인할 수 있다.  
+
+`ContextReorder` 를 검색기와 함께 사용하는 구현 예시는 아래와 같다.  
+
+```python
+
+from langchain.prompts import ChatPromptTemplate
+from operator import itemgetter
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
+
+def format_docs(docs):
+  return "\n\n\n".join(
+      [
+          f"[{i}] {doc.page_content}"
+          for i, doc in enumerate(docs)
+      ]
+  )
+
+def reorder_documents(docs):
+  reordering = LongContextReorder()
+  redordered_docs = reordering.transform_documents(docs)
+  result = format_docs(redordered_docs) 
+  print(result)
+  return result
+
+
+template = """다음 텍스트 발췌를 참고하세요:
+{context}
+
+-----
+다음 질문에 답변해주세요:
+{query}
+
+다음 언어로 답변해주세요: {lang}
+"""
+
+prompt = ChatPromptTemplate.from_template(template)
+
+chain = (
+        {
+          "context": itemgetter("query")
+                     | test_vector_retriever
+                     | RunnableLambda(reorder_documents),
+          "query" : itemgetter("query"),
+          "lang" : itemgetter("lang")
+        }
+        | prompt
+        | model
+        | StrOutputParser()
+)
+```  
+
+```python
+results = chain.invoke({
+      "query" : "사람처럼 학습하고 추론하는 시스템에서 높은 가용량을 보장하는 방법은 ?",
+      "lang" : "한국어"
+    })
+# 인공지능(AI) 시스템에서 높은 가용성을 보장하는 방법은 여러 가지가 있습니다. 하지만, 가장 대표적인 방법은 분산 시스템을 활용하여 클러스터링하는 것입니다. 클러스터링을 통해 여러 대의 컴퓨터 또는 서버를 결합하여 하나의 시스템처럼 작동하도록 만듭니다. 이렇게 하면, 시스템의 일부가 장애가 발생하더라도 다른 컴퓨터 또는 서버가 작업을 인계받아 시스템의 가용성을 높일 수 있습니다. 예를 들어, Kubernetes와 같은 컨테이너 오케스트레이션 도구를 사용하여 클러스터를 관리하면, 애플리케이션의 확장성과 안정성을 제공할 수 있습니다.
+```
+
+
+
+---  
+## Reference
+[Retrievers](https://python.langchain.com/docs/concepts/retrievers/)  
+[How to do retrieval with contextual compression](https://python.langchain.com/docs/how_to/contextual_compression/)  
+[Self-querying retrievers](https://python.langchain.com/docs/integrations/retrievers/self_query/)  
+[time-weighted vectorstore retrievers](https://python.langchain.com/docs/how_to/time_weighted_vectorstore/#virtual-time)  
+[How to add scores to retriever results](https://python.langchain.com/docs/how_to/add_scores_retriever)  
+[retrievers](https://python.langchain.com/api_reference/langchain/retrievers.html)  
+[검색기(Retriever)](https://wikidocs.net/233779)  
+
+
