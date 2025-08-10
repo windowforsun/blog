@@ -4,7 +4,7 @@ classes: wide
 title: "[LangChain] LangChain Prompt"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 에서 Retriever 의 역할과 종류에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,20 @@ tags:
     - LangChain
     - AI
     - LLM
+    - Retriever
+    - RAG
+    - Vector Store
+    - Chroma
+    - ContextualCompressionRetriever
+    - LLMChainExtractor
+    - LLMChainFilter
+    - LLMListwiseRerank
+    - EmbeddingsFilter
+    - DocumentCompressorPipeline
+    - MultiVectorRetriever
+    - SelfQueryRetriever
+    - TimeWeightedVectorStoreRetriever
+    - LongContextReorder
 toc: true
 use_math: true
 ---  
