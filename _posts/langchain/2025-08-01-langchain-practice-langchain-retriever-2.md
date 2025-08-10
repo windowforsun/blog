@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain]LangChain Retriever 2nd"
 header:
   overlay_image: /img/langchain-bg-2.jpg
 excerpt: 'LangChain 에서 Retriever 의 역할과 종류에 대해 알아보자'
