@@ -384,3 +384,47 @@ TLS/SSL
 예시: 온라인 뱅킹 웹사이트는 TLS 1.3을 사용하여 사용자의 금융 정보를 보호합니다. 
 연관키워드: 암호화, 인증서, HTTPS, 보안 통신, 데이터 무결성
 ```  
+
+```python
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_community.document_loaders import TextLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+
+# 벡터 저장소에서 사용할 입베딩 함수
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+# 텍스트 문서 로드
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=100)
+computerKeywordLoader = TextLoader("./computer-keywords.txt")
+split_computer_keywords = computerKeywordLoader.load_and_split(text_splitter)
+
+# 벡터 저장소 생성
+memory_db = Chroma.from_documents(documents=split_computer_keywords, embedding=hf_embeddings, collection_name="computer_keywords_db")
+vector_retriever = memory_db.as_retriever(search_kwargs={"k":10})
+vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='0c3bb309-a2af-4e14-b71a-8cd3249dc02e', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='18de0a53-bcb1-4cf6-af86-8bd1e0c03238', metadata={'source': './computer-keywords.txt'}, page_content='전이 학습\n\n정의: 전이 학습은 한 문제에서 학습된 지식을 관련된 다른 문제에 적용하는 머신러닝 기법입니다. \n예시: BERT 모델은 대규모 텍스트 데이터로 사전 학습된 후, 특정 자연어 처리 작업에 맞게 미세 조정됩니다. \n연관키워드: 머신러닝, 딥러닝, 사전학습, 미세조정, NLP\n\n컨테이너 오케스트레이션'),
+#  Document(id='ac0d7145-6ab9-48d3-991d-503e5c87b38e', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='217d1477-cd0e-454f-a629-0cb9bda6ac4d', metadata={'source': './computer-keywords.txt'}, page_content='양자 컴퓨팅\n\n정의: 양자 컴퓨팅은 양자역학의 원리를 활용하여 특정 유형의 문제를 기존 컴퓨터보다 더 효율적으로 해결하는 컴퓨팅 형태입니다. \n예시: IBM Quantum은 클라우드를 통해 양자 컴퓨터에 접근할 수 있는 서비스를 제공하여 연구자들이 양자 알고리즘을 개발할 수 있게 합니다. \n연관키워드: 큐비트, 양자 얽힘, 양자 중첩, 양자 게이트, 양자 우위\n\nTLS/SSL'),
+#  Document(id='aec74c0c-62f1-4b4b-990f-dc1d8dae7647', metadata={'source': './computer-keywords.txt'}, page_content='엣지 컴퓨팅\n\n정의: 엣지 컴퓨팅은 데이터 생성 지점 가까이에서 처리를 수행하여 지연 시간을 줄이고 대역폭 사용을 최적화하는 분산형 컴퓨팅 패러다임입니다. \n예시: 스마트 공장에서는 엣지 컴퓨팅 기술을 활용해 장비 센서 데이터를 실시간으로 분석하여 즉각적인 의사결정을 내립니다. \n연관키워드: 클라우드 컴퓨팅, IoT, 분산 처리, 실시간 분석, 지연 최소화\n\nGraphQL API'),
+#  Document(id='2ea1703a-0e4e-40bd-8f03-fe7497219607', metadata={'source': './computer-keywords.txt'}, page_content='알고리즘\n\n정의: 알고리즘은 특정 문제를 해결하기 위한 명확하게 정의된 일련의 단계적 절차입니다.\n예시: 구글의 검색 엔진은 PageRank 알고리즘을 사용하여 웹페이지의 관련성과 중요도를 평가합니다.\n연관키워드: 데이터 구조, 복잡도, 정렬, 검색, 최적화\n\nDNS'),
+#  Document(id='f2eae6f0-e54a-43b1-bc43-2bf82dd8e9e5', metadata={'source': './computer-keywords.txt'}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD'),
+#  Document(id='d045bed5-6752-4178-8ec6-897da2c22c76', metadata={'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능'),
+#  Document(id='86d06797-dfce-4c09-94ef-fcba2d754832', metadata={'source': './computer-keywords.txt'}, page_content='컨테이너 오케스트레이션\n\n정의: 컨테이너 오케스트레이션은 컨테이너화된 애플리케이션의 배포, 확장, 관리, 네트워킹을 자동화하는 기술입니다. \n예시: Kubernetes는 자동 확장, 로드 밸런싱, 장애 복구 기능을 갖춘 인기 있는 컨테이너 오케스트레이션 플랫폼입니다. \n연관키워드: 가상화, Docker, 마이크로서비스, DevOps, 클라우드 네이티브\n\nDDoS 방어'),
+#  Document(id='1505f316-8659-4958-ac70-1e3a293c89d8', metadata={'source': './computer-keywords.txt'}, page_content='빅데이터\n\n정의: 빅데이터는 기존 데이터베이스 도구로 처리하기 어려운 대량의 정형 및 비정형 데이터를 의미합니다.\n예시: 소셜 미디어 플랫폼은 매일 페타바이트 규모의 사용자 활동 데이터를 분석하여 맞춤 콘텐츠를 제공합니다.\n연관키워드: 하둡, 스파크, 데이터 마이닝, 분석, 볼륨\n\n머신러닝')]
+```  
+
+벡터 저장소는 `Reranker` 테스트를 위해 10개의 문서를 가져온다.  
