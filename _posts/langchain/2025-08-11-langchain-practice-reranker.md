@@ -428,3 +428,33 @@ vector_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
 ```  
 
 벡터 저장소는 `Reranker` 테스트를 위해 10개의 문서를 가져온다.  
+
+
+### Cross Encoder Reranker
+`Cross Encoder Reranker` 는 앞서 설명한 것과 같이, 
+쿼리와 검색된 문서를 동시에 인코딩하여 관련성 점수를 계산하는 모델이다. 
+이는 검색 파이프라인에서 초기 검색 결과(`retriever`)의 순위를 다시 매기는데 사용할 수 있다. 
+
+
+
+예제에서는 `HuggingFace` 에서 다국어 지원 `cross encoder` 모델인 [BAAI/bge-reranker-v2-m3](https://huggingface.co/BAAI/bge-reranker-v2-m3)
+을 사용해 `CrossEncoderReranker` 를 구현한다.  
+
+```python
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+
+model = HuggingFaceCrossEncoder(model_name="BAAI/bge-reranker-v2-m3")
+
+cross_encoder_compressor = CrossEncoderReranker(model=model, top_n=3)
+
+cross_encoder_compression_retriever = ContextualCompressionRetriever(
+    base_compressor=cross_encoder_compressor, base_retriever=vector_retriever
+)
+
+result = cross_encoder_compression_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(id='41e7dfa0-24b4-4469-b9fb-33e50046de8f', metadata={'source': './computer-keywords.txt'}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(id='f4cb593b-211d-4a50-8e39-cd04fde5abfc', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(id='8afb5185-2133-4c5a-a339-297cd5503574', metadata={'source': './computer-keywords.txt'}, page_content='전이 학습\n\n정의: 전이 학습은 한 문제에서 학습된 지식을 관련된 다른 문제에 적용하는 머신러닝 기법입니다. \n예시: BERT 모델은 대규모 텍스트 데이터로 사전 학습된 후, 특정 자연어 처리 작업에 맞게 미세 조정됩니다. \n연관키워드: 머신러닝, 딥러닝, 사전학습, 미세조정, NLP\n\n컨테이너 오케스트레이션')]
+```  
