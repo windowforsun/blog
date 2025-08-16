@@ -458,3 +458,30 @@ result = cross_encoder_compression_retriever.invoke("사람처럼 학습하고 �
 #  Document(id='f4cb593b-211d-4a50-8e39-cd04fde5abfc', metadata={'source': './computer-keywords.txt'}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
 #  Document(id='8afb5185-2133-4c5a-a339-297cd5503574', metadata={'source': './computer-keywords.txt'}, page_content='전이 학습\n\n정의: 전이 학습은 한 문제에서 학습된 지식을 관련된 다른 문제에 적용하는 머신러닝 기법입니다. \n예시: BERT 모델은 대규모 텍스트 데이터로 사전 학습된 후, 특정 자연어 처리 작업에 맞게 미세 조정됩니다. \n연관키워드: 머신러닝, 딥러닝, 사전학습, 미세조정, NLP\n\n컨테이너 오케스트레이션')]
 ```  
+
+
+### Cohere Reranker
+`Cohere Reranker` 는 `Cohere` API를 사용하여 쿼리와 문서의 관련성을 평가하는 모델이다. 
+이 또한 `Cross Encoder` 방식으로 동작한다.  
+
+`Cohere API Key` 발급이 필요한데 [여기](https://dashboard.cohere.com/)
+에서 발급 받을 수 있다. 
+
+
+```python
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain_cohere import CohereRerank
+import os
+
+os.environ["CO_API_KEY"] = "api key"
+cohere_compressor = CohereRerank(model="rerank-multilingual-v3.0")
+cohere_compression_retriever = ContextualCompressionRetriever(
+    base_compressor=cohere_compressor, base_retriever=vector_retriever
+)
+
+result = cohere_compression_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(metadata={'source': './computer-keywords.txt', 'relevance_score': 0.9828892}, page_content='인공지능\n\n정의: 인공지능(AI)은 인간의 지능을 모방하여 학습, 추론, 문제 해결, 자연어 처리 등을 수행할 수 있는 시스템과 기계를 만드는 과학입니다.\n예시: 음성 비서인 시리, 알렉사, 구글 어시스턴트는 AI 기술을 활용하여 자연어로 사용자와 상호작용합니다.\n연관키워드: 머신러닝, 딥러닝, 신경망, 자연어 처리, 컴퓨터 비전\n\n네트워크 스위치'),
+#  Document(metadata={'source': './computer-keywords.txt', 'relevance_score': 0.4737637}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
+#  Document(metadata={'source': './computer-keywords.txt', 'relevance_score': 0.0130707845}, page_content='GPU\n\n정의: GPU(Graphics Processing Unit)는 컴퓨터의 그래픽 렌더링과 복잡한 병렬 처리를 전문적으로 수행하는 프로세서입니다.\n예시: NVIDIA GeForce RTX 3080은 게임 및 인공지능 학습에 활용되는 고성능 GPU입니다.\n연관키워드: 그래픽 카드, 렌더링, CUDA, 병렬 처리\n\nSSD')]
+```  
+
