@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain Reranker"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+  overlay_image: /img/langchain-bg-2.png
+excerpt: 'LangChain 에서 정보의 검색이나 생성형 인공지능 파이프라인에서 여러 후보 결과를 다시 평가해서 최적의 순서로 재졍렬하는 Reranker 에 대해 알아보자.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,15 @@ tags:
     - LangChain
     - AI
     - LLM
+    - Reranker
+    - RAG
+    - Retriever
+    - Cross-Encoder
+    - Bi-Encoder
+    - Cross Encoder Reranker
+    - Cohere Reranker
+    - FlashRank Reranker
+    - Jina Reranker
 toc: true
 use_math: true
 ---  
@@ -538,3 +547,31 @@ result = flashrank_compression_retriever.invoke("사람처럼 학습하고 추�
 #  Document(metadata={'id': 3, 'relevance_score': np.float32(0.99951947), 'source': './computer-keywords.txt'}, page_content='양자 컴퓨팅\n\n정의: 양자 컴퓨팅은 양자역학의 원리를 활용하여 특정 유형의 문제를 기존 컴퓨터보다 더 효율적으로 해결하는 컴퓨팅 형태입니다. \n예시: IBM Quantum은 클라우드를 통해 양자 컴퓨터에 접근할 수 있는 서비스를 제공하여 연구자들이 양자 알고리즘을 개발할 수 있게 합니다. \n연관키워드: 큐비트, 양자 얽힘, 양자 중첩, 양자 게이트, 양자 우위\n\nTLS/SSL'),
 #  Document(metadata={'id': 7, 'relevance_score': np.float32(0.99951446), 'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능')]
 ```  
+
+### Compare Reranker
+
+| 구분               | FlashRank Reranker                                                       | Cross Encoder Reranker        | Cohere Reranker                  | Jina Reranker                       |
+|--------------------|--------------------------------------------------------------------------|-------------------------------|-----------------------------------|-------------------------------------|
+| 정의/제공자    | 빠르고 정밀한 오픈소스 리랭커                           | Cross-Encoder 구조 모델        | Cohere사의 상용 Cross-Encoder API | Jina AI의 오픈소스 리랭커 라이브러리 |
+| 동작 원리      | 쿼리-문서 쌍을 Cross-Encoder 구조로 평가하되, 속도 최적화                 | 쿼리-문서 쌍을 Cross-Encoder로 평가 | Cohere API에서 Cross-Encoder로 평가 | 다양한 모델로 쿼리-문서 쌍 평가     |
+| 주요 특징      | Cross-Encoder급 정확도, 매우 빠름, CPU/GPU 지원, 로컬 설치                | 정확도 최고, 느림(후보 많으면 부담) | SaaS, 별도 인프라 불필요, 쉽고 빠름 | 오픈소스, 다양한 모델, 커스텀 가능   |
+| 대표 모델      | BGE, MiniLM, Mistral 등                                                  | ms-marco-MiniLM, BERT 등      | cohere.rerank-english-v2 등       | jinaai/jina-reranker-v1-base-en 등  |
+| 사용 방식      | pip설치 후 Python에서 직접 사용, 서버리스도 가능                          | 직접 모델 로드/추론            | API 호출, API 키 필요             | pip설치 후 Python에서 직접 사용      |
+| 속도           | 매우 빠름 (동급 대비 수~수십배↑)                                      | 느림                          | 빠른 편(클라우드)                 | 모델/환경 따라 다름                 |
+| 정확도         | Cross-Encoder와 유사 (리더보드 상위권)                                   | 최고 (최신 모델일수록↑)        | 최고 수준                         | Cross-Encoder 선택 가능              |
+| 비용           | 무료(오픈소스)                                                           | 무료(오픈소스)                 | 유료(API 사용료)                  | 무료(오픈소스)                      |
+| 커스터마이즈   | 모델 교체, 로컬 커스텀 가능                                               | 자유롭게 가능                  | 제한적                            | 자유롭게 가능                       |
+| 장점           | 빠름, 정확, 오픈소스, 실무 적용 쉬움                                     | 정확, 다양한 모델              | 쉬운 사용, 인프라 불필요           | 다양한 모델, 오픈소스, 커스텀 가능   |
+| 단점           | 인프라 직접 구축 필요(클라우드 X)                                         | 느림, 인프라 필요              | 커스텀 불가, 비용발생              | 인프라 직접 구축 필요                |
+
+
+
+---  
+## Reference
+[RankLLM Reranker](https://python.langchain.com/docs/integrations/document_transformers/rankllm-reranker/)  
+[Cohere reranker](https://python.langchain.com/docs/integrations/retrievers/cohere-reranker/)  
+[FlashRank reranker](https://python.langchain.com/docs/integrations/retrievers/flashrank-reranker/)  
+[FlashRank](https://github.com/PrithivirajDamodaran/FlashRank)  
+[Reranker](https://wikidocs.net/253434)  
+
+
