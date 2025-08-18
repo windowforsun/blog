@@ -509,3 +509,32 @@ result = jina_compression_retriever.invoke("사람처럼 학습하고 추론하�
 #  Document(metadata={'source': './computer-keywords.txt', 'relevance_score': 0.30239108204841614}, page_content='머신러닝\n\n정의: 머신러닝은 컴퓨터가 명시적 프로그래밍 없이 데이터로부터 학습하고 예측할 수 있게 하는 인공지능의 한 분야입니다.\n예시: 넷플릭스의 콘텐츠 추천 시스템은 사용자의 시청 이력을 기반으로 선호할 만한 영화와 시리즈를 제안합니다.\n연관키워드: 인공지능, 딥러닝, 신경망, 데이터 모델링\n\n가상화'),
 #  Document(metadata={'source': './computer-keywords.txt', 'relevance_score': 0.13568955659866333}, page_content='전이 학습\n\n정의: 전이 학습은 한 문제에서 학습된 지식을 관련된 다른 문제에 적용하는 머신러닝 기법입니다. \n예시: BERT 모델은 대규모 텍스트 데이터로 사전 학습된 후, 특정 자연어 처리 작업에 맞게 미세 조정됩니다. \n연관키워드: 머신러닝, 딥러닝, 사전학습, 미세조정, NLP\n\n컨테이너 오케스트레이션')]
 ```  
+
+
+### FlashRank Reranker
+`FlashRank Reranker` 는 `FlashRank` 라이브러리를 사용하여 쿼리와 문서의 관련성을 평가하는 모델이다. 
+가장 큰 특징은 별도의 외부 `API` 를 사용하지 않고 `Python` 라이브러리를 설치하는 방식으로 사용할수 있다는 점이다. 
+그리고 다른 `Reranker` 들과 비교했을 때 빠른 성능을 제공할 수 있다. 
+`BGE`, `MiniLM` 등 기반 리랭크 모델을 최적화해, `Cross-Encoder` 급 정확도를 로컬 `GPU/CPU` 에서 사용할 수 있도록 구현한 것이다. 
+
+아래 명령으로 `flashrank` 라이브러리를 설치한다. 
+
+```bash
+pip install flashrank
+```  
+
+```python
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import FlashrankRerank
+
+# flashrank_compressor = FlashrankRerank(model="ms-marco-MultiBERT-L-12")
+flashrank_compressor = FlashrankRerank(model="ms-marco-MiniLM-L-12-v2")
+flashrank_compression_retriever = ContextualCompressionRetriever(
+    base_compressor=flashrank_compressor, base_retriever=vector_retriever
+)
+
+result = flashrank_compression_retriever.invoke("사람처럼 학습하고 추론하는 시스템은?")
+# [Document(metadata={'id': 8, 'relevance_score': np.float32(0.9995274), 'source': './computer-keywords.txt'}, page_content='컨테이너 오케스트레이션\n\n정의: 컨테이너 오케스트레이션은 컨테이너화된 애플리케이션의 배포, 확장, 관리, 네트워킹을 자동화하는 기술입니다. \n예시: Kubernetes는 자동 확장, 로드 밸런싱, 장애 복구 기능을 갖춘 인기 있는 컨테이너 오케스트레이션 플랫폼입니다. \n연관키워드: 가상화, Docker, 마이크로서비스, DevOps, 클라우드 네이티브\n\nDDoS 방어'),
+#  Document(metadata={'id': 3, 'relevance_score': np.float32(0.99951947), 'source': './computer-keywords.txt'}, page_content='양자 컴퓨팅\n\n정의: 양자 컴퓨팅은 양자역학의 원리를 활용하여 특정 유형의 문제를 기존 컴퓨터보다 더 효율적으로 해결하는 컴퓨팅 형태입니다. \n예시: IBM Quantum은 클라우드를 통해 양자 컴퓨터에 접근할 수 있는 서비스를 제공하여 연구자들이 양자 알고리즘을 개발할 수 있게 합니다. \n연관키워드: 큐비트, 양자 얽힘, 양자 중첩, 양자 게이트, 양자 우위\n\nTLS/SSL'),
+#  Document(metadata={'id': 7, 'relevance_score': np.float32(0.99951446), 'source': './computer-keywords.txt'}, page_content='IoT\n\n정의: IoT(Internet of Things)는 인터넷을 통해 데이터를 수집하고 교환할 수 있는 센서와 소프트웨어가 내장된 물리적 장치들의 네트워크입니다.\n예시: 스마트 홈 시스템은 조명, 온도 조절 장치, 보안 카메라 등을 인터넷에 연결하여 원격으로 제어할 수 있게 합니다.\n연관키워드: 스마트 기기, 센서, M2M, 연결성, 자동화\n\n인공지능')]
+```  
