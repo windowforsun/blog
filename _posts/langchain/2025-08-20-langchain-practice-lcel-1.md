@@ -76,3 +76,52 @@ result = chain.invoke({"query": "LangChain"})
 - 재사용성 : 각 컴포넌트(프롬프트, 모델 등)는 독립적으로 재사용 가능
 - 유연성 : 조건 분기, 반복, 병렬 등 다양한 워크플로우 유연하게 구현
 - 디버깅 용이 : 각 단계별로 결과를 쉽게 확인할 수 있음
+
+### RunnableMap
+`RunnableMap` 은 여러 개의 `Runnable` 을 병렬로 실행하여 각기 다른 결과를 딕셔너리 형태로 반환하는 역할을 한다. 
+하나의 입력을 받아 여러 개 처리(분석, 생성 등)를 동시에 실행하고, 
+각 다른 결과를 `key-value` 쌍으로 모아 최종적으로는 딕셔너리 형태로 반환한다.  
+
+`RunnableMap` 은 아래와 같은 경우 사용할 수 있다.
+
+- 동시에 여러 작업을 수행하고 싶을 때
+- 중복 실행을 피하면서, 다양한 분석/생성을 병렬 처리하고 싶을 때
+- 여러 `LLM` 체인 결과를 한 번에 모아서 관리하고 싶을 때 
+
+아래는 자용자의 질의를 요약하는 결과와 감정을 분석하는 처리를 모두 수행하는 `RunnableMap` 의 예시이다. 
+
+```python
+from langchain_core.runnables import RunnableMap
+from langchain.prompts import ChatPromptTemplate
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import StrOutputParser
+
+summary_template = """당신은 요약 전문가 입니다. 사용자 질의를 10자 이내로 요약하세요. 
+
+# 질의
+{question}
+"""
+summary_prompt = ChatPromptTemplate.from_template(summary_template)
+
+summary_chain = summary_prompt | model | StrOutputParser()
+
+setiment_template = """당신은 감정분석 전문가 입니다. 사용자 질의를 긍정, 부정으로 분류하세요.
+
+# 질의
+{question}
+
+# 답변은 반드시 긍정 혹은 부정으로만 답해야 합니다.
+"""
+sentiment_prompt = ChatPromptTemplate.from_template(setiment_template)
+
+sentiment_chain = sentiment_prompt | model | StrOutputParser()
+
+multi_chain = RunnableMap({
+    "요약" : summary_chain,
+    "감정분석" : sentiment_chain
+})
+
+result = multi_chain.invoke({"question" : "오늘 아침에 일어나 사과를 먹었는데 맛이 너무 좋아 친구들에게 알려줬어요."})
+# {'요약': '사과 먹고 친구한테 말함', '감정분석': '긍정'}
+```  
+
