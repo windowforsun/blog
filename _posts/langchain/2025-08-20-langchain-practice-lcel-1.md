@@ -175,3 +175,53 @@ result = sequence_chain.invoke({"question" : "오늘 아침에 일어나 사과�
 # I told my friend that the apple was delicious.
 ```
 
+
+### RunnableSequence
+`RunnableSequence` 는 여러 개의 `Runnable` 을 순차적으로 연결하여 실행하는 체인 역할을 한다.
+입력을 받아 첫 번째 `Runnable` 에 전달한 뒤 그 결과를 두 번째 `Runnable` 에 전달하고 마지막 `Runnable` 을 통해 최종 결과를 만드는
+파이프라인 또는 직렬 체인구조를 구현할 수 있다.
+
+`RunnableSequence` 는 아래와 같은 경우 사용할 수 있다.
+
+- 여러 단계를 거쳐 데이터를 처리하고 싶을 때
+- 단계별로 서로 다른 처리가 필요한 복합 워크플로우를 설계할 때
+- 체인의 각 단계를 재사용하고 싶을 때
+
+아래는 사용자의 질의를 요약하고 그 결과를 영어로 번역하는 `RunnableSequence` 의 예제이다.
+
+```python
+from langchain_core.runnables import RunnableSequence
+from langchain.prompts import ChatPromptTemplate
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import StrOutputParser
+
+summary_template = """당신은 요약 전문가 입니다. 사용자 질의를 10자 이내로 요약하세요.
+
+# 질의
+{question}
+"""
+summary_prompt = ChatPromptTemplate.from_template(summary_template)
+
+summary_chain = summary_prompt | model | StrOutputParser()
+
+translate_template = """한글을 영어로 번역하는 전문가입니다. 사용자의 질의를 영어로 번역하세요.
+
+# 질의
+{question}
+
+"""
+translate_prompt = ChatPromptTemplate.from_template(translate_template)
+
+translate_chain = translate_prompt | model | StrOutputParser()
+
+sequence_chain = RunnableSequence(
+    first=summary_chain,
+    last=translate_chain
+)
+# or equal
+# sequence_chain = summary_chain | translate_chain
+
+result = sequence_chain.invoke({"question" : "오늘 아침에 일어나 사과를 먹었는데 맛이 너무 좋아 친구들에게 알려줬어요."})
+# I told my friend that the apple was delicious.
+```
+
