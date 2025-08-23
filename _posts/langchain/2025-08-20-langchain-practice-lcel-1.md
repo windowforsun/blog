@@ -225,3 +225,61 @@ result = sequence_chain.invoke({"question" : "오늘 아침에 일어나 사과�
 # I told my friend that the apple was delicious.
 ```
 
+
+
+### RunnableLambda
+`RunnableLambda` 는 임의의 `Python` 함수를 체인 내에서 실행 가능한 `Runnable` 로 래핑하는 역할을 한다.
+기존에 구현한 `Python` 함수나 한단한 `Lambda` 연산을 `LCEL` 파이프라인 안에 자연스럽게 편입시켜
+체인의 한 단계로 활용할 수 있도록 도와준다.
+
+`RunnableLambda` 는 아래와 같은 경우 사용할 수 있다.
+
+- 데이터 전처리/후처리 : 입력값을 변환하거나, 출력값을 가공하고 싶을 때
+- 체인 사이의 값 변환 : 프롬프트, 모델, 파서 사이에서 값의 형태를 맞출 필요가 있을 때
+- 간단한 조건 분기, 필터링, 로직 삽입 : 복잡한 `Runnable` 을 따로 만들 필요 없이, `inline` 으로 간단한 처리를 하고 싶을 때
+- 기존 `Python` 함수의 재사용 : 이미 만들어둔 함수를 체인에 그대로 넣고 싶을 때
+
+먼저 사용자 정의 함수를 실행하는 예시에 대해 알아본다.
+주의할 점은 사용자 정의 함수가 받을 수 있는 인자는 1개라는 점을 기억해야 한다.
+여러 인수를 받는 함수를 구현하고 싶을 경우, 단일 입력을 받아들이고 이를 여러 인수로 풀어내는 래퍼 및 처리가 필요하다.
+
+
+```python
+from operator import itemgetter
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
+from langchain.chat_models import init_chat_model
+
+def str_len(text):
+  return len(text)
+
+def _multiply_str_len(x, y):
+  return str_len(x) * str_len(y)
+
+def multiply_str_len(_dict):
+  return _multiply_str_len(_dict['x'], _dict['y'])
+
+prompt = ChatPromptTemplate.from_template('{input1} + {input2} = ?')
+os.environ["GROQ_API_KEY"] = "api key"
+model = model = init_chat_model("llama-3.3-70b-versatile", model_provider="groq")
+
+prompt_chain = prompt | model
+
+chain = (
+    {
+        'input1' : itemgetter('text1') | RunnableLambda(str_len),
+        'input2' : {'x' : itemgetter('text1'), 'y' : itemgetter('text2')} | RunnableLambda(multiply_str_len),
+    }
+    | prompt
+    | model
+    | StrOutputParser() 
+)
+
+chain.invoke({'text1' : '안녕', 'text2' : '하세요'})
+# 2 + 6 = 8.
+```  
+
+`text1` 의 `안녕` 은 `RunnableLambda(str_len)` 를 통해 문자열 길이 `2` 로 `input1` 에 전달된다.
+그리고 `input2` 는 `RunnableLambda(multiply_str_len)` 을 통해 `안녕` 의 문자열 길이와 `하세요` 문자열 길이를 곱한 `6` 이 전달된다.
+
