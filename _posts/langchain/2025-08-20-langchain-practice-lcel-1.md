@@ -283,3 +283,101 @@ chain.invoke({'text1' : '안녕', 'text2' : '하세요'})
 `text1` 의 `안녕` 은 `RunnableLambda(str_len)` 를 통해 문자열 길이 `2` 로 `input1` 에 전달된다.
 그리고 `input2` 는 `RunnableLambda(multiply_str_len)` 을 통해 `안녕` 의 문자열 길이와 `하세요` 문자열 길이를 곱한 `6` 이 전달된다.
 
+
+
+
+### RunnablePassthrough
+`RunnablePassthrought` 는 입력받은 값을 아무런 변경 없이 그대로 다음 단계에 전달하는 역할을 한다.
+이는 데이터를 입력 받아 가공이나 추가 처리 없이 그대로 파이프라인의 다음 단계로 전달하는데 사용 가능하다.
+
+`RunnablePassthrought` 는 아래와 같은 경우 사용할 수 있다.
+
+- 파이프라인 구성 중 일부 단계에서 입력을 그대로 넘겨야 할 때
+- 조건부 분기(`brach`) 혹은 병렬(`map`) 구조에서 특정 경로에서 아무런 가공이 필요 업을 때
+- 테스트나 디버깅 목적으로 값의 흐름을 명확히 하고 싶을 때
+- 다른 `Runnable` 과의 인터페이스를 맞추기 위해
+
+단순한 사용 예시로 `RunnableParallel` 과 함께 사용해 데이터를 그대로 전달하는 경우와 키를 추가하는 경우를 보여준다.
+
+```python
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
+
+runnable = RunnableParallel(
+    # passed 속성은 입력값 그대로 전달
+    passed=RunnablePassthrough(),
+    # extra 속성은 입력값에 키를 추가하여 전달
+    extra=RunnablePassthrough.assign(mult=lambda x : x['num'] * 10),
+    # modified 속성은 입력값에 1을 더한 값을 전달
+    modified=lambda x : x['num'] + 1
+)
+
+runnable.invoke({"num": 1})
+# {'passed': {'num': 1}, 'extra': {'num': 1, 'mult': 10}, 'modified': 2}
+```  
+
+다음은 검색기(`RAG`)에서 `RunnablePassthrough` 를 사용하는 예시에 대해 알아본다.
+아래 예제에서 `RunnablePassthrough` 는 검색 체인에서 `question` 키에 해당하는 값을 그대로 전달하기 위해 사용된다.
+즉 사용자 질의에 해당하는 `question` 의 내용을 입력 그대로 아무런 가공 없이 그대로 `prompt` 에 전달하는 목적을 수행한다.
+
+```python
+from langchain_chroma import Chroma
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain.chat_models import init_chat_model
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+vectorstore = Chroma.from_texts(
+    [
+        "사과는 초록",
+        "바나나는 빨강",
+        "딸기는 파랑",
+        "수박은 노랑",
+        "토마토는 검정"
+    ],
+    embedding=hf_embeddings,
+)
+
+retriever = vectorstore.as_retriever()
+
+template = """사용자 질의에 답변을 하세요. 답변은 반드시 아래 문서만 고래해야 합니다. 
+# 문서
+{context}
+
+# 질의
+{question}
+"""
+
+prompt = ChatPromptTemplate.from_template(template)
+os.environ["GROQ_API_KEY"] = "api key"
+model = model = init_chat_model("llama-3.3-70b-versatile", model_provider="groq")
+
+def format_docs(docs):
+  return "\n".join([doc.page_content for doc in docs])
+
+retrieval_chain = (
+    {'context' : retriever | format_docs, 'question' : RunnablePassthrough()}
+    | prompt
+    | model
+    | StrOutputParser()
+)
+
+retrieval_chain.invoke('사과의 색과 rgb 를 알려줘')
+# 사과의 색은 초록입니다. RGB 색상 코드에서 초록은(typically) RGB(0, 128, 0)으로 표현됩니다.
+
+retrieval_chain.invoke('토마토의 색과 rgb 를 알려줘')
+# 토마토의 색은 검정입니다. RGB 색상 코드에서 검정은(typically) RGB(0, 0, 0)으로 표현됩니다.
+```  
