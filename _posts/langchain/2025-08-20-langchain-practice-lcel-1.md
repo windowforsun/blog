@@ -381,3 +381,192 @@ retrieval_chain.invoke('사과의 색과 rgb 를 알려줘')
 retrieval_chain.invoke('토마토의 색과 rgb 를 알려줘')
 # 토마토의 색은 검정입니다. RGB 색상 코드에서 검정은(typically) RGB(0, 0, 0)으로 표현됩니다.
 ```  
+
+
+### RunnableBranch
+`RunnableBranch` 는 입력값에 따라 여러 개의 `Runnable` 중 하나를 선택적으로 실행하는 조건 분기 역할을 한다.
+입력을 받아 미리 정의된 조건(함수)들을 순서대로 평가하고,
+조건을 만족하는 첫 번째 `Runnable` 만 실행해 그 결과를 반환하는 조건분기 체인을 구현할 수 있다.
+
+`RunnableBranch` 는 아래와 같은 경우 사용할 수 있다.
+
+- 입력값에 따라 체인 실행 경로를 다르게 하고 싶을 경우
+- `if-else`, `switch-case` 와 유사한 분기 처리가 필요할 때
+- 특정 조건에 따라 서로 다른 `프롬프트/LLM/파서/함수` 를 실행하고 싶을 때
+- 복잡한 워크플로우에서 로직 분기를 선언적으로 관리하고 싶을 때
+
+이렇듯 `RunnableBranch` 는 입력 데이터에 따라 동적으로 로직을 분기할 수 있게 해주는 도구로,
+복잡한 의사 결정 트리를 간단하게 구현할 수 있다.
+이를 통해 코드의 가독성과 유지보수성이 향상되고, 모듈화와 재사용성을 높일 수 있다.
+런타임에 분기 조건을 평가해 적절한 처리 루팅을 선택할 수 있어,
+다양한 도메인과 데이터 변동성이 큰 애플리케이션에서 유용하게 활용할 수 있다.
+
+`RunnableBranch` 의 주된 특징은 조건부 실행은 `RunnableBranch` 를 사용하지 않더라도 구현은 가능하다.
+비교를 위해 사용하지 않고 구현하는 경우 아래와 같은 내용이 필요하다.
+
+예제는 사용자 질의를 `수학`, `과학`, `IT`, `기타` 분류 하고,
+각 분류에 맞는 체인을 조건부로 실행하는 예시이다.
+
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from operator import itemgetter
+from langchain_core.runnables import RunnableLambda
+
+classification_prompt = PromptTemplate.from_template(
+    """
+    주어진 사용자 질의에 대해 `수학`, `과학`, `IT`, `기타` 중 하나로 분류하세요. 한 단어 이상으로 응답하지 마세요.
+
+    <question>
+    {question}
+    </question>
+
+    Classification:
+    """
+)
+
+classification_chain = (
+    classification_prompt
+    | model
+    | StrOutputParser()
+)
+
+classification_chain.invoke({"question" : "1+1 은 ?"})
+# 수학
+
+classification_chain.invoke({"question" : "langchain 에 대해 알고 싶어"})
+# IT
+
+classification_chain.invoke({"question" : "빛의 속도로 태양까지 얼마나 걸릴까 ?"})
+# 과학
+
+classification_chain.invoke({"question" : "부동산 가격이 오를까 ?"})
+# 기타
+
+
+# 각 분류별 체인 정의
+math_prompt = PromptTemplate.from_template(
+    """
+    당신은 수학 전문가 입니다. 수학관련 사용자 질의에 대해 답변하세요. 
+    답변은 반드시 다음 문자으로 시작해야 합니다. "피타고라스께서 말씀하시길 .."
+
+    Question: {question}
+    Answer:
+    """
+)
+
+math_chain = (
+        math_prompt
+        | model
+        | StrOutputParser()
+)
+
+it_prompt = PromptTemplate.from_template(
+    """
+    당신은 IT 전문가 입니다. IT관련 사용자 질의에 대해 답변하세요. 
+    답변은 반드시 다음 문자으로 시작해야 합니다. "빌게이츠께서 말씀하시길 .."
+
+    Question: {question}
+    Answer:
+    """
+)
+
+it_chain = (
+        it_prompt
+        | model
+        | StrOutputParser()
+)
+
+science_prompt = PromptTemplate.from_template(
+    """
+    당신은 과학 전문가 입니다. 과학관련 사용자 질의에 대해 답변하세요. 
+    답변은 반드시 다음 문자으로 시작해야 합니다. "뉴턴께서 말씀하시길 .."
+
+    Question: {question}
+    Answer:
+    """
+)
+
+science_chain = (
+        science_prompt
+        | model
+        | StrOutputParser()
+)
+
+etc_prompt = PromptTemplate.from_template(
+    """
+    당신은 다양한 분야의 전문가 입니다. 사용자 질의에 대해 답변하세요. 
+    답변은 반드시 다음 문자으로 시작해야 합니다. "슈퍼 컴퓨터께서 말씀하시길 .."
+
+    Question: {question}
+    Answer:
+    """
+)
+
+etc_chain = (
+        it_prompt
+        | model
+        | StrOutputParser()
+)
+```  
+
+위 코드 까지는 `RunnableBranch` 를 사용하는 경우와 그렇지 않는 경우 모두 공통으로 사용되는 코드이다.
+
+
+아래는 `RunnableBranch` 를 사용하지 않는 경우 어떻게 구현이 가능한지 살펴본다.
+
+```python
+# RunnableBranch 를 사용하지 않는 경우 필요한 조건 분기 함수
+def route(info):
+    if '수학' in info['topic'].lower():
+        return math_chain
+    elif '과학' in info['topic'].lower():
+        return science_chain
+    elif 'it' in info['topic'].lower():
+        return it_chain
+    else:
+        return etc_chain
+
+# RunnableBranch 를 사용하지 않고 구현한 조건분기 체인
+full_chain = (
+        {'topic' : classification_chain, 'question' : itemgetter('question')}
+        | RunnableLambda(route)
+        | StrOutputParser()
+)
+
+full_chain.invoke({'question' : '1 +1 은 ?'})
+# 피타고라스께서 말씀하시길, 1 + 1은 2입니다. 이는 가장 기본적인 산수 연산 중 하나로, 두 개의 동일한 개체를 합쳤을 때의 총 개수를 계산하는 것을 의미합니다. 따라서, 1 + 1은 2라는 결과가 나옵니다.
+
+full_chain.invoke({'question' : 'langchain 이 뭐야?'})
+# 빌게이츠께서 말씀하시길, LangChain은 인공지능과 언어 모델을 활용하여 다양한 TASK를 수행할 수 있는 프레임워크입니다. 이는 사용자들이 자신의 언어 모델과 인공지능 시스템을 쉽게 통합하고, 관리할 수 있도록 설계되어 있습니다. LangChain은 다양한 라이브러리와 도구를 제공하여, 개발자들이 효율적으로 언어 모델을 개발하고, 활용할 수 있도록 지원합니다. 또한, LangChain은 다양한 용途에 적용될 수 있으며, 예를 들어 챗봇, 언어 번역, 문서 요약 등 다양한 TASK에 활용될 수 있습니다. 이는 인공지능과 언어 모델의 발전에 따라, 더욱 많은 응용 분야에서 사용될 것으로 예상됩니다.
+```  
+
+이어서 `RunnableBranch` 를 사용해서 구현할 때를 알아본다.
+
+```python
+from langchain_core.runnables import RunnableBranch
+
+branch = RunnableBranch(
+    (lambda x : '수학' in x['topic'].lower(), math_chain),
+    (lambda x : '과학' in x['topic'].lower(), science_chain),
+    (lambda x : 'it' in x['topic'].lower(), it_chain),
+    etc_chain
+)
+
+branch_full_chain = (
+    {'topic' : classification_chain, 'question' : itemgetter('question')}
+    | branch
+    | StrOutputParser()
+)
+
+branch_full_chain.invoke({'question' : '1+1 은 ?'})
+# 피타고라스께서 말씀하시길, 1+1 은 기본적인 산수 연산의 결과로서 2로 계산됩니다. 이는 수학의 기본 원리 중 하나로, 두 개의 단위를 합쳤을 때 그 결과는 2가 됩니다. 따라서, 1+1의 결과는 2입니다.
+
+branch_full_chain.invoke({'question' : 'langchain 이 뭐야?'})
+# 빌게이츠께서 말씀하시길, LangChain은 인공지능과 언어모델을 활용하여 다양한 태스크를 수행할 수 있는 프레임워크입니다. LangChain은 주로 대규모 언어 모델(LLM, Large Language Model)과 같은 인공지능 모델을 활용하여 텍스트 생성, 번역, 요약, 질의 응답 등 다양한 언어 관련 태스크를 처리할 수 있습니다. LangChain의 주요 특징은 사용자가 쉽게 언어 모델을 통합하고, 커스텀한 태스크를 수행할 수 있는 플랫폼을 제공한다는 것입니다. 이를 통해 개발자들은 인공지능과 언어 모델을更加 효율적으로 활용할 수 있습니다.
+
+branch_full_chain.invoke({'question' : '빛의 속도로 태양까지 가면 얼마나 걸려?'})
+# 뉴턴께서 말씀하시길, 빛의 속도는 대략 초당 약 299,792,000 미터입니다. 태양까지의 평균 거리는 약 1.496억 킬로미터(149,600,000 km)입니다. 이를 바탕으로 계산을 해보면, 빛이 태양까지 가는 데 걸리는 시간은 약 500초, 즉 약 8분 20초 정도가 됩니다. 이 계산은 태양과 지구의 평균 거리를 기준으로 하며, 실제로 태양과 지구의 거리는 궤도상에서 약 1.38억 킬로미터에서 1.52억 킬로미터까지変化합니다. 따라서, 실제 시간은 약 8분 3초에서 8분 38초 사이로變化할 수 있습니다.
+```
+
