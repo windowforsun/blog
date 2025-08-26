@@ -570,3 +570,183 @@ branch_full_chain.invoke({'question' : '빛의 속도로 태양까지 가면 얼
 # 뉴턴께서 말씀하시길, 빛의 속도는 대략 초당 약 299,792,000 미터입니다. 태양까지의 평균 거리는 약 1.496억 킬로미터(149,600,000 km)입니다. 이를 바탕으로 계산을 해보면, 빛이 태양까지 가는 데 걸리는 시간은 약 500초, 즉 약 8분 20초 정도가 됩니다. 이 계산은 태양과 지구의 평균 거리를 기준으로 하며, 실제로 태양과 지구의 거리는 궤도상에서 약 1.38억 킬로미터에서 1.52억 킬로미터까지変化합니다. 따라서, 실제 시간은 약 8분 3초에서 8분 38초 사이로變化할 수 있습니다.
 ```
 
+
+### RunnableParallel
+`RunnableParallel` 은 여러 `Runnable` 을 동시에 병렬로 실행하는 역할을 한다.
+하나 또는 여러 입력을 받아 각 `Runnable` 에 병렬로 전달하고,
+각 `Runnable` 의 결과를 리스트, 튜플 또는 딕셔너리 등으로 모아 한 번에 반환한다.
+이는 `RunnableMap` 과 유사하지만 `RunnableParallel` 은 리스트/튜플 기반(순서 중심)으로 결과를 반환하는 특징이 있다.
+반면 `RunnableMap` 은 `key-value`(딕셔너리)로 결과를 반환한다.
+
+`RunnableParallel` 은 아래와 같은 경우 사용할 수 있다.
+
+- 동일한 입력을 여러 `Runnable` 에 동시에 전달해 결과를 나란히 받고 싶을 때
+- 여러 체인을 병렬로 실행해 순서대로 결과를 받고 싶을 때
+- 여러 `LLM/프롬프트/파서`의 결과를 일괄 비교하거나 합쳐서 활용하고 싶을 때
+- 입력값이 리스트/튜플일 때 각 값마다 다른 `Runnable` 을 적용하고 싶을 때
+
+`RunnableParallel` 은 알게 모르게 기존 예제에서도 많이 사용 됐는데 아래 예제를 살펴본다.
+아래와 같이 시퀀스 내에서 하나의 `Runnable` 의 출력을 다음 `Runnable` 의 입력 형식에 맞게 조작하는데 유용하게 사용할 수 있다.
+
+```python
+from langchain_chroma import Chroma
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+vectorstore = Chroma.from_texts(
+    [
+        "사과는 초록",
+        "바나나는 빨강",
+        "딸기는 파랑",
+        "수박은 노랑",
+        "토마토는 검정"
+    ],
+    embedding=hf_embeddings,
+)
+
+retriever = vectorstore.as_retriever()
+
+prompt = ChatPromptTemplate.from_template(
+    """
+    사용자 질의에 대해 반드시 아래 문맥만 고려해 답변하세요.
+
+    context: {context}
+    question: {question}
+    """
+)
+
+retrieval_chain = (
+        # RunnableParallel 사용되는 부눈
+        {'context': retriever, 'question' : RunnablePassthrough()}
+        | prompt
+        | model
+        | StrOutputParser()
+)
+
+retrieval_chain.invoke('사과 색상에 해당하는 rgb는 ?')
+# 사과는 초록색입니다. 
+# 초록색의 RGB 값은 (0, 128, 0)입니다.
+```  
+
+위 코드 중 `retrieval_chain` 에서 `RunnableParallel` 이 사용 됐다.
+아래 3개지는 모두 동일한 처리를 하는 코드이다.
+
+- `{'context': retriever, 'question' : RunnablePassthrough()}`(`RunnableParallel` 로 래핑됨)
+- `RunnableParallel({'context': retriever, 'question' : RunnablePassthrough()})`
+- `RunnableParallel(context=retriever, question=RunnablePassthrough())`
+
+만약 사용자의 입력이 2개 이상인 경우 [itemgetter](https://docs.python.org/3/library/operator.html#operator.itemgetter)
+를 사용해 딕셔터리에서 원하는 데이터를 추출할 수 있다.
+
+```python
+from operator import itemgetter
+
+prompt = ChatPromptTemplate.from_template(
+    """
+    사용자 질의에 대해 반드시 아래 문맥만 고려해 답변하세요. 답변은 언어에 맞춰 번역하세요.
+
+    context: {context}
+    question: {question}
+    lang: {lang}
+    """
+)
+
+retrieval_chain = (
+    {
+     'context': itemgetter('question') | retriever, 
+     'question' : itemgetter('question'),
+     'lang' : itemgetter('lang')
+    }
+    | prompt
+    | model
+    | StrOutputParser()
+)
+
+retrieval_chain.invoke({'question' : '사과 색상에 해당하는 rgb는 ?', 'lang' :'en'})
+# The color corresponding to 사과 (apple) is 초록 (green). The RGB value for green is (0, 128, 0).
+```  
+
+아래와 같이 앞서 알아본 `RunnableMap` 과 같이 여러 체인을 병렬로 실행하는 용도로도 사용할 수 있다.
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel
+
+captial_chain = (
+    ChatPromptTemplate.from_template("{country} 의 수도는 어디입니까?")
+    | model
+    | StrOutputParser()
+)
+
+
+area_chain = (
+    ChatPromptTemplate.from_template("{country} 의 면적은 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+popul_chain = (
+    ChatPromptTemplate.from_template("{country} 의 인구는 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+parallel_chain = RunnableParallel(capital=captial_chain, area=area_chain, popul=popul_chain)
+
+parallel_chain.invoke({'country' : '한국'})
+# {'capital': '한국의 수도는 서울입니다.',
+# 'area': '한국의 면적은 약 100,363km²입니다.',
+# 'popul': '한국의 인구는 약 5,200만 명입니다. 2023년 6월 기준으로, 한국 통계청이 발표한 인구 통계에 따르면, 한국의 총 인구는 51,811,167명입니다.'}
+```  
+
+위와 같이 체인이 모두 같은 템플릿 변수를 사용하는 경우도 가능하고,
+아래와 같이 서로드란 템플릿 변수를 사용해도 의도된 동작으로 실행 가능하다.
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel
+
+captial_chain = (
+    ChatPromptTemplate.from_template("{country1} 의 수도는 어디입니까?")
+    | model
+    | StrOutputParser()
+)
+
+
+area_chain = (
+    ChatPromptTemplate.from_template("{country2} 의 면적은 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+popul_chain = (
+    ChatPromptTemplate.from_template("{country3} 의 인구는 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+parallel_chain = RunnableParallel(capital=captial_chain, area=area_chain, popul=popul_chain)
+
+parallel_chain.invoke({'country1' : '한국', 'country2' : '미국', 'country3' : '영국'})
+# {'capital': '한국 의 수도는 서울입니다.',
+#  'area': '미국의 면적은 약 9,833,517 제곱킬로미터(3,805,927 제곱마일)입니다. 미국은 캐나다와 멕시코와 국경을 공유하며, 북아메리카 대륙의 대부분을 차지합니다.\n\n미국의 면적은 다음과 같이 세분화될 수 있습니다.\n\n* 육지 면적: 9,161,928 제곱킬로미터(3,537,438 제곱마일)\n* 수역 면적: 671,589 제곱킬로미터(259,489 제곱마일)\n\n미국은 세계에서 3번째로 큰 국가로, 러시아와 캐나다에 이어집니다.',
+#  'popul': '영국의 인구는 약 6,700만 명입니다(2020년 기준).'}
+```  
+
