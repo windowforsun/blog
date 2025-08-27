@@ -750,3 +750,38 @@ parallel_chain.invoke({'country1' : '한국', 'country2' : '미국', 'country3' 
 #  'popul': '영국의 인구는 약 6,700만 명입니다(2020년 기준).'}
 ```  
 
+
+### RunnableEach
+`RunnableEach` 는 리스트(배열) 형태의 입력값의 각 요소마다 동일한 `Runnable` 을 적용하는 컴포넌트이다.
+입력값이 여러 개일 때 각 요소를 한 번씩 같은 방식으로 처리하고 처리된 결과를 다시 리스트로 모아 반환한다.
+
+`RunnableEach` 는 아래와 같은 경우 사용할 수 있다.
+
+- 여러 입력값을 같은 `체인/프롬프트/LLM` 등에 일괄 적용하고 싶을 때
+- 데이터셋을 `LLM` 이나 체인으로 한 번에 처리할 때
+- 여러 개별 요청을 한 번에 일괄 변환/분석/생성할 때
+- 반복문 없이 체인 스타일로 일괄 처리를 구현하고 싶을 때
+
+아래는 국가이름을 질의로 받으면 해당 국가의 수도를 답하는 체인을 사용해 여러 국가를 한번에 전달해 답변을 받는 `RunnableEach` 의 예시이다.
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables.base import RunnableEach
+
+capital_chain = (
+    ChatPromptTemplate.from_template("{country} 의 수도는 어디입니까?")
+    | model
+    | StrOutputParser()
+)
+
+each_chain = RunnableEach(bound=capital_chain)
+
+countries = ['한국', '미국', '영국', '스페인', '이집트']
+
+each_chain.invoke(countries)
+# ['한국의 수도는 **서울**입니다.',
+# '미국의 수도는 워싱턴 D.C.입니다.',
+# '영국 의 수도는 런던입니다.',
+# '스페인의 수도는 마드리드입니다. 마드리드는 스페인 중부에 위치하고 있으며, 국가의 정치, 경제, 문화의 중심지 역할을 합니다. 마드리드는 인구 약 320만 명의 대도시로, 유럽에서 가장 큰 도시 중 하나입니다.',
+# '이집트 의 수도는 카이로입니다.']
+```
