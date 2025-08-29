@@ -785,3 +785,107 @@ each_chain.invoke(countries)
 # '스페인의 수도는 마드리드입니다. 마드리드는 스페인 중부에 위치하고 있으며, 국가의 정치, 경제, 문화의 중심지 역할을 합니다. 마드리드는 인구 약 320만 명의 대도시로, 유럽에서 가장 큰 도시 중 하나입니다.',
 # '이집트 의 수도는 카이로입니다.']
 ```
+
+### RunnableRetry
+`RunnableRetry` 는 실행 중(`LLM` 호출 등) 오류나 예외가 발생할 경우,
+지정한 횟수만큼 자동으로 재시도하는 기능을 제공한다.
+체인 내에서 특정 `Runnable` 이 실패할 경우 미리 정한 횟수만큼 같은 입력으로 반복 실행한다.
+성공시 그 결과를 반환하고 모든 시도에서 실패하면 마지막 예외를 그대로 전달해 안정성과 내결함성을 높여주는 역할을 한다.
+
+`RunnableRetry` 는 아래와 같은 경우 사용할 수 있다.
+
+- `LLM`, `API` 호출 등 외부 서비스가 일시적으로 실패할 수 있을 때
+- 네트워크 오류, 일시적 `RateLimit` 초과, 간헐적 예외가 예상될 때
+- 워크플로우의 신뢰성과 성공률을 높이고 싶을 때
+- 실패 상황에서 자동으로 재시도 로직을 일관되게 적용하고 싶을 때
+
+간단한 사용 예시는 아래와 같다.
+재시도 수행 최대 횟수와 재시도 수행 주기도 설정할 수 있다.
+
+```python
+import random, logging, datetime
+from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables.retry import RunnableRetry
+
+def foo(input):
+  value = random.random()
+  logging.info(f"value : {value}")
+  print(f"value : {value}, time : {datetime.datetime.now()}")
+  if value > 0.8:
+    return input
+  else:
+    raise ValueError("failed")
+
+runnable = RunnableLambda(foo)
+
+runnable_retry = RunnableRetry(
+    bound=runnable,
+    retry_exception_types=(ValueError,),
+    max_attempt_number=10,
+    wait_exponential_jitter=True,
+    exponential_jitter_params={'initial': 2}
+)
+
+runnable_retry.invoke('재시도 수행!')
+# value : 0.69321661519523, time : 12:12:36.169931
+# value : 0.7290873830446856, time : 12:12:38.719092
+# value : 0.2821680875499617, time : 12:12:42.800953
+# value : 0.8679592745698509, time : 12:12:51.038793
+# 재시도 수행!
+```  
+
+`RunnableRetry` 를 직접 사용하지 않고 `Runnable` 구현체라면 `with_retry()` 를 사용해 동일한 재시도 동작을 구현할 수 있다.
+
+```python
+runnable_with_retry = runnable.with_retry(
+    retry_if_exception_type=(ValueError,),
+    wait_exponential_jitter=True,
+    exponential_jitter_params={'initial': 2},
+    stop_after_attempt=10
+)
+
+runnable_with_retry.invoke('재시도 수행!')
+# value : 0.25226005335713353, time : 12:16:16
+# value : 0.4511207248548069, time : 12:16:18
+# value : 0.07975708951682481, time : 12:16:23
+# value : 0.26525273785183157, time : 12:16:32
+# value : 0.6358726157130956, time : 12:16:48
+# value : 0.8607426064017667, time : 12:17:21
+# 재시도 수행!
+```  
+
+재시도 동작의 경우 재시도가 수행되는 범위를 가능한 작게 유지하는 것이 좋다.
+즉 여러 체인이 연결된 최종 체인에 재시도를 적용하는 것보다 개별 체인에 재시도를 적용하는 것이 좋다.
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel
+
+capital_chain = (
+    ChatPromptTemplate.from_template("{country1} 의 수도는 어디입니까?")
+    | model
+    | StrOutputParser()
+)
+
+
+area_chain = (
+    ChatPromptTemplate.from_template("{country2} 의 면은 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+popul_chain = (
+    ChatPromptTemplate.from_template("{country3} 의 인구는 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+# bad
+parallel_chain = RunnableParallel(capital=capital_chain, area=area_chain, popul=popul_chain)
+parallel_chain_retry = parallel_chain.with_retry()
+
+# good
+parallel_chain_retry = RunnableParallel(capital=capital_chain.with_retry(), 
+                                        area=area_chain.with_retry(), 
+                                        popul=popul_chain.with_retry())
+```  
