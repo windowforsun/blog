@@ -176,56 +176,6 @@ result = sequence_chain.invoke({"question" : "오늘 아침에 일어나 사과�
 ```
 
 
-### RunnableSequence
-`RunnableSequence` 는 여러 개의 `Runnable` 을 순차적으로 연결하여 실행하는 체인 역할을 한다.
-입력을 받아 첫 번째 `Runnable` 에 전달한 뒤 그 결과를 두 번째 `Runnable` 에 전달하고 마지막 `Runnable` 을 통해 최종 결과를 만드는
-파이프라인 또는 직렬 체인구조를 구현할 수 있다.
-
-`RunnableSequence` 는 아래와 같은 경우 사용할 수 있다.
-
-- 여러 단계를 거쳐 데이터를 처리하고 싶을 때
-- 단계별로 서로 다른 처리가 필요한 복합 워크플로우를 설계할 때
-- 체인의 각 단계를 재사용하고 싶을 때
-
-아래는 사용자의 질의를 요약하고 그 결과를 영어로 번역하는 `RunnableSequence` 의 예제이다.
-
-```python
-from langchain_core.runnables import RunnableSequence
-from langchain.prompts import ChatPromptTemplate
-from langchain.chat_models import init_chat_model
-from langchain_core.output_parsers import StrOutputParser
-
-summary_template = """당신은 요약 전문가 입니다. 사용자 질의를 10자 이내로 요약하세요.
-
-# 질의
-{question}
-"""
-summary_prompt = ChatPromptTemplate.from_template(summary_template)
-
-summary_chain = summary_prompt | model | StrOutputParser()
-
-translate_template = """한글을 영어로 번역하는 전문가입니다. 사용자의 질의를 영어로 번역하세요.
-
-# 질의
-{question}
-
-"""
-translate_prompt = ChatPromptTemplate.from_template(translate_template)
-
-translate_chain = translate_prompt | model | StrOutputParser()
-
-sequence_chain = RunnableSequence(
-    first=summary_chain,
-    last=translate_chain
-)
-# or equal
-# sequence_chain = summary_chain | translate_chain
-
-result = sequence_chain.invoke({"question" : "오늘 아침에 일어나 사과를 먹었는데 맛이 너무 좋아 친구들에게 알려줬어요."})
-# I told my friend that the apple was delicious.
-```
-
-
 
 ### RunnableLambda
 `RunnableLambda` 는 임의의 `Python` 함수를 체인 내에서 실행 가능한 `Runnable` 로 래핑하는 역할을 한다.
@@ -287,17 +237,17 @@ chain.invoke({'text1' : '안녕', 'text2' : '하세요'})
 
 
 ### RunnablePassthrough
-`RunnablePassthrought` 는 입력받은 값을 아무런 변경 없이 그대로 다음 단계에 전달하는 역할을 한다.
-이는 데이터를 입력 받아 가공이나 추가 처리 없이 그대로 파이프라인의 다음 단계로 전달하는데 사용 가능하다.
+`RunnablePassthrought` 는 입력받은 값을 아무런 변경 없이 그대로 다음 단계에 전달하는 역할을 한다. 
+이는 데이터를 입력 받아 가공이나 추가 처리 없이 그대로 파이프라인의 다음 단계로 전달하는데 사용 가능하다. 
 
-`RunnablePassthrought` 는 아래와 같은 경우 사용할 수 있다.
+`RunnablePassthrought` 는 아래와 같은 경우 사용할 수 있다. 
 
 - 파이프라인 구성 중 일부 단계에서 입력을 그대로 넘겨야 할 때
 - 조건부 분기(`brach`) 혹은 병렬(`map`) 구조에서 특정 경로에서 아무런 가공이 필요 업을 때
 - 테스트나 디버깅 목적으로 값의 흐름을 명확히 하고 싶을 때
 - 다른 `Runnable` 과의 인터페이스를 맞추기 위해
 
-단순한 사용 예시로 `RunnableParallel` 과 함께 사용해 데이터를 그대로 전달하는 경우와 키를 추가하는 경우를 보여준다.
+단순한 사용 예시로 `RunnableParallel` 과 함께 사용해 데이터를 그대로 전달하는 경우와 키를 추가하는 경우를 보여준다. 
 
 ```python
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough
@@ -315,9 +265,9 @@ runnable.invoke({"num": 1})
 # {'passed': {'num': 1}, 'extra': {'num': 1, 'mult': 10}, 'modified': 2}
 ```  
 
-다음은 검색기(`RAG`)에서 `RunnablePassthrough` 를 사용하는 예시에 대해 알아본다.
-아래 예제에서 `RunnablePassthrough` 는 검색 체인에서 `question` 키에 해당하는 값을 그대로 전달하기 위해 사용된다.
-즉 사용자 질의에 해당하는 `question` 의 내용을 입력 그대로 아무런 가공 없이 그대로 `prompt` 에 전달하는 목적을 수행한다.
+다음은 검색기(`RAG`)에서 `RunnablePassthrough` 를 사용하는 예시에 대해 알아본다. 
+아래 예제에서 `RunnablePassthrough` 는 검색 체인에서 `question` 키에 해당하는 값을 그대로 전달하기 위해 사용된다. 
+즉 사용자 질의에 해당하는 `question` 의 내용을 입력 그대로 아무런 가공 없이 그대로 `prompt` 에 전달하는 목적을 수행한다.  
 
 ```python
 from langchain_chroma import Chroma
@@ -384,27 +334,27 @@ retrieval_chain.invoke('토마토의 색과 rgb 를 알려줘')
 
 
 ### RunnableBranch
-`RunnableBranch` 는 입력값에 따라 여러 개의 `Runnable` 중 하나를 선택적으로 실행하는 조건 분기 역할을 한다.
-입력을 받아 미리 정의된 조건(함수)들을 순서대로 평가하고,
-조건을 만족하는 첫 번째 `Runnable` 만 실행해 그 결과를 반환하는 조건분기 체인을 구현할 수 있다.
+`RunnableBranch` 는 입력값에 따라 여러 개의 `Runnable` 중 하나를 선택적으로 실행하는 조건 분기 역할을 한다. 
+입력을 받아 미리 정의된 조건(함수)들을 순서대로 평가하고, 
+조건을 만족하는 첫 번째 `Runnable` 만 실행해 그 결과를 반환하는 조건분기 체인을 구현할 수 있다. 
 
 `RunnableBranch` 는 아래와 같은 경우 사용할 수 있다.
 
 - 입력값에 따라 체인 실행 경로를 다르게 하고 싶을 경우
 - `if-else`, `switch-case` 와 유사한 분기 처리가 필요할 때
 - 특정 조건에 따라 서로 다른 `프롬프트/LLM/파서/함수` 를 실행하고 싶을 때
-- 복잡한 워크플로우에서 로직 분기를 선언적으로 관리하고 싶을 때
+- 복잡한 워크플로우에서 로직 분기를 선언적으로 관리하고 싶을 때 
 
-이렇듯 `RunnableBranch` 는 입력 데이터에 따라 동적으로 로직을 분기할 수 있게 해주는 도구로,
-복잡한 의사 결정 트리를 간단하게 구현할 수 있다.
-이를 통해 코드의 가독성과 유지보수성이 향상되고, 모듈화와 재사용성을 높일 수 있다.
-런타임에 분기 조건을 평가해 적절한 처리 루팅을 선택할 수 있어,
-다양한 도메인과 데이터 변동성이 큰 애플리케이션에서 유용하게 활용할 수 있다.
+이렇듯 `RunnableBranch` 는 입력 데이터에 따라 동적으로 로직을 분기할 수 있게 해주는 도구로, 
+복잡한 의사 결정 트리를 간단하게 구현할 수 있다. 
+이를 통해 코드의 가독성과 유지보수성이 향상되고, 모듈화와 재사용성을 높일 수 있다. 
+런타임에 분기 조건을 평가해 적절한 처리 루팅을 선택할 수 있어, 
+다양한 도메인과 데이터 변동성이 큰 애플리케이션에서 유용하게 활용할 수 있다.  
 
-`RunnableBranch` 의 주된 특징은 조건부 실행은 `RunnableBranch` 를 사용하지 않더라도 구현은 가능하다.
-비교를 위해 사용하지 않고 구현하는 경우 아래와 같은 내용이 필요하다.
+`RunnableBranch` 의 주된 특징은 조건부 실행은 `RunnableBranch` 를 사용하지 않더라도 구현은 가능하다. 
+비교를 위해 사용하지 않고 구현하는 경우 아래와 같은 내용이 필요하다.  
 
-예제는 사용자 질의를 `수학`, `과학`, `IT`, `기타` 분류 하고,
+예제는 사용자 질의를 `수학`, `과학`, `IT`, `기타` 분류 하고, 
 각 분류에 맞는 체인을 조건부로 실행하는 예시이다.
 
 
@@ -511,10 +461,10 @@ etc_chain = (
 )
 ```  
 
-위 코드 까지는 `RunnableBranch` 를 사용하는 경우와 그렇지 않는 경우 모두 공통으로 사용되는 코드이다.
+위 코드 까지는 `RunnableBranch` 를 사용하는 경우와 그렇지 않는 경우 모두 공통으로 사용되는 코드이다.  
 
 
-아래는 `RunnableBranch` 를 사용하지 않는 경우 어떻게 구현이 가능한지 살펴본다.
+아래는 `RunnableBranch` 를 사용하지 않는 경우 어떻게 구현이 가능한지 살펴본다.  
 
 ```python
 # RunnableBranch 를 사용하지 않는 경우 필요한 조건 분기 함수
@@ -542,7 +492,7 @@ full_chain.invoke({'question' : 'langchain 이 뭐야?'})
 # 빌게이츠께서 말씀하시길, LangChain은 인공지능과 언어 모델을 활용하여 다양한 TASK를 수행할 수 있는 프레임워크입니다. 이는 사용자들이 자신의 언어 모델과 인공지능 시스템을 쉽게 통합하고, 관리할 수 있도록 설계되어 있습니다. LangChain은 다양한 라이브러리와 도구를 제공하여, 개발자들이 효율적으로 언어 모델을 개발하고, 활용할 수 있도록 지원합니다. 또한, LangChain은 다양한 용途에 적용될 수 있으며, 예를 들어 챗봇, 언어 번역, 문서 요약 등 다양한 TASK에 활용될 수 있습니다. 이는 인공지능과 언어 모델의 발전에 따라, 더욱 많은 응용 분야에서 사용될 것으로 예상됩니다.
 ```  
 
-이어서 `RunnableBranch` 를 사용해서 구현할 때를 알아본다.
+이어서 `RunnableBranch` 를 사용해서 구현할 때를 알아본다. 
 
 ```python
 from langchain_core.runnables import RunnableBranch
@@ -572,21 +522,21 @@ branch_full_chain.invoke({'question' : '빛의 속도로 태양까지 가면 얼
 
 
 ### RunnableParallel
-`RunnableParallel` 은 여러 `Runnable` 을 동시에 병렬로 실행하는 역할을 한다.
-하나 또는 여러 입력을 받아 각 `Runnable` 에 병렬로 전달하고,
-각 `Runnable` 의 결과를 리스트, 튜플 또는 딕셔너리 등으로 모아 한 번에 반환한다.
-이는 `RunnableMap` 과 유사하지만 `RunnableParallel` 은 리스트/튜플 기반(순서 중심)으로 결과를 반환하는 특징이 있다.
-반면 `RunnableMap` 은 `key-value`(딕셔너리)로 결과를 반환한다.
+`RunnableParallel` 은 여러 `Runnable` 을 동시에 병렬로 실행하는 역할을 한다. 
+하나 또는 여러 입력을 받아 각 `Runnable` 에 병렬로 전달하고, 
+각 `Runnable` 의 결과를 리스트, 튜플 또는 딕셔너리 등으로 모아 한 번에 반환한다. 
+이는 `RunnableMap` 과 유사하지만 `RunnableParallel` 은 리스트/튜플 기반(순서 중심)으로 결과를 반환하는 특징이 있다. 
+반면 `RunnableMap` 은 `key-value`(딕셔너리)로 결과를 반환한다.  
 
 `RunnableParallel` 은 아래와 같은 경우 사용할 수 있다.
 
-- 동일한 입력을 여러 `Runnable` 에 동시에 전달해 결과를 나란히 받고 싶을 때
-- 여러 체인을 병렬로 실행해 순서대로 결과를 받고 싶을 때
-- 여러 `LLM/프롬프트/파서`의 결과를 일괄 비교하거나 합쳐서 활용하고 싶을 때
-- 입력값이 리스트/튜플일 때 각 값마다 다른 `Runnable` 을 적용하고 싶을 때
+- 동일한 입력을 여러 `Runnable` 에 동시에 전달해 결과를 나란히 받고 싶을 때 
+- 여러 체인을 병렬로 실행해 순서대로 결과를 받고 싶을 때 
+- 여러 `LLM/프롬프트/파서`의 결과를 일괄 비교하거나 합쳐서 활용하고 싶을 때 
+- 입력값이 리스트/튜플일 때 각 값마다 다른 `Runnable` 을 적용하고 싶을 때 
 
-`RunnableParallel` 은 알게 모르게 기존 예제에서도 많이 사용 됐는데 아래 예제를 살펴본다.
-아래와 같이 시퀀스 내에서 하나의 `Runnable` 의 출력을 다음 `Runnable` 의 입력 형식에 맞게 조작하는데 유용하게 사용할 수 있다.
+`RunnableParallel` 은 알게 모르게 기존 예제에서도 많이 사용 됐는데 아래 예제를 살펴본다. 
+아래와 같이 시퀀스 내에서 하나의 `Runnable` 의 출력을 다음 `Runnable` 의 입력 형식에 맞게 조작하는데 유용하게 사용할 수 있다. 
 
 ```python
 from langchain_chroma import Chroma
@@ -645,15 +595,15 @@ retrieval_chain.invoke('사과 색상에 해당하는 rgb는 ?')
 # 초록색의 RGB 값은 (0, 128, 0)입니다.
 ```  
 
-위 코드 중 `retrieval_chain` 에서 `RunnableParallel` 이 사용 됐다.
-아래 3개지는 모두 동일한 처리를 하는 코드이다.
+위 코드 중 `retrieval_chain` 에서 `RunnableParallel` 이 사용 됐다. 
+아래 3개지는 모두 동일한 처리를 하는 코드이다. 
 
 - `{'context': retriever, 'question' : RunnablePassthrough()}`(`RunnableParallel` 로 래핑됨)
 - `RunnableParallel({'context': retriever, 'question' : RunnablePassthrough()})`
 - `RunnableParallel(context=retriever, question=RunnablePassthrough())`
 
 만약 사용자의 입력이 2개 이상인 경우 [itemgetter](https://docs.python.org/3/library/operator.html#operator.itemgetter)
-를 사용해 딕셔터리에서 원하는 데이터를 추출할 수 있다.
+를 사용해 딕셔터리에서 원하는 데이터를 추출할 수 있다.  
 
 ```python
 from operator import itemgetter
@@ -683,7 +633,7 @@ retrieval_chain.invoke({'question' : '사과 색상에 해당하는 rgb는 ?', '
 # The color corresponding to 사과 (apple) is 초록 (green). The RGB value for green is (0, 128, 0).
 ```  
 
-아래와 같이 앞서 알아본 `RunnableMap` 과 같이 여러 체인을 병렬로 실행하는 용도로도 사용할 수 있다.
+아래와 같이 앞서 알아본 `RunnableMap` 과 같이 여러 체인을 병렬로 실행하는 용도로도 사용할 수 있다. 
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate
@@ -716,8 +666,8 @@ parallel_chain.invoke({'country' : '한국'})
 # 'popul': '한국의 인구는 약 5,200만 명입니다. 2023년 6월 기준으로, 한국 통계청이 발표한 인구 통계에 따르면, 한국의 총 인구는 51,811,167명입니다.'}
 ```  
 
-위와 같이 체인이 모두 같은 템플릿 변수를 사용하는 경우도 가능하고,
-아래와 같이 서로드란 템플릿 변수를 사용해도 의도된 동작으로 실행 가능하다.
+위와 같이 체인이 모두 같은 템플릿 변수를 사용하는 경우도 가능하고, 
+아래와 같이 서로드란 템플릿 변수를 사용해도 의도된 동작으로 실행 가능하다.  
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate
@@ -752,17 +702,17 @@ parallel_chain.invoke({'country1' : '한국', 'country2' : '미국', 'country3' 
 
 
 ### RunnableEach
-`RunnableEach` 는 리스트(배열) 형태의 입력값의 각 요소마다 동일한 `Runnable` 을 적용하는 컴포넌트이다.
-입력값이 여러 개일 때 각 요소를 한 번씩 같은 방식으로 처리하고 처리된 결과를 다시 리스트로 모아 반환한다.
+`RunnableEach` 는 리스트(배열) 형태의 입력값의 각 요소마다 동일한 `Runnable` 을 적용하는 컴포넌트이다. 
+입력값이 여러 개일 때 각 요소를 한 번씩 같은 방식으로 처리하고 처리된 결과를 다시 리스트로 모아 반환한다.  
 
 `RunnableEach` 는 아래와 같은 경우 사용할 수 있다.
 
 - 여러 입력값을 같은 `체인/프롬프트/LLM` 등에 일괄 적용하고 싶을 때
 - 데이터셋을 `LLM` 이나 체인으로 한 번에 처리할 때
 - 여러 개별 요청을 한 번에 일괄 변환/분석/생성할 때
-- 반복문 없이 체인 스타일로 일괄 처리를 구현하고 싶을 때
+- 반복문 없이 체인 스타일로 일괄 처리를 구현하고 싶을 때 
 
-아래는 국가이름을 질의로 받으면 해당 국가의 수도를 답하는 체인을 사용해 여러 국가를 한번에 전달해 답변을 받는 `RunnableEach` 의 예시이다.
+아래는 국가이름을 질의로 받으면 해당 국가의 수도를 답하는 체인을 사용해 여러 국가를 한번에 전달해 답변을 받는 `RunnableEach` 의 예시이다.  
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate
@@ -787,20 +737,20 @@ each_chain.invoke(countries)
 ```
 
 ### RunnableRetry
-`RunnableRetry` 는 실행 중(`LLM` 호출 등) 오류나 예외가 발생할 경우,
+`RunnableRetry` 는 실행 중(`LLM` 호출 등) 오류나 예외가 발생할 경우, 
 지정한 횟수만큼 자동으로 재시도하는 기능을 제공한다.
-체인 내에서 특정 `Runnable` 이 실패할 경우 미리 정한 횟수만큼 같은 입력으로 반복 실행한다.
-성공시 그 결과를 반환하고 모든 시도에서 실패하면 마지막 예외를 그대로 전달해 안정성과 내결함성을 높여주는 역할을 한다.
+체인 내에서 특정 `Runnable` 이 실패할 경우 미리 정한 횟수만큼 같은 입력으로 반복 실행한다. 
+성공시 그 결과를 반환하고 모든 시도에서 실패하면 마지막 예외를 그대로 전달해 안정성과 내결함성을 높여주는 역할을 한다.  
 
 `RunnableRetry` 는 아래와 같은 경우 사용할 수 있다.
 
 - `LLM`, `API` 호출 등 외부 서비스가 일시적으로 실패할 수 있을 때
 - 네트워크 오류, 일시적 `RateLimit` 초과, 간헐적 예외가 예상될 때
 - 워크플로우의 신뢰성과 성공률을 높이고 싶을 때
-- 실패 상황에서 자동으로 재시도 로직을 일관되게 적용하고 싶을 때
+- 실패 상황에서 자동으로 재시도 로직을 일관되게 적용하고 싶을 때 
 
-간단한 사용 예시는 아래와 같다.
-재시도 수행 최대 횟수와 재시도 수행 주기도 설정할 수 있다.
+간단한 사용 예시는 아래와 같다. 
+재시도 수행 최대 횟수와 재시도 수행 주기도 설정할 수 있다. 
 
 ```python
 import random, logging, datetime
@@ -834,7 +784,7 @@ runnable_retry.invoke('재시도 수행!')
 # 재시도 수행!
 ```  
 
-`RunnableRetry` 를 직접 사용하지 않고 `Runnable` 구현체라면 `with_retry()` 를 사용해 동일한 재시도 동작을 구현할 수 있다.
+`RunnableRetry` 를 직접 사용하지 않고 `Runnable` 구현체라면 `with_retry()` 를 사용해 동일한 재시도 동작을 구현할 수 있다.  
 
 ```python
 runnable_with_retry = runnable.with_retry(
@@ -854,8 +804,8 @@ runnable_with_retry.invoke('재시도 수행!')
 # 재시도 수행!
 ```  
 
-재시도 동작의 경우 재시도가 수행되는 범위를 가능한 작게 유지하는 것이 좋다.
-즉 여러 체인이 연결된 최종 체인에 재시도를 적용하는 것보다 개별 체인에 재시도를 적용하는 것이 좋다.
+재시도 동작의 경우 재시도가 수행되는 범위를 가능한 작게 유지하는 것이 좋다. 
+즉 여러 체인이 연결된 최종 체인에 재시도를 적용하는 것보다 개별 체인에 재시도를 적용하는 것이 좋다.  
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate
@@ -889,3 +839,90 @@ parallel_chain_retry = RunnableParallel(capital=capital_chain.with_retry(),
                                         area=area_chain.with_retry(), 
                                         popul=popul_chain.with_retry())
 ```  
+
+### RunnableWithFallbacks
+`RunnableWithFallbacks` 는 지정한 `Runnable` 이 실패한 경우, 
+미리 정해둔 하나 이상의 대체 `Runnable(fallback)` 을 순서대로 시도하여
+최종적으로 성공한 `Runnable` 의 결과를 반환해 결과의 안정성을 보장한다. 
+첫 번째 `Runnable` 이 실패하면, 두 번째 `Fallback Runnable` 을 시도하고, 
+그래도 실파하면 다음 `Fallback` 을 실행한다. 
+`Fallback` 이 모두 실패하면 마지막 예외를 그대로 전달하는 구조로, 
+워크플로우의 내결함성을 크게 높여준다.  
+
+`RunnableWithFallbacks` 는 아래와 같은 경우 사용할 수 있다.
+
+- `LLM`, `API` 등 실패 가능성이 있는 연산에 백업 처리를 넣고 싶은 경우
+- 단일 실패에 의존하지 않고, 여러 대체 경로를 마련해 신뢰성을 높이고 싶을 때
+- 중요 체인/서비스의 안정성 확보가 꼭 필요할 때
+- 여러 `LLM/체인/API` 중 우선순위대로 차례로 시도하고 싶을 때
+
+`RunnableWithFallbacks` 는 `with_fallbacks()` 메서드를 사용해 간단하게 `Runnable` 에 적용할 수 있고, 
+다양한 체인 범위에 적용할 수 있다. 
+먼저 모델 자체에 적용하는 경우는 아래와 같다. 
+
+```python
+from langchain.chat_models import init_chat_model
+
+error_model = init_chat_model("llama-3.3-70b-versatile", model_provider="groq", base_url="https://nourl.com")
+
+error_model.invoke('1+1 은?')
+# APIConnectionError: Connection error.
+
+
+model_with_fallback = error_model.with_fallbacks([model])
+model_with_fallback.invoke("1+1 은?")
+# AIMessage(content='1+1 은 2입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 9, 'prompt_tokens': 40, 'total_tokens': 49, 'completion_time': 0.032727273, 'prompt_time': 0.002581285, 'queue_time': 0.20677414900000002, 'total_time': 0.035308558}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--af3ff0e5-3060-43d4-8db8-87890451ca18-0', usage_metadata={'input_tokens': 40, 'output_tokens': 9, 'total_tokens': 49})
+```  
+
+아래와 같이 불필요한 `fallback` 처리를 방지하기 위해 `fallback` 이 수행되야 하는 오류만 명시할 수 있다.  
+
+```python
+# KeyboardInterrupt 오류에서만 fallback 수행하도록 설정
+model_with_fallback_to_handle = error_model.with_fallbacks(
+    [model],
+    exceptions_to_handle=(KeyboardInterrupt,),
+)
+
+model_with_fallback_to_handle.invoke("1+1 은?")
+# APIConnectionError: Connection error.
+```  
+
+그리고 아래는 완성된 체인 범위 그리고 여러 모델과 여러 체인을 사용해 `fallback` 을 설정하는 예시이다. 
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableParallel
+
+error_capital_chain = (
+    ChatPromptTemplate.from_template("{country} 의 수도는 어디입니까?")
+    | error_model_1
+    | StrOutputParser()
+)
+
+
+error_area_chain = (
+    ChatPromptTemplate.from_template("{country} 의 면적은 얼마입니까?")
+    | error_model_2
+    | StrOutputParser()
+)
+
+popul_chain = (
+    ChatPromptTemplate.from_template("{country} 의 인구는 얼마입니까?")
+    | model
+    | StrOutputParser()
+)
+
+fallback_chain = error_capital_chain.with_fallbacks([error_area_chain, popul_chain])
+
+fallback_chain.invoke({'country':'한국'})
+# 한국의 인구는 약 5,200만 명입니다.
+```  
+
+
+---  
+## Reference
+[Understanding LangChain Runnables](https://mirascope.com/blog/langchain-runnables/)  
+[runnables](https://python.langchain.com/api_reference/core/runnables.html)  
+[LCEL](https://wikidocs.net/233781)  
+
+
