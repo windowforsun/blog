@@ -129,3 +129,97 @@ model.with_config(configurable={'version':'gemma2-9b-it'}).invoke('1+1 은?').__
 #                     'output_tokens': 13,
 #                     'total_tokens': 27}}
 ```  
+
+모델 뿐만아니라 체인에도 `configurable_fields` 를 사용할 수 있다.  
+
+```python
+prompt = PromptTemplate.from_template("{query} 에 대해 100자 이내로 설명하세요.")
+
+chain = (prompt | model)
+
+# 모델 생성시 설정한 llama-3.3-70b-versatile 사용
+chain.invoke({"query" : "langchain"}).__dict__
+# {'content': 'LangChain은 언어 모델과 AI를 활용한 개발 플랫폼입니다.',
+#  'additional_kwargs': {},
+#  'response_metadata': {'token_usage': {'completion_tokens': 18,
+#                                        'prompt_tokens': 48,
+#                                        'total_tokens': 66,
+#                                        'completion_time': 0.096358423,
+#                                        'prompt_time': 0.002315397,
+#                                        'queue_time': 0.20693972,
+#                                        'total_time': 0.09867382},
+#                        'model_name': 'llama-3.3-70b-versatile',
+#                        'system_fingerprint': 'fp_3f3b593e33',
+#                        'finish_reason': 'stop',
+#                        'logprobs': None},
+#  'type': 'ai',
+#  'name': None,
+#  'id': 'run--760ab497-ad29-485c-bd45-8f8e04db5a52-0',
+#  'example': False,
+#  'tool_calls': [],
+#  'invalid_tool_calls': [],
+#  'usage_metadata': {'input_tokens': 48,
+#                     'output_tokens': 18,
+#                     'total_tokens': 66}}
+
+# 체인 실행 시점에 gemma2-9b-it 모델로 변경해서 실행
+chain.with_config(configurable={'version' : 'gemma2-9b-it'}).invoke({'query':'langchain'}).__dict__
+# {'content': 'LangChain은 대화형 AI 앱을 구축하기 위한 프레임워크입니다. \n\n텍스트 생성, 질의응답, 요약, 번역 등 다양한 자연어 처리(NLP) 작업을 위한 툴과 모듈을 제공하며, 외부 데이터와 통합하여 강력한 챗봇이나 인공지능 애플리케이션을 개발할 수 있습니다. \n',
+#  'additional_kwargs': {},
+#  'response_metadata': {'token_usage': {'completion_tokens': 93,
+#                                        'prompt_tokens': 24,
+#                                        'total_tokens': 117,
+#                                        'completion_time': 0.169090909,
+#                                        'prompt_time': 0.002118285,
+#                                        'queue_time': 0.08310903,
+#                                        'total_time': 0.171209194},
+#                        'model_name': 'gemma2-9b-it',
+#                        'system_fingerprint': 'fp_10c08bf97d',
+#                        'finish_reason': 'stop',
+#                        'logprobs': None},
+#  'type': 'ai',
+#  'name': None,
+#  'id': 'run--385cc6f0-5e15-493f-86bc-07910c2277e1-0',
+#  'example': False,
+#  'tool_calls': [],
+#  'invalid_tool_calls': [],
+#  'usage_metadata': {'input_tokens': 24,
+#                     'output_tokens': 93,
+#                     'total_tokens': 117}}
+```  
+
+`HubRunnable` 과 `configurable_fields` 를 사용하면 `LangChain Hub` 에 있는 다양한 프롬프트를 
+상황에 맞게 쉽게 변경해 사용할 수 있다. 
+
+```python
+from langchain.runnables.hub import HubRunnable
+
+prompt = HubRunnable("hardkothari/text_summary").configurable_fields(
+    owner_repo_commit=ConfigurableField(
+        id="hub_commit",
+        name="Hub Commit",
+        description="descroption"
+    )
+)
+prompt.invoke(
+    {
+        'word_count':100,
+        'target_audience' :
+            'children', 'text': '오늘 밥을 먹고 맛이 있어 레시피를 블로그에 작성해 올렸다'
+    }
+)
+# ChatPromptValue(messages=[SystemMessage(content='You are an expert summarizer and analyzer who can help me.', additional_kwargs={}, response_metadata={}), HumanMessage(content="Generate a concise and coherent summary from the given Context. \n\nCondense the context into a well-written summary that captures the main ideas, key points, and insights presented in the context. \n\nPrioritize clarity and brevity while retaining the essential information. \n\nAim to convey the context's core message and any supporting details that contribute to a comprehensive understanding. \n\nCraft the summary to be self-contained, ensuring that readers can grasp the content even if they haven't read the context. \n\nProvide context where necessary and avoid excessive technical jargon or verbosity.\n\nThe goal is to create a summary that effectively communicates the context's content while being easily digestible and engaging.\n\nSummary should NOT be more than 100 words for children audience.\n\nCONTEXT: 오늘 밥을 먹고 맛이 있어 레시피를 블로그에 작성해 올렸다\n\nSUMMARY: ", additional_kwargs={}, response_metadata={})])
+
+# with_config 를 사용해 프롬프트 변경
+prompt = prompt.with_config(
+    configurable={'hub_commit' : 'langchain/summary-memory-summarizer'}
+)
+prompt.invoke(
+    {
+        'summary' : '오늘 밥을 먹고 맛이 있어 레시피를 블로그에 작성해 올렸다',
+        'new_lines' : '\n'
+    }
+)
+# StringPromptValue(text='Progressively summarize the lines of conversation provided, adding onto the previous summary returning a new summary.\n\nEXAMPLE\nCurrent summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good.\n\nNew lines of conversation:\nHuman: Why do you think artificial intelligence is a force for good?\nAI: Because artificial intelligence will help humans reach their full potential.\n\nNew summary:\nThe human asks what the AI thinks of artificial intelligence. The AI thinks artificial intelligence is a force for good because it will help humans reach their full potential.\nEND OF EXAMPLE\n\nCurrent summary:\n오늘 밥을 먹고 맛이 있어 레시피를 블로그에 작성해 올렸다\n\nNew lines of conversation:\n\n\n\nNew summary:')
+```   
+
