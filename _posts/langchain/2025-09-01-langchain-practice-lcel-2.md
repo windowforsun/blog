@@ -359,3 +359,69 @@ chain.with_config(configurable={'prompt':'world_count'}).invoke({'query': 'langc
 chain.with_config(configurable={'prompt':'translate'}).invoke({'query': '대한민국의 현대사'})
 # AIMessage(content='"대한민국의 현대사"를 영어로 번역하면 "Modern history of South Korea" 또는 "Contemporary history of South Korea"로 번역할 수 있습니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 37, 'prompt_tokens': 50, 'total_tokens': 87, 'completion_time': 0.134545455, 'prompt_time': 0.002437236, 'queue_time': 0.207094754, 'total_time': 0.136982691}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--ea17a9e9-0f28-4f66-b03a-b8fa4de492a1-0', usage_metadata={'input_tokens': 50, 'output_tokens': 37, 'total_tokens': 87})
 ```  
+
+앞서 먼저 모델에 대해 `configurable_alternatives` 를 사용해 대체안을 설정하고, 
+프롬프트에도 `configurable_alternatives` 를 사용해 대체안을 설정했다. 
+이제 런타임에 모델, 프롬프트 모두 필요에 따라 대체안을 선택해 실행하 수 있다.  
+
+```python
+chain.with_config(
+    configurable={
+        'llm':'gemma2',
+        'prompt':'world_count'
+    }
+).invoke({'query': '대한민국의 현대사'}).__dict__
+# {'content': '"대한민국의 현대사"의 글자 수는 **11글자**입니다. \n\n\n* **대한민국:** 6글자\n* **의:** 1글자\n* **현대사:** 4글자 \n',
+#  'additional_kwargs': {},
+#  'response_metadata': {'token_usage': {'completion_tokens': 57,
+#                                        'prompt_tokens': 27,
+#                                        'total_tokens': 84,
+#                                        'completion_time': 0.103636364,
+#                                        'prompt_time': 0.002136625,
+#                                        'queue_time': 0.083296095,
+#                                        'total_time': 0.105772989},
+#                        'model_name': 'gemma2-9b-it',
+#                        'system_fingerprint': 'fp_10c08bf97d',
+#                        'finish_reason': 'stop',
+#                        'logprobs': None},
+#  'type': 'ai',
+#  'name': None,
+#  'id': 'run--e7dc0395-4cdc-44cc-b8df-f0cd048f7b46-0',
+#  'example': False,
+#  'tool_calls': [],
+#  'invalid_tool_calls': [],
+#  'usage_metadata': {'input_tokens': 27,
+#                     'output_tokens': 57,
+#                     'total_tokens': 84}}
+
+chain.with_config(
+    configurable={
+        'llm':'llama3',
+        'prompt':'translate'
+    }
+).invoke({'query': '대한민국의 현대사'}).__dict__
+# {'content': 'The phrase "대한민국의 현대사" can be translated to English as "Modern History of South Korea" or "Contemporary History of South Korea".',
+#  'additional_kwargs': {},
+#  'response_metadata': {'token_usage': {'completion_tokens': 32,
+#                                        'prompt_tokens': 25,
+#                                        'total_tokens': 57,
+#                                        'completion_time': 0.026666667,
+#                                        'prompt_time': 0.009414188,
+#                                        'queue_time': 1.986721293,
+#                                        'total_time': 0.036080855},
+#                        'model_name': 'llama3-8b-8192',
+#                        'system_fingerprint': 'fp_179b0f92c9',
+#                        'finish_reason': 'stop',
+#                        'logprobs': None},
+#  'type': 'ai',
+#  'name': None,
+#  'id': 'run--3046f45b-71ce-4de1-b362-d62488914ae9-0',
+#  'example': False,
+#  'tool_calls': [],
+#  'invalid_tool_calls': [],
+#  'usage_metadata': {'input_tokens': 25,
+#                     'output_tokens': 32,
+#                     'total_tokens': 57}}
+```  
+
+
