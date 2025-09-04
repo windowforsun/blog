@@ -425,3 +425,286 @@ chain.with_config(
 ```  
 
 
+
+
+### RunnableWithMessageHistory
+`RunnableWithMessageHistory` 는 `Runnable` 에 대화 히스토리를 자동으로 관리/주입하여 연속적인 대화 흐름을 자연스럽게 구현할 수 있게 한다. 
+현재 입력값과 함께 과거 주고받은 메시지를 `LLM`, 프롬프트 등 다음 단계에 자동으로 넘겨
+연속된 대화 컨텍스트를 유지하며 응답을 생성하는 역할을 한다.  
+
+`RunnableWithMessageHistory` 는 아래와 같은 경우 사용할 수 있다.
+
+- 챗봇, 멀티턴, 대화, 컨텍스트가 중요한 `LLM` 워크플로우를 만들 때 
+- 대화 이력을 자동 관리해, 매번 직접 전달하지 않고도 자연스러운 대화 흐름을 원할 때 
+- 사용자별, 세션별로 독립적인 대화 상태를 유지해야 할 때 
+- 연속된 질의응답/상황 기반 `LLM` 파이프라인을 설계할 때
+
+메시지 기록 저장은 메모리, 로컬 저장소, 외부(`Redis`) 저장소에 저장할 수 있다. 
+먼저 `BaseChatMessageHistory` 를 사용해 메모리에 저장해 히스토리를 보존하는 방법을 알아본다. 
+`BaseChatMessageHistory` 는 메시지 기록을 관리하기 위한 객체로, 메시지 기록을 저장, 검색, 업데이트하는 데 사용된다. 
+메시지 기록은 대화의 맥락을 유지하고 사용자의 이전 입력에 기반한 응답을 생성하는데 도움을 준다.  
+
+메모리 내에서 메시지 기록을 관리하기 위해 `ChatMessageHistory` 라는 `BaseChatMessageHistory` 의 구현체를 사용한다.  
+
+```python
+from langchain.chat_models import init_chat_model
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+model = init_chat_model(
+    "llama-3.3-70b-versatile", model_provider="groq"
+)
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "당신은 {ability} 에 능숙한 전문사 어시스턴트입니다. 20자 이내로 답변하세요."
+        ),
+        # 대화 기록용 변수
+        MessagesPlaceholder(variable_name="history"),
+        ("human", "{input}")
+    ]
+)
+
+chain = prompt | model
+```  
+
+위 체인을 사용해 메모리에 메시지 기록을 괸라하도록 설정한다.  
+
+```python
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+
+store = {}
+
+def get_session_history(session_ids: str) -> BaseChatMessageHistory:
+  print(f"id : {session_ids}")
+
+  if session_ids not in store:
+    store[session_ids] = ChatMessageHistory()
+
+  return store[session_ids]
+
+with_message_history = (
+    RunnableWithMessageHistory(
+        chain,
+        get_session_history,
+        # 입력 메시지로 처리될 키
+        input_message_key="input",
+        # 이전 메시지를 추가할 키
+        history_messages_key="history"
+    )
+)
+
+with_message_history.invoke(
+    {"ability" : "IT", "input" : "LangChain 에 대해 요약해서 설명해줘"},
+    config={'configurable':{'session_id' : 1}}
+)
+# id : 1
+# AIMessage(content='LLaMA와 같은 AI 모델을 활용하여 개발자들이 더 쉽게 개발할 수 있도록 도와주는 프레임워크입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 30, 'prompt_tokens': 72, 'total_tokens': 102, 'completion_time': 0.154697818, 'prompt_time': 0.003717552, 'queue_time': 0.205502147, 'total_time': 0.15841537}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--721c9729-53e1-4397-83da-270f15c2a60f-0', usage_metadata={'input_tokens': 72, 'output_tokens': 30, 'total_tokens': 102})
+
+print(store)
+
+with_message_history.invoke(
+    {'ability': 'IT', 'input' : '이전 답변을 영어로 답변해줘'},
+    config={'configurable':{'session_id' : 1}}
+)
+# id : 1
+# AIMessage(content='LangChain is a framework that helps developers build AI applications using models like LLaMA.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 19, 'prompt_tokens': 121, 'total_tokens': 140, 'completion_time': 0.084681832, 'prompt_time': 0.008310919, 'queue_time': 0.24781782900000002, 'total_time': 0.092992751}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--baa45c79-3800-4ca4-808c-2fba6c9940a0-0', usage_metadata={'input_tokens': 121, 'output_tokens': 19, 'total_tokens': 140})
+
+print(store)
+# {1: InMemoryChatMessageHistory(messages=[HumanMessage(content='LangChain 에 대해 요약해서 설명해줘', additional_kwargs={}, response_metadata={}), AIMessage(content='LLaMA와 같은 AI 모델을 활용하여 개발자들이 더 쉽게 개발할 수 있도록 도와주는 프레임워크입니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 30, 'prompt_tokens': 72, 'total_tokens': 102, 'completion_time': 0.154697818, 'prompt_time': 0.003717552, 'queue_time': 0.205502147, 'total_time': 0.15841537}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--721c9729-53e1-4397-83da-270f15c2a60f-0', usage_metadata={'input_tokens': 72, 'output_tokens': 30, 'total_tokens': 102})])}
+```  
+
+이전 대화 내용을 `store` 에 관리하기 때문에 이전 답변 맥락을 유지하며 질의를 수행할 수 있다.   
+
+
+앞선 예제에서는 메시지 기록을 추적하고 관리하는 키로 `session_id` 를 사용했다. 
+이는 별다른 설정을 하지 않으면 기본을 사용되는 키로 필요하다면 아래와 같이 커스텀이 가능하다. 
+아래는 `user_id` 와 `conversation_id` 2개의 키로 메시지 기록을 관리하는 예제이다.  
+
+```python
+from langchain_core.runnables import ConfigurableFieldSpec
+
+store_2 = {}
+
+def get_session_history_2(user_id: str, conversation_id: str) -> BaseChatMessageHistory:
+  if (user_id, conversation_id) not in store_2:
+    store_2[(user_id, conversation_id)] = ChatMessageHistory()
+
+  return store_2[(user_id, conversation_id)]
+
+with_message_history_2 = RunnableWithMessageHistory(
+    chain,
+    get_session_history_2,
+    input_messages_key='input',
+    history_messages_key='history',
+    history_factory_config=[
+        ConfigurableFieldSpec(
+            id='user_id',
+            annotation=str,
+            name="User ID",
+            description='사용자 식별자',
+            default="",
+            is_shared=True
+        ),
+        ConfigurableFieldSpec(
+            id='conversation_id',
+            annotation=str,
+            name='Conversation ID',
+            description='대화 식별자',
+            default='',
+            is_shared=True
+        )
+    ]
+)
+
+with_message_history_2.invoke(
+    {'ability':'IT', 'input' : '"LangChain 에 대해 요약해서 설명해줘'},
+    config={
+        'configurable':{
+            'user_id' : 'user1',
+            'conversation_id' : 'conv1'
+        }
+    }
+)
+# AIMessage(content='.LangChain은 AI와 프로그래밍을 연결합니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 14, 'prompt_tokens': 73, 'total_tokens': 87, 'completion_time': 0.061840539, 'prompt_time': 0.005160955, 'queue_time': 0.205330767, 'total_time': 0.067001494}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--cb5f68dd-54a2-4416-94f1-367faa6024d0-0', usage_metadata={'input_tokens': 73, 'output_tokens': 14, 'total_tokens': 87})
+
+with_message_history_2.invoke(
+    {'ability':'IT', 'input' : '이전 답변을 영어로 번역해줘'},
+    config={
+        'configurable':{
+            'user_id' : 'user1',
+            'conversation_id' : 'conv1'
+        }
+    }
+)
+# AIMessage(content='LangChain connects AI and programming.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 8, 'prompt_tokens': 107, 'total_tokens': 115, 'completion_time': 0.029090909, 'prompt_time': 0.005804578, 'queue_time': 0.207296262, 'total_time': 0.034895487}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--87a73fb2-7748-44ed-a9aa-2db9724f8906-0', usage_metadata={'input_tokens': 107, 'output_tokens': 8, 'total_tokens': 115})
+```  
+
+`RunnableWithMessageHistory` 를 사용할 때 입력과 출력의 형태를 필요에 따라 조정하며 사용할 수 있다. 
+아래는 `Message` 객체를 입력으로 사용하고 결과는 딕셔너리로 받는 예제이다.  
+
+```python
+from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableParallel
+
+chain_2 = RunnableParallel({'output_message' : model})
+
+with_message_history_3 = RunnableWithMessageHistory(
+    chain_2,
+    get_session_history,
+    # 입력으로 Message 객체를 넣기 때문에 별도로 input_message_key 를 지정하지 않는다. 
+    output_message_key='output_message'
+)
+
+with_message_history_3.invoke(
+    [HumanMessage(content='langchain 에 대해 요약해서 설명해줘')],
+    config={'configurable': {'session_id' : 's1'}}
+)
+# {'output_message': AIMessage(content='Langchain은 대규모 언어 모델(Large Language Model, LLM)과 같은 인공지능 기술을 쉽게 사용하고 확장할 수 있는 프레임워크입니다. \n\nLangchain은 다음과 같은 특징을 가지고 있습니다.\n\n1. **언어 모델 통합**: Langchain은 다양한 언어 모델을 지원하여 개발자가 쉽게 자신의 프로젝트에 통합할 수 있습니다.\n2. **사용자 정의 가능**: Langchain은 개발자가 자신의 언어 모델을 정의하고, 학습하고, 평가할 수 있는 강력한 도구를 제공합니다.\n3. **확장성**: Langchain은 대규모 데이터셋과 복잡한 모델을 처리할 수 있는 확장성 높은 아키텍처를 가지고 있습니다.\n4. **시각화 도구**: Langchain은 개발자가 모델의 성능을 시각화하고, 분석할 수 있는 도구를 제공합니다.\n\nLangchain을 사용하면 개발자는 다음과 같은 일들을 쉽게 할 수 있습니다.\n\n* 대규모 언어 모델을 쉽게 통합하고 사용할 수 있습니다.\n* 자신의 언어 모델을 정의하고, 학습하고, 평가할 수 있습니다.\n* 모델의 성능을 시각화하고, 분석할 수 있습니다.\n\nLangchain은 자연어 처리, 대화 시스템, 텍스트 생성 등 다양한 분야에서 유용하게 사용될 수 있습니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 288, 'prompt_tokens': 46, 'total_tokens': 334, 'completion_time': 1.047272727, 'prompt_time': 0.003877805, 'queue_time': 0.20691707399999998, 'total_time': 1.051150532}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--6fd79132-ff13-4509-b5f2-4323cf8c2dd1-0', usage_metadata={'input_tokens': 46, 'output_tokens': 288, 'total_tokens': 334})}
+
+with_message_history_3.invoke(
+    [HumanMessage(content='이전 답변을 영어로 번역해줘')],
+    config={'configurable': {'session_id' : 's1'}}
+)
+# {'output_message': AIMessage(content='Langchain is a framework that allows for easy use and extension of artificial intelligence technologies such as large language models (LLMs).\n\nLangchain has the following features:\n\n1. **Language Model Integration**: Langchain supports various language models, making it easy for developers to integrate them into their projects.\n2. **Customizability**: Langchain provides powerful tools for developers to define, train, and evaluate their own language models.\n3. **Scalability**: Langchain has a highly scalable architecture that can handle large datasets and complex models.\n4. **Visualization Tools**: Langchain provides tools for developers to visualize and analyze the performance of their models.\n\nBy using Langchain, developers can easily:\n\n* Integrate and use large language models\n* Define, train, and evaluate their own language models\n* Visualize and analyze the performance of their models\n\nLangchain can be useful in various fields such as natural language processing, conversational systems, and text generation.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 193, 'prompt_tokens': 354, 'total_tokens': 547, 'completion_time': 0.701818182, 'prompt_time': 0.052687606, 'queue_time': 0.248290259, 'total_time': 0.754505788}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'stop', 'logprobs': None}, id='run--8b7d9f42-ab8c-4248-b6f1-7028d083e49c-0', usage_metadata={'input_tokens': 354, 'output_tokens': 193, 'total_tokens': 547})}
+```  
+
+다음은 `Message` 객체를 입력으로 사용하고, `Message` 객체를 출력으로 받는 예제이다. 
+
+
+```python
+with_message_history_4 = RunnableWithMessageHistory(
+    model,
+    get_session_history
+    # 입력으로 Message 객체를 넣기 때문에 별도로 input_message_key 를 지정하지 않는다. 
+    # output_message_key 도 지정하지 않으면 기본적으로 Message 객체로 출력된다.
+)
+
+with_message_history_4.invoke(
+    [HumanMessage(content='langchain 에 대해 요약해서 설명해줘')],
+    config={'configurable':{'session_id':'s2'}}
+)
+# AIMessage(content='LangChain은 인공지능과 블록체인 기술을 결합하여 개발된 플랫폼입니다. LangChain은 사용자에게 더智能적이고 자동화된 서비스를 제공하기 위해 개발되었습니다. LangChain의 주요 특징은 다음과 같습니다:\n\n1. **인공지능 통합**: LangChain은 다양한 인공지능 모델을 통합하여 사용자에게 더 정확하고智能적인 서비스를 제공합니다.\n2. **블록체인 기반**: LangChain은 블록체인 기술을 기반으로 하여 데이터의 보안성과 투명성을 제공합니다.\n3. **자동화**: LangChain은 자동화된 프로세스를 통해 사용자의 요청을 처리하여 효율성을 높입니다.\n4. ** 확장성**: LangChain은 확장성이 뛰어나므로 사용자 수의 증가에 따라 쉽게 확장할 수 있습니다.\n\nLangChain은 여러 분야에서 응용될 수 있습니다. 예를 들어, LangChain을 사용하여 다음과 같은 서비스를 개발할 수 있습니다:\n\n*智能적인 고객 서비스 챗봇\n* 자동화된 데이터 분석 및 보고 시스템\n* 보안성이 높은 데이터 저장 및 관리 시스템\n* 개인화된 추천 시스템\n\nLangChain은 개발자와 사용자 모두에게 편리하고 효율적인 서비스를 제공하는 플랫폼입니다. 그러나 LangChain의详细한 기능과 사용법은 더 연구하고 학습해야 합니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 297, 'prompt_tokens': 46, 'total_tokens': 343, 'completion_time': 1.08, 'prompt_time': 0.003504893, 'queue_time': 0.247403755, 'total_time': 1.083504893}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--7f524edf-b771-4536-8461-571679e345d2-0', usage_metadata={'input_tokens': 46, 'output_tokens': 297, 'total_tokens': 343})
+
+with_message_history_4.invoke(
+    [HumanMessage(content='이전 답변을 영어로 번역해줘')],
+    config={'configurable':{'session_id':'s2'}}
+)
+# AIMessage(content='LangChain is a platform that combines artificial intelligence and blockchain technology. It was developed to provide users with more intelligent and automated services. The main features of LangChain are:\n\n1. **Artificial Intelligence Integration**: LangChain integrates various AI models to provide users with more accurate and intelligent services.\n2. **Blockchain-based**: LangChain is based on blockchain technology, providing security and transparency for data.\n3. **Automation**: LangChain processes user requests through automated processes, increasing efficiency.\n4. **Scalability**: LangChain is highly scalable, making it easy to expand as the number of users increases.\n\nLangChain can be applied in various fields. For example, LangChain can be used to develop the following services:\n\n* Intelligent customer service chatbots\n* Automated data analysis and reporting systems\n* Secure data storage and management systems\n* Personalized recommendation systems\n\nLangChain is a platform that provides convenient and efficient services for both developers and users. However, more research and learning are needed to understand the detailed features and usage of LangChain.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 210, 'prompt_tokens': 363, 'total_tokens': 573, 'completion_time': 0.763636364, 'prompt_time': 0.023587732, 'queue_time': 0.205756393, 'total_time': 0.787224096}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--4a2719b4-6322-44b3-93c4-96b4e3a524bb-0', usage_metadata={'input_tokens': 363, 'output_tokens': 210, 'total_tokens': 573})
+```  
+
+마지막으로 입력과 출력을 모두 딕셔너리 형태로 사용하는 예제이다. 
+
+```python
+from operator import itemgetter
+
+with_message_history_5 = RunnableWithMessageHistory(
+    # 입력으로 들어오는 딕셔너리에서 input_message 키를 사용해 모델에 전달한다. 
+    itemgetter('input_message') | model,
+    get_session_history,
+    # 입력 메시지로 사용할 키를 지정한다. 
+    input_messages_key='input_message'
+)
+
+with_message_history_5.invoke(
+    {'input_message' : 'langchain 에 대해 요약해서 설명해줘'},
+    config={'configurable':{'session_id':'s3'}}
+)
+# AIMessage(content='Langchain은 인공지능(AI) 기반의 자연어 처리(NLP) 플랫폼입니다. Langchain은 사용자와 대화형으로 상호작용하며, 사용자의 입력을 받아서 이해하고, 해당하는 답변을 제공합니다.\n\nLangchain의 주요 기능은 다음과 같습니다:\n\n1. **자연어 이해**: Langchain은 자연어를 이해하고, 이를 기반으로 사용자의 의도와 요구를 파악합니다.\n2. **대화형 상호작용**: Langchain은 사용자와 대화형으로 상호작용하며, 사용자의 질문이나 요청에 답변을 제공합니다.\n3. **문서 생성**: Langchain은 사용자의 요청에 따라 문서를 생성할 수 있습니다.\n4. **번역**: Langchain은 다중 언어를 지원하며, 사용자의 언어를 자동으로 번역할 수 있습니다.\n\nLangchain은 다양한 분야에서 활용될 수 있습니다. 예를 들어, 고객 서비스, 교육, 의료 등에서 사용될 수 있습니다. 또한, Langchain은 개발자들이 인공지능 기반의 애플리케이션을 쉽게 개발할 수 있도록 도와주는 도구입니다.\n\nLangchain의 장점은 다음과 같습니다:\n\n1. **고유한 아키텍처**: Langchain은 고유한 아키텍처를 갖고 있으며, 이는 다른 플랫폼과 차별화됩니다.\n2. **고성능**: Langchain은 고성능을 제공하며, 빠른 속도로 사용자의 요청을 처리할 수 있습니다.\n3. **다양한 언어 지원**: Langchain은 다중 언어를 지원하며, 사용자의 언어를 자동으로 번역할 수 있습니다.\n\nLangchain은 계속해서 발전하고 있으며, 새로운 기능과 성능을 추가하여 사용자에게 더 좋은 서비스를 제공하고 있습니다.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 386, 'prompt_tokens': 46, 'total_tokens': 432, 'completion_time': 1.403636364, 'prompt_time': 0.00249485, 'queue_time': 0.20549788, 'total_time': 1.406131214}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_9a8b91ba77', 'finish_reason': 'stop', 'logprobs': None}, id='run--bc9d121f-b849-4bd0-9aa2-d78b3fdd5f00-0', usage_metadata={'input_tokens': 46, 'output_tokens': 386, 'total_tokens': 432})
+
+with_message_history_5.invoke(
+    {'input_message' : '이전 답변을 영어로 번역해줘'},
+    config={'configurable':{'session_id':'s3'}}
+)
+# AIMessage(content="Here is the translation of the previous answer:\n\nLangchain is an artificial intelligence (AI) based natural language processing (NLP) platform. Langchain interacts with users in a conversational manner, understanding their input and providing relevant answers.\n\nThe main features of Langchain are as follows:\n\n1. **Natural Language Understanding**: Langchain understands natural language and identifies the user's intent and requirements.\n2. **Conversational Interaction**: Langchain interacts with users in a conversational manner, providing answers to their questions or requests.\n3. **Document Generation**: Langchain can generate documents based on user requests.\n4. **Translation**: Langchain supports multiple languages and can automatically translate user language.\n\nLangchain can be applied in various fields, such as customer service, education, and healthcare. Additionally, Langchain is a tool that helps developers easily develop AI-based applications.\n\nThe advantages of Langchain are as follows:\n\n1. **Unique Architecture**: Langchain has a unique architecture that differentiates it from other platforms.\n2. **High Performance**: Langchain provides high performance and can process user requests quickly.\n3. **Multi-Language Support**: Langchain supports multiple languages and can automatically translate user language.\n\nLangchain is continuously evolving, adding new features and performance to provide better services to users.", additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 258, 'prompt_tokens': 452, 'total_tokens': 710, 'completion_time': 0.938181818, 'prompt_time': 0.028555753, 'queue_time': 0.206971923, 'total_time': 0.966737571}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'stop', 'logprobs': None}, id='run--c1fcd36a-adf8-4608-b26e-dc7d371caaf1-0', usage_metadata={'input_tokens': 452, 'output_tokens': 258, 'total_tokens': 710})
+```  
+
+이번에는 메모리에 메시지 기록을 관리하는 것이 아닌 `Redis` 와 같은 외부 저장소에 영속성이 있도록 메시지 기록을 관리하는 방법에 대해 알아본다. 
+이때는 `BaseChatMessageHistory` 의 구현체인 `RedisChatMessageHistory` 를 사용한다.  
+
+```python
+from langchain_community.chat_message_histories import RedisChatMessageHistory
+
+REDIS_URL = "redis://...."
+
+def get_redis_message_history(session_id: str) -> RedisChatMessageHistory:
+  return RedisChatMessageHistory(session_id, url=REDIS_URL)
+
+redis_with_message_history = RunnableWithMessageHistory(
+    chain,
+    get_redis_message_history,
+    input_messages_key='input',
+    history_messages_key='history'
+)
+
+redis_with_message_history.invoke(
+    {'ability':'IT', 'input':'langchain 에 대해 요약해서 설명해줘'},
+    config={'configurable':{'session_id':'rs1'}}
+)
+# AIMessage(content='LLaMA 에서 파생된 대화형 AI 프레임워크', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 17, 'prompt_tokens': 72, 'total_tokens': 89, 'completion_time': 0.095742698, 'prompt_time': 0.003685556, 'queue_time': 0.248086022, 'total_time': 0.099428254}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--bbe91fec-ee2b-494a-a9d0-43aaca41c96e-0', usage_metadata={'input_tokens': 72, 'output_tokens': 17, 'total_tokens': 89})
+
+redis_with_message_history.invoke(
+    {'ability':'IT', 'input':'이전 답변을 영어로 번역해줘'},
+    config={'configurable':{'session_id':'rs1'}}
+)
+# AIMessage(content='A conversational AI framework derived from LLaMA.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 12, 'prompt_tokens': 109, 'total_tokens': 121, 'completion_time': 0.050341463, 'prompt_time': 0.008292484, 'queue_time': 0.248558983, 'total_time': 0.058633947}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--7d7c0fb9-82ba-45d7-a747-9fe90b341035-0', usage_metadata={'input_tokens': 109, 'output_tokens': 12, 'total_tokens': 121})
+
+redis_with_message_history.invoke(
+    {'ability':'IT', 'input':'이전 답변을 영어로 번역해줘'},
+    config={'configurable':{'session_id':'rs9999999'}}
+)
+# AIMessage(content='There is no previous answer.', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 7, 'prompt_tokens': 72, 'total_tokens': 79, 'completion_time': 0.042750819, 'prompt_time': 0.004015454, 'queue_time': 0.206939182, 'total_time': 0.046766273}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_6507bcfb6f', 'finish_reason': 'stop', 'logprobs': None}, id='run--dbc37055-edf3-4b0f-a892-5dd77aa86e46-0', usage_metadata={'input_tokens': 72, 'output_tokens': 7, 'total_tokens': 79})
+```  
+
+이후 `Redis` 에 접속해 키를 확인하면 아래와 같이 `session_id` 로 사용한 키가 생성된 것을 확인할 수 있다.  
+
+```bash
+$ redis-cli -u redis://...
+
+redis> keys *
+1) "message_store:rs9999999"
+2) "message_store:rs1"
+```  
+
