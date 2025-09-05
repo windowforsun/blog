@@ -708,3 +708,149 @@ redis> keys *
 2) "message_store:rs1"
 ```  
 
+
+### Runnable Graph
+앞서 살펴 본 다양한 `LCEL` 을 사용해 체인을 구성했을 때 
+전체의 내부 구조와 실행 흐름을 그래프 형태로 시각화/분석할 수 있도록 체인의 구성(노드/엣지 등)을 
+객체로 반환하는 메서드이다. 
+복잡한 `LCEL` 체인이 어떻게 연결(조합)되어 있는지 
+노드와 엣지 단위로 그래프 객체로 표현해 구조 파악, 디버깅, 시각화, 문서화 등에 활용할 수 있게 한다.  
+
+그래프 예제를 위해 아래와 같이 `LCEL` 체인을 구성한다. 
+`RAG` 를 사용해 질의에 대한 답변을 생성하는 체인이다.  
+
+```python
+from langchain_chroma import Chroma
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain.chat_models import init_chat_model
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+vectorstore = Chroma.from_texts(
+    [
+        "사과는 초록",
+        "바나나는 빨강",
+        "딸기는 파랑",
+        "수박은 노랑",
+        "토마토는 검정"
+    ],
+    embedding=hf_embeddings,
+)
+
+retriever = vectorstore.as_retriever()
+
+template = """
+다음 내용만 고려해 질의에 맞는 답변을 제공하세요.
+
+context: {context}
+
+question: {question}
+"""
+
+prompt = ChatPromptTemplate.from_template(template)
+
+chain = (
+    {'context' : retriever, 'question' : RunnablePassthrough()}
+    | prompt
+    | model
+    | StrOutputParser()
+)
+```  
+
+`chain.get_graph()` 메서드는 체인의 실행 그래프를 반환한다. 
+그래프의 노드는 체인의 각 단계를 나타내며, 엣지는 각 단계 간의 데이터 흐름을 나타낸다. 
+먼저 `chain.get_graph().nodes` 을 통해 체인의 그래프에서 노드 정보를 가져올 수 있다.  
+
+```python
+chain.get_graph().nodes
+# {'9a07e3cfde514a1fbe3dca8428549a2a': Node(id='9a07e3cfde514a1fbe3dca8428549a2a', name='Parallel<context,question>Input', data=<class 'langchain_core.runnables.base.RunnableParallel<context,question>Input'>, metadata=None),
+# '9509fef1025d403ab6208a1c4d3138b8': Node(id='9509fef1025d403ab6208a1c4d3138b8', name='Parallel<context,question>Output', data=<class 'langchain_core.utils.pydantic.RunnableParallel<context,question>Output'>, metadata=None),
+# '62bacd224938463d814b617b3cf0aeb0': Node(id='62bacd224938463d814b617b3cf0aeb0', name='VectorStoreRetriever', data=VectorStoreRetriever(tags=['Chroma', 'HuggingFaceEmbeddings'], vectorstore=<langchain_chroma.vectorstores.Chroma object at 0x7df1b6b30890>, search_kwargs={}), metadata=None),
+# '78ab3ed409e64de7b50b16f2dfbc3258': Node(id='78ab3ed409e64de7b50b16f2dfbc3258', name='Passthrough', data=RunnablePassthrough(), metadata=None),
+# 'bb09dcd82dc34c27b4136350397229f3': Node(id='bb09dcd82dc34c27b4136350397229f3', name='ChatPromptTemplate', data=ChatPromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, messages=[HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, template='\n다음 내용만 고려해 질의에 맞는 답변을 제공하세요. \n\ncontext: {context}\n\nquestion: {question}\n'), additional_kwargs={})]), metadata=None),
+# 'b5b63cec5cf34fa39c89a1aede6516dc': Node(id='b5b63cec5cf34fa39c89a1aede6516dc', name='ChatGroq', data=ChatGroq(client=<groq.resources.chat.completions.Completions object at 0x7df2fb576150>, async_client=<groq.resources.chat.completions.AsyncCompletions object at 0x7df2fb577110>, model_name='llama-3.3-70b-versatile', model_kwargs={}, groq_api_key=SecretStr('**********')), metadata=None),
+# 'b39f13acf8044e3db3319cb375fe556b': Node(id='b39f13acf8044e3db3319cb375fe556b', name='StrOutputParser', data=StrOutputParser(), metadata=None),
+# '93cd8025d0f44686bbd4bcd04dac927e': Node(id='93cd8025d0f44686bbd4bcd04dac927e', name='StrOutputParserOutput', data=<class 'langchain_core.output_parsers.string.StrOutputParserOutput'>, metadata=None)}
+```  
+
+`chain.get_graph().edges` 는 체인의 그래프에서 엣지 정보를 가져올 수 있다.  
+
+```python
+chain.get_graph().edges
+# [Edge(source='fd4b91571d7647db989794ebe69acf4b', target='78eecced4041474ba0766aaade312ec9', data=None, conditional=False),
+#  Edge(source='78eecced4041474ba0766aaade312ec9', target='28a9109205c6472682f3836f66b90c75', data=None, conditional=False),
+#  Edge(source='fd4b91571d7647db989794ebe69acf4b', target='91bcfaf624f745fcaa0688bc43054461', data=None, conditional=False),
+#  Edge(source='91bcfaf624f745fcaa0688bc43054461', target='28a9109205c6472682f3836f66b90c75', data=None, conditional=False),
+#  Edge(source='28a9109205c6472682f3836f66b90c75', target='4925ab0ceb034ade86d275c973eff3e6', data=None, conditional=False),
+#  Edge(source='4925ab0ceb034ade86d275c973eff3e6', target='db3878b3487e4474994ebd9aa80596ec', data=None, conditional=False),
+#  Edge(source='aaa556d794a147e484e7e4be04f53d40', target='d488eda0ce414775866ab1707428ae3e', data=None, conditional=False),
+#  Edge(source='db3878b3487e4474994ebd9aa80596ec', target='aaa556d794a147e484e7e4be04f53d40', data=None, conditional=False)]
+```  
+
+시각화된 그래프 형태로 확인하고 싶은 경우 `chain.get_graph().print_ascii()` 메서드를 사용하면 된다.  
+
+```python
+chain.get_graph().print_ascii()
+#           +---------------------------------+        
+#           | Parallel<context,question>Input |        
+#           +---------------------------------+        
+#                    ***             **                
+#                  **                  ***             
+#                **                       **           
+# +----------------------+            +-------------+  
+# | VectorStoreRetriever |            | Passthrough |  
+# +----------------------+            +-------------+  
+#                    ***             **                
+#                       **        ***                  
+#                         **    **                     
+#           +----------------------------------+       
+#           | Parallel<context,question>Output |       
+#           +----------------------------------+       
+#                             *                        
+#                             *                        
+#                             *                        
+#                  +--------------------+              
+#                  | ChatPromptTemplate |              
+#                  +--------------------+              
+#                             *                        
+#                             *                        
+#                             *                        
+#                       +----------+                   
+#                       | ChatGroq |                   
+#                       +----------+                   
+#                             *                        
+#                             *                        
+#                             *                        
+#                   +-----------------+                
+#                   | StrOutputParser |                
+#                   +-----------------+                
+#                             *                        
+#                             *                        
+#                             *                        
+#                +-----------------------+             
+#                | StrOutputParserOutput |             
+#                +-----------------------+
+```  
+
+마지막으로 `chain.get_prompts()` 메서드를 사용하면 체인에서 사용되는 프롬프트의 정보를 가져올 수 있다.  
+
+```python
+chain.get_prompts()
+# [ChatPromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, messages=[HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, template='\n다음 내용만 고려해 질의에 맞는 답변을 제공하세요. \n\ncontext: {context}\n\nquestion: {question}\n'), additional_kwargs={})])]
+```  
+
