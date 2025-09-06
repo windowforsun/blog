@@ -854,3 +854,48 @@ chain.get_prompts()
 # [ChatPromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, messages=[HumanMessagePromptTemplate(prompt=PromptTemplate(input_variables=['context', 'question'], input_types={}, partial_variables={}, template='\n다음 내용만 고려해 질의에 맞는 답변을 제공하세요. \n\ncontext: {context}\n\nquestion: {question}\n'), additional_kwargs={})])]
 ```  
 
+
+### @chain Decorator
+`@chain` 데코레이터는 `LCEL` 에서 일반적인 파이썬 함수를 `LCEL` 의 `Runnable` 체인 객체로 변환해주는 데코레이터이다. 
+이는 `RunnableLambda` 로 래핑하는 것과 기능적으로 동일하다. 
+기존의 함수를 몇 줄의 코드 수정 없이 `LCEL` 파이프라인의 한 단계로 쉽게 조립/확장할 수 있게 해주는 `함수 -> 체인(Runnable`)` 자동 변환 장치이다.  
+
+`@chain` 데코레이터는 아래와 같은 경우 사용할 수 있다. 
+
+- 기존 파이썬 함수/로직을 `LCEL` 체인에 손쉽게 통합하고 싶을 때 
+- 함수형 처리(전처리, 후처리, 조건부 처리 등)를 체인 구성에 자연스럽게 녹이고 싶을 때 
+- 직접 `Runnable` 클래스를 만들지 않고도, 빠르게 체인 요소를 추가하고 싶을 때 
+- `LCEL` 의 파이프라인 연산자(`|`)와 함께 사용해, `함수-프롬프트-LLM-파서` 등을 자연스럽게 조합하고 싶을 때 
+
+`@chain` 활용 예시를 보이기 위해 아래와 같은 2개의 프롬프트를 사용한다.  
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import chain
+
+prompt1 = ChatPromptTemplate.from_template("{query} 에 대해 짧게 설명하세요.")
+prompt2 = ChatPromptTemplate.from_template("{setence} 를 emoji 를 사용해 꾸며주세요.")
+```  
+
+그리고 `@chain` 데코레이터로 사용자 저으이 함수를 데코레이팅 하여, 일반 파이썬 함수를 `Runnable` 객체로 변환한다.  
+
+```python
+@chain
+def custom_chain(text):
+  chain1 = prompt1 | model | StrOutputParser()
+  output1 = chain1.invoke({"query" : text})
+
+  chain2 = prompt2 | model | StrOutputParser()
+
+  return chain2.invoke({"setence" : output1})
+```  
+
+`custom_chain` 은 앞서 정의된 2개의 프롬프트를 사용해서 사용자 질의에 대한 설명 답변을 생성하고, 
+그 답변을 다시 이모지를 사용해 꾸미는 결과를 만들어낸다. 
+그리고 `custom_chain` 은 실행 가능한 `Runnable` 객체이기 때문에 `invoke()` 를 사용해 실행할 수 있다.  
+
+```python
+custom_chain.invoke('langchain')
+# 🤖 LangChain은 인공지능을 쉽게 사용할 수 있도록 도와주는 라이브러리입니다 📚. LangChain은 Python으로 작성되었으며 🐍, 자연어 처리(NLP) 📝, 대화 시스템 💬, 그리고 언어 모델을 위한 다양한 도구와 기능을 제공합니다 🎉. LangChain을 사용하면 개발자가 효율적으로 인공지능을 활용하여 다양한 애플리케이션을 개발할 수 있습니다 💻. 🚀 개발자들의 인공지능 활용을 쉽게 만들어주는 LangChain은 인공지능 개발의未来를 밝혀줄 것입니다 💫!
+```
