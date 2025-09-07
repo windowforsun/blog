@@ -899,3 +899,113 @@ def custom_chain(text):
 custom_chain.invoke('langchain')
 # 🤖 LangChain은 인공지능을 쉽게 사용할 수 있도록 도와주는 라이브러리입니다 📚. LangChain은 Python으로 작성되었으며 🐍, 자연어 처리(NLP) 📝, 대화 시스템 💬, 그리고 언어 모델을 위한 다양한 도구와 기능을 제공합니다 🎉. LangChain을 사용하면 개발자가 효율적으로 인공지능을 활용하여 다양한 애플리케이션을 개발할 수 있습니다 💻. 🚀 개발자들의 인공지능 활용을 쉽게 만들어주는 LangChain은 인공지능 개발의未来를 밝혀줄 것입니다 💫!
 ```
+
+
+### Custom Generator
+`Custom Generator` 는 파이썬의 `Generator` 기능(`yield`를 사용하는 함수)과 `LCEL` 의 체인(`Runnable`)시스템을 결합하여, 
+데이터를 한 번에 모두 처리하는 것이 아니라 순차적(스트리밍) 생성하는 사용자 정의 실행 단위를 의미한다. 
+입력값을 받아 처리 결과를 `yield` 를 통해 한 단계씩 반환하고 `LCEL` 파이프라인 내에서, 
+대용량 처리/점진적 응답/실시간 피드백 등 다양한 스트림 기반 워크플로우를 구현할 때 핵심 역할을 한다. 
+
+`Custom Generator` 는 아래와 같은 경우 사용할 수 있다.
+
+- `LLM`, `API` 등에서 응답을 한 번에 모두 받지 않고, 토큰 단위/문장 단위로 점진적 출력이 필요할 때 
+- 데용량 데이터를 일괄처리 하지 않고, 한 줄씩 처리/전송할 때
+- 스트림 기반 파이프라인을 만들고 싶을 때 
+- 메모리 사용을 최소화하며, 데이터 흐름을 효율적으로 제어하고 싶을 때 
+
+또한 사용자 정의 출력 파서 구현 및 이전 단계 출력을 수정하면서 스트리밍 기능을 유지하고 싶을 때 사용할 수 있다. 
+
+`Custom Generator` 예시를 위해 아래와 같은 체인을 구현한다.  
+
+```python
+from typing import Iterator, List
+from langchain.prompts.chat import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+prompt = ChatPromptTemplate.from_template(
+    "{query} 에 맞는 주요한 키워드 5개를 쉽표로 구분된 목록으로 작성하세요."
+)
+
+str_chain = prompt | model | StrOutputParser()
+```  
+
+`stream()` 과 `invoke()` 결과를 확인하면 아래와 같다.  
+
+```python
+for chunk in str_chain.stream({"query": "langchain"}):
+    print(chunk, end="", flush=True)
+# LLaMA, AI, 언어 모델, 인공지능, 챗봇
+
+str_chain.invoke({"query":"langchain"})
+# LLaMA, 인공지능, 채팅봇, 언어 모델, AI 플랫폼
+```  
+
+아래 `split_into_list` 함수는 사용자 제너레이터는 `LLM` 토큰의 `Iterator` 입력아로 받아 쉼표로 구분된 문자열 리스트의 `Iterator` 를 반환한다.  
+
+```python
+def split_into_list(input: Iterator[str]) -> Iterator[List[str]]:
+    buffer = ""
+    
+    for chunk in input:
+        buffer += chunk
+        while "," in buffer:
+            comma_index = buffer.index(",")
+            yield [buffer[:comma_index].strip()]
+            buffer = buffer[comma_index + 1 :]
+            
+    yield [buffer.strip()]
+```  
+
+`split_into_list` 사용자 제너레이터를 파이프(`|`) 연산자를 사용해 `str_chain` 에 연결한다.  
+
+```python
+list_chain = str_chain | split_into_list
+```  
+
+사용자 제너레이터와 연결된 체인을 `stream()` 과 `invoke()` 로 실행하면 아래와 같이 
+`LLM` 의 응답을 쉼표로 구분된 리스트 형태로 변환한 결과를 확인할 수 있다.  
+
+```python
+for chunk in list_chain.stream({"query": "langchain"}):
+    print(chunk, flush=True)
+# ['LLaMA']
+# ['언어 모델']
+# ['인공지능']
+# ['챗봇']
+# ['AI']
+
+list_chain.invoke({"query" : "langchain"})
+# ['Large Language Model', '인공지능', '챗봇', '자연어 처리', '언어 모델링']
+```  
+
+`astream()` 과 `ainvoke()` 와 같이 비동기 함수를 사용한다면 아래와 같이 사용자 제너레이터를 구현해 사용할 수 있다.  
+
+```python
+from typing import AsyncIterator
+
+async def asplit_into_list(input: AsyncIterator[str]) -> AsyncIterator[List[str]]:
+    buffer = ""
+    
+    async for chunk in input:
+        buffer += chunk
+        while "," in buffer:
+            comma_index = buffer.index(",")
+            yield [buffer[:comma_index].strip()]
+            buffer = buffer[comma_index + 1:]
+            
+    yield [buffer.strip()]
+
+alist_chain = str_chain | asplit_into_list
+
+async for chunk in alist_chain.astream({"query":"langchain"}):
+    print(chunk, flush=True)
+['AI']
+['언어 모델']
+['챗봇']
+['자연어 처리']
+['기계 학습']
+
+await alist_chain.ainvoke({"query":"langchain"})
+# ['LLaMA', 'AI', '챗봇', '자연어 처리', '프로그래밍']
+```  
