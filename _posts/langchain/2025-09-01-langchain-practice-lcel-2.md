@@ -1009,3 +1009,174 @@ async for chunk in alist_chain.astream({"query":"langchain"}):
 await alist_chain.ainvoke({"query":"langchain"})
 # ['LLaMA', 'AI', '챗봇', '자연어 처리', '프로그래밍']
 ```  
+
+### Runnable Arguments Binding
+`Runnable Arguents Binding` 은 `Runnable` 체인 실행 시점에 동적으로 인자(파라미터, 옵션 등)를 주입하여 
+동일한 체인 구조라도 매번 다르게 동작하게 만드는 기능을 의미한다. 
+체인 정의 시 고정된 값이 아니라 실행 시점에 외부에서 필요한 값을(프롬프트 변수, 모델 옵션 등)을 전달해 
+각 단계별로 원하는 입력, 옵션, 변수, 설정 등을 유연하게 변경 가능하다. 
+
+`Runnable Arguments Binding` 은 아래와 같은 경우 사용할 수 있다.
+
+- 프롬프트 내 변수 값, `LLM` 파라미터, 체인 옵션 등을 실행할 때마다 다르게 지정하고 싶은 경우
+- 동일한 파이프라인 구조로 다양한 입력값/환경/옵션을 실험하거나 운영하고 싶을 때
+- 동적 워크플로우, 사용자 맞춤 실행, A/B 테스트 등 상황별로 체인 동작을 바꾸고 싶을 때
+- 체인 재사용성, 유연성, 확장성을 극대화하고 싶을 때 
+
+
+`Runnable Arguments Binding` 예시를 위해 아래와 같은 체인을 구현한다.
+자연어로 수식을 작성하면 이를 방정식을 만들고 결과를 도출하는 프롬프트이다.  
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "대수 기호를 사용해 다음 방벙식을 작성한 다음 풀이하세요."
+            "최종 결과는 아래를 따르세요."
+            "수식 : .."
+            "답 : ..."
+        ),
+        (
+            "human",
+            "{query}"
+        )
+    ]
+)
+
+runnable = (
+    {"query" : RunnablePassthrough()} | prompt | model | StrOutputParser()
+)
+
+runnable.invoke({"query" : "x제곱 더하기 7은 12"})
+# 수식 : x^2 + 7 = 12
+# 답 : x = ±√5
+```  
+
+여기서 `bind()` 의 `stop` 파라미터를 사용해 최종 답변에서 특정 토큰까지만 출력하도록 설정할 수 있다. 
+아래 예시는 `수식`까지만 출력하고 `답` 은 출력하지 않도록 설정한 것이다.  
+
+```python
+runnable_with_bind = (
+    {"query" : RunnablePassthrough()}
+    | prompt
+    | model.bind(stop="답")
+    | StrOutputParser()
+)
+
+
+runnable_with_bind.invoke({"query" : "x제곱 더하기 7은 12"})
+# 수식 : x^2 + 7 = 12
+```  
+
+`binding` 의 유용한 활용으로는 `Functions` 기능을 연결하는 것이다. 
+아래와 같이 `수식` 과 `답` 을 출력하는 `Function` 을 정의한다.  
+
+```python
+function = {
+    "name" : "solver",
+    "description" : "Formulates and solves an equation",
+    "parameters" : {
+        "type" : "object",
+        "properties" : {
+            "equation" : {
+                "type" : "string",
+                "description" : "The algebraic expression of the equation",
+            },
+            "solution" : {
+                "type" : "string",
+                "description" : "The solution to the equation"
+            }
+        },
+        "required" : ["equation", "solution"]
+    }
+}
+```  
+
+그리고 `LLM` 모델에 `bind()` 메서드를 사용해 정의한 함수 호출을 모델에 바인딩한다.  
+
+```python
+function_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "대수 기호를 사용해 다음 방정식을 작성한 다음 풀이하세요."
+        ),
+        (
+            "human",
+            "{query}"
+        )
+    ]
+)
+
+function_runnable = model.bind(function_call={'name':'solver'}, functions=[function])
+
+result = function_runnable.invoke("x제곱 더하기 7은 12")
+# AIMessage(content='', additional_kwargs={'function_call': {'arguments': '{"equation": "x^2 + 7 = 12", "solution": "x = sqrt(5)"}', 'name': 'solver'}}, response_metadata={'token_usage': {'completion_tokens': 29, 'prompt_tokens': 279, 'total_tokens': 308, 'completion_time': 0.105454545, 'prompt_time': 0.024568217, 'queue_time': 0.231275051, 'total_time': 0.130022762}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'function_call', 'logprobs': None}, id='run--6bd7a989-da4d-4683-8304-38ef91f84a49-0', usage_metadata={'input_tokens': 279, 'output_tokens': 29, 'total_tokens': 308})
+
+funciton_result = result.additional_kwargs['function_call']['arguments']
+# {"equation": "x^2 + 7 = 12", "solution": "x = sqrt(5)"}
+```  
+
+또 다른 활용법으로는 `tools` 를 연결해 활용하는 방법이 있다. 
+`tools` 를 정의해 모델에 바인딩하면 다양한 기능을 간편하게 사용할 수 있다. 
+아래와 같은 지역의 날씨를 확인하는 `tool` 을 정의한다.  
+
+```python
+tools = [
+    {
+        "type" : "function",
+        "function" : {
+            "name" : "get_current_weather",
+            "description" : "주어진 위치의 현재 날씨를 가져옵니다.",
+            "parameters" : {
+                "type" : "object",
+                "properties" : {
+                    "location" : {
+                        "type" : "string",
+                        "description " : "도시와 주, e.g) San Francisco, CA"
+                    },
+                    "unit" : {
+                        "type" : "string",
+                        "enum" : ["celsius", "fahrenheit"]
+                    },
+                }
+            },
+            "required" : ["location"]
+        }
+    }
+]
+```  
+
+정의한 툴을 모델에 `bind()` 메서드를 사용해 바인딩한다. 
+그리고 여러 지역을 질의에 넣어 질문하면 아래와 같이 툴에 맞는 결과를 얻을 수 있다.  
+
+```python
+tools_model = model.bind(tools=tools)
+
+result = tools_model.invoke("서울, 샌프란시스코의 현재 날씨에 대해 알려줘")
+# AIMessage(content='', additional_kwargs={'tool_calls': [{'id': 'call_d75x', 'function': {'arguments': '{"location":"서울", "unit":"celsius"}', 'name': 'get_current_weather'}, 'type': 'function'}, {'id': 'call_gw66', 'function': {'arguments': '{"location":"San Francisco, CA", "unit":"fahrenheit"}', 'name': 'get_current_weather'}, 'type': 'function'}]}, response_metadata={'token_usage': {'completion_tokens': 42, 'prompt_tokens': 268, 'total_tokens': 310, 'completion_time': 0.152727273, 'prompt_time': 0.023455216, 'queue_time': 0.23160565500000002, 'total_time': 0.176182489}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'tool_calls', 'logprobs': None}, id='run--753185e7-32a9-4294-9dab-2ca6782e9f6f-0', tool_calls=[{'name': 'get_current_weather', 'args': {'location': '서울', 'unit': 'celsius'}, 'id': 'call_d75x', 'type': 'tool_call'}, {'name': 'get_current_weather', 'args': {'location': 'San Francisco, CA', 'unit': 'fahrenheit'}, 'id': 'call_gw66', 'type': 'tool_call'}], usage_metadata={'input_tokens': 268, 'output_tokens': 42, 'total_tokens': 310})
+
+tool_result = result.additional_kwargs['tool_calls']
+# [{'id': 'call_nph9',
+#   'function': {'arguments': '{"location": "서울", "unit": "celsius"}',
+#                'name': 'get_current_weather'},
+#   'type': 'function'},
+#  {'id': 'call_v519',
+#   'function': {'arguments': '{"location": "San Francisco, CA", "unit": "fahrenheit"}',
+#                'name': 'get_current_weather'},
+#   'type': 'function'}]
+```  
+
+
+
+---  
+## Reference
+[Understanding LangChain Runnables](https://mirascope.com/blog/langchain-runnables/)  
+[runnables](https://python.langchain.com/api_reference/core/runnables.html)  
+[LCEL](https://wikidocs.net/233781)  
+
