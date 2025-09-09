@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain LCEL 2nd"
 header:
   overlay_image: /img/langchain-bg-2.png
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 프레임워크 내에서 체인, 프롬프트, 모델의 연결과 조작을 더 쉽고 강력하게 만들어주는 도구적 언어인 LCEL 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,15 @@ tags:
     - LangChain
     - AI
     - LLM
+    - LCEL
+    - Expression Language
+    - configurable_fields
+    - configurable_alternatives
+    - RunnableWithMessageHistory
+    - Runnable Graph
+    - Chain Decorator
+    - Custom Generator
+    - Runnable Arguments Binding
 toc: true
 use_math: true
 ---  
