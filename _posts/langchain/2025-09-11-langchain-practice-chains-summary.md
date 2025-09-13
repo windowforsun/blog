@@ -262,3 +262,188 @@ answer = map_reduce_chain.invoke({"docs": pdf_docs_mini})
 # * 포브스는 2025년 50대 AI 기업 목록을 발표했으며, 이 목록에는 오픈AI, 앤스로픽, 싱킹머신랩, 월드랩스 등이 포함되었다.
 ```  
 
+
+### Map-Refine
+`Map-Refine` 방식은 문서를 청크로 나눈 뒤, 첫 번째 청크를 요약하고, 이후 각 청크마다 이전 요약본을 바탕으로 점진적으로 내용을 보완(`Refine`)하는 방식이다. 
+이전 요약을 계속 참고하므로, 문서의 흐름이나 맥락을 더 잘 반영할 수 있고, 
+순차적으로 정보가 누적되어, 전체 맥락을 유지한 요약이 가능하다. 
+하지만 벙렬 처리가 불가하고, 청크 수가 많으면 시간이 오래 걸릴 수 있다.  
+
+우선 `Map` 단계에서 각 청크를 요약하고 중요한 정보를 추출한다.  
+
+```python
+# map 
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+map_summary_prompt = ChatPromptTemplate.from_messages([
+    ("system", """
+    You are an expert summarizer. Your task is to summarize the following document in {language}.
+    """),
+    ("human", """
+    Extract most important main thesis from the documents, then summarize in bullet points.
+
+    #Forma
+    - summary 1
+    - summary 2
+    - summary 3
+    -...
+
+    Here is a given document: 
+    {documents}
+
+    Write 1~5 sentences. Think step by step.
+    #Summary:
+    """)
+])
+
+map_summary_chain = map_summary_prompt | model | StrOutputParser()
+
+prompt_datas = [{"documents" : doc, "language" :"Korean"} for doc in pdf_docs_mini]
+
+map_summary_answer = map_summary_chain.batch(prompt_datas)
+
+print(map_summary_answer[0])
+# - 구글은 AI 에이전트 간 통신 프로토콜 'A2A(Agent2Agent)'를 공개했다.
+# - A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원한다.
+# - 구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했다.
+# - A2A는 MCP를 보완하는 역할로서, 에이전트 간 협업을 위한 상위 수준의 프로토콜이다.
+# - A2A 프로토콜은 다중 에이전트 간 협업을 위한 개방형 프로토콜로 설계되어, 다양한 플랫폼과 클라우드 환경에서 사용할 수 있다.
+```  
+
+이후 `Refine` 단계에서는 이전 청크까지의 요약과 현재 청크 요약정보를 바탕으로 점진적으로 보완한다. 
+최종적으로는 전체 문서에 대한 요약을 생성할 수 있다.  
+
+```python
+# refine
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+refine_prompt = ChatPromptTemplate.from_messages([
+    ("system", """
+    You are an expert summarizer.
+    """),
+    ("human", """
+    Your job is to produce a final summary
+
+    We have provided an existing summary up to a certain point:
+    previous summary: {previous_summary}
+
+    Update the summary including the above with the summary below.
+    ------------
+    {current_summary}
+    ------------
+    Given the new context, refine the original summary in {language}.
+    If the context isn't useful, return the original summary.
+    """)
+])
+
+refine_chain = refine_prompt | model | StrOutputParser()
+
+refine_answer = refine_chain.invoke({"previous_summary": map_summary_answer[0], 
+                                     "current_summary": map_summary_answer[1], 
+                                     "language":"Korean"})
+# 구글은 AI 에이전트 간 통신 프로토콜 'A2A(Agent2Agent)'를 공개했으며, A2A는 에이전트 간 협업을 위한 표준 방식을 제공하기 위해 구축되었다. A2A 프로토콜은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 설계되었다. A2A는 작업을 구성하고 전달하는 역할을 하는 클라이언트 에이전트와 작업을 수행하는 원격 에이전트 간 원활한 통신을 위해 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 기능을 제공한다. 또한, 구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명했다. A2A 프로토콜은 기업 환경에서 요구하는 높은 수준의 인증 및 권한 관리 기능을 제공하고 빠른 작업뿐 아니라 장시간 작업 환경에도 적합하며, 텍스트와 오디오, 동영상 스트리밍도 지원한다.
+# 
+# 한편, 메타는 멀티모달 AI 모델 '라마 4' 제품군을 공개하였으며, 라마 4 스카우트와 라마 4 매버릭을 출시하고 라마 4 베히모스는 프리뷰로 공개되었습니다. 라마 4는 라마 시리즈 최초의 전문가혼합 모델로 설계되었으며, 텍스트뿐 아니라 이미지, 비디오를 함께 처리할 수 있는 멀티모달 기능을 기본 탑재하였습니다. 라마 4 스카우트는 활성 매개변수 170억 개에 16개의 전문가 모델로 구성되어 있으며, 주요 벤치마크 평가에서 유사 크기의 경쟁 모델보다 우수한 성능을 기록하였습니다. 메타는 라마 4의 성능 평가에 사용한 버전과 실제 개발자에게 제공되는 버전 간의 성능 차이로 인해 테스트셋으로 모델을 학습시켰다는 의혹을 부인했습니다. 메타의 아흐마드 알달레 사장은 이러한 의혹은 전혀 사실이 아니라고 반박하며, 모델이 준비되자마자 공개했기 때문에 기능 안정화에는 시간이 필요하다고 해명했습니다. 이러한 새로운 기술 개발과 공개는 AI 분야의 발전에 기여할 것으로 예상됩니다.
+```  
+
+위 `Map-Refine` 를 하나의 체인으로 구성하면 아래와 같다.
+
+```python
+# map-refine full
+
+from langchain_core.runnables import chain
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+@chain
+def map_refine_chain(docs):
+  map_summary_prompt = ChatPromptTemplate.from_messages([
+      ("system", """
+      You are an expert summarizer. Your task is to summarize the following document in {language}.
+      """),
+      ("human", """
+      Extract most important main thesis from the documents, then summarize in bullet points.
+
+      #Format:
+      - summary 1
+      - summary 2
+      - summary 3
+      -...
+
+      Here is a given document: 
+      {documents}
+
+      Write 1~5 sentences. Think step by step.
+      #Summary:
+      """)
+  ])
+
+  map_summary_chain = map_summary_prompt | model | StrOutputParser()
+
+  prompt_datas = [{"documents" : doc, "language" :"Korean"} for doc in pdf_docs_mini]
+
+  map_summary_answer = map_summary_chain.batch(prompt_datas)
+
+  refine_prompt = ChatPromptTemplate.from_messages([
+      ("system", """
+      You are an expert summarizer.
+      """),
+      ("human", """
+      Your job is to produce a final summary
+
+      We have provided an existing summary up to a certain point:
+      previous summary: {previous_summary}
+
+      Update the summary including the above with the summary below.
+      ------------
+      {current_summary}
+      ------------
+      Given the new context, refine the original summary in {language}.
+      If the context isn't useful, return the original summary.
+      """)
+  ])
+
+  refine_chain = refine_prompt | model | StrOutputParser()
+
+  previous_summary = map_summary_answer[0]
+
+  for current_summary in map_summary_answer[1:]:
+    previous_summary = refine_chain.invoke({
+        "previous_summary": previous_summary, 
+        "current_summary": current_summary, 
+        "language":"Korean"
+    })
+
+    print(previous_summary)
+    print("==================================================")
+
+  return previous_summary
+
+
+answer = map_refine_chain.invoke(pdf_docs_mini)
+# 구글은 AI 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 'A2A(Agent2Agent)'를 공개했다.
+# - A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원한다.
+# - A2A 프로토콜은 다중 에이전트 간 협업을 위한 표준 방식을 제공하기 위해 설계되었다.
+# - 구글은 제미나이 모델과 SDK에서 앤στρο픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명했다.
+# - A2A 프로토콜은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 설계되었다.
+# 한편, 메타는 최근 멀티모달 AI 모델 '라마 4' 제품군을 공개했으며, 이 모델은 텍스트, 이미지, 비디오를 함께 처리할 수 있는 멀티모달 기능을 기본 탑재한 전문가혼합 모델입니다. 라마 4는 이미 일부 제품이 출시되었으며, 다양한 벤치마크 평가에서 우수한 성능을 기록했습니다. 그러나 일부 AI 연구자들은 메타가 성능을 조작했다는 의혹을 제기했지만, 메타는 이를 부인했습니다.
+# 또한, 아마존은 웹브라우저 내에서 사용자 대신 다양한 작업을 수행하도록 훈련된 AI 모델 '아마존 노바 액트'를 개발자용 SDK와 함께 공개했다.
+# - 노바 액트는 벤치마크 평가에서 앤스로픽의 클로드 3.7 소네트와 오픈AI CUA를 능가했으며, 아마존의 AI 기반 음성 비서 '알렉사 플러스'에도 적용되었다.
+# - 노바 액트는 복잡한 작업을 세부적인 작업 단위로 나누어 처리할 수 있도록 설계되어 사용자 대신 작업을 수행하는 안정성을 강화한다.
+# - 아마존은 노바 액트가 반복 작업을 자동 실행하도록 설정 가능하며, 예를 들어 매주 같은 시간에 샐러드를 자동으로 주문하는 등 다양한 작업을 수행할 수 있다.
+# - 노바 액트는 화면 없이 백그라운드에서 작동하게 하거나 AI 에이전트를 API 형태로 만들어 제품에 통합할 수 있다.
+# さらに, 오픈AI는 GPT-4.1 API를 출시했으며, 최대 100만 개 토큰의 컨텍스트 창을 지원하고, 전반적인 성능이 GPT-4o와 GPT-4o 미니를 능가한다.
+# - GPT-4.1 기본 모델은 코딩, 지시이행, 장문 컨텍스트 이해 능력에서 GPT-4o를 능가한다.
+# - 오픈AI는 또한 추론 모델 o3와 o4-미니를 출시했으며, o3는 멀티모달과 코딩 관련 벤치마크 평가에서 최고 점수를 기록했다.
+# - 그러나 o3와 o4-미니의 환각 현상은 o1보다 심해졌으며, 오픈AI는 환각 증가의 원인을 규명하기 위해 더 많은 연구가 필요하다고 밝혔다.
+# - GPT-4.1 미니와 나노 모델은 각각 비슷하거나 더 뛰어난 지능을 발휘하면서 지연 시간과 비용을 줄였다.
+# 최근 중국에서 자율주행 보조 기능을 탑재한 샤오미 전기차가 충돌사고로 3명이 사망하면서 자율주행 기능의 안전성 및 과도한 마케팅에 대한 우려가 증폭되고 있다. 이러한 기술 개발은 AI 에이전트의 협업과 상호운용성을 향상시키며, 사용자에게 더 편리하고 효율적인 서비스를 제공할 수 있을 것으로 기대된다. 그러나 안전성과 마케팅에 대한 우려도 함께 증가하고 있어, 기술 개발과 함께 안전성 및 책임성에 대한 고려가 필요할 것으로 보인다.
+# 또한, 포브스는 2025년 50대 AI 기업 목록을 발표했으며, 이 목록에는 오픈AI와 앤스로픽을 비롯한 여러 기업이 포함되어 있습니다.
+# - 이 목록은 AI 에이전트로의 전환 추세를 반영하며, 단순히 명령에 응답하는 AI를 넘어 문제를 해결하고 전체 작업을 완료할 수 있는 AI 에이전트가 주류로 부상할 것으로 예상됩니다.
+# - 포브스는 2026년에는 사용자 대신 모든 업무를 처리하는 AI 에이전트가 주류가 될 것으로 전망합니다.
+# - 목록에 포함된 기업 중에는 법률 AI 스타트업 하비와 애니스피어 등이 있으며, 이 기업들은 업무용 AI 도구를 제공하고 있습니다.
+# - 포브스의 2025년 AI 50 목록은 AI 기술의 발전과 미래의 전망을 보여주는 중요한 지표입니다.
+# 이러한 기술 개발과 기업 동향은 AI 분야의 빠른 발전과 사용자에게 제공되는 서비스의 다양화와 개선을 의미하며, 앞으로의 기술 발전과 함께 책임성과 안전성에 대한 관심도 함께 증가할 것으로 예상된다.
+```  
