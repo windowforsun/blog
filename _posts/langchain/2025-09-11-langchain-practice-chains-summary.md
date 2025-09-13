@@ -79,3 +79,186 @@ stuff_summary = stuff_chain.invoke({"context": docs, "language" : "Korean"})
 # * KG는 구조적으로 정리된 정보, LLM의 언어실력과 이를 연결하는 RAG가 힘을 합쳐 강력한 AI 작품을 만듭니다.
 ```  
 
+
+### Map-Reduce
+`Map-Reduce` 방식은 문서를 여러 청크로 나누고, 각 청크를 개별적으로 요약(`Map`)한 뒤, 이 요약본들을 다시 하나로 통합 요약(`Reduce`)하는 방식이다.
+대용량 문서나 컨텍스트 윈도우를 초과하는 경우에도 사용 가능하고, 
+`Map` 단계가 병렬화되어 처리 속도가 빠르다는 장점이 있다. 
+하지만 `Reduce` 단계에서 요약본이 많으면 다시 컨텍스트 한도에 도달할 수 있고, 
+각 청크 간의 연관성을 높칠 수 있다.  
+
+예제를 위해 `AI Brief` PDF 문서 중 일부를 사용한다. 
+
+```python
+from langchain_community.document_loaders import PyPDFLoader
+
+pdf_loader = PyPDFLoader("./SPRi AI Brief 5월호 산업동향.pdf")
+pdf_docs = pdf_loader.load()
+
+pdf_docs_mini = pdf_docs[10:17]
+print(len(pdf_docs))
+# 7
+print(pdf_docs_mini[0])
+# Document(metadata={'producer': 'Hancom PDF 1.3.0.505', 'creator': 'Hancom PDF 1.3.0.505', 'creationdate': '2025-05-09T09:07:04+09:00', 'author': 'dj', 'moddate': '2025-05-09T09:07:04+09:00', 'pdfversion': '1.4', 'source': './SPRi AI Brief 5월호 산업동향.pdf', 'total_pages': 28, 'page': 10, 'page_label': '11'}, page_content='정책･법제기업･산업기술･연구인력･교육\n9\n구글, AI 에이전트 간 통신 프로토콜 ‘A2A’ 공개 및 MCP 지원 발표n구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원n구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명\nKEY Contents\n£A2A, 다중 에이전트 간 협업을 위한 개방형 프로토콜로 설계n구글(Google)이 2025년 4월 9일 50개 이상의 기업*과 협력해 AI 에이전트 간 통신을 위한 개방형 프로토콜 ‘A2A(Agent2Agent)’를 공개* 액센추어(Accenture), 코히어(Cohere), 랭체인(Langchain), 페이팔(Paypal), 세일즈포스(Salesforce) 등∙구글은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 A2A 프로토콜을 출시했다고 발표∙구글에 따르면 A2A는 AI 에이전트 간 협업을 위한 표준 방식을 제공하기 위해 HTTP, SSE, JSON-RPC 등 기존 표준을 기반으로 구축되었으며, 기업 환경에서 요구하는 높은 수준의 인증 및 권한 관리 기능을 제공하고 빠른 작업뿐 아니라 장시간 작업 환경에도 적합하며, 텍스트와 오디오, 동영상 스트리밍도 지원nA2A는 작업을 구성하고 전달하는 역할을 하는 클라이언트 에이전트(Client Agent)와 작업을 수행하는 원격 에이전트(Remote Agent) 간 원활한 통신을 위해 다음과 같은 기능을 제공∙(기능 탐색) 각 에이전트가 자신의 기능을 JSON* 형식의 ‘에이전트 카드**’를 통해 공개하면 클라이언트 에이전트는 작업 수행에 가장 적합한 에이전트를 식별해 A2A로 원격 에이전트와 통신* 키-값 쌍으로 이루어진 데이터 객체를 표현하기 위한 텍스트 기반의 개방형 표준 형식** 에이전트의 기능과 스킬, 인증 요구사항 등을 설명하는 공개 메타데이터 파일∙(작업 관리) 클라이언트 에이전트와 원격 에이전트는 최종 사용자의 요청에 대응해 작업 수명주기 전반에서 작업 처리 상태를 지속 동기화하여 처리∙(협업) 각 에이전트는 서로 컨텍스트, 응답, 작업 결과물, 사용자 지시와 같은 메시지를 교환해 협업을 진행∙(사용자 경험 협의) 각 메시지에는 이미지, 동영상, 웹 양식과 같은 특정 콘텐츠 유형이 명시되어 있어, 각 에이전트는 사용자 인터페이스(UI)에 맞게 적절한 콘텐츠 형식을 협의£구글, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원 발표n한편, 구글 딥마인드(Google Deepmind)의 데미스 하사비스(Demis Hassabis) CEO는 2025년 4월 9일 X를 통해 구글이 앤스로픽의 MCP를 제미나이 모델과 SDK에서 지원하겠다고 발표**  https://x.com/demishassabis/status/1910107859041271977∙구글에 따르면 A2A는 MCP를 보완하는 역할로서, MCP가 LLM을 데이터, 리소스 및 도구와 연결하는 프로토콜이라면 A2A는 에이전트 간 협업을 위한 상위 수준의 프로토콜에 해당 출처 | Google, Announcing the Agent2Agent Protocol (A2A), 2025.04.09.')
+```  
+
+`PDF` 문서를 한 장씩 `Map` 단계를 수행한다. 
+`Map` 단계를 수행하는 프롬프트와 코드는 아래와 같다.  
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+
+
+map_prompt = ChatPromptTemplate.from_messages([
+    ("system", """
+    You are a professional main thesis extractor.
+    """),
+    ("human", """
+    Your task is to extract main thesis from given documents. Answer should be in same language as given document. 
+
+    #Format: 
+    - thesis 1
+    - thesis 2
+    - thesis 3
+    - ...
+
+    Here is a given document: 
+    {doc}
+
+    Write 1~5 sentences.
+    #Answer:
+    """)
+])
+
+
+map_chain = map_prompt | model | StrOutputParser()
+
+
+pdf_docs_summaries = map_chain.batch(pdf_docs_mini)
+
+print(pdf_docs_summaries[0])
+# - 구글은 AI 에이전트 간 통신 프로토콜 'A2A'를 공개하여 다중 에이전트 간 협업을 위한 개방형 프로토콜을 제공했다.
+# - A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원한다.
+# - 구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했다.
+# - A2A는 MCP를 보완하는 역할로서, 에이전트 간 협업을 위한 상위 수준의 프로토콜이다.
+# - 구글은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 A2A 프로토콜을 출시했다.
+```  
+
+모든 페지이가 `Map` 단계를 거쳐 요약된 결과가 만들어 졌으면, 
+이를 `Reduce` 단계를 통해 하나의 요약으로 병합한다.  
+
+```python
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+reduce_prompt = ChatPromptTemplate.from_messages([
+    ("system", """
+    You are a professional summarizer. You are given a list of summaries of documents and you are asked to create a single summary of the documents.
+    """),
+    ("human", """
+    #Instructions: 
+    1. Extract main points from a list of summaries of documents
+    2. Make final summaries in bullet points format.
+    3. Answer should be written in {language}.
+
+    #Format: 
+    - summary 1
+    - summary 2
+    - summary 3
+    - ...
+
+    Here is a list of summaries of documents: 
+    {doc_summaries}
+
+    #SUMMARY:
+    """)
+])
+
+reduce_chain = reduce_prompt | model | StrOutputParser()
+
+reduce_answer = reduce_chain.invoke({"doc_summaries": pdf_docs_summaries, "language":"Korean"})
+# * 구글은 다중 에이전트 간 협업을 위한 개방형 프로토콜 'A2A'를 공개했다.
+# * 메타는 멀티모달 AI 모델 '라마 4' 제품군을 공개했다.
+# * 아마존은 웹브라우저 내에서 사용자 대신 다양한 작업을 수행하도록 훈련된 AI 모델 '아마존 노바 액트'를 개발자용 SDK와 함께 공개했다.
+# * 오픈AI는 GPT-4.1 제품군을 API로 출시했다.
+# * 중국에서 자율주행 보조 기능에 대한 우려가 증대되었다.
+# * 포브스는 2025년 50대 AI 기업 목록을 발표했다.
+# * 기술 연구의 최근 동향과 발전에 관한 논문이 있다.
+```  
+
+위 `Map-Reduce` 를 하나의 체인으로 구성하면 아래와 같다.  
+
+```python
+# map-reduce full
+
+from langchain_core.runnables import chain
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+
+@chain
+def map_reduce_chain(docs):
+  map_prompt = ChatPromptTemplate.from_messages([
+      ("system", """
+      You are a professional main thesis extractor.
+      """),
+      ("human", """
+      Your task is to extract main thesis from given documents. Answer should be in same language as given document. 
+
+      #Format: 
+      - thesis 1
+      - thesis 2
+      - thesis 3
+      - ...
+
+      Here is a given document: 
+      {doc}
+
+      Write 1~5 sentences.
+      #Answer:
+      """)
+  ])
+  map_chain = map_prompt | model | StrOutputParser()
+  pdf_docs_summaries = map_chain.batch(pdf_docs_mini)
+
+  reduce_prompt = ChatPromptTemplate.from_messages([
+      ("system", """
+      You are a professional summarizer. You are given a list of summaries of documents and you are asked to create a single summary of the documents.
+      """),
+      ("human", """
+      #Instructions: 
+      1. Extract main points from a list of summaries of documents
+      2. Make final summaries in bullet points format.
+      3. Answer should be written in {language}.
+      4. Do not include any content or information other than the document summary in the final answer.
+
+      #Format: 
+      - summary 1
+      - summary 2
+      - summary 3
+      - ...
+
+      Here is a list of summaries of documents: 
+      {doc_summaries}
+
+      #SUMMARY:
+      """)
+  ])
+
+  reduce_chain = reduce_prompt | model | StrOutputParser()
+
+  reduce_answer = reduce_chain.invoke({"doc_summaries": pdf_docs_summaries, "language":"Korean"})
+
+  return reduce_answer
+
+
+answer = map_reduce_chain.invoke({"docs": pdf_docs_mini})
+# * 구글은 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했다.
+# * 메타는 멀티모달 AI 모델 '라마 4' 제품군을 공개했으며, 라마 4는 텍스트, 이미지, 비디오를 함께 처리할 수 있는 멀티모달 기능을 기본 탑재했다.
+# * 아마존은 AI 에이전트 구축을 위한 AI 모델 '노바 액트'를 개발자용 SDK와 함께 공개했으며, 노바 액트는 사용자 대신 다양한 작업을 수행하도록 훈련된 AI 모델이다.
+# * 오픈AI는 GPT-4.1 API를 출시했으며, 최대 100만 개 토큰의 컨텍스트 창을 지원한다.
+# * 자율주행 보조 기능의 안전성 및 과도한 마케팅에 대한 우려가 증폭했다.
+# * 포브스는 2025년 50대 AI 기업 목록을 발표했으며, 이 목록에는 오픈AI, 앤스로픽, 싱킹머신랩, 월드랩스 등이 포함되었다.
+```  
+
