@@ -447,3 +447,121 @@ answer = map_refine_chain.invoke(pdf_docs_mini)
 # - 포브스의 2025년 AI 50 목록은 AI 기술의 발전과 미래의 전망을 보여주는 중요한 지표입니다.
 # 이러한 기술 개발과 기업 동향은 AI 분야의 빠른 발전과 사용자에게 제공되는 서비스의 다양화와 개선을 의미하며, 앞으로의 기술 발전과 함께 책임성과 안전성에 대한 관심도 함께 증가할 것으로 예상된다.
 ```  
+
+### Chain of Density
+반복적으로 요약을 수행하며, 매 단계마다 누락된 핵심 정보를 추가해 점점 더 정보 밀도가 높은 요약을 만들어내는 방식이다. 
+정보가 누락되지 않도록 반복적으로 보완해 매우 압축적이면서도 풍부한 요약을 생성하고, 
+복잡한 긴 문서에서 핵심 정보를 최대한 많이 담아낼 수 있다. 
+하지만 반복적으로 `LLM` 을 호출하므로 비용과 시간이 증가하고, 
+프롬프트 설계가 다소 복잡해 질 수 있다.  
+
+- 점진적 개선 : 초기에는 간단한 요약을 생성한 뒤, 단계적으로 중요한 개체들을 추가하며 개선한다. 과정이 반복되더라도 요약 길이는 유지되면서 정보의 밀도는 높아져 읽기 슆고 풍부한 요약이 만들어진다. 
+- 정보 밀도와 가독성 균형 : 요약의 정보 밀도를 계속 조절하며 정보성과 가독성 사이의 최적 균형점을 찾는다. 
+- 추상화 및 정보 융합 : 추상적이고 융합성이 뛰어나다. 원문의 앞부분에 치우치는 경향이 덜하다. 
+
+`CoD` 를 구현하는 프롬프트와 코드는 아래와 같다. 
+먼저 `Cod` 의 프롬프틑 아래와 같은 입력 파라미터를 사용한다.  
+
+- `content_category` : 요약할 문서의 종류 (기사, 논문, 블로그 등)
+- `content` : 요약할 컨텐츠
+- `entity_range` : 컨텐츠에서 선택하여 요약에 추가할 엔티티 수의 범위
+- `max_words` : 1번 요약을 수행할 때 포함할 최대 단어 수
+- `iterations` : 엔티티 고도화 라운드 수
+
+```python
+import textwrap
+from langchain_core.output_parsers import SimpleJsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+cod_chain_input = {
+    "content" : lambda d : d.get("content"),
+    "content_category" : lambda d: d.get("content_category", "Article"),
+    "entity_range" : lambda d: d.get("entity_range", "1-3"),
+    "max_words" : lambda d: int(d.get("max_words", 80)),
+    "iterations" : lambda d: int(d.get("iterations", 5)),
+    "language" : lambda d: d.get("language", "Korean")
+}
+
+cod_prompt = ChatPromptTemplate.from_messages([
+    ("system", """
+    As an expert copy-writer, you will write increasingly concise, entity-dense summaries of the user provided {content_category}. The initial summary should be under {max_words} words and contain {entity_range} informative Descriptive Entities from the {content_category}.
+
+    A Descriptive Entity is:
+    - Relevant: to the main story.
+    - Specific: descriptive yet concise (5 words or fewer).
+    - Faithful: present in the {content_category}.
+    - Anywhere: located anywhere in the {content_category}.
+
+    # Your Summarization Process
+    - Read through the {content_category} and the all the below sections to get an understanding of the task.
+    - Pick {entity_range} informative Descriptive Entities from the {content_category} (";" delimited, do not add spaces).
+    - In your output JSON list of dictionaries, write an initial summary of max {max_words} words containing the Entities.
+    - You now have `[{{"missing_entities": "...", "denser_summary": "..."}}]`
+
+    Then, repeat the below 2 steps {iterations} times:
+
+    - Step 1. In a new dict in the same list, identify {entity_range} new informative Descriptive Entities from the {content_category} which are missing from the previously generated summary.
+    - Step 2. Write a new, denser summary of identical length which covers every Entity and detail from the previous summary plus the new Missing Entities.
+
+    A Missing Entity is:
+    - An informative Descriptive Entity from the {content_category} as defined above.
+    - Novel: not in the previous summary.
+
+    # Guidelines
+    - The first summary should be long (max {max_words} words) yet highly non-specific, containing little information beyond the Entities marked as missing. Use overly verbose language and fillers (e.g., "this {content_category} discusses") to reach ~{max_words} words.
+    - Make every word count: re-write the previous summary to improve flow and make space for additional entities.
+    - Make space with fusion, compression, and removal of uninformative phrases like "the {content_category} discusses".
+    - The summaries should become highly dense and concise yet self-contained, e.g., easily understood without the {content_category}.
+    - Missing entities can appear anywhere in the new summary.
+    - Never drop entities from the previous summary. If space cannot be made, add fewer new entities.
+    - You're finished when your JSON list has 1+{iterations} dictionaries of increasing density.
+
+    # IMPORTANT
+    - Remember, to keep each summary to max {max_words} words.
+    - Never remove Entities or details. Only add more from the {content_category}.
+    - Do not discuss the {content_category} itself, focus on the content: informative Descriptive Entities, and details.
+    - Remember, if you're overusing filler phrases in later summaries, or discussing the {content_category} itself, not its contents, choose more informative Descriptive Entities and include more details from the {content_category}.
+    - Answer with a minified JSON list of dictionaries with keys "missing_entities" and "denser_summary".
+    - "denser_summary" should be written in the same language as the "content".
+    - Answer should be written in {language}.
+
+    ## Example output
+    [{{"missing_entities": "ent1;ent2", "denser_summary": "<vague initial summary with entities 'ent1','ent2'>"}}, {{"missing_entities": "ent3", "denser_summary": "denser summary with 'ent1','ent2','ent3'"}}, ...]
+    """),
+    ("human", """
+    {content_category}:
+    {content}
+    """)
+])
+
+cod_chain = (
+        cod_chain_input
+        | cod_prompt
+        | model
+        | SimpleJsonOutputParser()
+)
+
+cod_summary = cod_chain.invoke({
+    "content" : pdf_docs_mini[0],
+    "content_category" : "Article",
+    "iterations" : 5
+})
+
+
+# [{'missing_entities': 'A2A;에이전트',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜입니다.'},
+#  {'missing_entities': 'MCP',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜이고, A2A는 MCP를 보완하는 역할입니다.'},
+#  {'missing_entities': '제미나이',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜이고, A2A는 MCP를 보완하는 역할이며, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가합니다.'},
+#  {'missing_entities': 'HTTP;SSE;JSON-RPC',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜이고, A2A는 MCP를 보완하는 역할이며, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하고, HTTP, SSE, JSON-RPC 등 기존 표준을 기반으로 구축되었습니다.'},
+#  {'missing_entities': '클라이언트 에이전트;원격 에이전트',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜이고, A2A는 MCP를 보완하는 역할이며, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하고, HTTP, SSE, JSON-RPC 등 기존 표준을 기반으로 구축되었으며, 클라이언트 에이전트와 원격 에이전트 간 원활한 통신을 제공합니다.'},
+#  {'missing_entities': '에이전트 카드',
+#   'denser_summary': '구글이 에이전트 간 통신 프로토콜 A2A를 공개했으며, 에이전트 간 상호운용성을 보장하기 위한 개방형 프로토콜이고, A2A는 MCP를 보완하는 역할이며, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하고, HTTP, SSE, JSON-RPC 등 기존 표준을 기반으로 구축되었으며, 클라이언트 에이전트와 원격 에이전트 간 원활한 통신을 제공하고, 에이전트 카드를 통해 에이전트의 기능을 공개합니다.'}]
+```  
+
+이후 `Refine` 등 작업을 사용해 `cod_summary` 의 마지막 요약들을 합쳐 전체 요약본을 생성할 수 있다.  
+
