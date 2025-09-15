@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain Chains for Summary"
 header:
   overlay_image: /img/langchain-bg-2.png
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 에서 Chain 을 구성해 문서를 요약하는 다양한 방법론에 대해 알아본다.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,12 @@ tags:
     - LangChain
     - AI
     - LLM
+    - Summary
+    - Stuff
+    - Map-Reduce
+    - Map-Refine
+    - Chain of Density
+    - Clustering-Map-Refine
 toc: true
 use_math: true
 ---  
@@ -564,4 +570,3 @@ cod_summary = cod_chain.invoke({
 ```  
 
 이후 `Refine` 등 작업을 사용해 `cod_summary` 의 마지막 요약들을 합쳐 전체 요약본을 생성할 수 있다.  
-
