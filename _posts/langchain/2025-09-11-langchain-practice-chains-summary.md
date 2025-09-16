@@ -570,3 +570,160 @@ cod_summary = cod_chain.invoke({
 ```  
 
 이후 `Refine` 등 작업을 사용해 `cod_summary` 의 마지막 요약들을 합쳐 전체 요약본을 생성할 수 있다.  
+
+
+### Clustering-Map-Refine
+`Clustering-Map-Refine` 방식은 문서를 클러스터링하여 주제별로 요약을 수행하는 방식이다. 
+문서를 의미적으로 `N` 개의 클러스터로 그룹화하고, 
+각 클러스터의 중심 청크를 선택하여 `Refine` 방식을 수행한다. 
+유사한 주제끼리 묶어서 요약하므로 주제별 더 정교한 요약이 가능하고, 
+대량의 문서에서 토픽별로 요약이 필요할 때 효과적이다. 
+하지만 클러스터링 과정이 추가로 필요해 복잡성이 증가할 수 있고, 
+클러스터링 품질에 따라 요약 품질이 달리질 수 있다.  
+
+우선 `Clustering-Map-Refine` 를 구현하기 위해, 
+문서 전체 내용을 하나의 문자열로 합치고 `RecursiveCharacterTextSplitter` 를 사용해 청크로 나눈다. 
+그리고 문서 클러스터링을 위해 `Embedding` 을 수행하고 그 결과르 `KMeans` 알고리즘을 사용해 클러스터링을 수행한다. 
+
+```python
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from sklearn.cluster import KMeans
+
+pdf_mini_texts = "\n\n".join([doc.page_content for doc in pdf_docs_mini])
+
+print(len(pdf_mini_texts))
+# 9747
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=100)
+split_pdf_mini_texts = text_splitter.split_text(pdf_mini_texts)
+
+print(len(split_pdf_mini_texts))
+# 49
+
+
+vectors = hf_embeddings.embed_documents(split_pdf_mini_texts)
+
+num_clusters = 10
+
+kmeans = KMeans(n_clusters=num_clusters, random_state=1234).fit(vectors)
+
+print(kmeans.labels_)
+# array([5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 9, 9, 9, 9, 0, 0, 4, 4, 8, 8, 8, 8,
+# 8, 2, 9, 4, 3, 3, 9, 3, 3, 3, 3, 3, 4, 7, 7, 7, 1, 1, 1, 1, 4, 6,
+# 6, 6, 2, 2, 4], dtype=int32)
+```  
+
+클러스터링 결과의 분포를 `scatter` 표로 확인하면 아래와 같다.  
+
+```python
+# 분포 확인
+
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import warnings
+
+warnings.filterwarnings("ignore")
+
+tsne = TSNE(n_components=2, random_state=42)
+reduced_data_tsne = tsne.fit_transform(np.array(vectors))
+
+sns.set_style("white")
+
+plt.figure(figsize=(10, 8))
+sns.scatterplot(
+    x=reduced_data_tsne[:, 0],
+    y=reduced_data_tsne[:, 1],
+    hue=kmeans.labels_,
+    palette="deep",
+    s=100,
+)
+plt.xlabel("Dimension 1", fontsize=12)
+plt.ylabel("Dimension 2", fontsize=12)
+plt.title("Clustered Embeddings", fontsize=16)
+plt.legend(title="Cluster", title_fontsize=12)
+
+# 배경색 설정
+plt.gcf().patch.set_facecolor("white")
+
+plt.tight_layout()
+plt.show()
+```  
+
+.. 그림 ..
+chains-summary-1.png
+
+그리고 클러스터링의 중심에서 가장 가까운 임베딩을 찾아 해당하는 문서를 저장한다.  
+
+```python
+import numpy as np
+from langchain_core.documents import Document
+
+closet_indices = []
+
+for i in range(num_clusters):
+  distances = np.linalg.norm(vectors - kmeans.cluster_centers_[i], axis=1)
+  closet_index = np.argmin(distances)
+  closet_indices.append(closet_index)
+
+
+selected_indices = sorted(closet_indices)
+
+selected_indices = [int(x) for x in selected_indices]
+
+print(selected_indices)
+# [0, 8, 11, 17, 19, 32, 36, 40, 44, 47]
+
+selected_docs = [Document(page_content=split_pdf_mini_texts[doc]) for doc in selected_indices]
+# [Document(metadata={}, page_content='정책･법제기업･산업기술･연구인력･교육\n9\n구글, AI 에이전트 간 통신 프로토콜 ‘A2A’ 공개 및 MCP 지원 발표n구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원n구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명\nKEY Contents'),
+#  Document(metadata={}, page_content='SPRi AI Brief2025년 5월호\n10\n메타, 멀티모달 AI 모델 ‘라마 4’ 제품군 공개 및 성능 조작 의혹 부인n메타가 라마 시리즈 최초로 전문가혼합 모델로 설계되고 멀티모달 기능을 기본 탑재한 라마 4 제품군 중 스카우트와 라마를 출시하고 베히모스는 프리뷰로 공개n라마 4 공개 이후 메타가 성능 평가에 사용한 버전과 실제 개발자에게 제공되는 버전 간 성능 차이로 인해 메타가 테스트셋으로 모델을 학습시켰다는 의혹이 제기되었으나 메타는 이를 부인\nKEY Contents'),
+#  Document(metadata={}, page_content='개 토큰의 컨텍스트 창을 지원하며, 코딩과 추론, 이미지 이해 관련 벤치마크 평가에서 유사 크기의 경쟁 모델보다 우수한 성능을 기록** ChartQA(이미지 이해) 기준 라마 4 스카우트(instruction-tuned): 88.8점, 젬마 3 27B: 76.3점, 제미나이 2.0 플래시-라이트: 73.0점∙메타는 라마 4 매버릭이 등급 최고의 멀티모달 모델로 활성 매개변수 170억 개에 128개의 전문가 모델로 구성되며, 주요 벤치마크 평가에서 GPT-4o와 제미나이 2.0 플래시를 앞서는 한편, 라마 3.3 70B 대비 더'),
+#  Document(metadata={}, page_content='new era of natively multimodal AI innovation, 2025.04.05.         TechCrunch, Meta exec denies the company artificially boosted Llama 4’s benchmark scores, 2025.04.07.'),
+#  Document(metadata={}, page_content='£노바 액트, 사용자 대신 스스로 작업을 수행하는 AI 에이전트 구축 지원n아마존(Amazon)이 2025년 4월 1일 웹브라우저 내에서 다양한 작업을 수행하도록 설계된 AI 모델 ‘아마존 노바 액트(Amazon Nova Act)’를 SDK와 함께 공개∙아마존은 전용 웹사이트(nova.amazon.com)에서 개발자들이 모델 초기 버전을 이용해 AI 에이전트를 구축할 수 있는 노바 액트 SDK를 연구용 프리뷰로 제공∙노바 액트 SDK는 여러 단계의 복잡한 작업 수행 시 사람의 지속적 개입과 감독이 요구되는 기존 AI 에이전트의'),
+#  Document(metadata={}, page_content='보고* MMMU(멀티모달 이해): 82.9%, SWE-Bench Verified(소프트웨어 엔지니어링): 69.1%∙o4-미니는 빠르고 비용 효율적 추론에 최적화된 소형 모델로, 특히 수학, 코딩, 시각적 작업에서 크기와 비용 대비 뛰어난 성능을 제공∙오픈AI는 두 모델 모두 강화학습을 통해 도구를 사용하도록 훈련했으며, 도구 사용법뿐 아니라 언제 어떻게 도구를 사용해야 하는지 추론하는 능력도 학습해 통상적으로 1분 이내 응답을 신속히 생성한다고 강조n한편, 오픈AI가 공개한 o3와 o4-미니의 기술 보고서(OpenAI o3'),
+#  Document(metadata={}, page_content='£자율주행 보조 기능을 탑재한 샤오미 전기차 충돌사고로 탑승자 3명 전원 사망n중국 관영 언론 차이나 데일리(China Daily)를 비롯한 주요 언론 보도에 따르면 2025년 3월 29일 중국 안후이성(安徽省) 고속도로에서 샤오미 SU7 전기차 충돌로 탑승객 3명 전원이 사망하는 사고가 발생∙샤오미에 따르면 해당 차량은 자율주행 보조 기능을 작동시킨 상태로 시속 116km로 주행 중이었으며, 도로 공사 구역에서 전방의 장애물을 감지한 뒤 운전자에게 경고를 보내어 장애물을 피하도록 안내∙운전자는 1초 안에 반응하여 핸들과'),
+#  Document(metadata={}, page_content='회피”, 심지어 “핸즈프리 운전 가능” 등의 표현을 사용하며 타사보다 성능이 우수하다고 주장* 특정 조건에서 제한된 자율주행이 가능하나 운전자가 항상 주행 상황을 주시하고 필요시 개입∙ADAS 기능에 대한 일부 홍보영상은 운전자가 운전대에서 손을 떼고 장시간 자율주행하는 모습을 보여주기도 하면서, 기술에 익숙하지 않은 일부 소비자에게 자율주행 보조 기능을 작동하고 도로를 주시하지 않는 등의 오용을 유발n이번 사고를 계기로 일부 언론은 중국 내에서 스마트 운전 기능의 마케팅 방식에 대한 규제를 강화해야 하며, 해당 기능을 장착한'),
+#  Document(metadata={}, page_content='£2025년 AI 50 목록, 업무를 자율적으로 처리하는 AI 에이전트로의 전환 추세 반영n미국 경제매체 포브스(Forbes)가 2025년 4월 10일 전 세계에서 가장 유망한 비상장 AI 기업들을 선정한 ‘AI 50’ 목록을 발표∙오픈AI와 앤스로픽은 2025년 AI 50 목록에 포함된 기업들이 조달한 총 1,424억 5천만 달러 중 절반이 넘는 810억 달러를 유치하며 확고한 입지를 구축∙오픈AI 전 CTO인 미라 무라티(Mira Murati)가 설립한 싱킹머신랩(Thinking Machines Lab)과 AI 대모로 불리는'),
+#  Document(metadata={}, page_content='상당수는 업무용 AI 도구를 제공 중으로, 일례로 애니스피어(Anysphere)는 텍스트 지시를 코드로 변환해 간편한 애플리케이션 제작을 지원하는 ‘커서(Cursor)’ 서비스를 통해 개발자 커뮤니티에서 급부상∙포브스는 아직 AI로 일상 업무를 대신 처리하는 주류 앱은 등장하지 않았으나, 2026년에는 사용자 대신 모든 업무를 처리하는 AI 에이전트가 주류가 될 것으로 전망')]
+```  
+
+
+이제 각 클러스터의 중심 청크를 선택했으므로, 
+선택된 문서를 사용해 `Refine` 방식으로 요약을 수행한다.  
+
+```python
+cluster_refine_summary = map_refine_chain.invoke(selected_docs)
+# 구글은 AI 에이전트 간 통신 프로토콜 'A2A(Agent2Agent)'를 공개했으며, A2A는 에이전트 간 협업을 위한 표준 방식을 제공하기 위해 구축되었다. A2A 프로토콜은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 설계되었다. A2A는 작업을 구성하고 전달하는 역할을 하는 클라이언트 에이전트와 작업을 수행하는 원격 에이전트 간 원활한 통신을 위해 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 기능을 제공한다. 또한, 구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명했다. A2A 프로토콜은 기업 환경에서 요구하는 높은 수준의 인증 및 권한 관리 기능을 제공하고 빠른 작업뿐 아니라 장시간 작업 환경에도 적합하며, 텍스트와 오디오, 동영상 스트리밍도 지원한다.
+# 
+# 한편, 메타는 멀티모달 AI 모델 '라마 4' 제품군을 공개하였으며, 라마 4 스카우트와 라마 4 매버릭을 출시하고 라마 4 베히모스는 프리뷰로 공개되었습니다. 라마 4는 라마 시리즈 최초의 전문가혼합 모델로 설계되었으며, 텍스트뿐 아니라 이미지, 비디오를 함께 처리할 수 있는 멀티모달 기능을 기본 탑재하였습니다. 라마 4 스카우트는 활성 매개변수 170억 개에 16개의 전문가 모델로 구성되어 있으며, 주요 벤치마크 평가에서 유사 크기의 경쟁 모델보다 우수한 성능을 기록하였습니다. 메타는 라마 4의 성능 평가에 사용한 버전과 실제 개발자에게 제공되는 버전 간의 성능 차이로 인해 테스트셋으로 모델을 학습시켰다는 의혹을 부인했습니다. 메타의 아흐마드 알달레 사장은 이러한 의혹은 전혀 사실이 아니라고 반박하며, 모델이 준비되자마자 공개했기 때문에 기능 안정화에는 시간이 필요하다고 해명했습니다.
+# 
+# 또한, 아마존은 웹브라우저 내에서 사용자 대신 다양한 작업을 수행하도록 훈련된 AI 모델 '아마존 노바 액트(Amazon Nova Act)'를 개발자용 SDK와 함께公开했다. 노바 액트는 사용자 대신 스스로 작업을 수행하는 AI 에이전트 구축을 지원하며, 여러 단계의 복잡한 작업 수행 시 사람의 지속적 개입과 감독이 요구되는 기존 AI 에이전트의 단점을 해결하기 위해 복잡한 작업을 세부적인 작업 단위로 나누어 처리할 수 있도록 설계되었다. 아마존은 노바 액트가 AI 에이전트의 웹브라우저 작업 능력을 측정하는 ScreenSpot 평가에서 최고의 성능을 달성했다고 보고 있으며, 노바 액트는 사용자가 매번 진행 과정을 확인하지 않아도 AI 에이전트가 직접 작업을 수행할 수 있는 안정성에 중점을 두고 개발되었다.
+# 
+# 최근 오픈AI는 GPT-4.1 API를 출시했으며, 최대 100만 개 토큰의 컨텍스트 창을 지원하고 GPT-4와 GPT-4 미니의 성능을 능가합니다. GPT-4.1 기본 모델은 코딩, 지시이행, 장문 컨텍스트 이해 능력에서 GPT-4를 능가하며, GPT-4.1 미니는 비슷하거나 더 뛰어난 지능을 발휘합니다. 오픈AI는 추론 모델 o3와 o4-미니를 출시했으며, o3는 가장 강력한 추론 모델로 멀티모달과 코딩 관련 벤치마크 평가에서 최고 점수를 기록했습니다. o4-미니는 빠르고 비용 효율적 추론에 최적화된 소형 모델로, 수학, 코딩, 시각적 작업에서 크기와 비용 대비 뛰어난 성능을 제공합니다. 그러나 o3와 o4-미니의 환각률은 각각 33%와 48%로, 이전 모델 o1보다 크게 높아졌습니다.
+# 
+# 이러한 기술 개발과 함께 최근 중국에서 샤오미 전기차가 자율주행 보조 기능을 사용 중에 가드레일과 충돌해 3명이 사망하는 사고가 발생했습니다. 이 사고로 중국에서 자율주행 보조 기능의 안전성과 자동차 업계의 과도한 마케팅에 대한 우려가 증폭되었습니다. 샤오미 측은 수집한 주행 데이터를 경찰에 제출하고, 당국에 전면적으로 협조하여 사고를 공개적이고 투명하게 처리하겠다고 밝혔습니다. 중국 내에서 스마트 운전 기능의 마케팅 방식에 대한 규제를 강화해야 한다는 의견이 제기되었으며, 해당 기능을 장착한 차량을 구매하는 소비자에게 더욱 철저한 교육이 필요하다는 의견이 있습니다. 일부 자동차 제조업체는 자율주행 레벨 2 수준의 ADAS 기능을 보유하고 있으나, 과도한 마케팅으로 일부 소비자에게 자율주행 보조 기능을 작동하고 도로를 주시하지 않는 등의 오용을 유발할 수 있습니다. 이러한 새로운 기술 개발과 안전성에 대한 우려는 AI 분야의 발전과 함께 안전성과 책임에 대한 관심을 높여주고 있습니다.
+# 
+# 또한, 포브스는 2025년 50대 AI 기업 목록을 발표했으며, 이 목록에는 오픈AI, 앤스로픽, 싱킹머신랩, 월드랩스 등이 포함되어 있다. 이 목록에는 단순히 명령에 응답하는 AI를 넘어 문제를 해결하고 전체 작업을 완료할 수 있는 AI 에이전트로의 전환 추세가 반영되어 있다. 포브스는 2026년에는 사용자 대신 모든 업무를 처리하는 AI 에이전트가 주류가 될 것으로 전망하고 있다. 목록에 포함된 기업 중에는 법률 AI 스타트업 하비, 애니스피어 등이 있으며, 이들은 업무용 AI 도구를 제공하고 있다. 포브스의 이러한 전망은 AI 기술의 발전과 그에 따른 산업의 변화를 반영하는 것으로 보인다. 따라서, 향후 AI 기술은 더욱 발전하여 사용자 대신 다양한 작업을 수행하는 AI 에이전트가 주류가 될 것으로 예상된다.
+```
+
+
+
+
+
+### 요약 방식 비교
+
+방식|처리 방식| 정보 누락 방지 | 구현 난이도 | 병렬화 |맥락 유지|대용량 지원|특징 요약
+---|---|----------|--------|-----|---|---|---
+Stuff|전체 한 번에 요약| 낮음       | 가장 쉬움  | 불가  | 낮음    |불가|간단, 소규모 문서에 적합
+Map-Reduce|분할 후 병합| 높음       | 쉬움     | 가능  | 낮음  |가능|대용량, 병렬 처리, 맥락 약함
+Map-Refine|분할 후 점진적 보완| 높음       | 보통     | 불가     | 높음  |가능|맥락 중시, 순차적, 느릴 수 있음
+Chain of Density|반복적 정보 추가| 중간      | 어려움    | 불가     | 높음  |가능|정보 밀도↑, 반복적, 비용↑
+Clustering-Map-Refine|클러스터별 Refine| 높음      | 어려움    | 부분     | 높음  |가능|주제별 요약, 복잡도↑
+
+---  
+## Reference
+[Summarize Text](https://python.langchain.com/docs/tutorials/summarization/)  
+[Chains-문서 요약](https://wikidocs.net/234020)  
+
+
