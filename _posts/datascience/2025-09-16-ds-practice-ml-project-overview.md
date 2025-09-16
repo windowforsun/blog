@@ -263,3 +263,113 @@ Name: count, dtype: float64
 for set_ in (strat_train_set, strat_test_set):
     set_.drop("income_cat", axis=1, inplace=True)
 ```  
+
+### 데이터 탐색 및 시각화
+주택 가격은 지리적인 위치에 따라 가격 편차가 크게 발생할 수 있다. 
+이를 확인하기 위해 지리적 데이터를 시각화 해본다. 
+위도와 경도를 그리고 알파(투명도)를 사용해 산점도 그래프를 그려보면 아래와 같다.  
+
+```python
+housing = strat_train_set.copy()
+housing.plot(kind="scatter", x="longitude", y="latitude", alpha=0.2)
+plt.xlabel('lng')
+plt.ylabel('lat')
+plt.show()
+```
+
+![ml-project-overview-2.png]({{site.baseurl}}/img/datascience/ml-project-overview-2.png)
+
+위 그래프를 통해 주택 가격이 밀집된 지역을 확인할 수 있다. 
+좀 더 데이터를 명확히 보기위해 반지름은 구역의 인구수 그리고, 
+색상은 가격을 나타내는 산점도 그래프를 그려보면 아래와 같다.  
+
+```python
+housing.plot(kind="scatter", x="longitude", y="latitude", grid=True,
+             # 원 반지름
+             s=housing["population"] / 100, label="population",
+             # 원 색상
+             c="median_house_value", cmap="jet", colorbar=True,
+             legend=True, figsize=(10, 7))
+cax = plt.gcf().get_axes()[1]
+cax.set_ylabel('median_house_value')
+plt.xlabel('lng')
+plt.ylabel('lat')
+plt.show()
+```  
+
+![ml-project-overview-3.png]({{site.baseurl}}/img/datascience/ml-project-overview-3.png)
+
+위 그래프를 통해 인구 밀집 지역 및 주택 위치에 따라 주택 가격이 큰 영향을 받는 다는 것을 시각적으로 확인 할 수 있다.  
+
+다음으로 주택 가격에 따른 각 특성들의 상관관계에 대해 알아본다. 
+이는 `표준 상관계수(pearson)` 을 사용하므로 `corr()` 을 통해 쉽게 구할 수 있다.  
+
+```python
+corr_matrix = housing.corr(numeric_only=True)
+corr_matrix["median_house_value"].sort_values(ascending=False)
+
+'''
+median_house_value    1.000000
+median_income         0.688380
+total_rooms           0.137455
+housing_median_age    0.102175
+households            0.071426
+total_bedrooms        0.054635
+population           -0.020153
+longitude            -0.050859
+latitude             -0.139584
+Name: median_house_value, dtype: float64
+'''
+```  
+
+표준 상관계수는 `+1 ~ -1` 사이의 값을 가지며, `+1` 이면 강한 양의 상관관계, `-1` 이면 강한 음의 상관관계를 의미한다. 
+`0` 이면 상관관계가 없다는 것을 의미한다. 
+결과를 보면 `median_income` 이 `median_house_value` 와 가장 강한 양의 상관관계를 가지고 있음을 알 수 있고, 
+`latitude` 가 가장 강한 음의 상관관계를 가지고 있음을 알 수 있다.  
+
+각 특성 사이의 상관관계를 확인하는 다른 방법은 `pandas` 의 `scatter_matrix` 를 사용해 숫자형 특성 간 산점도를 그려보는 것이다. 
+예측하려는 주택 가격과 관계가 있어보이는 주요 특성간 상관관계 산점도를 그려보면 아래와 같다.   
+
+```python
+attributes = ["median_house_value", "median_income", "total_rooms", "housing_median_age"]
+scatter_matrix(housing[attributes], figsize=(12, 8))
+plt.show()
+```  
+
+![ml-project-overview-4.png]({{site.baseurl}}/img/datascience/ml-project-overview-4.png)
+
+위 그래프에서 `median_income` 그래프를 보면 `median_house_value` 와 상관관계가 매우 강하다는 것을 다시 확인할 수 있다. 
+그래프로 우상향을 띄면서 너무 많이 퍼져 있지도 않다.  
+
+마지막으로 가장 유용한 특성을 찾아보기 위해 특성 조합으로 새로운 특성을 만들어 상관관계를 살펴본다. 
+현재 데이터셋의 특성 중 `total_rooms`, `total_bedrooms`, `population`, `households` 는 의미가 없어 보이지만,
+이들을 조합해 새로운 특성을 만들어보면 의미 있는 특성을 만들 수 있다.  
+
+```python
+housing["rooms_per_house"] = housing["total_rooms"] / housing["households"]
+housing["bedrooms_ratio"] = housing["total_bedrooms"] / housing["total_rooms"]
+housing["population_per_house"] = housing["population"] / housing["households"]
+
+corr_matrix = housing.corr(numeric_only=True)
+print(corr_matrix["median_house_value"].sort_values(ascending=False))
+
+'''
+median_house_value      1.000000
+median_income           0.688380
+rooms_per_house         0.143663
+total_rooms             0.137455
+housing_median_age      0.102175
+households              0.071426
+total_bedrooms          0.054635
+population             -0.020153
+population_per_house   -0.038224
+longitude              -0.050859
+latitude               -0.139584
+bedrooms_ratio         -0.256397
+Name: median_house_value, dtype: float64
+'''
+```  
+
+새로 추가한 조합 특성 `rooms_per_house`, `bedrooms_ratio`, `population_per_house` 는 기존 단일 특성에 비해 `median_house_value` 와의 상관관계가 더 높은 것을 확인할 수 있다. 
+그 중에서도 `bedrooms_ratio` 는 가장 강한 음의 상관관계를 가지고 있음을 알 수 있다.  
+
