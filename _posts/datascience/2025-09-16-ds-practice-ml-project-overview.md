@@ -373,3 +373,55 @@ Name: median_house_value, dtype: float64
 새로 추가한 조합 특성 `rooms_per_house`, `bedrooms_ratio`, `population_per_house` 는 기존 단일 특성에 비해 `median_house_value` 와의 상관관계가 더 높은 것을 확인할 수 있다. 
 그 중에서도 `bedrooms_ratio` 는 가장 강한 음의 상관관계를 가지고 있음을 알 수 있다.  
 
+
+### ML 을 위한 데이터 준비
+머신러닝 알고리즘을 위한 데이터 준비는 자동화하는 것이 좋다. 
+그 이유를 나열하면 아래와 같다.  
+
+- 어떤 데이터셋에 대해서도 데이터 변환을 손쉽게 반복할 수 있다.
+- 향후 프로젝트에 사용할 수 있는 변환 라이브러리를 구축한다.
+- 실제 시스템에서 알고리즘에 새 데이터를 주입하기 전에 변환을 쉽게 시도할 수 있다.
+- 여러 가지 데이터 변환을 쉽게 시도해볼 수 있고 어떤 조합이 가장 좋은지 확인할 수 있다.
+
+먼저 훈련 세트와 레이블을 분리해야 한다. 
+기존 훈련 세트에서 `median_house_value` 를 제거한 데이터와 `median_house_value` 만 가진 `label` 데이터로 분리한다.    
+
+```python
+housing = strat_train_set.drop('median_house_value', axis=1)
+print(housing.info())
+
+'''
+<class 'pandas.core.frame.DataFrame'>
+Index: 16512 entries, 13096 to 19888
+Data columns (total 9 columns):
+ #   Column              Non-Null Count  Dtype  
+---  ------              --------------  -----  
+ 0   longitude           16512 non-null  float64
+ 1   latitude            16512 non-null  float64
+ 2   housing_median_age  16512 non-null  float64
+ 3   total_rooms         16512 non-null  float64
+ 4   total_bedrooms      16344 non-null  float64
+ 5   population          16512 non-null  float64
+ 6   households          16512 non-null  float64
+ 7   median_income       16512 non-null  float64
+ 8   ocean_proximity     16512 non-null  object 
+dtypes: float64(8), object(1)
+memory usage: 1.3+ MB
+None
+'''
+
+housing_labels = strat_train_set['median_house_value'].copy()
+print(housing_labels.info())
+
+'''
+<class 'pandas.core.series.Series'>
+Index: 16512 entries, 13096 to 19888
+Series name: median_house_value
+Non-Null Count  Dtype  
+--------------  -----  
+16512 non-null  float64
+dtypes: float64(1)
+memory usage: 258.0 KB
+None
+'''
+```  
