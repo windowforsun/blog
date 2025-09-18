@@ -425,3 +425,59 @@ memory usage: 258.0 KB
 None
 '''
 ```  
+
+#### 데이터 정제
+데이터 정제에서는 누락된 값에 대한 처리를 해야 한다. 
+데이터셋 특성 중 `total_bedrooms` 특성은 값이 없는 경우가 있는데, `ML` 알고리즘은 누락된 값에 대해 처리하지 못하기 때문에 정제가 필요하다. 
+대표적인 정제 방법은 아래 3가지가 있다.  
+
+1. 해당 구역 제거(행 삭제) `housing.dropna(subset=["total_bedrooms"], inplace=True)`
+2. 해당 특성 제거(열 삭제) `housing.drop("total_bedrooms", axis=1, inplace=True)`
+3. 어떤 값으로 대체(0, 평균, 중간값 등) `median = housing["total_bedrooms"].median() housing["total_bedrooms"].fillna(median, inplace=True)`
+
+데이터를 최대한 유지하는 것이 중요하기 때문에 3번 방법을 사용해 누락된 값에 중간값을 대체한다. 
+매번 특정 특성의 중간값을 계산해야 하므로 이를 자동화하기 위해 사이킷런에서 제공하는 `SimpleImputer` 를 사용한다. 
+이는 각 특성의 중간값을 저장하고 훈련 세트 이후 검증 세트, 테스트 세트 그리고 새로 주입될 새로운 데이터에도 누락값을 대체할 수 있다.  
+
+```python
+imputer = SimpleImputer(strategy='median')
+housing_num = housing.select_dtypes(include=[np.number])
+imputer.fit(housing_num)
+print(imputer.statistics_)
+
+'''
+[-118.51     34.26     29.     2129.     435.     1166.     409.       3.5348]
+'''
+
+print(housing_num.median().values)
+
+'''
+[-118.51     34.26     29.     2129.     435.     1166.     409.       3.5348]
+'''
+
+housing_tr = imputer.transform(housing_num)
+housing_tr = pd.DataFrame(housing_tr, columns=housing_num.columns, index=housing_num.index)
+print(housing_tr.info())
+
+'''
+<class 'pandas.core.frame.DataFrame'>
+Index: 16512 entries, 13096 to 19888
+Data columns (total 8 columns):
+ #   Column              Non-Null Count  Dtype  
+---  ------              --------------  -----  
+ 0   longitude           16512 non-null  float64
+ 1   latitude            16512 non-null  float64
+ 2   housing_median_age  16512 non-null  float64
+ 3   total_rooms         16512 non-null  float64
+ 4   total_bedrooms      16512 non-null  float64
+ 5   population          16512 non-null  float64
+ 6   households          16512 non-null  float64
+ 7   median_income       16512 non-null  float64
+dtypes: float64(8)
+memory usage: 1.1 MB
+None
+'''
+```  
+
+계산된 각 특성의 중간값은 `imputer.statistics_` 에 저장되어 있으며, 이를 사용해 훈련 세트의 누락된 값을 대체할 수 있다.  
+
