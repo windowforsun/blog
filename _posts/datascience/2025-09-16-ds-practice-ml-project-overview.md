@@ -481,3 +481,64 @@ None
 
 계산된 각 특성의 중간값은 `imputer.statistics_` 에 저장되어 있으며, 이를 사용해 훈련 세트의 누락된 값을 대체할 수 있다.  
 
+
+#### 텍스트와 범주형 특성 다루기
+데이터셋에 숫자형이 아닌 데이터는 숫자형으로 변환하는 것이 필요하다. 
+먼저 다를 데이터셋에서 숫자형이 아닌 `ocean_proximity` 를 확인해보면 아래와 같다.  
+
+```python
+housing_cat = housing[['ocean_proximity']]
+
+cat_head = housing_cat.head(8)
+
+'''
+ocean_proximity
+13096        NEAR BAY
+14973       <1H OCEAN
+3785           INLAND
+14689          INLAND
+20507      NEAR OCEAN
+1286           INLAND
+18078       <1H OCEAN
+4396         NEAR BAY
+'''
+```  
+
+위와 같은 텍스트 범주형을 숫자로 변환하는 방법중 하나는 `OrdinalEncoder` 를 사용하는 것이다. 
+하지만 `OrdinalEncoder` 는 순서가 있는 범주형 데이터에 적합한데, 
+가장 대표적인 예가 바로 `bad`, `average`, `good`, `excellent` 와 같은 데이터이다. 
+하지만 `ocean_proximity` 의 경우 순서가 없는 범주형 데이터이기 때문에 `OneHotEncoder` 를 사용해야 한다. 
+`OneHotEncoder` 는 각 범주를 별도의 이진 특성으로 변환하며, 이를 `원-핫 인코딩(One-Hot Encoding)` 이라고 한다.  
+
+```python
+cat_encoder = OneHotEncoder(handle_unknown="ignore")
+# or cat_encoder.handle_unknown = "ignore"
+
+housing_cat_1hot = cat_encoder.fit_transform(housing_cat)
+cat_1_hot_head = housing_cat_1hot.toarray()[:8]
+
+'''
+[[0. 0. 0. 1. 0.]
+ [1. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0.]
+ [0. 1. 0. 0. 0.]
+ [0. 0. 0. 0. 1.]
+ [0. 1. 0. 0. 0.]
+ [1. 0. 0. 0. 0.]
+ [0. 0. 0. 1. 0.]]
+'''
+```  
+
+위 결과를 통해 `NEAR BAY` 는 `[0. 0. 0. 1. 0.]` 인 회소행렬로 변환되었음을 확인할 수 있다. 
+희소행렬은 대부분 0으로 이루어진 행렬을 의미하며, 이러한 행렬은 메모리를 효율적으로 사용할 수 있다. 
+내부적으로는 0이 아닌 값과 그 위치만 저장해 범주형 특성을 숫자형으로 다룰 수 있다.  
+
+만약 카테고리 특성이 많은 경우 `원-핫 인코딩` 을 사용하면 특성의 차원이 매우 커질 수 있다. 
+이는 훈련을 느리게 할 뿐만 아니라 성능을 저하시킬 수 있다. 
+이를 해결하기 위해 `임베딩(Embedding)` 이라는 방법을 사용할 수 있다. 
+임베딩은 각 범주형 특성을 학습 가능한 저차원 벡터로 변환하는 방법이다. 
+이를 통해 차원을 줄이고 효율적으로 훈련할 수 있다. 
+대표적인 방법으로는 해안까지의 거리등으로 나타내어 범주형 특성을 숫자형으로 변환하는 것이다.  
+
+`OneHotEncodder` 에서 각 열 이름은 `feature_names_in_` 에 저장되어 있으며, `cat_encoder.get_feature_names_out()` 을 사용해 각 열 이름을 확인할 수 있다.  
+
