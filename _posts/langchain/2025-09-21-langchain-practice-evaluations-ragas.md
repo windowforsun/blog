@@ -60,3 +60,54 @@ split_docs = splitter.split_documents(pdf_docs_mini)
 print(len(split_docs))
 # 17
 ```  
+
+테스트셋 생성에 사용할 `LLM` 모델과 `Embedding` 모델을 초기화한다.  
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api key"
+generator_llm = LangchainLLMWrapper(ChatGoogleGenerativeAI(model="gemini-2.0-flash"))
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+generator_embeddings = LangchainEmbeddingsWrapper(hf_embeddings)
+```  
+
+불러온 문서를 `Knowledge Graph` 를 생성해 추가한다.  
+
+```python
+from ragas.testset.graph import KnowledgeGraph
+from ragas.testset.graph import Node, NodeType
+
+kg = KnowledgeGraph()
+
+for doc in split_docs:
+  kg.nodes.append(
+      Node(
+          type=NodeType.DOCUMENT,
+          properties={
+              "page_content" : doc.page_content,
+              "document_metadata" : doc.metadata
+          }
+      )
+  )
+
+print(kg)
+# KnowledgeGraph(nodes: 17, relationships: 0)
+
+
+```  
