@@ -111,3 +111,46 @@ print(kg)
 
 
 ```  
+
+노드로만 구성한 지식 그래프를 사용해 `SingleHop` 데이터셋 생성을 위해 그래프를 개선하고 쿼리 생성을 개선하기 위해 `KeyphrasesExtractor` 를 사용한다. 
+필요한 경우 `Ragas` 에서 제공하는 다양한 변환을 적용할 수 있다. 
+`KeyphrasesExtractor` 를 사용하면 생성된 쿼리의 다양성과 관련성을 풍부하게 하는 의미론적 시드 포인트 역할을 하는 핵심 주제 키구문을 식별할 수 있다.  
+
+```python
+from ragas.testset.transforms import apply_transforms
+from ragas.testset.transforms import KeyphrasesExtractor
+
+keyphrase_extractor = KeyphrasesExtractor(llm=generator_llm)
+
+transforms = [
+    keyphrase_extractor
+]
+
+apply_transforms(kg, transforms=transforms)
+```  
+
+그리고 쿼리 생성을 위한 `Persona` 를 구성한다. 
+페르소나는 생성된 쿼리가 자연스럽고 사용자에 따라 다르며 다양한 맥락과 관점을 제공한다. 
+쿼리를 다양한 사요앚 관점에 맞게 조정함으로써, 테스트 세트는 다양한 시나리오와 사용자 요구를 포괄할 수 있다. 
+현재 예제 문서는 기업관련 `AI` 최신 기술 소개를 다루기 때문에 각 직무에 따른 시나리오를 다룬다.  
+
+```python
+from ragas.testset.persona import Persona
+
+persona_general_public = Persona(
+    name="general public",
+    role_description="A person with little to no background in technology or artificial intelligence. They are interested in understanding how AI impacts their daily life and society, focusing on clear, jargon-free explanations and practical implications."
+)
+
+persona_software_developer = Persona(
+    name="software developer",
+    role_description="A professional with experience in programming and software engineering, but not necessarily specialized in AI. They are interested in how AI technologies work under the hood, potential integration points, and best practices for implementation."
+)
+
+persona_ai_expert = Persona(
+    name="ai expert",
+    role_description="An individual with a deep understanding of artificial intelligence, including theory, algorithms, and practical applications. They seek detailed technical information, research references, and advanced discussions on model architectures and performance."
+)
+
+personas = [persona_general_public, persona_software_developer, persona_ai_expert]
+```  
