@@ -154,3 +154,49 @@ persona_ai_expert = Persona(
 
 personas = [persona_general_public, persona_software_developer, persona_ai_expert]
 ```  
+
+`Synthesizer` 는 풍부한 노드와 페르소나를 쿼리로 변환하는 역할을 한다. 
+`keyphrase` 와 같은 노드 속성을 선택하고, 
+이를 페르소나, 스타일, 쿼리 길이와 페어링해 `LLM` 을 사용해서 노드의 내용을 기반으로 쿼리-응답 쌍을 생성한다.  
+현재 예제는 `Keyphrases-Based Synthesizer` 를 사용해 주요 개념에 대한 쿼리를 형성하여 더 광범위하고 주제별 질문을 생성하도록 했다.  
+필요한 경우 다양한 `Synthesizer` 를 함께 사용하고, 각 `Synthesizer` 의 가중치를 조정하여 쿼리 분포를 제어할 수 있다.  
+
+```python
+from ragas.testset.synthesizers.single_hop.specific import (
+    SingleHopSpecificQuerySynthesizer
+)
+
+query_distribution = [
+    (
+        SingleHopSpecificQuerySynthesizer(llm=generator_llm, property_name="keyphrase"),
+        1
+    )
+]
+```  
+
+이제 모든 준비가 완료됐기 때문에 `TestGenerator` 생성하고 10개의 테스트 세트를 생성한다.  
+
+```python
+from ragas.testset import TestsetGenerator
+
+generator = TestsetGenerator(
+    llm=generator_llm,
+    embedding_model=generator_embeddings,
+    knowledge_graph=kg,
+    persona_list=personas
+)
+
+testset = generator.generate(testset_size=10, query_distribution=query_distribution)
+testset_df = testset.to_pandas()
+testset_df.to_csv("ragas_synthetic_dataset.csv")
+```  
+
+생성한 테스트 세트 결과를 일부만 출력하면 아래와 같다. 
+
+user_input| reference_contexts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |reference|synthesizer_name
+---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|---
+Wut iz A2A?| ['정책･법제기업･산업기술･연구인력･교육\n9\n구글, AI 에이전트 간 통신 프로토콜 ‘A2A’ 공개 및 MCP 지원 발표n구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원n구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명\nKEY Contents']|구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원|single_hop_specifc_query_synthesizer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+What is A2A protocol and what it do?| ['£A2A, 다중 에이전트 간 협업을 위한 개방형 프로토콜로 설계n구글(Google)이 2025년 4월 9일 50개 이상의 기업*과 협력해 AI 에이전트 간 통신을 위한 개방형 프로토콜 ‘A2A(Agent2Agent)’를 공개* 액센추어(Accenture), 코히어(Cohere), 랭체인(Langchain), 페이팔(Paypal), 세일즈포스(Salesforce) 등∙구글은 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 A2A 프로토콜을 출시했다고 발표∙구글에 따르면 A2A는 AI 에이전트 간 협업을 위한 표준 방식을 제공하기 위해 HTTP, SSE, JSON-RPC 등 기존 표준을 기반으로 구축되었으며, 기업 환경에서 요구하는 높은 수준의 인증 및 권한 관리 기능을 제공하고 빠른 작업뿐 아니라 장시간 작업 환경에도 적합하며, 텍스트와 오디오, 동영상 스트리밍도 지원nA2A는 작업을 구성하고 전달하는 역할을 하는 클라이언트 에이전트(Client Agent)와 작업을 수행하는 원격 에이전트(Remote Agent) 간 원활한 통신을 위해 다음과 같은 기능을 제공∙(기능 탐색) 각 에이전트가 자신의 기능을 JSON* 형식의 ‘에이전트 카드**’를 통해 공개하면 클라이언트 에이전트는 작업 수행에 가장 적합한 에이전트를 식별해 A2A로 원격 에이전트와 통신* 키-값 쌍으로 이루어진 데이터 객체를 표현하기 위한 텍스트 기반의 개방형 표준 형식** 에이전트의 기능과 스킬, 인증 요구사항 등을 설명하는 공개 메타데이터 파일∙(작업 관리) 클라이언트 에이전트와 원격 에이전트는 최종 사용자의 요청에 대응해 작업 수명주기 전반에서 작업 처리 상태를 지속 동기화하여 처리∙(협업) 각 에이전트는 서로 컨텍스트, 응답, 작업 결과물, 사용자 지시와 같은 메시지를 교환해 협업을 진행∙(사용자 경험 협의) 각 메시지에는 이미지, 동영상, 웹 양식과 같은 특정 콘텐츠 유형이 명시되어 있어, 각 에이전트는 사용자']|A2A is a open protocol for collaboration between multiple agents. Google released it on April 9, 2025, in collaboration with over 50 companies. It enables multiple AI agents to communicate, securely exchange information, and coordinate tasks across various platforms and cloud environments. A2A provides a standard way for AI agents to collaborate, built on existing standards like HTTP, SSE, and JSON-RPC. It offers authentication and authorization features, supports both short and long tasks, and handles text, audio, and video streaming.|single_hop_specifc_query_synthesizer 
+can yuo explayn what agennts do in a simple way?| ['에이전트와 원격 에이전트는 최종 사용자의 요청에 대응해 작업 수명주기 전반에서 작업 처리 상태를 지속 동기화하여 처리∙(협업) 각 에이전트는 서로 컨텍스트, 응답, 작업 결과물, 사용자 지시와 같은 메시지를 교환해 협업을 진행∙(사용자 경험 협의) 각 메시지에는 이미지, 동영상, 웹 양식과 같은 특정 콘텐츠 유형이 명시되어 있어, 각 에이전트는 사용자 인터페이스(UI)에 맞게 적절한 콘텐츠 형식을 협의£구글, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원 발표n한편, 구글 딥마인드(Google Deepmind)의 데미스 하사비스(Demis Hassabis) CEO는 2025년 4월 9일 X를 통해 구글이 앤스로픽의 MCP를 제미나이 모델과 SDK에서 지원하겠다고 발표** https://x.com/demishassabis/status/1910107859041271977∙구글에 따르면 A2A는 MCP를 보완하는 역할로서, MCP가 LLM을 데이터, 리소스 및 도구와 연결하는 프로토콜이라면 A2A는 에이전트 간 협업을 위한 상위 수준의 프로토콜에 해당 출처 Google, Announcing the Agent2Agent Protocol (A2A), 2025.04.09.']|Agents and remote agents handle user requests by continuously synchronizing the status of tasks throughout their lifecycle. They collaborate by exchanging messages containing context, responses, work results, and user instructions. These messages specify content types like images, videos, and web forms, allowing agents to agree on appropriate formats for the user interface.|single_hop_specifc_query_synthesizer
+What are the key contents of the SPRi AI Brief May 2025?|['SPRi AI Brief2025년 5월호\n10\n메타, 멀티모달 AI 모델 ‘라마 4’ 제품군 공개 및 성능 조작 의혹 부인n메타가 라마 시리즈 최초로 전문가혼합 모델로 설계되고 멀티모달 기능을 기본 탑재한 라마 4 제품군 중 스카우트와 라마를 출시하고 베히모스는 프리뷰로 공개n라마 4 공개 이후 메타가 성능 평가에 사용한 버전과 실제 개발자에게 제공되는 버전 간 성능 차이로 인해 메타가 테스트셋으로 모델을 학습시켰다는 의혹이 제기되었으나 메타는 이를 부인\nKEY Contents']|The SPRi AI Brief May 2025 discusses Meta releasing the Llama 4 product line, which includes Scout and Llama, with Behimos available as a preview. It also mentions allegations that Meta manipulated performance by training the model with the test set, which Meta denies.|single_hop_specifc_query_synthesizer
+
