@@ -200,3 +200,31 @@ What is A2A protocol and what it do?| ['£A2A, 다중 에이전트 간 협업을
 can yuo explayn what agennts do in a simple way?| ['에이전트와 원격 에이전트는 최종 사용자의 요청에 대응해 작업 수명주기 전반에서 작업 처리 상태를 지속 동기화하여 처리∙(협업) 각 에이전트는 서로 컨텍스트, 응답, 작업 결과물, 사용자 지시와 같은 메시지를 교환해 협업을 진행∙(사용자 경험 협의) 각 메시지에는 이미지, 동영상, 웹 양식과 같은 특정 콘텐츠 유형이 명시되어 있어, 각 에이전트는 사용자 인터페이스(UI)에 맞게 적절한 콘텐츠 형식을 협의£구글, 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원 발표n한편, 구글 딥마인드(Google Deepmind)의 데미스 하사비스(Demis Hassabis) CEO는 2025년 4월 9일 X를 통해 구글이 앤스로픽의 MCP를 제미나이 모델과 SDK에서 지원하겠다고 발표** https://x.com/demishassabis/status/1910107859041271977∙구글에 따르면 A2A는 MCP를 보완하는 역할로서, MCP가 LLM을 데이터, 리소스 및 도구와 연결하는 프로토콜이라면 A2A는 에이전트 간 협업을 위한 상위 수준의 프로토콜에 해당 출처 Google, Announcing the Agent2Agent Protocol (A2A), 2025.04.09.']|Agents and remote agents handle user requests by continuously synchronizing the status of tasks throughout their lifecycle. They collaborate by exchanging messages containing context, responses, work results, and user instructions. These messages specify content types like images, videos, and web forms, allowing agents to agree on appropriate formats for the user interface.|single_hop_specifc_query_synthesizer
 What are the key contents of the SPRi AI Brief May 2025?|['SPRi AI Brief2025년 5월호\n10\n메타, 멀티모달 AI 모델 ‘라마 4’ 제품군 공개 및 성능 조작 의혹 부인n메타가 라마 시리즈 최초로 전문가혼합 모델로 설계되고 멀티모달 기능을 기본 탑재한 라마 4 제품군 중 스카우트와 라마를 출시하고 베히모스는 프리뷰로 공개n라마 4 공개 이후 메타가 성능 평가에 사용한 버전과 실제 개발자에게 제공되는 버전 간 성능 차이로 인해 메타가 테스트셋으로 모델을 학습시켰다는 의혹이 제기되었으나 메타는 이를 부인\nKEY Contents']|The SPRi AI Brief May 2025 discusses Meta releasing the Llama 4 product line, which includes Scout and Llama, with Behimos available as a preview. It also mentions allegations that Meta manipulated performance by training the model with the test set, which Meta denies.|single_hop_specifc_query_synthesizer
 
+
+### Evaluation by Ragas
+저장한 테스트 세트를 로드하고 `Ragas` 를 사용해 평가에 필요한 전처리를 수행한다.  
+
+```python
+from datasets import Dataset
+import pandas as pd
+import ast
+
+df = pd.read_csv("./ragas_synthetic_dataset.csv")
+
+test_dataset = Dataset.from_pandas(df)
+# Dataset({
+#     features: ['Unnamed: 0', 'user_input', 'reference_contexts', 'reference', 'synthesizer_name'],
+#     num_rows: 10
+# })
+
+def convert_to_list(example):
+    contexts = ast.literal_eval(example['reference_contexts'])
+    return {"contexts": contexts}
+
+
+test_dataset = test_dataset.map(convert_to_list)
+# Dataset({
+#     features: ['Unnamed: 0', 'user_input', 'reference_contexts', 'reference', 'synthesizer_name', 'contexts'],
+#     num_rows: 10
+# })
+```  
