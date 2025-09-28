@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangChain] LangChain Prompt"
+title: "[LangChain] LangChain Ragas"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: 'LangChain 에서 Prompt 를 사용해 언어 모델에 대한 입력을 구조화하는 방법에 대해 알아보자'
+excerpt: 'LangChain 과 Ragas 를 사용해 Synthetic Test Dataset 을 생성하고 평가하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,11 @@ tags:
     - LangChain
     - AI
     - LLM
+    - RAG
+    - Ragas
+    - Evaluation
+    - Synthetic Test Dataset
+    - Test Dataset
 toc: true
 use_math: true
 ---  
@@ -228,3 +233,106 @@ test_dataset = test_dataset.map(convert_to_list)
 #     num_rows: 10
 # })
 ```  
+
+그리고 답변 생성을 위해 동일한 문서를 기반으로 `RAG` 파이프라인을 구성한다. 
+
+```python
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.vectorstores import Chroma
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import PromptTemplate
+
+pdf_loader = PyPDFLoader("./SPRi AI Brief 5월호 산업동향.pdf")
+pdf_docs = pdf_loader.load()
+
+pdf_docs_mini = pdf_docs[10:17]
+print(len(pdf_docs_mini))
+
+for doc in pdf_docs_mini:
+  doc.metadata['filename'] = doc.metadata['source']
+pdf_docs_mini[0]
+
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+split_documents = text_splitter.split_documents(pdf_docs_mini)
+
+vectorstore = Chroma.from_documents(split_documents, hf_embeddings)
+
+retriever = vectorstore.as_retriever()
+
+prompt = PromptTemplate.from_template(
+    """You are an assistant for question-answering tasks. 
+Use the following pieces of retrieved context to answer the question. 
+If you don't know the answer, just say that you don't know. 
+Final answer must be in Korean.
+
+#Context: 
+{context}
+
+#Question:
+{question}
+
+#Answer:"""
+)
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+chain = (
+        {"context" : retriever, "question" : RunnablePassthrough()}
+        | prompt
+        | llm
+        | StrOutputParser()
+)
+```  
+
+`RAG` 파이프라인에서 사용할 사용자 질문은 테스트 세트에 있는 `user_input` 컬럼을 사용한다.  
+
+```python
+batch_dataset = [question for question in test_dataset["user_input"]]
+# ['Wut iz A2A?',
+#  'What is A2A protocol and what it do?',
+#  'can yuo explayn what agennts do in a simple way?',
+#  'What are the key contents of the SPRi AI Brief May 2025?',
+#  'What is, like, the dealio with 라마 4, and how many parameters do 라마 4 스카우트 and 라마 4 매버릭 got, and also, like, what kinda performance do they do on them benchmarky things, and also, like, what is 라마 4 베히모스 doing?',
+#  "Can you eloborate on the controversy surrounding Meta's Llama 4 model and the allegations of benchmark manipulation, including details about the performance differences and Meta's response to these claims, and also provide information about the Llama 4 Behemoth model's architecture and performance in comparison to other models like Claude Sonnet 3.7 and Gemini 2.0 Pro?",
+#  'Wut iz Amazon Nova Act?',
+#  'What is Amazon Nova Act?',
+#  'Wat r sum AI releeses?',
+#  'GPT-4.1 good?']
+```  
+
+배치를 사용해 위 질의에 대한 답변을 생성한다.  
+
+```python
+answers = chain.batch(batch_dataset)
+
+print(answers[:3])
+# ['A2A는 에이전트 간 상호 운용성을 보장하기 위한 개방형 통신 프로토콜입니다. 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원합니다. 또한, A2A는 MCP보다 상위 계층의 프로토콜로서 MCP를 보완합니다.',
+#  'A2A는 구글이 공개한 AI 에이전트 간의 상호 운용성을 보장하기 위한 개방형 통신 프로토콜입니다. A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원합니다. 다양한 플랫폼과 클라우드 환경에서 다중 AI 에이전트가 서로 통신하고 안전하게 정보를 교환하며 작업을 조정할 수 있도록 합니다.',
+#  '문맥에서 AI 에이전트가 무엇을 하는지 간단하게 설명하자면, 사용자가 매번 진행 과정을 확인하지 않아도 AI 에이전트가 직접 작업을 수행할 수 있도록 도와줍니다. 예를 들어, 매주 같은 시간에 샐러드를 자동으로 주문하는 등 반복 작업을 자동 실행하도록 설정할 수 있습니다. 또한, API가 제공되지 않는 서비스에서 직접 인터넷을 탐색하고 사용자 대신 작업을 완료할 수도 있습니다.']
+```  
+
+이제 도출된 답변의 결과를 테스트 세트의 `answer` 컬럼으로 추가한다.  
+
+```python
+
+if "answer" in test_dataset.column_names:
+  test_dataset = test_dataset.remove_columns(["answer"]).add_column("answer", answers)
+else:
+  test_dataset = test_dataset.add_column("answer", answers)
+
+
+print(test_dataset[0])
+# {'Unnamed: 0': 0,
+#  'user_input': 'Wut iz A2A?',
+#  'reference_contexts': "['정책･법제기업･산업기술･연구인력･교육\\n9\\n구글, AI 에이전트 간 통신 프로토콜 ‘A2A’ 공개 및 MCP 지원 발표n구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원n구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명\\nKEY Contents']",
+#  'reference': '구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원',
+#  'synthesizer_name': 'single_hop_specifc_query_synthesizer',
+#  'contexts': ['정책･법제기업･산업기술･연구인력･교육\n9\n구글, AI 에이전트 간 통신 프로토콜 ‘A2A’ 공개 및 MCP 지원 발표n구글이 에이전트 간 상호운용성을 보장하기 위한 개방형 통신 프로토콜 A2A를 공개했으며, A2A는 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원n구글은 제미나이 모델과 SDK에서 앤스로픽의 MCP 지원을 추가하기로 했으며, A2A가 MCP보다 상위 계층의 프로토콜로서 MCP를 보완한다고 설명\nKEY Contents'],
+#  'answer': 'A2A는 에이전트 간 상호 운용성을 보장하기 위한 개방형 통신 프로토콜입니다. 에이전트 간 기능 탐색, 작업 관리, 협업, 사용자 경험 협의 등의 다양한 기능을 지원합니다. 또한, A2A는 MCP보다 상위 계층의 프로토콜로서 MCP를 보완합니다.'}
+```  
+
+테스트 세트를 바탕으로 각 테스트 셋에 대한 `SingleTurnSample` 을 생성하고, 
+생성된 `SingleTurnSample` 을 바탕으로 평가에 사용할 `EvaluationDataset` 을 생성한다.  
