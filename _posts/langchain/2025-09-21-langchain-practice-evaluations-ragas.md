@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangChain] LangChain Ragas"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
+  overlay_image: /img/langchain-bg-2.png
 excerpt: 'LangChain 과 Ragas 를 사용해 Synthetic Test Dataset 을 생성하고 평가하는 방법에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
