@@ -336,3 +336,137 @@ print(test_dataset[0])
 
 테스트 세트를 바탕으로 각 테스트 셋에 대한 `SingleTurnSample` 을 생성하고, 
 생성된 `SingleTurnSample` 을 바탕으로 평가에 사용할 `EvaluationDataset` 을 생성한다.  
+
+```python
+from ragas import EvaluationDataset
+from ragas.dataset_schema import SingleTurnSample
+
+test_dataset_list = test_dataset.map(convert_to_list)
+
+
+evaluation_sample_list = [SingleTurnSample(
+    user_input=dataset["user_input"],
+    retrieved_contexts=dataset["contexts"],
+    response=dataset["answer"],
+    reference=dataset["reference"]
+) for dataset in test_dataset_list]
+
+
+evaluation_dataset_ragas = EvaluationDataset(samples=evaluation_sample_list)
+```  
+
+`Ragas` 에는 다양한 평가 메트릭을 제공하는데 그 상세한 내용은 [여기](https://docs.ragas.io/en/stable/concepts/metrics/overview/)
+에서 확인할 수 있다. 
+예제에서는 `ContextPrecision`, `ContextRecall`, `ResponseRelevancy`, `Faithfulness` 지표를 사용해 평가를 진행한다. 
+1개 이상의 퍙가 메트릭을 한번에 평가할 수 있지만, 요쳥량 제한 이슈로 각 하나씩 진행한다.  
+
+```python
+from ragas.dataset_schema import SingleTurnSample
+from ragas import evaluate
+from ragas.metrics import (
+    ResponseRelevancy,
+    Faithfulness,
+    LLMContextRecall,
+    LLMContextPrecisionWithReference
+)
+
+context_precision = LLMContextPrecisionWithReference(llm=generator_llm)
+context_recall = LLMContextRecall(llm=generator_llm)
+response_relevancy = ResponseRelevancy(llm=generator_llm, embeddings=generator_embeddings)
+faithfulness = Faithfulness(llm=generator_llm)
+
+
+context_precision_result = evaluate(
+    dataset=evaluation_dataset_ragas,
+    metrics=[
+        context_precision,
+    ]
+)
+# {'llm_context_precision_with_reference': 1.0000}
+
+context_recall_result = evaluate(
+    dataset=evaluation_dataset_ragas,
+    metrics=[
+        context_recall,
+    ]
+)
+# {'context_recall': 1.0000}
+
+response_relevancy_result = evaluate(
+    dataset=evaluation_dataset_ragas,
+    metrics=[
+        response_relevancy,
+    ]
+)
+# {'answer_relevancy': 0.5216}
+
+faithfulness_result = evaluate(
+    dataset=evaluation_dataset_ragas,
+    metrics=[
+        faithfulness,
+    ]
+)
+# {'faithfulness': 0.7971}
+```  
+
+위 결과는 전체 테스트 세트에 대한 평균치이고, 각 테스트 세트에 대한 점수가 궁금하다면 `to_pandas()` 를 사용해 개별적으로 확인해 볼 수도 있다.  
+
+
+```mermaid
+graph TD
+    A["<br><b>데이터 윈도우 #1</b>"]
+subgraph TOP1 [ ]
+direction LR
+subgraph INPUT1 [입력]
+A1["t=0"] --> A2["t=1"] --> A3["..."] --> A4["t=22"] --> A5["t=23"]
+end
+subgraph LABEL1 [레이블]
+A6["t=24"] --> A7["t=25"] --> A8["..."] --> A9["t=46"] --> A10["t=47"]
+end
+end
+
+B["<br><b>데이터 윈도우 #2</b>"]
+subgraph TOP2 [ ]
+direction LR
+subgraph INPUT2 [입력]
+B1["t=1"] --> B2["t=2"] --> B3["..."] --> B4["t=23"] --> B5["t=24"]
+end
+subgraph LABEL2 [레이블]
+B6["t=25"] --> B7["t=26"] --> B8["..."] --> B9["t=47"] --> B10["t=48"]
+end
+end
+
+C["<br><b>데이터 윈도우 #3</b>"]
+subgraph TOP3 [ ]
+direction LR
+subgraph INPUT3 [입력]
+C1["t=2"] --> C2["t=3"] --> C3["..."] --> C4["t=24"] --> C5["t=25"]
+end
+subgraph LABEL3 [레이블]
+C6["t=26"] --> C7["t=27"] --> C8["..."] --> C9["t=48"] --> C10["t=49"]
+end
+end
+
+%% 스타일링
+linkStyle default stroke-width:0px, stroke:transparent
+
+style TOP1 fill:transparent,stroke:transparent
+style TOP2 fill:transparent,stroke:transparent
+style TOP3 fill:transparent,stroke:transparent
+
+style INPUT1 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+style LABEL1 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+style INPUT2 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+style LABEL2 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+style INPUT3 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+style LABEL3 fill:transparent,stroke:#333,stroke-width:1.5px,rx:5,ry:5
+```
+
+---  
+## Reference
+[Ragas Testset Generation](https://docs.ragas.io/en/stable/howtos/applications/singlehop_testset_gen/)  
+[Ragas Evaluation](https://docs.ragas.io/en/stable/concepts/components/eval_sample/)  
+[Ragas Metrics](https://docs.ragas.io/en/stable/concepts/metrics/overview/)  
+[Ragas 평가](https://wikidocs.net/259205)
+
+
