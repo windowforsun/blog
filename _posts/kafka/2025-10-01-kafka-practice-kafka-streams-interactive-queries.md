@@ -62,3 +62,20 @@ use_math: true
 
 이후 설명에 사용하는 모든 예제의 상새 내용은 [여기](https://github.com/windowforsun/kafka-streams-interactive-queries-exam)
 에서 확인 할 수 있다.  
+
+### Query local state stores of an app instance
+`Kafka Streams` 에서 현재 인스턴스의 `Local State Store` 라는 것은 전체 `State Store` 의 일부이다. 
+현재 로컬 상태의 조회가 필요한 경우 `KafkaStreams.store()` 를 사용해 로컬 상태 저장소를 이름과 저장소 유형에 따라 찾을 수 있다. 
+
+> `Kafka Streams 3.5` 버전 기준으로 `VersionesStateStore` 는 지원되지 않는다. 
+
+조회에 필요한 상태 저장소 이름은 `Processor API` 혹은 `Streams DSL` 을 사용할 때 멍시적으로 설정하거나, 
+설정하지 않은 경우 암시적으로 생성되기 때문에 이를 인지하고 사용해야 한다. 
+그리고 상태 저장소의 유형의 경우 `QueryableStoreType` 을 통해 결정할 수 있다.  
+
+
+> `Kafka Streams` 는 스트림 파티션당 하나의 상태 저장소를 구성한다. 
+> 즉 해당 애플리케이션 인스턴스가 `N` 개의 파티션을 할당 받았다면 로컬 상태 저장소도 파티션 수에 비례한다는 의미이다. 
+> `Interactive Queries` 즉 `KafkaStreams.store()` 를 통해 얻은 상태 저장소 객체의 경우 
+> 이름과 저장소 유형에 해당하는 각 파티션 별 상태 저장소가 통합된 상태로 제공하기 때문에 이러한 부분을 크게 고려할 필요는 없다. 
+
