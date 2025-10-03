@@ -79,3 +79,49 @@ use_math: true
 > `Interactive Queries` 즉 `KafkaStreams.store()` 를 통해 얻은 상태 저장소 객체의 경우 
 > 이름과 저장소 유형에 해당하는 각 파티션 별 상태 저장소가 통합된 상태로 제공하기 때문에 이러한 부분을 크게 고려할 필요는 없다. 
 
+
+#### Querying Local KeyValueStore
+아래는 예제를 위해 구현한 레코드 값의 개별 단어수를 `KeyValueStore` 를 사용해 카운트 하는 `Kafka Streams` 구현이다.  
+
+```java
+public void queryLocalKeyValue(KStream<String, String> inputStream) {
+    KGroupedStream<String, String> kGroupedStream = inputStream
+        .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+        .groupBy((key, value) -> value, Grouped.with(Serdes.String(), Serdes.String()));
+
+    kGroupedStream.count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("CountKeyValueStore"));
+}
+```  
+
+저장소 유형은 `KeyValueStore` 이고, 저장소의 이름은 `CountKeyValueStore` 이다. 
+`Kafka Streams` 애플리케이션이 실행되면 해당 상태 저장소를 현재 인스턴스에서 바로 조회해 쿼리할 수 있다.  
+
+```java
+@Test
+public void queryLocalKeyValue() throws InterruptedException {
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams.state() == KafkaStreams.State.RUNNING);
+
+    this.kafkatemplate.send("input-topic", "a", "hello world");
+    this.kafkatemplate.send("input-topic", "c", "hi world");
+    this.kafkatemplate.send("input-topic", "d", "bye world");
+    this.kafkatemplate.send("input-topic", "a", "hello land");
+    this.kafkatemplate.send("input-topic", "b", "hi land");
+    this.kafkatemplate.send("input-topic", "d", "bye land");
+    Thread.sleep(2000);
+
+    ReadOnlyKeyValueStore<String, Long> countKeyValueStore = kafkaStreams.store(
+        StoreQueryParameters.fromNameAndType("CountKeyValueStore", QueryableStoreTypes.keyValueStore()));
+
+    assertThat(countKeyValueStore.get("hello"), is(2L));
+    assertThat(countKeyValueStore.get("world"), is(3L));
+    assertThat(countKeyValueStore.get("hi"), is(2L));
+    assertThat(countKeyValueStore.get("bye"), is(2L));
+    assertThat(countKeyValueStore.get("land"), is(3L));
+}
+```  
+
+`ReadOnlyKeyValueStore` 에 대한 상세한 사용법은 [여기](https://kafka.apache.org/35/javadoc/org/apache/kafka/streams/state/ReadOnlyKeyValueStore.html)
+에서 확인 할 수 있다. 
+
