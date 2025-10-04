@@ -125,3 +125,67 @@ public void queryLocalKeyValue() throws InterruptedException {
 `ReadOnlyKeyValueStore` 에 대한 상세한 사용법은 [여기](https://kafka.apache.org/35/javadoc/org/apache/kafka/streams/state/ReadOnlyKeyValueStore.html)
 에서 확인 할 수 있다. 
 
+
+#### Querying Local WindowStore
+아래는 `WindowStore` 를 사용해 레코드의 값의 개벼 단어 수를 카운트 하는 구현이다. 
+
+```java
+public void queryLocalWindow(KStream<String, String> inputStream) {
+	KGroupedStream<String, String> kGroupedStream = inputStream
+		.flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+		.groupBy((key, value) -> value, Grouped.with(Serdes.String(), Serdes.String()));
+
+	kGroupedStream
+		.windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(1)))
+		.count(Materialized.<String, Long, WindowStore<Bytes, byte[]>>as("CountWindowStore").withRetention(Duration.ofMinutes(1)));
+}
+```  
+
+`WindowStore` 는 주어진 키에 대해 `Time Window` 별로 여러 결과가 있을 수 있기 때문에
+상태 저장소 쿼리에도 앞선 `KeyValueStore` 와는 차이가 있다.  
+
+```java
+@Test
+public void queryLocalWindow() throws Exception {
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams.state() == KafkaStreams.State.RUNNING);
+
+    Instant windowQueryStart = Instant.now().minusSeconds(1);
+    Instant windowQueryEnd = Instant.now().plusSeconds(10);
+    this.kafkatemplate.send("input-topic", "a", "hello world");
+    this.kafkatemplate.send("input-topic", "c", "hi world");
+    Thread.sleep(1000);
+    this.kafkatemplate.send("input-topic", "d", "bye world");
+    this.kafkatemplate.send("input-topic", "a", "hello land");
+    this.kafkatemplate.send("input-topic", "b", "hi land");
+    this.kafkatemplate.send("input-topic", "d", "bye land");
+    Thread.sleep(2000);
+
+    ReadOnlyWindowStore<String, Long> countWindowStore = kafkaStreams.store(
+        StoreQueryParameters.fromNameAndType("CountWindowStore", QueryableStoreTypes.windowStore()));
+
+    WindowStoreIterator<Long> helloKeyWindowStore = countWindowStore.fetch("hello", windowQueryStart, windowQueryEnd);
+    assertThat(helloKeyWindowStore.next().value, is(1L));
+    assertThat(helloKeyWindowStore.next().value, is(1L));
+
+    WindowStoreIterator<Long> worldKeyWindowStore = countWindowStore.fetch("world", windowQueryStart, windowQueryEnd);
+    assertThat(worldKeyWindowStore.next().value, is(2L));
+    assertThat(worldKeyWindowStore.next().value, is(1L));
+
+    WindowStoreIterator<Long> hiKeyWindowStore = countWindowStore.fetch("hi", windowQueryStart, windowQueryEnd);
+    assertThat(hiKeyWindowStore.next().value, is(1L));
+    assertThat(hiKeyWindowStore.next().value, is(1L));
+
+    WindowStoreIterator<Long> byeKeyWindowStore = countWindowStore.fetch("bye", windowQueryStart, windowQueryEnd);
+    assertThat(byeKeyWindowStore.next().value, is(2L));
+
+    WindowStoreIterator<Long> landKeyWindowStore = countWindowStore.fetch("land", windowQueryStart, windowQueryEnd);
+    assertThat(landKeyWindowStore.next().value, is(3L));
+}
+```  
+
+
+`ReadOnlyWindowStore` 에 대한 상세한 사용법은 [여기](https://kafka.apache.org/35/javadoc/org/apache/kafka/streams/state/ReadOnlyWindowStore.html)
+에서 확인 할 수 있다.  
+
