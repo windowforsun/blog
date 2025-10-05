@@ -189,3 +189,96 @@ public void queryLocalWindow() throws Exception {
 `ReadOnlyWindowStore` 에 대한 상세한 사용법은 [여기](https://kafka.apache.org/35/javadoc/org/apache/kafka/streams/state/ReadOnlyWindowStore.html)
 에서 확인 할 수 있다.  
 
+
+#### Querying Local CustomStore
+`CustomStore` 는 `Kafka Streams` 에서 기본으로 제공하는 상태 저장소와는 별개로 사용자가 커스텀하게 구현이 필요할 때 사용할 수 있다. 
+이는 `Processor API` 에서만 활용이 가능하고 `Kafka Streams` 와 연동 및 쿼리를 위해 아래와 같은 인터페이스 구현이 필요하다. 
+
+- `StateStore` 인터페이스 구현 : `Kafka Streams` 가 상태 저장소를 관리하고 상호 작용하는데 필요한 기본 메서드를 정의 해야한다. 
+- 사용자 저장소 동작 정의를 위한 인터페이스 정의 : 사용자 정의 저장소의 읽기, 쓰기, 삭제 등 작업을 정의한다. 이곳에서 사용자 정의 동작을 결정할 수 있다.   
+- `StoreBuilder` 인터페이스 구현 : `Kafka Streams` 가 필요에 따라 저장소의 새 인스턴스를 생성할 수 있도록 한다. 
+- `ReadOnly` 구현체 제공 : 사용자 정의 저장소에 대해 외부 변경을 막아, 무결성을 보호한다. 
+
+아래는 사용자 정의 상태 저장소 구현에 필요한 구현의 일부이다. 
+상세한 구현 내용은 [여기](https://github.com/windowforsun/kafka-streams-interactive-queries-exam)
+에서 확인 가능하다. 
+구현하는 `CusotmStore` 는 `KeyValueStore` 와 동일한 성격을 지닌 상태 저장소로 구현한다.  
+
+```java
+public class MyCustomStore<K,V> implements StateStore, MyWriteableCustomStore<K,V> {
+  // 실제 저장소의 구현
+}
+
+// MyCustomStore의 읽기-쓰기 인터페이스
+public interface MyWriteableCustomStore<K,V> extends MyReadableCustomStore<K,V> {
+  void write(K Key, V value);
+}
+
+// MyCustomStore의 읽기 전용 인터페이스
+public interface MyReadableCustomStore<K,V> {
+  V read(K key);
+}
+
+public class MyCustomStoreBuilder implements StoreBuilder {
+  // MyCustomStore에 대한 공급자 구현
+}
+```  
+
+추가적으로 사용자 정의 저장소에서 `Interactive Queries` 를 제공하기 위해서는 아래와 같은 구현이 필요하다. 
+
+- `QueryableStoreType` 구현 : `Kafka Streams` 가 특정 유형의 상태 저장소를 인식하고 관리할 수 있도록 한다. 
+- `Wrapper` 클래스 제공 : 여러 로컬 상태 저장소 인스턴스에 대한 단일 접근 지점을 제공한다. 
+
+```java
+public class MyCustomStoreType<K,V> implements QueryableStoreType<MyReadableCustomStore<K,V>> {
+
+  // MyCustomStore 유형의 StateStores만 허용
+  @Override
+  public boolean accepts(final StateStore stateStore) {
+    return stateStore instanceof MyCustomStore;
+  }
+
+  @Override
+  public MyReadableCustomStore<K,V> create(final StateStoreProvider storeProvider, final String storeName) {
+	  return new MyCustomStoreTypeWrapper<K, V>(stateStoreProvider, s, this);
+  }
+
+}
+```  
+
+`Kafka Streams` 애플리케이션의 각 인스턴스는 여러 스트림 태스크를 실행하고, 
+여러 개의 로컬 상태 저장소 인스턴스를 관리할 수 있다. 
+`Wrapper` 클래스는 이러한 복잡성을 숨기고 사용자가 쉽게 상태 저장소를 쿼리할 수 있도록, 
+즉 모든 개별 로컬 상태 저장소 인스턴스를 알 필요 없이 이름으로만 논리적으로 상태 저장소를 쿼리할 수 있도록 한다.  
+
+`Wrapper` 클래스를 구현할 때는 `StateStoreProvider` 인터페이스를 사용해 실제 상태 저장소 인스턴스에 접근한다. 
+`StateStoreProvider#stores(String storeName, QueryableStoreType<T> queryableStoreType)` 를 사용하면 
+`List` 형태의 상태 저장소들을 얻을 수 있는데 이러한 결과값을 통해 전체 로컬 상태 인스턴스에 대해 쿼리할 수 있는 구현체를 제공하면 된다.  
+
+
+```java
+public class MyCustomStoreTypeWrapper<K, V> implements MyReadableCustomStore<K, V> {
+	private final QueryableStoreType<MyReadableCustomStore<K, V>> customStoreType;
+	private final String storeName;
+	private final StateStoreProvider provider;
+
+	public MyCustomStoreTypeWrapper(StateStoreProvider provider, String storeName,
+		QueryableStoreType<MyReadableCustomStore<K, V>> customStoreType
+	) {
+		this.customStoreType = customStoreType;
+		this.storeName = storeName;
+		this.provider = provider;
+	}
+
+	@Override
+	public V get(K key) {
+		final List<MyReadableCustomStore<K, V>> stores = this.provider.stores(this.storeName, this.customStoreType);
+		final Optional<V> value = stores.stream()
+			.filter(store -> store.get(key) != null)
+			.map(store -> store.get(key))
+			.findFirst();
+
+		return value.orElse(null);
+	}
+}
+```  
