@@ -282,3 +282,110 @@ public class MyCustomStoreTypeWrapper<K, V> implements MyReadableCustomStore<K, 
 	}
 }
 ```  
+
+아래는 구현한 `CustomStore` 를 사용해 레코드 값의 개별 단어 수를 카운트하는 예제로 `Processor API` 를 사용했다.  
+
+```java
+public void queryLocalCustom(StreamsBuilder builder) {
+    Topology topology = builder.build();
+    MyCustomStoreBuilder<String, Long> customStoreBuilder = new MyCustomStoreBuilder<>("CustomStore");
+
+    topology.addSource("input", "input-topic")
+        .addProcessor("split", SplitProcessor::new, "input")
+        .addProcessor("count", CountProcessor::new, "split")
+        .addStateStore(customStoreBuilder, "count")
+        .connectProcessorAndStateStores("count", "CustomStore");
+}
+
+static class SplitProcessor implements Processor<String, String, String, String> {
+    private ProcessorContext<String, String> context;
+
+    @Override
+    public void process(Record<String, String> record) {
+        String value = record.value();
+        List<String> list = Arrays.asList(value.toLowerCase().split("\\W+"));
+
+        for (String word : list) {
+            this.context.forward(new Record<>(record.key(), word, record.timestamp()));
+        }
+    }
+
+    @Override
+    public void init(ProcessorContext<String, String> context) {
+        this.context = context;
+    }
+
+    @Override
+    public void close() {
+    }
+}
+
+static class CountProcessor
+    implements Processor<String, String, String, Long> {
+    private MyCustomStore<String, Long> kvStore;
+
+    private ProcessorContext<String, Long> context;
+
+    @Override
+    public void init(ProcessorContext<String, Long> context) {
+        this.context = context;
+        this.kvStore = context.getStateStore("CustomStore");
+    }
+
+    @Override
+    public void process(Record<String, String> record) {
+        String key = record.key();
+        String value = record.value();
+
+        Long count = this.kvStore.read(value);
+        if (count == null) {
+            count = 0L;
+        }
+        
+        count++;
+        this.kvStore.write(value, count);
+        this.context.forward(new Record<>(value, count, record.timestamp()));
+    }
+
+    @Override
+    public void close() {}
+}
+```  
+
+`CustomStore` 에 대한 `Interactive Queries` 는 아래와 같이 사용할 수 있다.  
+
+```java
+@Test
+public void queryLocalCustom() throws InterruptedException {
+    Awaitility.await().atMost(10, TimeUnit.SECONDS)
+        .pollDelay(100, TimeUnit.MILLISECONDS)
+        .until(() -> kafkaStreams.state() == KafkaStreams.State.RUNNING);
+
+    this.kafkatemplate.send("input-topic", "a", "hello world");
+    this.kafkatemplate.send("input-topic", "c", "hi world");
+    this.kafkatemplate.send("input-topic", "d", "bye world");
+    this.kafkatemplate.send("input-topic", "a", "hello land");
+    this.kafkatemplate.send("input-topic", "b", "hi land");
+    this.kafkatemplate.send("input-topic", "d", "bye land");
+    Thread.sleep(2000);
+
+    MyReadableCustomStore<String, Long> countCustomStore = kafkaStreams.store(
+        StoreQueryParameters.fromNameAndType("CustomStore", new MyCustomStoreType<>()));
+
+    assertThat(countCustomStore.read("hello"), is(2L));
+    assertThat(countCustomStore.read("world"), is(3L));
+    assertThat(countCustomStore.read("hi"), is(2L));
+    assertThat(countCustomStore.read("bye"), is(2L));
+    assertThat(countCustomStore.read("land"), is(3L));
+}
+```  
+
+### Query remote state stores for entire app instance
+전체 애플리케이션 인스턴스에 대해 `Remote Store` 를 쿼리하기 위해서는 각 애플리케이션에서 자신의 상태 저장소를 
+다른 애플리케이션에게 노출해야 한다. 
+전체 애플리케이션 인스턴스에 대해 전체 상태를 쿼리할 수 있도록 하는 주요 스텝은 아래와 같다.  
+
+1. 네트워크를 통해 애플리케이션 인스턴스와 상호작용할 수 있는 `RPC` 레이어를 추가한다. (e.g. `REST`, `Thrift`, 등) 해당 `RPC` 레이어에서는 `Interactive Queries` 에 대한 적절한 쿼리 결과를 응딥해야 한다. 
+2. 애플리케이션 인스턴스에서 `RPC` 레이어 엔드포인트를 `application.server` 구성을 통해 노출한다. `RPC` 엔드포인트는 네트워크 내에서 고유하면서 식별 가능하도록 각 인스턴스에서 설정이 필요하다. 이를 통해 `Kafka Streams` 는 다른 인스턴스 애플리케이션에서 필요한 인스턴스를 검색할 수 있다. 
+3. `RPC` 레이어에서 원격 애플리케이션 인스턴스와 상태 저장소를 검색하고 사용 가능한 상태 저장소를 쿼리해 애플리케이션의 전체 상태를 쿼리할 수 있도록 한다. 특정 인스턴스에서 쿼리 응답이 부족할 경우 다른 애플리케이션 인스턴스에 쿼리를 연쇄적으로 전달해 충분한 쿼리 결과를 만들어 내도록할 수 있다.  
+
