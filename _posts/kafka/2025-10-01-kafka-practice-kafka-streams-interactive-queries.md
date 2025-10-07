@@ -389,3 +389,32 @@ public void queryLocalCustom() throws InterruptedException {
 2. 애플리케이션 인스턴스에서 `RPC` 레이어 엔드포인트를 `application.server` 구성을 통해 노출한다. `RPC` 엔드포인트는 네트워크 내에서 고유하면서 식별 가능하도록 각 인스턴스에서 설정이 필요하다. 이를 통해 `Kafka Streams` 는 다른 인스턴스 애플리케이션에서 필요한 인스턴스를 검색할 수 있다. 
 3. `RPC` 레이어에서 원격 애플리케이션 인스턴스와 상태 저장소를 검색하고 사용 가능한 상태 저장소를 쿼리해 애플리케이션의 전체 상태를 쿼리할 수 있도록 한다. 특정 인스턴스에서 쿼리 응답이 부족할 경우 다른 애플리케이션 인스턴스에 쿼리를 연쇄적으로 전달해 충분한 쿼리 결과를 만들어 내도록할 수 있다.  
 
+
+#### Add RPC layer in application
+`RPC` 레이어 추가는 애플리케이션 인스턴스들이 네트워크를 통해 상호작용할 수 있도록하는 추가 구현을 의미한다. 
+일반적으로 `REST API` 혹은 `gRPC` 를 사용하는 아래 예제는 `REST API` 를 사용해 
+현재 인스턴스에서 자신의 로컬 저장소를 탐색해 쿼리에 응답하는 `RPC` 레이어 예시이다.  
+
+```java
+@RestController
+@RequiredArgsConstructor
+public class ExamController {
+	private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
+
+	@GetMapping(path = {"/RpcKeyValueStore/{key}"})
+	public Long getRpcStore(@PathVariable String key) {
+		KafkaStreams kafkaStreams = this.streamsBuilderFactoryBean.getKafkaStreams();
+
+		if (kafkaStreams != null) {
+			ReadOnlyKeyValueStore<String, Long> store = kafkaStreams.store(
+				StoreQueryParameters.fromNameAndType("RpcKeyValueStore",
+					QueryableStoreTypes.keyValueStore()));
+
+			return store.get(key);
+		}
+
+		return null;
+	}
+}
+```  
+
