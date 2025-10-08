@@ -418,3 +418,35 @@ public class ExamController {
 }
 ```  
 
+
+#### Expose RPC endpoints of application
+각 애플리케이션 인스턴스의 `RPC` 엔드포인트를 `Kafka Streams` 설정에 추가해 노출한다. 
+이를 통해 다른 인스턴스들이 해당 인스턴스를 발견해 `Remote Store` 탐색에 사용할 수 있다.  
+
+`Kafka Streams` 구성 설정에 `application.server` 속성을 사용해 `호스트:포트` 와 같이 설정 할 수 있다. 
+해당 속성의 값은 개별 인스턴스을 식별해야 하기 때문에 고유하면서 네트워크 안에서 접근 가능해야 한다. 
+해당 속정이 정의되면 `Kafka Streams` 는 애플리케이션의 각 인스턴스, 상태 저장소, 할당된 스트림 파티션에 대한 `RPC` 엔드포인트 정보 담고 있는
+`StreamsMetadata` 인스턴스를 사용해 탐색에 활용한다.  
+
+```java
+@Value("${spring.kafka.bootstrap-servers}")
+private String bootstrapServers;
+@Value("${server.port}")
+private int serverPort;
+
+@Bean(name = KafkaStreamsDefaultConfiguration.DEFAULT_STREAMS_CONFIG_BEAN_NAME)
+public KafkaStreamsConfiguration kStreamsConfig() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(StreamsConfig.APPLICATION_ID_CONFIG, "interactive-queries-app");
+    props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, this.bootstrapServers);
+    props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
+    props.put(StreamsConfig.STATE_DIR_CONFIG, "/tmp/kafka-state");
+    props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0);
+    props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 0);
+    props.put(StreamsConfig.APPLICATION_SERVER_CONFIG, "localhost:" + this.serverPort);
+
+    return new KafkaStreamsConfiguration(props);
+}
+```  
+
