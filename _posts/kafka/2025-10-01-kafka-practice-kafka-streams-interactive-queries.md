@@ -450,3 +450,42 @@ public KafkaStreamsConfiguration kStreamsConfig() {
 }
 ```  
 
+
+#### Discover application and local state store
+모든 애플리케이션 인스턴스에서 `RPC` 레이어가 추가돼 있고 `RPC` 엔드포인트가 노출된 상태라면, 
+원격 애플리케이션 인스턴스를 발견하고 로컬에서 사용 가능한 상태 저장소를 쿼리하여 전체 애플리케이션 상태를 조회 하도록 구현할 수 있다. 
+
+> 여기서 전체 애플리케이션이라 함은 `Kafka` 의 `Consumer Group` 단위로 봐도 무방하다. 
+
+- `KafkaStreams.allMetadata()` : 전체 애플리케이션의 모든 인스턴스 및 메타정보
+- `KafkaStreams.allMetadataForStore(storeName)` : 저장소 이름에 해당하는 로컬 인스턴스를 관리하는 애플리케이션 인스턴스 메타정보 탐색
+- `KafkaStreams.queryMetadataForKey(storeName, key, keySerdes)` : 기본 스트림 파티셔닝 전략을 사용해 저장소 이름, 키를 보유한 애플리케이션 인스턴스 탐색
+- `KafkaStreams.queryMetadataForKey(storeName, key, partitioner)` : 특정된 파티셔너를 사용해 저장소 이름, 키를 보유한 애플리케이션 인스턴스 탐색
+
+위와 같은 탐색 방안을 적용해 전체 애프리케이션에 대해 상태 저장소를 탐색하는 쿼리할 수 있도록 구현하면 아래와 같다.  
+
+```java
+@RestController
+@RequiredArgsConstructor
+public class ExamController {
+	private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
+
+	@GetMapping(path = "/all-search/{key}")
+	public Long getAllSearch(@PathVariable String key) {
+		KafkaStreams kafkaStreams = this.streamsBuilderFactoryBean.getKafkaStreams();
+
+		if (kafkaStreams != null) {
+			KeyQueryMetadata metadata = kafkaStreams.queryMetadataForKey("RpcKeyValueStore", key, Serdes.String()
+				.serializer());
+
+			String url = String.format("http://%s:%s/RpcKeyValueStore/%s", metadata.activeHost().host(),
+				metadata.activeHost().port(), key);
+			Long result = restTemplate.getForObject(url, Long.class);
+
+			return result;
+		}
+
+		return null;
+	}
+}
+```  
