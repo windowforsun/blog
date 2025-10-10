@@ -4,7 +4,7 @@ classes: wide
 title: "[Kafka] Kafka Streams Interactive Queries"
 header:
   overlay_image: /img/kafka-bg.jpg
-excerpt: ''
+excerpt: 'Kafka Streams Interactive Queries 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,11 @@ tags:
     - Practice
     - Kafka
     - Kafka Streams
+    - Interactive Queries
+    - State Store
+    - Local State
+    - Remote State
+    - RPC
 toc: true
 use_math: true
 ---  
@@ -489,3 +494,287 @@ public class ExamController {
 	}
 }
 ```  
+
+#### Demo
+데모에 대한 자세한 내용은 [여기](https://github.com/windowforsun/kafka-streams-interactive-queries-exam)
+에서 확인 가능하다.  
+
+아래는 `RPC` 레이어의 저장소를 사용해 레코드 값의 개별 단어를 카운트하는 스트림 구현이다.  
+
+```java
+public void queryRpcKeyValue(KStream<String, String> inputStream) {
+    KGroupedStream<String, String> kGroupedStream = inputStream
+        .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+        .peek((k, v) -> log.info("input record {} {}", k, v))
+        .groupBy((key, value) -> value, Grouped.with(Serdes.String(), Serdes.String()));
+
+    kGroupedStream.count(Materialized.<String, Long, KeyValueStore<Bytes, byte[]>>as("RpcKeyValueStore"));
+}
+```  
+
+`Remote Store` 구현/탐색과 테스트를 위해 각 애플리케이션 인스턴스에서 노출할 `RPC` 레이어의 내용은 아래와 같다.  
+
+```java
+@RestController
+@RequiredArgsConstructor
+public class ExamController {
+	private final StreamsBuilderFactoryBean streamsBuilderFactoryBean;
+
+	@GetMapping(path = {"/RpcKeyValueStore/{key}"})
+	public Long getRpcStore(@PathVariable String key) {
+		KafkaStreams kafkaStreams = this.streamsBuilderFactoryBean.getKafkaStreams();
+
+		if (kafkaStreams != null) {
+			ReadOnlyKeyValueStore<String, Long> store = kafkaStreams.store(StoreQueryParameters.fromNameAndType("RpcKeyValueStore",
+				QueryableStoreTypes.keyValueStore()));
+
+			return store.get(key);
+		}
+
+		return null;
+	}
+
+
+	@GetMapping(path = {"/RpcKeyValueStore"})
+	public List<KeyValue<String, Long>> getRpcStore() {
+		KafkaStreams kafkaStreams = this.streamsBuilderFactoryBean.getKafkaStreams();
+
+		if (kafkaStreams != null) {
+			ReadOnlyKeyValueStore<String, Long> store = kafkaStreams.store(StoreQueryParameters.fromNameAndType("RpcKeyValueStore",
+				QueryableStoreTypes.keyValueStore()));
+
+			List<KeyValue<String, Long>> all = new ArrayList<>();
+
+			store.all().forEachRemaining(all::add);
+
+			return all;
+		}
+
+		return Collections.emptyList();
+	}
+
+	private final RestTemplate restTemplate = new RestTemplate();
+
+	@GetMapping(path = "/all-search/{key}")
+	public Long getAllSearch(@PathVariable String key) {
+		KafkaStreams kafkaStreams = this.streamsBuilderFactoryBean.getKafkaStreams();
+
+		if (kafkaStreams != null) {
+			KeyQueryMetadata metadata = kafkaStreams.queryMetadataForKey("RpcKeyValueStore", key, Serdes.String()
+				.serializer());
+
+			String url = String.format("http://%s:%s/RpcKeyValueStore/%s", metadata.activeHost().host(), metadata.activeHost().port(), key);
+			Long result = restTemplate.getForObject(url, Long.class);
+
+			return result;
+		}
+
+		return null;
+	}
+
+
+	private final KafkaTemplate<String, String> kafkaTemplate;
+
+
+	private static List<String> KEY_POOL = List.of("a", "b", "c", "d");
+	private static List<String> VALUE_POOL = List.of("desktop", "mouse", "keyboard", "graphics card", "hello world", "kafka");
+	private static AtomicInteger KEY_COUNT = new AtomicInteger();
+	private static AtomicInteger VALUE_COUNT = new AtomicInteger();
+
+	@GetMapping(path = {"/push", "/push/{data}"})
+	public Map<String, String> push(@PathVariable(required = false) String data) throws
+		ExecutionException, InterruptedException {
+		String pushData = StringUtils.isBlank(data) ? KEY_POOL.get(KEY_COUNT.getAndIncrement() % KEY_POOL.size()) : data;
+
+		SendResult<String, String> result = this.kafkaTemplate.send("input-topic", pushData,
+			VALUE_POOL.get(VALUE_COUNT.getAndIncrement() % VALUE_POOL.size())).get();
+
+		return Map.of("key", result.getProducerRecord().key(), "value", result.getProducerRecord().value(), "topic", result.getProducerRecord().topic());
+	}
+}
+```  
+
+
+데모 진행을 위해서는 실제 `Kafka Broker` 구성과 더불어 `N` 개의 애플리케이션 인스턴스를 구성해줘야 한다. 
+우선 `Kafka Broker` 는 아래 `Docker Compose` 를 사용해 구성할 수 있다.  
+
+```yaml
+version: '3'
+
+services:
+  zookeeper:
+    container_name: myZookeeper
+    image: confluentinc/cp-zookeeper:7.0.16
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_INIT_LIMIT: 5
+      ZOOKEEPER_SYNC_LIMIT: 2
+    ports:
+      - "2181:2181"
+
+  kafka:
+    container_name: myKafka
+    image: confluentinc/cp-kafka:7.0.16
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    ports:
+      - "29092:29092"
+```  
+
+`docker-compose up --build` 명령을 사용해 위 구성을 실행한다.
+그리고 스트림 입력 토픽은 `input-topic` 인데 분산 환경 구성을 위해 명시적으로 3개의 파티션 구성으로 토픽을 생성한다.
+
+```bash
+$ docker exec -it myKafka \
+kafka-topics \
+--bootstrap-server localhost:9092 \
+--create \
+--partitions 3 \
+--topic input-topic
+```  
+
+
+그리고 `application.id` 가 동일한 애플리케이션 인스턴스를 데모 목적으로 실행하기 위해 아래와 같이 `profile` 로 구분하고 아래와 같이 구성해 준다.  
+
+```yaml
+spring:
+  kafka:
+    bootstrap-servers: localhost:29092
+    streams:
+      cleanup:
+        on-startup: true
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: first
+server:
+  port: 8080
+
+kafka:
+  streams:
+    state:
+      dir: /tmp/kafka-state-first
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: second
+server:
+  port: 8081
+
+kafka:
+  streams:
+    state:
+      dir: /tmp/kafka-state-second
+```  
+
+```java
+@SpringBootApplication
+public class ExamFirstApplication {
+	public static void main(String... args) {
+		SpringApplication app = new SpringApplication(ExamSecondApplication.class);
+		app.setAdditionalProfiles("first");
+		app.run(args);
+	}
+}
+
+@SpringBootApplication
+public class ExamSecondApplication {
+	public static void main(String[] args) {
+		SpringApplication app = new SpringApplication(ExamSecondApplication.class);
+		app.setAdditionalProfiles("second");
+		app.run(args);
+	}
+}
+```  
+
+
+이제 `ExamFirstApplication` 과 `ExamSecondApplication` 을 각각 실행한다. 
+그리고 아래와 같이 2개중 아무곳에 `/push` 요청을 보내 `input-topic` 에 테스트 레코드를 생성한다.  
+
+```bash
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"a","value":"desktop"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"b","value":"mouse"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"c","value":"keyboard"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"d","value":"graphics card"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"a","value":"hello world"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"b","value":"kafka"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"c","value":"desktop"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"d","value":"mouse"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"a","value":"keyboard"}
+$ curl localhost:8080/push
+{"topic":"input-topic","key":"b","value":"graphics card"}
+```  
+
+그리고 2개 애플리케이션 인스턴스에 각각 자신의 로컬 저상소의 전체 내용을 응답하는 `/RpcKeyValueStore` 을 호출하면 서로 다른 키 구성으로 워드 카운트의 결과가 있는 것을 확인 할 수 있다.  
+
+```bash
+.. first application ..
+$  curl http://localhost:8080/RpcKeyValueStore
+[{"key":"graphics","value":2},{"key":"kafka","value":1},{"key":"world","value":1}]
+
+.. second application ..
+$  curl http://localhost:8081/RpcKeyValueStore
+[{"key":"mouse","value":2},{"key":"card","value":2},{"key":"desktop","value":2},{"key":"hello","value":1},{"key":"keyboard","value":2}]
+```  
+
+이제 전체 애플리케이션 인스턴스의 상태 저장소를 탐색할 수 있는 `/all-search/{key}` 로 각 애플리케이션에 존재하지 않는 키로 조회하면 아래와 같이, 
+모두 정상 조회가 되는 것을 확인 할 수 있다.  
+
+```bash
+.. fist application .. 
+$ curl http://localhost:8080/all-search/mouse
+2
+$ curl http://localhost:8080/all-search/card 
+2
+$ curl http://localhost:8080/all-search/desktop
+2
+$ curl http://localhost:8080/all-search/hello  
+1
+$ curl http://localhost:8080/all-search/keyboard
+2
+
+.. second application
+$ curl http://localhost:8081/all-search/graphics 
+2
+$ curl http://localhost:8081/all-search/kafka   
+1
+$ curl http://localhost:8081/all-search/world
+1
+```  
+
+
+
+
+
+---  
+## Reference
+[Apache Kafka INTERACTIVE QUERIES](https://kafka.apache.org/38/documentation/streams/developer-guide/interactive-queries.html)  
+[Kafka Streams Interactive Queries for Confluent Platform](https://docs.confluent.io/platform/current/streams/developer-guide/interactive-queries.html)  
+
+
+
