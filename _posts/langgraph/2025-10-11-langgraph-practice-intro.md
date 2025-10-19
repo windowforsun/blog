@@ -80,3 +80,27 @@ use_math: true
 | 상태(State)  | 그래프 실행 중 주고받는 정보(딕셔너리 등), 맥락·데이터·진행 상황 등 |
 | 그래프(Graph)| 전체 워크플로우 구조. 여러 노드/엣지로 구성됨                |
 | 멀티에이전트(Multi-Agent) | 여러 에이전트가 상호작용하는 구조                |
+
+### LangGraph vs LangChain
+
+| 구분          | LangGraph                          | LangChain                       |
+|---------------|------------------------------------|----------------------------------|
+| 구조          | 그래프(노드-엣지) 기반             | 체인(Chain) 및 에이전트 기반    |
+| 상태 관리     | 명시적, 세밀한 제어                | 암시적, 자동화된 관리           |
+| 유연성        | 매우 높음 (커스텀 로직 자유로움)   | 중간 (미리 정의된 컴포넌트 중심)|
+| 주요 목적     | 복잡한 워크플로우, 의사결정        | LLM 통합, 체인 구성             |
+
+
+
+
+
+---  
+## Reference
+[LangGraph](https://langchain-ai.github.io/langgraph/)  
+[LangGraph Github](https://github.com/langchain-ai/langgraph)  
+[What is LangGraph?](https://www.ibm.com/think/topics/langgraph)  
+[LangGraph Reference](https://langchain-ai.github.io/langgraph/reference/)  
+[LangGraph Tutorial](https://github.com/langchain-ai/langgraph/tree/main/docs/docs/tutorials)  
+[LangGraph Docs](https://github.com/langchain-ai/langgraph/tree/main/docs/docs)  
+
+
