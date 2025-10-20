@@ -68,3 +68,54 @@ example_typed_dict : ExampleTypedDict = {
 그 이유는 `TypedDict` 는 정적 타입 힌트를 제공하는 도구일 뿐,
 런타임에서 타입을 실제로 검사하거나 강제하지는 않기 때문이다. 
 정적 타입검사를 사용하고 싶은 경우 `mypy` 혹은 `pyright` 와 같은 도구를 사용하면 타입 오류를 탐지해 낼 수 있다.  
+
+
+### Annotated
+`Annotated` 는 `Python` 의 `typing` 모듈에서 제공하는 기능으로, 
+타입에 추가적인 설명(`Metadata`) 을 덧붙일 수 있다. 
+`LangGraph` 에서는 상태 필드에 설명, 예시, 목적 등을 추가하여 코드의 가독성과 문서화를 돕는다. 
+상태 필드에 대한 설명과 예시를 명확히 해 유지보수에 용이하게 한다. 
+그리고 자동 문서화, 입력 검증 등에도 활용할 수 있다.  
+
+또한 타입 힌트에 추가적인 정보를 추가해 추가적인 라이브러리(`Pydantic` 등)와 함께 사용해 데이터 유효성 검사를 수행할 수 있다.  
+
+
+아래는 `Annotated` 의 예시이다. 
+
+```python
+from typing import Annotated, List
+from pydantic import Field, BaseModel, ValidationError
+
+# 기본 사용
+name: Annotated[str, "사용자의 이름"]
+age: Annotated[int, "사용자의 나이"]
+skills: Annotated[List[str], "사용자의 기술"]
+
+
+
+# Pydandic 과 사용
+class Person(BaseModel):
+  name: Annotated[str, Field(..., description="사용자의 이름")]
+  age: Annotated[int, Field(gt=0, lt=150, description="사용자의 나이")]
+  skills: Annotated[List[str], Field(min_items=1, max_items=3, description="사용자의 기술")]
+
+
+valid_example = Person(name="jack", age=30, skills=["Java", "C", "LangChain"])
+# Person(name='jack', age=30, skills=['Java', 'C', 'LangChain'])
+
+
+
+try:
+    invalid_example = Person(name="jack", age=300, skills=[])
+except Error as e:
+    print(e)
+# ValidationError: 2 validation errors for Person
+# age
+# Input should be less than 150 [type=less_than, input_value=300, input_type=int]
+# For further information visit https://errors.pydantic.dev/2.11/v/less_than
+# skills
+# List should have at least 1 item after validation, not 0 [type=too_short, input_value=[], input_type=list]
+# For further information visit https://errors.pydantic.dev/2.11/v/too_short
+# 
+# During handling of the above exception, another exception occurred:
+```  
