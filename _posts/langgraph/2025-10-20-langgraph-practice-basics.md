@@ -119,3 +119,53 @@ except Error as e:
 # 
 # During handling of the above exception, another exception occurred:
 ```  
+
+
+### add_messages
+`add_messages` 는 `LangGraph` 에서 대화형 워크플로우를 만들 때, 상태의 `messages` 리스트에 새로운 메시지를 추가하는 함수이다. 
+`LLM` 응답이나 사용자 입력을 메시지 기록에 누적할 때 사용한다. 
+대화 흐름을 관리하여, 다음 `LLM` 호출 시 `context` 로 활용할 수 있도록 한다. 
+그리고 각 노드에서 메시지를 추가해 전체 대화 흐름을 기록하는데 사용할 수 있다.  
+
+`add_messages` 함수는 2개의 인자를 받아 좌, 우 메시지를 병학하는 방식으로 동작한다. 
+기본적으로 `append-only` 상태를 유지하고, 동일한 `ID` 를 가진 메시지가 있는 경우, 새 메시지로 기존 메시지를 대체한다.  
+
+아래는 `add_messages` 의 예시이다. 
+
+```python
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.graph import add_messages
+
+msg_1 = [HumanMessage(content="1+1 은?", id=1)]
+msg_2 = [AIMessage(content="2", id=2)]
+
+result_1 = add_messages(msg_1, msg_2)
+# [HumanMessage(content='1+1 은?', additional_kwargs={}, response_metadata={}, id='1'),
+#  AIMessage(content='2', additional_kwargs={}, response_metadata={}, id='2')]
+
+
+# id 가 동일한 경우, 새 메시지로 기존 메시지를 대체한다.
+msg_1 = [HumanMessage(content="1+1 은?", id=1)]
+msg_2 = [AIMessage(content="2", id=1)]
+
+result_2 = add_messages(msg_1, msg_2)
+# [AIMessage(content='2', additional_kwargs={}, response_metadata={}, id='1')]
+```  
+
+`TypedDict`, `Annotated` 와 함께 `add_messages` 를 사용하면 아래와 같다.  
+
+```python
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.graph import add_messages
+from typing import Annotated, TypedDict
+
+class MyMessages(TypedDict):
+  messages: Annotated[list, add_messages]
+
+
+my_msg = MyMessages(messages=[HumanMessage(content="1+1 은?", id=1)])
+
+my_msg["messages"].append(AIMessage(content="2", id=2))
+# {'messages': [HumanMessage(content='1+1 은?', additional_kwargs={}, response_metadata={}, id='1'),
+#               AIMessage(content='2', additional_kwargs={}, response_metadata={}, id='2')]}
+```  
