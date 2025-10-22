@@ -169,3 +169,30 @@ my_msg["messages"].append(AIMessage(content="2", id=2))
 # {'messages': [HumanMessage(content='1+1 은?', additional_kwargs={}, response_metadata={}, id='1'),
 #               AIMessage(content='2', additional_kwargs={}, response_metadata={}, id='2')]}
 ```  
+
+
+### LangGraph Chatbot Example
+앞서 알아본 기본 개념들을 바탕으로 간단한 `Chatbot` 을 구현해 본다. 
+
+#### StateGraph
+`StateGraph` 객체는 챗봇의 구조를 `State Machine` 으로 정의한다. 
+이를 통해 `nodes` 를 추가하여 챗봇이 호출할 수 있는 `LLM` 과 함수들을 나타내고, 
+`edges` 를 추가해 봇이 이러한 함수들 간에 어떻게 전환해야 하는지 정의한다.  
+
+먼저 아래와 같이 상태값으로 사용할 `ChatBotState` 를 정의하고 `StateGraph` 를 생성한다.  
+
+```python
+from typing import Annotated
+
+from typing_extensions import TypedDict
+
+from langgraph.graph import StateGraph, START
+from langgraph.graph.message import add_messages
+
+# 상태 정의
+class ChatBotState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+# 그래프 생성
+graph_builder = StateGraph(State)
+```  
