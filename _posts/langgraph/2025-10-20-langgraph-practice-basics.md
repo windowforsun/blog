@@ -196,3 +196,27 @@ class ChatBotState(TypedDict):
 # 그래프 생성
 graph_builder = StateGraph(State)
 ```  
+
+### Nodes
+다음으로 `Node` 를 추가한다. 
+`Nodes` 는 작업 단위를 나타내며 일반적으로 `Python` 함수를 사용할 수 있다. 
+챗봇에서 필요한 작업은 `LLM` 모델에 정의한 상태를 전달해 그 결과를 받는 것이므로 아래와 같이 정의한다.  
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+import os
+
+# llm 정의
+os.environ["GOOGLE_API_KEY"] = "api key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+
+# 챗봇 함수 정의
+def chatbot(state: ChatBotState):
+    return {"messages": [llm.invoke(state["messages"])]}
+
+
+# 함수 or callable 을 사용해 챗봇 노드 추가
+graph_builder.add_node("chatbot", chatbot)
+```  
