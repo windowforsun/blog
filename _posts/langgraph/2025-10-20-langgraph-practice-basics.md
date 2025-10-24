@@ -220,3 +220,16 @@ def chatbot(state: ChatBotState):
 # 함수 or callable 을 사용해 챗봇 노드 추가
 graph_builder.add_node("chatbot", chatbot)
 ```  
+
+### Edges
+`Edges` 는 노드 간의 연결을 나타내며, 
+각 노드가 어떤 조건에서 다음 노드로 전환되는지를 정의한다. 
+`START` 는 그래프가 실행될 때마다 직업을 시작할 위치이다. 
+`END` 는 그래프 흐름으 종료 지점을 나타낸다.  
+
+```python
+# 그래프 엣지 추가
+graph_builder.add_edge(START, "chatbot")
+graph_builder.add_edge("chatbot", END)
+```  
+
