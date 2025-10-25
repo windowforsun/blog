@@ -4,7 +4,7 @@ classes: wide
 title: "[LangGraph] LangGraph Intro"
 header:
   overlay_image: /img/langgraph-img-2.jpeg
-excerpt: 'LLM 기반의 복잡한 워크플로우와 멀티에이전트 협업을 그래프 구조로 설계하고 구현할 수 있는 AI Framework 인 LangGraph 에 대해 알아보자
+excerpt: 'LLM 기반의 복잡한 워크플로우와 멀티에이전트 협업을 그래프 구조로 설계하고 구현할 수 있는 AI Framework 인 LangGraph 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
