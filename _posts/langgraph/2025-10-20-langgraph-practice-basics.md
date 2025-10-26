@@ -233,3 +233,14 @@ graph_builder.add_edge(START, "chatbot")
 graph_builder.add_edge("chatbot", END)
 ```  
 
+
+### Graph Compile
+`StateGraph` 정의 및 `Node`, `Edge` 추가가 완료되면 
+`compile` 메서드를 호출해 그래프를 컴파일한다. 
+이를 통해 상태를 바탕으로 호출할 수 있는 `CompiledGraph` 객체가 생성된다.  
+
+```python
+# 그래프 컴파일
+graph = graph_builder.compile()
+```   
+
