@@ -244,3 +244,19 @@ graph_builder.add_edge("chatbot", END)
 graph = graph_builder.compile()
 ```   
 
+
+### Graph Visualization
+다음과 같이 컴파일한 `Graph` 객체를 사용해서 그래프를 시각화 할 수 있다.  
+
+```python
+from IPython.display import Image, display
+
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    # This requires some extra dependencies and is optional
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/basics-1.png)
+
