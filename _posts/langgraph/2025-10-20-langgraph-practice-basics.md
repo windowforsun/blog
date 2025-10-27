@@ -260,3 +260,74 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/basics-1.png)
 
+
+### Run Graph(Chatbot)
+최종적으로 아래와 같이 구성한 그래프를 실행해 챗봇을 구현할 수 있다.  
+
+```python
+def stream_graph_updates(user_input: str):
+    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
+        for value in event.values():
+            print("Assistant:", value["messages"][-1].content)
+
+
+while True:
+    try:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("Goodbye!")
+            break
+        stream_graph_updates(user_input)
+    except:
+        user_input = "What do you know about LangGraph?"
+        print("User: " + user_input)
+        stream_graph_updates(user_input)
+        break
+        
+# User: 대한민국 광역시도 기준 인구 TOP 10을 지역명과 인구로 나열해줘
+# Assistant: ## 대한민국 광역시도별 인구 TOP 10 (2024년 5월 기준)
+# 
+# 아래는 2024년 5월 행정안전부 주민등록 인구통계 자료에 기반한 광역시도별 인구 순위입니다.
+# 
+# | 순위 | 지역명    | 인구수 (명) |
+# | --- | -------- | -------- |
+# | 1   | 경기도    | 13,647,547  |
+# | 2   | 서울특별시 | 9,407,540   |
+# | 3   | 부산광역시 | 3,283,684   |
+# | 4   | 경상남도   | 3,254,383   |
+# | 5   | 인천광역시 | 2,999,323   |
+# | 6   | 경상북도   | 2,607,932   |
+# | 7   | 대구광역시 | 2,360,582   |
+# | 8   | 충청남도   | 2,134,722   |
+# | 9   | 전라북도   | 1,759,587   |
+# | 10  | 전라남도   | 1,691,576   |
+# 
+# **참고:**
+# 
+# *   인구수는 주민등록 인구 기준으로, 실제 거주 인구와는 차이가 있을 수 있습니다.
+# *   최신 자료는 행정안전부 주민등록 인구통계 웹사이트에서 확인하실 수 있습니다.
+# User: langgraph 에 대해 짧게 소개해줘
+# Assistant: LangGraph는 LangChain에서 제공하는 도구로, **LLM (Large Language Model)을 활용한 복잡한 대화형 애플리케이션을 구축하기 위한 프레임워크**입니다. 간단히 말해, LLM을 마치 레고 블록처럼 연결하여 **상태 관리, 순환 흐름, 조건부 분기** 등을 구현할 수 있게 해줍니다.
+# 
+# **핵심 특징:**
+# 
+# *   **그래프 기반 구조:** LLM, 함수, 프롬프트 등을 노드로 연결하고, 노드 간의 흐름을 정의하여 복잡한 대화 흐름을 시각적으로 표현하고 관리할 수 있습니다.
+# *   **상태 관리:** 대화의 상태를 추적하고 업데이트하여 이전 대화 내용을 기억하고 활용할 수 있습니다.
+# *   **순환 흐름:** 특정 조건을 만족할 때까지 노드를 반복적으로 실행하는 루프를 구현할 수 있습니다.
+# *   **조건부 분기:** 대화의 흐름을 조건에 따라 분기하여 다양한 시나리오에 대응할 수 있습니다.
+# *   **유연성 및 확장성:** 다양한 종류의 LLM, 도구, 프롬프트를 통합하여 사용자 정의 에이전트를 구축할 수 있습니다.
+# 
+# **LangGraph를 사용하면 다음과 같은 유형의 애플리케이션을 만들 수 있습니다:**
+# 
+# *   **자율 에이전트:** 목표를 달성하기 위해 스스로 계획을 세우고 실행하는 에이전트
+# *   **챗봇:** 복잡한 질문에 답변하고 다양한 작업을 수행하는 챗봇
+# *   **데이터 분석 도구:** LLM을 사용하여 데이터를 분석하고 시각화하는 도구
+# *   **게임 에이전트:** 게임 환경에서 전략적으로 행동하는 에이전트
+# 
+# **LangGraph는 복잡한 대화형 애플리케이션을 구축하는 데 강력한 도구이지만, 초기 학습 곡선이 있을 수 있습니다. LangChain에 대한 기본적인 이해가 필요하며, 그래프 기반 프로그래밍에 대한 경험이 있으면 더욱 도움이 됩니다.**
+# 
+# 더 자세한 내용은 LangChain 공식 문서 ([https://python.langchain.com/docs/langgraph](https://python.langchain.com/docs/langgraph))를 참고하시기 바랍니다.
+# User: q
+# Goodbye!
+```  
+
