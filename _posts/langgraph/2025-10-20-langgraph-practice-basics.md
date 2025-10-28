@@ -331,3 +331,89 @@ while True:
 # Goodbye!
 ```  
 
+
+### Full code
+
+```python
+from typing import Annotated, TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_google_genai import ChatGoogleGenerativeAI
+from IPython.display import Image, display
+import os
+
+
+# 상태 정의 
+class ChatBotState(TypedDict):
+  messages: Annotated[list, add_messages]
+
+
+# llm 정의
+os.environ["GOOGLE_API_KEY"] = "api key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+
+# 챗봇 함수 정의
+def chatbot(state: ChatBotState):
+  return {"messages": [llm.invoke(state["messages"])]}
+
+
+# 그래프 생성
+graph_builder = StateGraph(ChatBotState)
+
+
+# 함수 or callable 을 사용해 챗봇 노드 추가
+graph_builder.add_node("chatbot", chatbot)
+
+# 그래프 엣지 추가
+graph_builder.add_edge(START, "chatbot")
+graph_builder.add_edge("chatbot", END)
+
+
+# 그래프 컴파일
+graph = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+
+
+# 그래프 실행
+def stream_graph_updates(user_input: str):
+    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
+        for value in event.values():
+            print("Assistant:", value["messages"][-1].content)
+
+
+while True:
+    try:
+        user_input = input("User: ")
+        if user_input.lower() in ["quit", "exit", "q"]:
+            print("Goodbye!")
+            break
+        stream_graph_updates(user_input)
+    except:
+        # fallback if input() is not available
+        user_input = "What do you know about LangGraph?"
+        print("User: " + user_input)
+        stream_graph_updates(user_input)
+        break
+```
+
+
+
+
+
+---  
+## Reference
+[Build a basic chatbot](https://langchain-ai.github.io/langgraph/tutorials/get-started/1-build-basic-chatbot/)  
+[Python typing](https://docs.python.org/3/library/typing.html)  
+[LangGraph 에 자주 등장하는 Python 문법이해](https://wikidocs.net/264613)  
+[Graph API concepts](https://langchain-ai.github.io/langgraph/concepts/low_level/)  
+[LangGraph Reference](https://langchain-ai.github.io/langgraph/reference/)  
+[LangGraph Tutorial](https://github.com/langchain-ai/langgraph/tree/main/docs/docs/tutorials)  
+[LangGraph Docs](https://github.com/langchain-ai/langgraph/tree/main/docs/docs)  
+
+
