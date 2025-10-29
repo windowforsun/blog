@@ -4,7 +4,7 @@ classes: wide
 title: "[LangGraph] LangGraph Basics"
 header:
   overlay_image: /img/langgraph-img-2.jpeg
-excerpt: ''
+excerpt: 'LangGraph 사용에 앞서 필요한 기본 지식을 설명하고, 이를 바탕으로 간단한 Chatbot 을 구현해 본다.'
 author: "window_for_sun"
 header-style: text
 categories :
