@@ -228,3 +228,199 @@ for event in graph.stream({"messages": [{"role": "user", "content": user_input}]
 # Assistant: 현재 가장 유튜브 구독자가 많은 채널은 MrBeast로, 약 394백만 명의 구독자를 보유하고 있습니다.
 ```
 
+
+
+### Agent Memory
+앞서 구현한 `Agent` 는 실시간 검색 도구를 사용할 수 있는 `Agent` 이지만, 
+과거 대화의 내용을 기억하지 못해 `Context` 가 필요한 `Multi-Turn` 대화가 불가능하다.  
+
+이를 해결하기 위해 `LangGraph` 의 `Persistent Checkpoint` 를 사용해 
+그래프 호출시 `thread_id` 를 지정해 `thread_id` 별로 상태를 유지할 수 있도록 한다. 
+이를 사용하면 `Agent` 가 지금까지 대화 맥락을 이해하고 그에 맞춤 답변을 제공할 수 있다.  
+
+`LangGraph` 에서 제공하는 `Persistent Checkpoint` 기능은 `LangChain` 에서 제공하는 
+`Memory` 기능보다 훨씬 강력하다. 
+주요 차이점을 표로 정리하면 다음과 같다.  
+
+구분|Persistent Checkpoint (LangGraph)|Memory (LangChain)
+---|---|---
+지속성|영구적(외부 저장)|임시적(메모리 기반)
+복구/재시작|중단/재시작 완벽 지원|세션 종료 시 데이터 소멸
+확장성|대용량, 복잡 워크플로도 지원|짧고 단순한 대화에 적합
+구현 난이도|상대적으로 복잡(저장소 연동 필요)|상대적으로 간단
+관리/운용|상태 관리·운용에 특화|간단한 세션 컨텍스트 관리
+
+`Persistent Checkpoint` 를 사용해 `Multi-Turn` 대화가 가능한 `Agent` 구현은 
+이전 `Agent` 에서 언급한 `LangGraph` 에서 제공하는 `ToolNode` 와 `tools_condition` 을 사용한다. 
+그리고 간단한 구현을 위해 메모리 기반으로 진행한다.  
+
+`in-memory checkpointer` 를 정의하고 기존 `Agent` 구현을 `ToolNode` 와 
+`tools_condition` 기반으로 수정 후 메모리 기능을 `Agent` 에 추가하면 아래와 같다.  
+
+```python
+from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated
+from typing_extensions import TypedDict
+from langchain_community.tools import DuckDuckGoSearchRun
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain.chat_models import init_chat_model
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+# in-memory checkpointer 정의
+memory = MemorySaver()
+
+
+# 상태 정의
+class AgentState(TypedDict):
+    messages: Annotated[list, add_messages]
+
+# 도구 초기화
+tool = DuckDuckGoSearchRun()
+tools = [tool]
+
+# LLM 초기화
+os.environ["GOOGLE_API_KEY"] = "api key"
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+
+# LLM 도구 바인딩
+model_with_tools = model.bind_tools(tools)
+
+
+# 챗봇 함수 정의
+def chatbot(state: AgentState):
+    return {"messages" : [model_with_tools.invoke(state["messages"])]}
+
+# 상태 그래프 생성
+graph_builder = StateGraph(AgentState)
+
+# 챗봇 노드 추가
+graph_builder.add_node("chatbot", chatbot)
+
+# 도구 노드 추가
+tool_node = ToolNode(tools=tools)
+graph_builder.add_node("tools", tool_node)
+
+# 조건부 엣지
+graph_builder.add_conditional_edges(
+    "chatbot",
+    tools_condition
+)
+
+# tools -> chatbot 엣지 추가
+graph_builder.add_edge("tools", "chatbot")
+
+# START -> chatbot 엣지 추가
+graph_builder.add_edge(START, "chatbot")
+
+# chatbot -> END 엣지 추가
+graph_builder.add_edge("chatbot", END)
+
+# checkpointer를 사용해 상태 그래프 컴파일
+graph = graph_builder.compile(checkpointer=memory)
+```  
+
+구현된 그패르르 시각화하면 이전 `Agent` 와 동일하다. 
+차이점은 그래프가 각 노드를 처리하면서 `State` 를 체크포인트 하는 것이다.  
+
+```python
+from IPython.display import Image, display
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+.. 그림 ..
+agent-memory-stream-1.png
+
+`checkpointing` 기능을 사용해 `Agent` 를 호출하기 위해서는 `thread_id` 를 지정해야 하기 때문에, 
+`RunnableConfig` 를 정의해 사용한다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+config = RunnableConfig(
+    # 최대 10개 노드 방문
+    recursion_limit=10,
+    # 대화 세션을 구분할 스레드 ID
+    configurable={"thread_id": "1"}
+)
+
+
+def answer_print(question, config):
+  for event in graph.stream({"messages": [("user", question)]}, config=config):
+      for value in event.values():
+          value["messages"][-1].pretty_print()
+
+answer_print("안녕 내이름은 jack 이야 반가워", config)
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요, Jack님. 만나서 반갑습니다! 어떤 도움이 필요하신가요?
+```  
+
+동일한 `thread_id` 를 사용하는 경우 이전 대화를 기억해 답변하지만 다르면 기억하지 못한다.  
+
+```python
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "2"},
+)
+
+answer_print("내 이름이 뭐라고 ?", config)
+# ================================== Ai Message ==================================
+# 
+# 저는 당신의 이름을 모릅니다. 저는 대규모 언어 모델입니다.
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "1"},
+)
+
+answer_print("내 이름이 뭐라고 ?", config)
+# ================================== Ai Message ==================================
+# 
+# 당신의 이름은 Jack입니다.
+```  
+
+저장된 `State` 를 확인하고 싶은 경우 `thread_id` 를 지정해 `get_state()` 함수를 통해 확인해 볼 수 있다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+config = RunnableConfig(
+    configurable={"thread_id": "1"}
+)
+
+snapshot = graph.get_state(config)
+# 메시지 확인
+snapshot.values["messages"]
+# [HumanMessage(content='안녕 내이름은 jack 이야', additional_kwargs={}, response_metadata={}, id='a657b2ed-d7c5-4763-8ea2-67f9ef02dd32'),
+#  AIMessage(content='<function=duckduckgo_search({"query": "jack"})</function>', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 18, 'prompt_tokens': 274, 'total_tokens': 292, 'completion_time': 0.065454545, 'prompt_time': 0.017705171, 'queue_time': 0.22546059400000001, 'total_time': 0.083159716}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'stop', 'logprobs': None}, id='run--50fcef24-c195-409c-8c63-fe6c6c10dde2-0', usage_metadata={'input_tokens': 274, 'output_tokens': 18, 'total_tokens': 292}),
+#  HumanMessage(content='내 이름이 뭐라고 ?', additional_kwargs={}, response_metadata={}, id='45972f3c-e413-4d20-9463-68c9bde0a059'),
+#  AIMessage(content='당신의 이름은 Jack입니다.', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--bbe24502-92d3-4893-8a04-2b77e5eb8125-0', usage_metadata={'input_tokens': 198, 'output_tokens': 8, 'total_tokens': 206, 'input_token_details': {'cache_read': 0}})]
+
+# 설정된 config 확인
+snapshot.config
+# {'configurable': {'thread_id': '1',
+#                   'checkpoint_ns': '',
+#                  'checkpoint_id': '1f049d38-9337-689d-8010-2fbde531c2a3'}}
+
+# 저장된 값 확인
+snapshot.values
+# {'messages': [HumanMessage(content='안녕 내이름은 jack 이야', additional_kwargs={}, response_metadata={}, id='a657b2ed-d7c5-4763-8ea2-67f9ef02dd32'),
+#               AIMessage(content='<function=duckduckgo_search({"query": "jack"})</function>', additional_kwargs={}, response_metadata={'token_usage': {'completion_tokens': 18, 'prompt_tokens': 274, 'total_tokens': 292, 'completion_time': 0.065454545, 'prompt_time': 0.017705171, 'queue_time': 0.22546059400000001, 'total_time': 0.083159716}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'stop', 'logprobs': None}, id='run--50fcef24-c195-409c-8c63-fe6c6c10dde2-0', usage_metadata={'input_tokens': 274, 'output_tokens': 18, 'total_tokens': 292}),
+#               HumanMessage(content='내 이름이 뭐라고 ?', additional_kwargs={}, response_metadata={}, id='45972f3c-e413-4d20-9463-68c9bde0a059'),
+#              AIMessage(content='당신의 이름은 Jack입니다.', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--bbe24502-92d3-4893-8a04-2b77e5eb8125-0', usage_metadata={'input_tokens': 198, 'output_tokens': 8, 'total_tokens': 206, 'input_token_details': {'cache_read': 0}})]}
+
+# 다음 노드 확인
+# 현재 END 로 종료되어 빈값
+snapshot.next
+# {}
+```  
