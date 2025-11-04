@@ -516,3 +516,96 @@ for event in graph.stream(input=input, config=config):
 # 
 # 현재 비트코인 가격은 106,885.76 btc/usd 이며, 현재 가격은 ₩143,455,835.00입니다. 최근 24시간 동안 가격이 -1.01% 변동되었습니다.
 ```  
+
+#### output_keys
+`output_keys` 옵션은 스트리밍할 키를 지정하는 옵션이다. 
+`list` 형태로 `channels` 에 정의된 키 중 선택해 사용해야 한다.  
+
+```python
+# output_keys
+# state key 출력
+list(graph.channels.keys())
+# ['extra_data', 'messages', '__start__', 'branch:to:chatbot', 'branch:to:tools']
+```  
+
+아래는 `extra_data` 키를 지정해 스트리밍하는 예시이다. 
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+    input=input,
+    config=config,
+    output_keys=["extra_data"]
+):
+  for key, value in event.items():
+    print(f"\n[{key}]\n")
+    if value:
+      print(value.keys())
+      if "extra_data" in value:
+        print(value["extra_data"])
+
+# [chatbot]
+# 
+# dict_keys(['extra_data'])
+# chatbot dummay data 메시지
+# 
+# [tools]
+# 
+# 
+# [chatbot]
+# 
+# dict_keys(['extra_data'])
+# chatbot dummay data 메시지
+```
+
+아래는 `messages` 키를 지정해 스트리밍하는 예시이다. 
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+    input=input,
+    config=config,
+    output_keys=["messages"]
+):
+  for key, value in event.items():
+    if value and "messages" in value:
+      print(f"\n[{key}]\n")
+      print(value["messages"][-1].content)
+
+
+# [chatbot]
+# 
+# 
+# 
+# [tools]
+# 
+# Bitcoin (BTC) price, live charts, news and more. Bitcoin to USD price is updated in real time. Learn about Bitcoin, receive market updates and more. Get the latest Bitcoin price in USD, currently at 102,435.00, live chart, 24h stats, market cap, trading volume, and real-time updates. ... Together, these five entities hold nearly 1.2 million BTC valued at about $36 billion at the current price. This is more than 5.6% of Bitcoin's total supply. Among the corporate holders, Grayscale has the ... The current price of Bitcoin in United States is $104,707.98 per (BTC / USD) Get the latest price, news, live charts, and market trends about Bitcoin. Get up to $200 for getting started The Kitco Bitcoin price index provides the latest Bitcoin price in US Dollars using an average from the world's leading exchanges. The live price of Bitcoin today is $104.223K, with a current market cap of $2.066T. The 24-hour trading volume is 30,112M. The price of BTC to USD is updated in real time.
+# 
+# [chatbot]
+# 
+# 현재 비트코인 가격은 약 102,435.00 달러에서 104,707.98 달러 사이입니다. 이는 실시간으로 업데이트되는 가격이며, 변동될 수 있습니다.
+```  
