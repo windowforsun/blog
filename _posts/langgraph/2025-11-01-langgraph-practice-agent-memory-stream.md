@@ -609,3 +609,122 @@ for event in graph.stream(
 # 
 # 현재 비트코인 가격은 약 102,435.00 달러에서 104,707.98 달러 사이입니다. 이는 실시간으로 업데이트되는 가격이며, 변동될 수 있습니다.
 ```  
+
+#### stream_mode
+`stream_mode` 는 스트리밍 출력 모드를 지정하는 옵션이다. 
+
+먼저 `stream_mode=values` 인 경우를 보면 아래와 같다. 
+`values` 는 각 단계의 현재 상태 전체를 출력한다. 
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+    input=input,
+    config=config,
+    stream_mode="values"
+):
+  for key, value in event.items():
+    print(f"\n[{key}]\n")
+    if key == "messages":
+      print(f"메시지 개수 : {len(value)}")
+
+  print("==== 단계 ====")
+
+
+# [extra_data]
+# 
+# 
+# [messages]
+# 
+# 메시지 개수 : 25
+# ==== 단계 ====
+# 
+# [extra_data]
+# 
+# 
+# [messages]
+# 
+# 메시지 개수 : 26
+# ==== 단계 ====
+# 
+# [extra_data]
+# 
+# 
+# [messages]
+# 
+# 메시지 개수 : 27
+# ==== 단계 ====
+# 
+# [extra_data]
+# 
+# 
+# [messages]
+# 
+# 메시지 개수 : 28
+# ==== 단계 ====
+```  
+
+
+다음으로 `stream_mode=updates` 인 경우를 보면 아래와 같다. 
+`updates` 는 각 단계에 대한 업데이트된 상태만 출력한다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+        input=input,
+        config=config,
+        stream_mode="updates"
+):
+    for key, value in event.items():
+        print(f"\n[{key}]\n")
+        print(value.keys())
+
+        if "messages" in value:
+            print(f"메시지 개수 : {len(value['messages'])}")
+
+    print("==== 단계 ====")
+
+
+
+# [chatbot]
+# 
+# dict_keys(['messages', 'extra_data'])
+# 메시지 개수 : 1
+# ==== 단계 ====
+# 
+# [tools]
+# 
+# dict_keys(['messages'])
+# 메시지 개수 : 1
+# ==== 단계 ====
+# 
+# [chatbot]
+# 
+# dict_keys(['messages', 'extra_data'])
+# 메시지 개수 : 1
+# ==== 단계 ====
+```  
