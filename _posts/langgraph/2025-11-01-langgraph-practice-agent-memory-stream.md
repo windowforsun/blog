@@ -728,3 +728,121 @@ for event in graph.stream(
 # 메시지 개수 : 1
 # ==== 단계 ====
 ```  
+
+#### interrupt_before / interrupt_after
+`interrupt_before` 와 `interrupt_after` 는 특정 노드 실행 전후에 중단할지를 지정하는 옵션이다.  
+
+먼저 노드 실행 전에 스트리밍을 중단하는 `interrupt_before` 를 사용해 `tools` 노드 실행 전에 중단하는 예시를 보면 아래와 같다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+    input=input,
+    config=config,
+    stream_mode="updates",
+    interrupt_before=["tools"],
+):
+  for key, value in event.items():
+      # key 는 노드 이름
+      print(f"\n[{key}]\n")
+
+      # value 는 노드의 출력값
+      if isinstance(value, dict):
+          print(value.keys())
+          if "messages" in value:
+              print(value["messages"])
+
+      # value 에는 state 가 dict 형태로 저장(values 의 key 값)
+      if "messages" in value:
+          print(f"메시지 개수: {len(value['messages'])}")
+  print("===" * 10, " 단계 ", "===" * 10)
+
+# [chatbot]
+# 
+# dict_keys(['messages', 'extra_data'])
+# [AIMessage(content='', additional_kwargs={'function_call': {'name': 'duckduckgo_search', 'arguments': '{"query": "current bitcoin price"}'}}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--92a5862e-e4a6-4af1-96ad-d09d16caddba-0', tool_calls=[{'name': 'duckduckgo_search', 'args': {'query': 'current bitcoin price'}, 'id': '7d9fa634-735a-4840-8432-4f6c440b1604', 'type': 'tool_call'}], usage_metadata={'input_tokens': 2326, 'output_tokens': 9, 'total_tokens': 2335, 'input_token_details': {'cache_read': 0}})]
+# 메시지 개수: 1
+# ==============================  단계  ==============================
+# 
+# [__interrupt__]
+# 
+# ==============================  단계  ==============================
+```  
+
+다음으로 노드 실행 후에 스트리밍을 중단하는 `interrupt_after` 를 사용해 `tools` 노드 실행 후에 중단하는 예시를 보면 아래와 같다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+question = "현재 실시간 비트코인 가격을 알려줘"
+
+input = AgentState(extra_data="추가 데이터", messages=[("user", question)])
+
+config = RunnableConfig(
+    recursion_limit=10,
+    configurable={"thread_id": "10"},
+    tags=["my-tag"]
+)
+
+
+for event in graph.stream(
+        input=input,
+        config=config,
+        stream_mode="updates",
+        interrupt_after=["tools"],
+):
+    for key, value in event.items():
+        # key 는 노드 이름
+        print(f"\n[{key}]\n")
+
+        # value 는 노드의 출력값
+        if isinstance(value, dict):
+            print(value.keys())
+            if "messages" in value:
+                print(value["messages"])
+
+        # value 에는 state 가 dict 형태로 저장(values 의 key 값)
+        if "messages" in value:
+            print(f"메시지 개수: {len(value['messages'])}")
+    print("===" * 10, " 단계 ", "===" * 10)
+
+# [chatbot]
+# 
+# dict_keys(['messages', 'extra_data'])
+# [AIMessage(content='', additional_kwargs={'tool_calls': [{'id': 't37a675c7', 'function': {'arguments': '{"query":"current bitcoin price"}', 'name': 'duckduckgo_search'}, 'type': 'function'}]}, response_metadata={'token_usage': {'completion_tokens': 19, 'prompt_tokens': 564, 'total_tokens': 583, 'completion_time': 0.069090909, 'prompt_time': 0.029193029, 'queue_time': 0.214756638, 'total_time': 0.098283938}, 'model_name': 'llama-3.3-70b-versatile', 'system_fingerprint': 'fp_3f3b593e33', 'finish_reason': 'tool_calls', 'logprobs': None}, id='run--359032b9-51fe-4f4a-a091-282a21030045-0', tool_calls=[{'name': 'duckduckgo_search', 'args': {'query': 'current bitcoin price'}, 'id': 't37a675c7', 'type': 'tool_call'}], usage_metadata={'input_tokens': 564, 'output_tokens': 19, 'total_tokens': 583})]
+# 메시지 개수: 1
+# ==============================  단계  ==============================
+# 
+# [tools]
+# 
+# dict_keys(['messages'])
+# [ToolMessage(content="Bitcoin (BTC) price, live charts, news and more. Bitcoin to USD price is updated in real time. Learn about Bitcoin, receive market updates and more. Get the latest Bitcoin price in USD, currently at 102,435.00, live chart, 24h stats, market cap, trading volume, and real-time updates. ... Together, these five entities hold nearly 1.2 million BTC valued at about $36 billion at the current price. This is more than 5.6% of Bitcoin's total supply. Among the corporate holders, Grayscale has the ... The current price of Bitcoin in United States is $104,707.98 per (BTC / USD) Get the latest price, news, live charts, and market trends about Bitcoin. Get up to $200 for getting started The Kitco Bitcoin price index provides the latest Bitcoin price in US Dollars using an average from the world's leading exchanges. The live price of Bitcoin today is $104.223K, with a current market cap of $2.066T. The 24-hour trading volume is 30,112M. The price of BTC to USD is updated in real time.", name='duckduckgo_search', id='72a9604c-a709-45f9-80f3-d28fd987fa70', tool_call_id='t37a675c7')]
+# 메시지 개수: 1
+# ==============================  단계  ==============================
+# 
+# [__interrupt__]
+# 
+# ==============================  단계  ==============================
+```  
+
+
+
+
+---  
+## Reference
+[Agent 에 메모리(memory) 추가](https://wikidocs.net/265658)
+[LangGraph 스트리밍 출력](https://wikidocs.net/265659)
+
+
