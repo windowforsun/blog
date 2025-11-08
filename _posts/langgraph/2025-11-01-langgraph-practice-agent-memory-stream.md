@@ -208,8 +208,8 @@ except Exception:
 ```  
 
 
-.. 그림 ..
-agent-memory-stream-1.png
+![그림 1]({{site.baseurl}}/img/langgraph/agent-memory-stream-1.png)
+
 
 
 `Agent` 가 잘 동작하는지 테스트해 보면 아래와 같다.  
@@ -337,8 +337,7 @@ except Exception:
     pass
 ```
 
-.. 그림 ..
-agent-memory-stream-1.png
+![그림 1]({{site.baseurl}}/img/langgraph/agent-memory-stream-1.png)
 
 `checkpointing` 기능을 사용해 `Agent` 를 호출하기 위해서는 `thread_id` 를 지정해야 하기 때문에, 
 `RunnableConfig` 를 정의해 사용한다.  
