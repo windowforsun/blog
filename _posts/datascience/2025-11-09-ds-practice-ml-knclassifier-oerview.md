@@ -8,7 +8,7 @@ excerpt: 'K-Nearest Neighbors(KNN), K-최근접 이웃 알고리즘에 대해 �
 author: "window_for_sun"
 header-style: text
 categories :
-  - AI/ML
+  - Data Science
 tags:
     - Practice
     - ML
