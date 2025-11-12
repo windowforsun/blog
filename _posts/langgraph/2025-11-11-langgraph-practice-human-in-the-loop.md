@@ -254,3 +254,66 @@ for event in graph.stream(None, to_replay.config, stream_mode="values"):
 # 
 # 최신 AI 뉴스에 따르면, 타이완은 AI 붐으로 인해 올해 수출액이 사상 최대치를 기록할 것으로 예상됩니다. 또한, 생성형 AI 발전에 따라 피지컬 AI, 특히 휴머노이드 로봇이 부상하고 있다는 소식도 있습니다. AI 기술은 현재 매우 빠른 속도로 발전하고 있으며, 빅테크 기업들은 AI 기술에 많은 투자를 하고 있습니다.
 ```  
+
+### 에이전트 상태 수동 업데이트
+`LangGraph` 에서는 중간단계 개입 되돌림을 통해 상태 수정과 `Replay` 를 구현할 수 있다. 
+이는 `LLM` 기반 자동화 워크플로우에서 신뢰성과 유연성을 높이기 위해 도입한 중요한 개념이다. 
+워크플로우를 실행하다가 특정 단계(노드)에서 사람이 개입해야 하거나, 잘못된 상태가 감지된 경우, 해당 시점으로 되돌아가서 상태를 수정하고 다시 진행할 수 있다.  
+
+- 실행 중단/개입 : `LLM` 답변이 부적절하거나, 도구 호출 결과가 잘못된 경우, 해당 시점에서 자동화를 멈추고 사람이 개입하여 상태를 직접 수정할 수 있다. 
+- 상태 수정 : 사람이 직접 `state` 를 수정하여 잘못된 정보, 누락된 정보 등을 보완할 수 있다. 
+- 되돌림(`Rollback`) : 각 단계 `state` 를 저장하고 있기 때문에, 원하는 이전 단계로 되돌아가(`Rollback`) 그 시점의 `state` 부터 `Replay` 가 가능하다.  
+
+`LangGraph` 에이전트는 앞선 예제와 동일한 것을 사용한다.  
+이번 예제에서는 에이전트가 웹 검색 도구에 사용하는 상태를 수정해 적합한 최종 답변을 제공할 수 있도록 구현해 본다.  
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+query = "LangGraph 가 무엇인지 조사해 알려줘"
+
+input = AgentState(messages=[("user", query)])
+
+config = RunnableConfig(
+    configurable={"thread_id": "2"}
+)
+
+# interrupt_before, interrupt_after 를 적용할 수 있는 목록
+print(graph.nodes.keys())
+# dict_keys(['__start__', 'chatbot', 'tools'])
+
+events = graph.stream(
+    input=input, config=config, interrupt_before=["tools"], stream_mode="values"
+)
+
+for event in events:
+    if "messages" in event:
+        event["messages"][-1].pretty_print()
+
+# ================================ Human Message =================================
+# 
+# LangGraph 가 무엇인지 조사해 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (f245c634-891f-4a2f-968d-8942e79b4e3e)
+# Call ID: f245c634-891f-4a2f-968d-8942e79b4e3e
+# Args:
+# query: LangGraph
+```  
+
+그래프에서 중단된 지점의 스냅샷을 가져와 가장 최근 메시지를 확인하면, 
+에이전트가 웹 검색 도구에 사용할 검색 쿼리를 확인할 수 있다.  
+
+```python
+snapshot = graph.get_state(config)
+
+last_message = snapshot.values["messages"][-1]
+
+last_message.pretty_print()
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (f245c634-891f-4a2f-968d-8942e79b4e3e)
+# Call ID: f245c634-891f-4a2f-968d-8942e79b4e3e
+# Args:
+# query: LangGraph
+```  
