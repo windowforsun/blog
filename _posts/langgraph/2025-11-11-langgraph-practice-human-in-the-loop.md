@@ -317,3 +317,151 @@ last_message.pretty_print()
 # Args:
 # query: LangGraph
 ```  
+
+#### 노드의 결과 수정하기
+현재 중단된 지점은 웹 검색 도구 노드이다. 
+이때 관리자가 보다 적합한 검색 결과를 직접 개입하는 경우에 대해 살펴본다.  
+
+웹 검색 도구의 결과로 관리자가 입력한 아래와 같은 가상 검색 결과를 제공한다고 가정한다.  
+
+```python
+modified_search_result = """[수정된 웹 검색 결과]
+문의 내용의 답변은 다음과 같습니다.
+직접 알아보세요!
+"""
+```  
+
+도구 노드의 결과를 직접 수정하기 위해서는 동일한 `tool_call_id` 를 사용해야 한다. 
+아래와 같은 방법으로 현재 도구 노드의 `tool_call_id` 를 가져올 수 있다.  
+
+```python
+# 메시지를 수정하려면 수정하고자 하는 Message 와 일치하는 tool_call_id 를 지정해야 한다.
+tool_call_id = last_message.tool_calls[0]["id"]
+# f245c634-891f-4a2f-968d-8942e79b4e3e
+```  
+
+이제 해당 `tool_call_id` 를 사용해 상태 업데이트에 사용할 `ToolMessage` 를 생성한다.  
+
+```python
+from langchain_core.messages import AIMessage, ToolMessage
+
+new_messages = [
+    ToolMessage(
+        content=modified_search_result,
+        tool_call_id=tool_call_id
+    )
+]
+
+new_messages[-1].pretty_print()
+# ================================= Tool Message =================================
+# 
+# [수정된 웹 검색 결과]
+# 문의 내용의 답변은 다음과 같습니다.
+# 직접 알아보세요!
+```  
+
+만들어진 `TollMessage` 로 그래프의 상태를 업데이트해 주면된다. 
+이때 `StateGraph` 의 [update_state](https://langchain-ai.github.io/langgraph/reference/graphs/#langgraph.graph.state.CompiledStateGraph.update_state)
+메서드를 사용한다.  
+
+`update_state` 메서드를 간략하게 설명하면 다음과 같다. 
+
+메개 변수는 아래와 같다. 
+
+- `config` : `RunnableConfig` 객체로, 그래프 실행에 필요한 설정 정보를 포함한다.
+- `values` : `State` 의 값을 포함하는 딕셔너리로, 그래프의 현재 상태를 나타낸다.
+- `as_node` : `string` 타입으로 값의 출처로 간주할 노드 이름을 지정한다. 
+
+주요 특징은 아래와 같다. 
+
+- 체크포인터를 통해 이전 상태를 로드하고 새로운 상태를 저장한다. 
+- 서브그래프에 대한 상태 업데이트를 처리한다. 
+- `as_node` 가 지정되지 않은 경우, 마지막으로 상태를 업데이트한 노드를 찾는다. 
+- 그래프의 상태를 수동으로 업데이트할 때 사용한다. 
+- 상태 업데이트 중 `SharedValues` 에 쓰기 작업은 허용되지 않는다.  
+
+```python
+# update_state 를 사용해 상태 업데이트
+
+graph.update_state(
+    config,
+    {"messages" : new_messages},
+    as_node="tools"
+)
+
+print(graph.get_state(config).values["messages"][-1])
+# ToolMessage(content='[수정된 웹 검색 결과] \n문의 내용의 답변은 다음과 같습니다. \n직접 알아보세요!\n', id='902b0354-4be8-491c-8e80-bd8c388d29fa', tool_call_id='f245c634-891f-4a2f-968d-8942e79b4e3e')
+
+# 상태 수동 업데이트 후 현재 그래프 상태 확인
+snapshot = graph.get_state(config)
+print(snapshot.next)
+# ('chatbot',)
+```  
+
+상태를 수동 업데이트하고 그래프에서 실행할 다음 노드를 보면 `chatbot` 으로 다음 노드로 이동한 것을 확인할 수 있다. 
+이는 `update_state` 는 특정 시점의 체크포인트 `state` 를 불러와 수정 하면 해당 노드의 결과는 업데이트된 상태의 것으로 간주하고, 
+`Replay` 를 수행하면 수정된 시점 이후의 노드부터 실행된다.  
+
+이제 중단된 그래프를 다시 실행하면 아래와 같이, 사용자가 수정한 검색 결과를 기반으로 최종 답변이 나오는 것을 확인할 수 있다.  
+
+```python
+# 수정된 메시지를 바탕으로 이어서 수행
+
+events = graph.stream(None, config, stream_mode="values")
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================= Tool Message =================================
+# 
+# [수정된 웹 검색 결과]
+# 문의 내용의 답변은 다음과 같습니다.
+# 직접 알아보세요!
+# 
+# ================================== Ai Message ==================================
+# 
+# LangGraph에 대한 정보를 직접 검색해 보시는 것이 좋겠습니다.
+
+# 만약 최종 메시지까지 수정을 원하다면 아래와 같이 할 수 있다. 
+# graph.update_state(
+#     config,
+#     {
+#         "messages" : [
+#             AIMessage(content="Google 에서 아래 제시된 키워드로 검색해 보시는 걸 추천 드립니다. ...")
+#         ]
+#     }
+# )
+```  
+
+마지막으로 상태 수동 업데이트가 `checkpoint` 에 정상적으로 반영됐는지 확인하면 아래와 같다.  
+
+```python
+# 그래프 상태 스냅샷 생성
+snapshot = graph.get_state(config)
+
+# 최근 세 개의 메시지 출력
+for message in snapshot.values["messages"]:
+    message.pretty_print()
+# ================================ Human Message =================================
+# 
+# LangGraph 가 무엇인지 조사해 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (f245c634-891f-4a2f-968d-8942e79b4e3e)
+# Call ID: f245c634-891f-4a2f-968d-8942e79b4e3e
+# Args:
+# query: LangGraph
+# ================================= Tool Message =================================
+# 
+# [수정된 웹 검색 결과]
+# 문의 내용의 답변은 다음과 같습니다.
+# 직접 알아보세요!
+# 
+# ================================== Ai Message ==================================
+# 
+# LangGraph에 대한 정보를 직접 검색해 보시는 것이 좋겠습니다.
+
+# 다음 실행 노드, 모두 실행된 상태로 상태가 업데이트 됨
+print(snapshot.next)
+# ()
+```  
