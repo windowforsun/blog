@@ -465,3 +465,158 @@ for message in snapshot.values["messages"]:
 print(snapshot.next)
 # ()
 ```  
+
+#### 노드의 입력값 수정하기
+이번에는 웹 검색 도구의 쿼리를 수정해 그래프가 실행되도록 해본다. 
+랜던 값을 사용해 `thread_id` 를 지정해서 체크포인터가 구분될 수 있도록 하고, 
+동일하게 `tools` 노드 이전에 중단되도록 해 그래프를 실행한다.  
+
+```python
+import random
+
+thread_id = random.randrange(1, 99999999999)
+
+query = "LangGraph 가 무엇인지 조사해 알려줘"
+
+input = AgentState(messages=[("user", query)])
+
+config = {"configurable": {"thread_id" : thread_id}}
+
+events = graph.stream(
+    input=input,
+    config=config,
+    interrupt_before=["tools"],
+    stream_mode="values"
+)
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# LangGraph 가 무엇인지 조사해 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (b81a82bd-01a8-4c1b-9b7b-964192b397b2)
+# Call ID: b81a82bd-01a8-4c1b-9b7b-964192b397b2
+# Args:
+# query: LangGraph
+```  
+
+상태의 마지막 메시지를 확인하고, 웹 검색 도구의 쿼리 매개변수를 수정한다. 
+그리고 이를 `AIMessage` 로 만들어 상태를 업데이트 한다. 
+이때 중요한 점은 기존 메시지 `id` 를 그대로 사용해야 한다는 점이다.  
+
+```python
+from langchain_core.messages import AIMessage
+
+snapshot = graph.get_state(config)
+
+# messages 마지막 메시지
+existing_message = snapshot.values["messages"][-1]
+
+# 마지막 메시지 id
+print(existing_message.id)
+# run--1a65c077-5c72-457b-bbf9-47e7aeeabc2f-0
+
+# 마지막 메시지의 첫번째 도구
+print(existing_message.tool_calls[0])
+# {'name': 'duckduckgo_search', 'args': {'query': 'LangGraph'}, 'id': 'b81a82bd-01a8-4c1b-9b7b-964192b397b2', 'type': 'tool_call'}
+
+# 위 마지막 메시지의 첫번째 도구의 query 를 수정해 본다.
+
+# tool_calls 를 복사해 새로운 도구 호출 생성
+new_tool_call = existing_message.tool_calls[0].copy()
+
+# 쿼리 메개변수 수정
+new_tool_call["args"] = {"query" : "LangGraph checkpointing"}
+print(new_tool_call)
+# {'name': 'duckduckgo_search',
+#  'args': {'query': 'LangGraph checkpointing'},
+#  'id': 'b81a82bd-01a8-4c1b-9b7b-964192b397b2',
+#  'type': 'tool_call'}
+
+new_message = AIMessage(
+    content=existing_message.content,
+    tool_calls=[new_tool_call],
+    id=existing_message.id
+)
+
+# 웹 검색 도구에서 사용할 업데이트된 메시지
+new_message.pretty_print()
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (b81a82bd-01a8-4c1b-9b7b-964192b397b2)
+# Call ID: b81a82bd-01a8-4c1b-9b7b-964192b397b2
+# Args:
+# query: LangGraph checkpointing
+
+
+# 업데이트 된 메시지로 상태 업데이트
+graph.update_state(config, {"messages":[new_message]})
+# {'configurable': {'thread_id': '3145555862',
+#                   'checkpoint_ns': '',
+#                   'checkpoint_id': '1f054d8d-099a-607d-8002-656231f0c8cb'}}
+```  
+
+최종적으로 그래프 상태에서 마지막 메시지의 `tool_calls` 를 확인해 상태 수정이 잘 됐는지 확인한다.  
+
+```python
+# 업데이트 후 그래프의 상태 중 마지막 메시지의 도구
+graph.get_state(config).values["messages"][-1].tool_calls
+# [{'name': 'duckduckgo_search',
+#   'args': {'query': 'LangGraph checkpointing'},
+#   'id': 'b81a82bd-01a8-4c1b-9b7b-964192b397b2',
+#   'type': 'tool_call'}]
+```  
+
+이제 업데이트된 상태로 다시 그래프를 이어서 진행한다. 
+그러면 앞서 수정한 검색 쿼리로 그래프가 이어 수행되는 것을 확인할 수 있다. 
+
+```python
+# 그래프 스트림 이어서 수행
+events = graph.stream(None, config, stream_mode="values")
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (b81a82bd-01a8-4c1b-9b7b-964192b397b2)
+# Call ID: b81a82bd-01a8-4c1b-9b7b-964192b397b2
+# Args:
+# query: LangGraph checkpointing
+# ================================= Tool Message =================================
+# Name: duckduckgo_search
+# 
+# Thread Threads enable the checkpointing of multiple different runs, making them essential for multi-tenant chat applications and other scenarios where maintaining separate states is necessary. A thread is a unique ID assigned to a series of checkpoints saved by a checkpointer. Hello everyone, I am a beginner in databases. If I use Postgres as a checkpointer in a production environment, how should I correctly use Langgraph in my API when using a web framework? (I am using FastAPI) Create a single global graph object and use only one checkpointer. Create a new graph object for each API request but use the same checkpointer. Create a new graph object for each API ... The checkpoint mechanism and human-computer interaction features of LangGraph provide powerful tools for building complex and reliable AI systems. By using these features wisely, we can create more intelligent, flexible, and controllable applications. LangGraph is an orchestration framework for complex agentic systems and is more low-level and controllable than LangChain agents. On the other hand, LangChain provides a standard interface to ... We've released LangGraph v0.2 for increased customization with new checkpointer libraries. LangGraph v0.2 allows you to tailor stateful LangGraph apps to...
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 복잡한 에이전트 시스템을 위한 오케스트레이션 프레임워크입니다. LangChain 에이전트보다 더 낮은 수준에서 제어가 가능합니다. LangGraph는 여러 실행의 체크포인트를 가능하게 하여, 멀티 테넌트 채팅 애플리케이션과 같이 별도의 상태를 유지해야 하는 시나리오에 필수적입니다. 또한, LangGraph v0.2는 새로운 체크포인터 라이브러리를 통해 사용자 정의를 향상시켰습니다.
+```  
+
+체크포인터에 업데이트된 상태가 잘 반영 됐는지 확인하기 위해 동일한 `thread_id` 로 추가 질문을 이어서 수행해 본다. 
+그러면 요청한 출처 정보에 수정한 검색 쿼리가 나오는 것을 볼 수 있고, 이를 통해 잘 상태가 수정되고 체크포인터에도 반영됐음을 확인할 수 있다.  
+
+```python
+events = graph.stream(
+    {
+        "messages" : (
+            "user",
+            "지금까지 질문을 모두 하나로 정리해줘 그리고 출처도 포함해줘"
+        )
+    },
+    config,
+    stream_mode="values"
+)
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 지금까지 질문을 모두 하나로 정리해줘 그리고 출처도 포함해줘
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 복잡한 에이전트 시스템을 위한 오케스트레이션 프레임워크이며, LangChain 에이전트보다 더 낮은 수준에서 제어가 가능합니다. LangGraph는 여러 실행의 체크포인트를 가능하게 하여, 멀티 테넌트 채팅 애플리케이션과 같이 별도의 상태를 유지해야 하는 시나리오에 필수적입니다. 또한, LangGraph v0.2는 새로운 체크포인터 라이브러리를 통해 사용자 정의를 향상시켰습니다. (출처: DuckDuckGo 검색 "LangGraph checkpointing")
+```  
