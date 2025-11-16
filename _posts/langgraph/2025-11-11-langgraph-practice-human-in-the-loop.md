@@ -620,3 +620,128 @@ for event in events:
 # 
 # LangGraph는 복잡한 에이전트 시스템을 위한 오케스트레이션 프레임워크이며, LangChain 에이전트보다 더 낮은 수준에서 제어가 가능합니다. LangGraph는 여러 실행의 체크포인트를 가능하게 하여, 멀티 테넌트 채팅 애플리케이션과 같이 별도의 상태를 유지해야 하는 시나리오에 필수적입니다. 또한, LangGraph v0.2는 새로운 체크포인터 라이브러리를 통해 사용자 정의를 향상시켰습니다. (출처: DuckDuckGo 검색 "LangGraph checkpointing")
 ```  
+
+### 스냅샷 결과 수정 및 Replay
+이번에는 이미 수행된 그래프의 스냅샷을 가져와 
+특정 노드로 돌아가, 원하는 상태로 수정하고 다시 이어서 `Replay` 하는 방법에 대해 살펴본다.  
+
+우선 아래와 같이 상태 히스토리 중 특정 노드의 상태를 가져와 저장한다.  
+
+```python
+# 메시지 수를 바탕으로 지난 스냅샷 중 수정할 메시지 선택
+
+to_replay_state = None
+
+for state in graph.get_state_history(config):
+  messages = state.values["messages"]
+
+  if len(messages) > 0:
+    print(state.values["messages"][-1].id, "-" * 10)
+    print("메시지 수: ", len(state.values["messages"]), "다음 노드: ", state.next)
+
+    if "tools" in state.next:
+      to_replay_state = state
+
+# 히스토리 중 선택한 메시지
+existing_message = to_replay_state.values["messages"][-1]
+
+print(existing_message.tool_calls)
+# [{'name': 'duckduckgo_search',
+#   'args': {'query': 'LangGraph'},
+#   'id': 'b81a82bd-01a8-4c1b-9b7b-964192b397b2',
+#   'type': 'tool_call'}]
+```  
+
+스냅샷 중 수정할 노드는 `tools` 노드이고, 
+해당 웹 검색 툴에서 사용할 쿼리를 수정해 상태에 수동 업데이트 한다.  
+
+```python
+# 쿼리 수정
+tool_call = existing_message.tool_calls[0].copy()
+tool_call["args"] = {
+    "query" : "langgraph cehckpointing and human in the loop"
+}
+
+# 업데이트 된 쿼리로 메시지 생성
+new_message = AIMessage(
+    content=existing_message.content,
+    tool_calls=[tool_call],
+    id=existing_message.id
+)
+
+# 이전 메시지
+print(graph.get_state(to_replay_state.config).values["messages"][-1].tool_calls)
+# {'name': 'duckduckgo_search', 'args': {'query': 'LangGraph'}, 'id': 'b81a82bd-01a8-4c1b-9b7b-964192b397b2', 'type': 'tool_call'}]
+
+
+# 새로운 메시지로 그래프 업데이트
+update_state = graph.update_state(
+    to_replay_state.config,
+    {"messages" : [new_message]}
+)
+
+print(update_state)
+# {'configurable': {'thread_id': '3145555862',
+#                   'checkpoint_ns': '',
+#                   'checkpoint_id': '1f054dc6-5c19-69e7-8002-d6b3d98b4cee'}}
+```  
+
+그리고 그래프를 업데이트 된 상태를 사용해서 `Replay` 한다. 
+
+```python
+# 업데이트 된 상태로 그래프 스트리밍 수행
+events = graph.stream(None, update_state, stream_mode="values")
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (b81a82bd-01a8-4c1b-9b7b-964192b397b2)
+# Call ID: b81a82bd-01a8-4c1b-9b7b-964192b397b2
+# Args:
+# query: langgraph cehckpointing and human in the loop
+# ================================= Tool Message =================================
+# Name: duckduckgo_search
+# 
+# Human-in-the-loop interaction refers to allowing human participation and decision-making during the execution of AI systems. LangGraph provides flexible mechanisms to achieve this interaction. Whether through interrupts or the strategic management of persistence, humans ensure that AI systems remain flexible, ethical, and responsive to real-world needs. By leveraging LangGraph's persistence features, developers can create AI systems that perform optimally and maintain a balance between autonomy and human oversight. In this article, you'll learn how to use LangGraph's breakpoints and interrupts to build human-in-the-loop LLM workflows. We'll walk through a working example where an LLM generates a recipe from user-provided ingredients, but pauses for human feedback before continuing. Conclusion Human-in-the-Loop provides a powerful mechanism for creating interactive, collaborative systems that combine AI automation with human judgment. By properly implementing the interrupt-resume pattern in LangGraph, you can create applications that leverage the strengths of both AI and human intelligence. Langchain's LangGraph library provides powerful tools for building complex agentic systems, and its interruption capabilities are key to implementing effective Human-in-the-Loop (HITL) patterns.
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 복잡한 에이전트 시스템을 구축하기 위한 강력한 도구를 제공하는 Langchain 라이브러리입니다. 특히, LangGraph는 "Human-in-the-Loop" (HITL) 패턴을 효과적으로 구현하는 데 핵심적인 "interrupt" 기능을 제공합니다.
+# 
+# Human-in-the-Loop 상호 작용은 AI 시스템 실행 중에 인간의 참여와 의사 결정을 허용하는 것을 의미합니다. LangGraph는 이러한 상호 작용을 달성하기 위한 유연한 메커니즘을 제공합니다. interrupts 또는 persistence의 전략적 관리를 통해 인간은 AI 시스템이 유연하고 윤리적이며 실제 요구에 대응할 수 있도록 보장합니다.
+# 
+# LangGraph의 persistence 기능을 활용하여 개발자는 자율성과 인간의 감독 간의 균형을 유지하면서 최적으로 수행되는 AI 시스템을 만들 수 있습니다. LangGraph의 breakpoints 및 interrupts를 사용하여 Human-in-the-Loop LLM 워크플로우를 구축할 수 있습니다. 예를 들어, LLM이 사용자 제공 재료에서 레시피를 생성하지만 계속하기 전에 인간의 피드백을 위해 일시 중지하는 작업이 가능합니다.
+# 
+# 결론적으로, Human-in-the-Loop는 AI 자동화와 인간의 판단을 결합한 대화형 협업 시스템을 만들기 위한 강력한 메커니즘을 제공합니다. LangGraph에서 interrupt-resume 패턴을 적절하게 구현하면 AI와 인간 지능의 강점을 모두 활용하는 애플리케이션을 만들 수 있습니다.
+```  
+
+그래프 상태에 저장된 최종 결과를 확인하면 업데이트 된 상태로 `Replay` 되고, 상태 값이 잘 반영된 것을 확인할 수 있다.  
+
+```python
+# 최종 결과 출력
+for msg in graph.get_state(config).values["messages"]:
+  msg.pretty_print()
+# ================================ Human Message =================================
+# 
+# LangGraph 가 무엇인지 조사해 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (b81a82bd-01a8-4c1b-9b7b-964192b397b2)
+# Call ID: b81a82bd-01a8-4c1b-9b7b-964192b397b2
+# Args:
+# query: langgraph cehckpointing and human in the loop
+# ================================= Tool Message =================================
+# Name: duckduckgo_search
+# 
+# Human-in-the-loop interaction refers to allowing human participation and decision-making during the execution of AI systems. LangGraph provides flexible mechanisms to achieve this interaction. Whether through interrupts or the strategic management of persistence, humans ensure that AI systems remain flexible, ethical, and responsive to real-world needs. By leveraging LangGraph's persistence features, developers can create AI systems that perform optimally and maintain a balance between autonomy and human oversight. In this article, you'll learn how to use LangGraph's breakpoints and interrupts to build human-in-the-loop LLM workflows. We'll walk through a working example where an LLM generates a recipe from user-provided ingredients, but pauses for human feedback before continuing. Conclusion Human-in-the-Loop provides a powerful mechanism for creating interactive, collaborative systems that combine AI automation with human judgment. By properly implementing the interrupt-resume pattern in LangGraph, you can create applications that leverage the strengths of both AI and human intelligence. Langchain's LangGraph library provides powerful tools for building complex agentic systems, and its interruption capabilities are key to implementing effective Human-in-the-Loop (HITL) patterns.
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 복잡한 에이전트 시스템을 구축하기 위한 강력한 도구를 제공하는 Langchain 라이브러리입니다. 특히, LangGraph는 "Human-in-the-Loop" (HITL) 패턴을 효과적으로 구현하는 데 핵심적인 "interrupt" 기능을 제공합니다.
+# 
+# Human-in-the-Loop 상호 작용은 AI 시스템 실행 중에 인간의 참여와 의사 결정을 허용하는 것을 의미합니다. LangGraph는 이러한 상호 작용을 달성하기 위한 유연한 메커니즘을 제공합니다. interrupts 또는 persistence의 전략적 관리를 통해 인간은 AI 시스템이 유연하고 윤리적이며 실제 요구에 대응할 수 있도록 보장합니다.
+# 
+# LangGraph의 persistence 기능을 활용하여 개발자는 자율성과 인간의 감독 간의 균형을 유지하면서 최적으로 수행되는 AI 시스템을 만들 수 있습니다. LangGraph의 breakpoints 및 interrupts를 사용하여 Human-in-the-Loop LLM 워크플로우를 구축할 수 있습니다. 예를 들어, LLM이 사용자 제공 재료에서 레시피를 생성하지만 계속하기 전에 인간의 피드백을 위해 일시 중지하는 작업이 가능합니다.
+# 
+# 결론적으로, Human-in-the-Loop는 AI 자동화와 인간의 판단을 결합한 대화형 협업 시스템을 만들기 위한 강력한 메커니즘을 제공합니다. LangGraph에서 interrupt-resume 패턴을 적절하게 구현하면 AI와 인간 지능의 강점을 모두 활용하는 애플리케이션을 만들 수 있습니다.
+```  
