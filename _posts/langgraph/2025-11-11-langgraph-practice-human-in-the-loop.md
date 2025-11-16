@@ -745,3 +745,98 @@ for msg in graph.get_state(config).values["messages"]:
 # 
 # 결론적으로, Human-in-the-Loop는 AI 자동화와 인간의 판단을 결합한 대화형 협업 시스템을 만들기 위한 강력한 메커니즘을 제공합니다. LangGraph에서 interrupt-resume 패턴을 적절하게 구현하면 AI와 인간 지능의 강점을 모두 활용하는 애플리케이션을 만들 수 있습니다.
 ```  
+
+### Human Node 사용
+지금까지 알아본 `Human-in-the-Loop` 기능은 주로 그래프의 `State` 와 `interrupt` 기능을 활용하는 방안이였다. 
+이는 상태 값들의 수정으로도 충분히 다양한 니즈를 구현할 수 있지만, 메시지 목록에 의존하지 않고 좀 더 복잡한 동작을 정의하기 위해서는 
+상태 필드 및 노드를 추가해 구현해 볼 수 있다.  
+
+이번에는 `LangGraph` 에이전트가 인간의 개입이 필요한지 직접 판단하고, 
+필요하다면 `Human Node` 를 호출해 최종 답변을 제공하는 예제를 살펴본다.  
+
+그래프 상태에 `ask_human` 이라는 필드를 추가하고 다음과 같이 `LangGrpah` 에이전트를 구현한다.  
+
+```python
+from typing import Annotated
+from typing_extensions import TypedDict
+from langchain_community.tools import DuckDuckGoSearchRun
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import StateGraph, START
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+from pydantic import BaseModel
+
+class AgentWithHumanState(TypedDict):
+  messages: Annotated[list, add_messages]
+  ask_human: bool
+
+class HumanRequest(BaseModel):
+    """
+    전문가에게 대화를 전달하세요. 직접 도움을 줄 수 없거나 사용자가 권한을 초과하는 도움이 필요할 때 사용하세요.
+    이 기능을 사용하려면 전문가가 적절한 안내를 제공할 수 있도록 사용자의 'requests'을 전달하세요.
+    """
+    requests: str
+
+# llm
+os.environ["GOOGLE_API_KEY"] = "api key"
+model = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+# 도구 정의 및 바인딩
+tool = DuckDuckGoSearchRun()
+# 도구 목록 추가(HumanRequest 도구)
+tools = [tool, HumanRequest]
+
+# 도구 바인딩
+llm_with_tools = llm.bind_tools(tools)
+
+def chatbot_with_human(state: AgentWithHumanState):
+  response = llm_with_tools.invoke(state["messages"])
+
+  ask_human = False
+
+  # 도구 호출이 있으면서 해당 이름이 HumanRequest 인 경우 ask_human 필드를 True 로 설정
+  if response.tool_calls and response.tool_calls[0]["name"] == HumanRequest.__name__:
+    ask_human = True
+
+
+  return {"messages": [response], "ask_human": ask_human}
+
+# 그래프에 chatbot 과 tools 노드 추가
+graph_builder = StateGraph(AgentWithHumanState)
+graph_builder.add_node("chatbot", chatbot_with_human)
+graph_builder.add_node("tools", ToolNode(tools=[tool]))
+```  
+
+앞선 코드는 `LangGrpah` 에이전트가 `Human Node` 를 사용할 수 있도록 확장해 그래프를 구성하는 내용이였다. 
+이번에는 `Human Node` 를 생성하고 그래프에 추가하는 방법을 살펴본다.  
+
+```python
+# human 노드 설정
+from langchain_core.messages import AIMessage, ToolMessage
+
+# 응답 메시지 생성
+def create_response(response: str, ai_message: AIMessage):
+  return ToolMessage(
+      content=response,
+      tool_call_id=ai_message.tool_calls[0]["id"]
+  )
+
+# human 노드 처리 함수
+def human_node(state: AgentWithHumanState):
+  new_messages= []
+
+  if not isinstance(state["messages"][-1], ToolMessage):
+    # human 응답이 없는 경우
+    new_messages.append(
+        create_response("No response from human", state["messages"][-1])
+    )
+
+  return {
+      "messages" : new_messages,
+      "ask_human" : False
+  }
+
+
+# 그래프에 human 노드 추가
+graph_builder.add_node("human", human_node)
+```  
