@@ -840,3 +840,235 @@ def human_node(state: AgentWithHumanState):
 # 그래프에 human 노드 추가
 graph_builder.add_node("human", human_node)
 ```  
+
+그리고 `tools_condition` 을 사용해 다음 실행된 노드를 결정할 조건을 정의하고 이를 그래프에 추가한다.  
+
+```python
+# ask_human 에 따라 조건부 분기 정의
+
+from langgraph.graph import END
+
+def select_next_node(state: AgentWithHumanState):
+  if state["ask_human"]:
+    return "human"
+
+  return tools_condition(state)
+
+graph_builder.add_conditional_edges(
+    "chatbot",
+    select_next_node,
+    {"human": "human", "tools": "tools", END: END}
+)
+```  
+
+이제 각 노드를 엣지로 연결해주고 그래프 컴파일 및 시각화로 확인한다.  
+
+```python
+# 노드간 엣지를 연결하고 그래프 컴파일
+
+graph_builder.add_edge("tools", "chatbot")
+graph_builder.add_edge("human", "chatbot")
+graph_builder.add_edge(START, "chatbot")
+
+# 메모리 저장소
+memory = MemorySaver()
+
+# 그래프 컴파일
+graph = graph_builder.compile(
+    checkpointer=memory,
+    interrupt_before=["human"]
+)
+
+from IPython.display import Image, display
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+.. 그림 .. 
+human-in-the-loop-2.png
+
+구현된 에이전트는 아래와 같은 동작을 수행할 수 있다. 
+
+- 사용자의 질의에 인간의 개입이 필요한 경우 : `chatbot` -> `select` -> `human`
+- 웹 검색이 필요한 경우 : `chatbot` - > `select` -> `tools`
+- 직접 답변이 가능한 경우 : `chatbot` -> `select` -> `END`
+
+먼저 인간의 개입이 필요한 경우를 살펴본다.  
+
+```python
+import random
+
+thread_id = random.randrange(1, 99999999)
+
+query = "langgraph 에 대해 좀 더 자세히 알고 싶습니다. 가능하다면 전문가의 답변을 받고 싶습니다."
+
+config = {"configurable": {"thread_id": thread_id}}
+
+events = graph.stream(
+    {"messages": [("user", query)]},
+    config,
+    stream_mode="values"
+)
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# langgraph 에 대해 좀 더 자세히 알고 싶습니다. 가능하다면 전문가의 답변을 받고 싶습니다.
+# ================================== Ai Message ==================================
+# Tool Calls:
+# HumanRequest (e44cb710-5a18-41a2-95b2-e5d17f32cd77)
+# Call ID: e44cb710-5a18-41a2-95b2-e5d17f32cd77
+# Args:
+# requests: langgraph 에 대해 좀 더 자세히 알고 싶습니다.
+```  
+
+에이전트가 사용자의 질문을 보고 `HumanRequest` 도구를 호출해 인터럽트가 된 상태이다. 
+그래프 상태를 확인하면 다음과 같다.  
+
+```python
+# 질문을 바탕으로 llm 이 HumanRequest 을 호출해 인터럽트 됨
+
+# 그래프 상태 스냅샷 생성
+snapshot = graph.get_state(config)
+
+# human 에게 전달될 사용자 질문
+print(snapshot.next)
+# ('human',)
+```  
+
+이제 `Human Node` 를 사용해 인간의 개입을 요청하고, 
+사용자가 답변을 제공하면 이를 그래프 상태에 업데이트 한다. 
+
+```python
+# human 메시지 생성
+
+ai_message = snapshot.values["messages"][-1]
+
+human_response = (
+    "전문가의 답변은 다음과 같습니다. 다음 키워드로 웹 검색을 해보길 추천드립니다."
+    "langgraph 의 checkpointer",
+    "langgraph 의 human in the loop",
+    "langgraph 와 langchain 의 차이점"
+)
+
+tool_message = create_response(human_response, ai_message)
+
+graph.update_state(config, {"messages": [tool_message]})
+# {'configurable': {'thread_id': '69958342',
+#                   'checkpoint_ns': '',
+#                   'checkpoint_id': '1f054e22-f915-67d4-8002-a632eef871ae'}}
+```  
+
+그래프 상태를 통해 업데이트 한 상태가 잘 반영됐는지 확인한다.  
+
+```python
+# 업데이트된 상태값 확인
+graph.get_state(config).values["messages"]
+# [HumanMessage(content='langgraph 에 대해 좀 더 자세히 알고 싶습니다. 가능하다면 전문가의 답변을 받고 싶습니다.', additional_kwargs={}, response_metadata={}, id='aae65877-3429-4cfa-9de6-34039f7bfc83'),
+#  AIMessage(content='', additional_kwargs={'function_call': {'name': 'HumanRequest', 'arguments': '{"requests": "langgraph \\uc5d0 \\ub300\\ud574 \\uc880 \\ub354 \\uc790\\uc138\\ud788 \\uc54c\\uace0 \\uc2f6\\uc2b5\\ub2c8\\ub2e4."}'}}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--6dcd851f-af41-461a-86f5-4523cd543def-0', tool_calls=[{'name': 'HumanRequest', 'args': {'requests': 'langgraph 에 대해 좀 더 자세히 알고 싶습니다.'}, 'id': 'e44cb710-5a18-41a2-95b2-e5d17f32cd77', 'type': 'tool_call'}], usage_metadata={'input_tokens': 148, 'output_tokens': 18, 'total_tokens': 166, 'input_token_details': {'cache_read': 0}}),
+#  ToolMessage(content=['전문가의 답변은 다음과 같습니다. 다음 키워드로 웹 검색을 해보길 추천드립니다.langgraph 의 checkpointer', 'langgraph 의 human in the loop', 'langgraph 와 langchain 의 차이점'], id='c9d66905-d3df-414a-bdb9-34e081f495e2', tool_call_id='e44cb710-5a18-41a2-95b2-e5d17f32cd77')]
+```  
+
+이제 그래프를 이어서 수행한다.  
+
+```python
+# 그래프 스트림을 이어서 수행
+events = graph.stream(None, config, stream_mode="values")
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================= Tool Message =================================
+# 
+# ['전문가의 답변은 다음과 같습니다. 다음 키워드로 웹 검색을 해보길 추천드립니다.langgraph 의 checkpointer', 'langgraph 의 human in the loop', 'langgraph 와 langchain 의 차이점']
+# ================================= Tool Message =================================
+# 
+# ['전문가의 답변은 다음과 같습니다. 다음 키워드로 웹 검색을 해보길 추천드립니다.langgraph 의 checkpointer', 'langgraph 의 human in the loop', 'langgraph 와 langchain 의 차이점']
+# ================================== Ai Message ==================================
+# 
+# 전문가에 따르면 LangGraph에 대해 자세히 알아보려면 다음 키워드로 웹 검색을 해보는 것이 좋습니다.
+# * LangGraph의 checkpointer
+# * LangGraph의 human in the loop
+# * LangGraph와 LangChain의 차이점
+```  
+
+그래프 상태에서 최종 결과를 확인하면 사용자 개입이 잘 수행된 것을 확인 할 수 있다.  
+
+```python
+# 최종 상태 확인
+state = graph.get_state(config)
+
+# 단계별 메시지 출력
+for message in state.values["messages"]:
+    message.pretty_print()
+# ================================ Human Message =================================
+# 
+# langgraph 에 대해 좀 더 자세히 알고 싶습니다. 가능하다면 전문가의 답변을 받고 싶습니다.
+# ================================== Ai Message ==================================
+# Tool Calls:
+# HumanRequest (6cd09c02-73e4-44c7-ac99-2c23b9b09317)
+# Call ID: 6cd09c02-73e4-44c7-ac99-2c23b9b09317
+# Args:
+# requests: Tell me more about langgraph.
+# ================================= Tool Message =================================
+# 
+# ['전문가의 답변은 다음과 같습니다. 다음 키워드로 웹 검색을 해보길 추천드립니다.langgraph 의 checkpointer', 'langgraph 의 human in the loop', 'langgraph 와 langchain 의 차이점']
+# ================================== Ai Message ==================================
+# 
+# 전문가에 따르면 LangGraph에 대해 자세히 알아보려면 다음 키워드로 웹 검색을 해보는 것이 좋습니다.
+# * LangGraph의 checkpointer
+# * LangGraph의 human in the loop
+# * LangGraph와 LangChain의 차이점
+```  
+
+만약 아래와 같이 사용자 질문이 답변에 있어서 인간의 개입이 필요하지 않는 경우, 
+기존 웹 검색 도구를 사용해 최종 답변을 한다.  
+
+```python
+thread_id = random.randrange(1, 99999999)
+
+query = "langgraph 최신 정보로 알려줘"
+
+config = {"configurable": {"thread_id": thread_id}}
+
+events = graph.stream(
+    {"messages": [("user", query)]},
+    config,
+    stream_mode="values"
+)
+
+for event in events:
+  if "messages" in event:
+    event["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# langgraph 최신 정보로 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# duckduckgo_search (f773a54c-0e84-4b53-9718-fb9324087652)
+# Call ID: f773a54c-0e84-4b53-9718-fb9324087652
+# Args:
+# query: langgraph latest information
+# ================================= Tool Message =================================
+# Name: duckduckgo_search
+# 
+# We've made a few new improvements to LangGraph Cloud: We now have a SDK/API method to ensure a thread exists. This is useful if you work with threads with external IDs, so you can use the same code regardless of whether the LangGraph thread already exists. We now have a SDK/API method to create a batch of background runs. This makes it easier to implement flows where one user action gets ... LangChain announces updates for LangGraph Cloud, LangSmith, and LangGraph documentation, along with upcoming events and hackathons. LangChain, a leading platform in the AI development space, has released its latest updates, showcasing new use cases and enhancements across its ecosystem. According to ... LangGraph, a powerful extension of the LangChain library, is designed to help developers build these advanced AI agents by enabling stateful, multi-actor applications with cyclic computation ... LangGraph Platform — Deploy and scale agents effortlessly with a purpose-built deployment platform for long running, stateful workflows. Discover, reuse, configure, and share agents across teams — and iterate quickly with visual prototyping in LangGraph Studio. At LangChain Interrupt 2025, the launch of LangGraph Platform marked a turning point in AI Agent infrastructure. As a sponsor and active participant, Qubika witnessed firsthand the speed of developments in AI and LangChain. In this post, we share key takeaways from the event - and how we're integrating the latest LangChain innovations into our Agentic Platform to help organizations deploy ...
+# ================================== Ai Message ==================================
+# 
+# LangGraph Cloud에 대한 몇 가지 새로운 개선 사항이 있습니다. 이제 스레드가 존재하는지 확인하는 SDK/API 메서드가 있습니다. LangGraph 스레드가 이미 존재하는지 여부에 관계없이 동일한 코드를 사용할 수 있도록 외부 ID가 있는 스레드에서 작업하는 경우에 유용합니다. 이제 백그라운드 실행 배치를 생성하는 SDK/API 메서드가 있습니다. 이를 통해 한 번의 사용자 작업으로 흐름을 더 쉽게 구현할 수 있습니다. LangChain은 LangGraph Cloud, LangSmith 및 LangGraph 문서에 대한 업데이트와 함께 예정된 이벤트 및 해커톤을 발표합니다. AI 개발 분야의 선도적인 플랫폼인 LangChain은 최신 업데이트를 발표하여 생태계 전반에 걸쳐 새로운 사용 사례와 개선 사항을 보여줍니다. LangChain 라이브러리의 강력한 확장인 LangGraph는 개발자가 상태 저장, 다중 액터 애플리케이션을 통해 이러한 고급 AI 에이전트를 구축할 수 있도록 설계되었습니다. LangGraph 플랫폼은 장기 실행 상태 저장 워크플로우를 위한 전용 배포 플랫폼을 통해 에이전트를 손쉽게 배포하고 확장합니다. 팀 간에 에이전트를 검색, 재사용, 구성 및 공유하고 LangGraph Studio에서 시각적 프로토타입 제작을 통해 빠르게 반복합니다. LangChain Interrupt 2025에서 LangGraph 플랫폼의 출시는 AI 에이전트 인프라의 전환점을 의미했습니다. 후원사이자 적극적인 참여자로서 Qubika는 AI 및 LangChain의 개발 속도를 직접 목격했습니다. 이 게시물에서는 이벤트에서 얻은 주요 내용과 최신 LangChain 혁신을 에이전트 플랫폼에 통합하여 조직이 배포할 수 있도록 지원하는 방법을 공유합니다.
+```
+
+
+
+---  
+## Reference
+[Human-in-the-loop](https://langchain-ai.github.io/langgraph/concepts/human_in_the_loop/)  
+[Add human-in-the-loop controls](https://langchain-ai.github.io/langgraph/tutorials/get-started/4-human-in-the-loop/)  
+
