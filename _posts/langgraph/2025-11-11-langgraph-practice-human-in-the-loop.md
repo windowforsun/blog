@@ -1,7 +1,7 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph Agent Memory and Stream"
+title: "[LangGraph] LangGraph Human in the Loop"
 header:
   overlay_image: /img/langchain-bg-2.jpg
 excerpt: 'LangGraph 에이전트에서 Human-in-the-Loop(HITL) 구현과 상태 수동 업데이트 방법을 알아보자'
@@ -13,6 +13,11 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - Human-in-the-Loop
+    - HITL
+    - Interrupt
+    - State Update
+    - Replay
 toc: true
 use_math: true
 ---  
@@ -106,8 +111,8 @@ except Exception:
     pass
 ```  
 
-.. 그림 ..
-human-in-the-loop-1.png
+![그림 1]({{site.baseurl}}/img/langgraph/human-in-the-loop-1.png)
+
 
 구현해 볼 것은 사용자 질문에 대해 `LLM` 이 웹 검색 `Tool` 에 사용할 검색어를 확인 후 지속여부를 결정하는 흐름이다. 
 이를 위해 `interrupt_before=tools` 로 지정해 질문을 처리하도록 구성한다.  
@@ -889,8 +894,8 @@ except Exception:
     pass
 ```  
 
-.. 그림 .. 
-human-in-the-loop-2.png
+![그림 1]({{site.baseurl}}/img/langgraph/human-in-the-loop-2.png)
+
 
 구현된 에이전트는 아래와 같은 동작을 수행할 수 있다. 
 
@@ -1071,4 +1076,6 @@ for event in events:
 ## Reference
 [Human-in-the-loop](https://langchain-ai.github.io/langgraph/concepts/human_in_the_loop/)  
 [Add human-in-the-loop controls](https://langchain-ai.github.io/langgraph/tutorials/get-started/4-human-in-the-loop/)  
+[Human-in-the-loop](https://wikidocs.net/265663)  
+
 
