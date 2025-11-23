@@ -85,3 +85,81 @@ plt.tight_layout()
 
 ![그림 1]({{site.baseurl}}/img/datascience/baseline-model-1.png)
 
+
+### Train/Test Split
+모델을 개발하기 전 필수로 수행하는 작업이 `Train/Test Split` 이다. 
+이는 모델이 학습한 데이터와 평가에 사용하는 데이터를 분리하는 작업이다. 
+시계열 데이터의 경우, 시간의 흐름에 따라 데이터를 분리하는 것이 중요하다. 
+즉, 과거 데이터를 학습에 사용하고, 미래 데이터를 평가에 사용하는 방식으로 분리해야 한다.  
+
+이를 위해 데이터 훈련 집합은 1960년 ~ 1979년 데이터로 하고, 
+테스트 집합은 1980년 데이터로 분리한다.  
+
+```python
+# 1960 ~ 1979년 데이터
+train = df[:-4]
+# 1980년 데이터
+test = df[-4:]
+
+```  
+
+### Mean value
+`Mean value` 은 과거 관측값의 평균을 예측값으로 사용하는 방법이다. 
+예를 들어, 지난 30일간의 평균 기온을 내일의 기온으로 예측하는 것이다. 
+그러므로 우리는 1960년 ~ 1979년 까지의 `EPS` 평균을 계산하고, 이를 1980년의 모든 분기에 대한 예측값으로 사용한다. 
+
+
+```python
+import numpy as npㅈ
+
+historical_mean = np.mean(train['data'])
+historical_mean
+# 4.3084999875
+
+test.loc[:, 'pred_mean'] = historical_mean
+#       date	data	pred_mean
+# 80	1980-01-01	16.20	4.3085
+# 81	1980-04-01	14.67	4.3085
+# 82	1980-07-02	16.02	4.3085
+# 83	1980-10-01	11.61	4.3085
+
+```  
+
+전체 평균으로 구한 예측 성능을 측정하기 위해 `MAPE`(Mean Absolute Percentage Error) 를 사용한다. 
+이는 예측과 실제의 차이를 백분율로 나타내며, 데이터 단위와 상관없이 해석할 수 있다는 장점이 있다.  
+
+```python
+def mape(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+mape_hist_mean = mape(test['data'], test['pred_mean'])
+# 70.00752579965118
+```  
+
+`MAPE` 계산 결과 `70%` 만큼의 예측 오차가 있음을 알 수 있다. 
+이제 평균으로 구한 예측과 실제 데이터를 차트로 그려 시각화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(train['date'], train['data'], 'g-.', label='Train')
+ax.plot(test['date'], test['data'], 'b-', label='Test')
+ax.plot(test['date'], test['pred_mean'], 'r--', label='Mean')
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share')
+ax.axvspan(80, 83, color='gray', alpha=0.2)
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 85, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/baseline-model-2.png)
+
+
+
+차트를 보면 데이터에 `양의 추세` 가 있음을 알 수 있다. 
+그러므로 단순 평균으로는 증가하는 추세를 반영하지 못하므로 예측 오차가 클 수 밖에 없다.  
+
