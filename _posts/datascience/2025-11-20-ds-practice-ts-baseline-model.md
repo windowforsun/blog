@@ -4,7 +4,7 @@ classes: wide
 title: "[TimeSeries] Baseline Model"
 header:
   overlay_image: /img/data-science-bg.jpg
-excerpt: ''
+excerpt: '시계열 예측에서 Baseline Model(기본 모델)의 개념과 구현 방법을 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -14,6 +14,7 @@ tags:
     - Data Science
     - Time Series
     - Random Walk
+    - Baseline Model
 toc: true
 use_math: true
 ---  
@@ -162,4 +163,48 @@ plt.tight_layout()
 
 차트를 보면 데이터에 `양의 추세` 가 있음을 알 수 있다. 
 그러므로 단순 평균으로는 증가하는 추세를 반영하지 못하므로 예측 오차가 클 수 밖에 없다.  
+
+
+### Last Year Mean
+이전 `Mean value` 는 전체 평균을 사용했기 때문에, 시계열 데이터의 특성을 충분히 반영하지 못했다. 
+따라서, 이번에는 `Last Year Mean` 을 사용해 본다. 
+이는 데이터에 양의 추세를 반영하기 위해 훈련 집합의 가장 최근 1년의 평균을 예측값으로 사용한다. 
+
+```python
+last_year_mean = np.mean(train['data'][-4:])
+# 12.96
+
+test.loc[:, 'pred__last_yr_mean'] = last_year_mean
+#       date	     data	pred_mean	pred__last_yr_mean
+# 80	1980-01-01	16.20	4.3085	    12.96
+# 81	1980-04-01	14.67	4.3085	    12.96
+# 82	1980-07-02	16.02	4.3085	    12.96
+# 83	1980-10-01	11.61	4.3085	    12.96
+
+mape_last_year_mean = mape(test['data'], test['pred__last_yr_mean'])
+# 15.5963680725103
+
+
+fig, ax = plt.subplots()
+
+ax.plot(train['date'], train['data'], 'g-.', label='Train')
+ax.plot(test['date'], test['data'], 'b-', label='Test')
+ax.plot(test['date'], test['pred__last_yr_mean'], 'r--', label='Last Year Mean')
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share')
+ax.axvspan(80, 83, color='gray', alpha=0.2)
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 85, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/baseline-model-3.png)
+
+
+결과를 보면 직전 전체 평균을 사용한 예측과 비교해서 `MAPE` 가 `15.6%` 로 크게 감소했음을 알 수 있다. 
+이를 바탕으로 최근 데이터가 미래 예측에 더 유용하다는 점, 
+즉 시계열 데이터의 자기상관관계(과거와 미래가 연결 됨)를 확인할 수 있다.  
 
