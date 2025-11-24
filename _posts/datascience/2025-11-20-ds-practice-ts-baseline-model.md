@@ -208,3 +208,45 @@ plt.tight_layout()
 이를 바탕으로 최근 데이터가 미래 예측에 더 유용하다는 점, 
 즉 시계열 데이터의 자기상관관계(과거와 미래가 연결 됨)를 확인할 수 있다.  
 
+
+### Last value
+앞선 2가지 방식으로 보았을 때 전체 평균과 최근 1년 평균 중 최신 값을 더 많이 반영할 수록 예측 성능이 올라가는 것을 확인할 수 있었다. 
+이러한 추론을 바탕으로 이번에는 훈련 집합의 마지막 값을 예측값으로 사용하는 `Last value` 방식을 적용해 본다. 
+
+```python
+last = train['data'].iloc[-1]
+# 9.99
+
+test.loc[:, 'pred_last'] = last
+#           date	data	pred_mean	pred__last_yr_mean	pred_last
+# 80	1980-01-01	16.20	4.3085	    12.96	            9.99
+# 81	1980-04-01	14.67	4.3085	    12.96	            9.99
+# 82	1980-07-02	16.02	4.3085	    12.96	            9.99
+# 83	1980-10-01	11.61	4.3085	    12.96	            9.99
+
+mape_last = mape(test['data'], test['pred_last'])
+# 30.457277908606535
+
+
+fig, ax = plt.subplots()
+
+ax.plot(train['date'], train['data'], 'g-.', label='Train')
+ax.plot(test['date'], test['data'], 'b-', label='Test')
+ax.plot(test['date'], test['pred_last'], 'r--', label='Last value')
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share')
+ax.axvspan(80, 83, color='gray', alpha=0.2)
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 85, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/baseline-model-4.png)
+
+
+하지만 이번에는 `MAPE` 가 `30.4%` 로 오히려 증가해 예측의 정확도가 떨어진 것을 알 수 있다. 
+이는 마지막 값만 사용하면 데이터의 계절성(분기별 반복적 변화)을 반영하지 못해 오차가 처진 것으로 볼 수 있다. 
+
