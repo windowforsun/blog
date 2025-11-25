@@ -250,3 +250,44 @@ plt.tight_layout()
 하지만 이번에는 `MAPE` 가 `30.4%` 로 오히려 증가해 예측의 정확도가 떨어진 것을 알 수 있다. 
 이는 마지막 값만 사용하면 데이터의 계절성(분기별 반복적 변화)을 반영하지 못해 오차가 처진 것으로 볼 수 있다. 
 
+
+### Seasonal Naive
+이번에는 시계열 데이터를 보았을 떄 눈에 띄기 보이는 계절성을 반영한 단순한 방식을 사용해 본다. 
+이전 년도 각 분기의 `EPS` 를 다음 해 각 분기의 예측값으로 사용하는 방식이다.  
+
+
+```python
+test.loc[:, 'pred_last_season'] = train['data'][-4:].values
+#     date	    data	pred_mean	pred__last_yr_mean	pred_last	pred_last_season
+# 80	1980-01-01	16.20	4.3085	    12.96	            9.99	    14.04
+# 81	1980-04-01	14.67	4.3085	    12.96	            9.99	    12.96
+# 82	1980-07-02	16.02	4.3085	    12.96	            9.99	    14.85
+# 83	1980-10-01	11.61	4.3085	    12.96	            9.99	    9.99
+
+mape_naive_seasonal = mape(test['data'], test['pred_last_season'])
+# 11.561658552433654
+
+
+fig, ax = plt.subplots()
+
+ax.plot(train['date'], train['data'], 'g-.', label='Train')
+ax.plot(test['date'], test['data'], 'b-', label='Test')
+ax.plot(test['date'], test['pred_last_season'], 'r--', label='Seasonal Naive')
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share')
+ax.axvspan(80, 83, color='gray', alpha=0.2)
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 85, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/baseline-model-5.png)
+
+
+단순한 계절 예측은 `MAPE` 가 `11.5%` 로 가장 낮아 예측 성능이 가장 우수함을 알 수 있다. 
+이는 지금 주이전 데이터의 경우 계절적 패턴이 강하여 이를 반영한 예측이 가장 효과적이라는 것을 의미한다. 
+이후에도 시계열을 예측할 때는 데이터의 계절성을 반드시 고려해야 한다.  
+
