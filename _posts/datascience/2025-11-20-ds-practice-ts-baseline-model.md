@@ -291,3 +291,44 @@ plt.tight_layout()
 이는 지금 주이전 데이터의 경우 계절적 패턴이 강하여 이를 반영한 예측이 가장 효과적이라는 것을 의미한다. 
 이후에도 시계열을 예측할 때는 데이터의 계절성을 반드시 고려해야 한다.  
 
+
+### Comparison
+지금까지 적용해본 4가지의 베이스라인 성능을 비교하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+x = ['hist_mean', 'last_year_mean', 'last', 'naive_seasonal']
+y = [70.00, 15.60, 30.46, 11.56]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Baselines')
+ax.set_ylabel('MAPE (%)')
+ax.set_ylim(0, 75)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value + 1, s=str(value), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/baseline-model-6.png)
+
+
+
+존슨앤드존슨의 분기별 EPS 데이터를 예시로, 전체 평균, 최근 1년 평균, 마지막 값, 그리고 계절성을 반영한 단순 계절 모델 등 네 가지 베이스라인 예측 방법을 구현해봤다.
+데이터에 뚜렷한 추세와 계절성이 존재할 때는 이를 반영한 단순 계절 예측 모델이 가장 좋은 성능(MAPE 11.56%)을 보였다. 
+반면, 전체 평균이나 마지막 값만 사용하는 방식은 오차가 큰것을 확인 할 수 있었다. 
+이처럼 시계열 데이터의 특성을 잘 파악하고, 그 특성을 최대한 반영한 단순 모델부터 시작하는 것이 중요하다는 것을 알 수 있었다.  
+
+앞으로 더 정교하고 복잡한 예측 모델을 개발할 때도, 반드시 데이터의 추세와 계절성 등 주요 패턴을 분석하고, 
+베이스라인 모델과의 비교를 통해 개선 효과를 객관적으로 평가를 수행해야 한다. 
+
+
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
