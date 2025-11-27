@@ -98,3 +98,40 @@ tool_node.invoke({"messages" : [message_with_multiple_tool_calls]})
 # {'messages': [ToolMessage(content='{"searchParameters": {"q": "langgraph", "gl": "us", "hl": "en", "type": "search", "num": 10, "engine": "google"}, "organic": [{"title": "LangGraph - LangChain", "link": "https://www.langchain.com/langgraph", "snippet": "LangGraph sets the foundation for how we can build and scale AI workloads — from conversational agents, complex task automation, to custom LLM-backed ...", "position": 1}, {"title": "langchain-ai/langgraph: Build resilient language agents as graphs.", "link": "https://github.com/langchain-ai/langgraph", "snippet": "LangGraph is a low-level orchestration framework for building, managing, and deploying long-running, stateful agents.", "position": 2}, {"title": "Learn LangGraph basics - Overview", "link": "https://langchain-ai.github.io/langgraph/concepts/why-langgraph/", "snippet": "Overview¶. LangGraph is built for developers who want to build powerful, adaptable AI agents. Developers choose LangGraph for:.", "position": 3}, {"title": "What is LangGraph? - IBM", "link": "https://www.ibm.com/think/topics/langgraph", "snippet": "LangGraph, created by LangChain, is an open source AI agent framework designed to build, deploy and manage complex generative AI agent workflows.", "position": 4}, {"title": "How to Build an Agent with Auth and Payments - LangGraph.js", "link": "https://www.youtube.com/watch?v=4Z2uBtIfmfE", "snippet": "Build a Complete AgentChat App with Auth + Payments using LangGraph.js This full-stack template includes everything you need to build and ...", "date": "5 days ago", "position": 5}, {"title": "LangGraph.js", "link": "https://langchain-ai.github.io/langgraphjs/", "snippet": "LangGraph — used by Replit, Uber, LinkedIn, GitLab and more — is a low-level orchestration framework for building controllable agents ...", "position": 6}, {"title": "ReAct agent from scratch with Gemini 2.5 and LangGraph", "link": "https://ai.google.dev/gemini-api/docs/langgraph-example", "snippet": "LangGraph is a framework for building stateful LLM applications, making it a good choice for constructing ReAct (Reasoning and Acting) Agents.", "position": 7}, {"title": "LangGraph Tutorial - How to Build Advanced AI Agent Systems", "link": "https://www.youtube.com/watch?v=1w5cCXlh7JQ", "snippet": "For polished writing, BeLikeNative offers an excellent paraphrasing tool. It refines your sentences while keeping the original meaning ...", "date": "May 5, 2025", "position": 8}], "relatedSearches": [{"query": "langgraph studio"}, {"query": "langgraph github"}, {"query": "langgraph js"}, {"query": "langgraph python"}, {"query": "langgraph academy"}, {"query": "langgraph documentation"}, {"query": "langgraph course"}, {"query": "langgraph vs langchain"}], "credits": 1}', name='search_web', tool_call_id='tool_call_id_1'),
 # ToolMessage(content='24\n', name='python_code_interpreter', tool_call_id='tool_call_id_1')]}
 ```  
+
+### ToolNode with LLM
+`ToolNode` 는 `LLM` 과 함께 사용할수 있는데 아래는 `LLM` 에 사용자 쿼리를 전달하고, 
+이를 바탕으로 적절한 툴을 호출해 최종 결과를 반환하는 예시이다.  
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api key"
+# llm 모델에 정의된 툴 바인딩
+llm_with_tools = ChatGoogleGenerativeAI(model="gemini-2.0-flash").bind_tools(tools)
+```  
+
+사용자 질의를 전달하면 `LLM` 이 도구 호출에 필요한 파라미터를 생성한다.  
+
+```python
+llm_with_tools.invoke("가장 작은 소수 10개를 출력하는 python code 작성해줘").tool_calls
+# [{'name': 'python_code_interpreter',
+# 'args': {'code': '\ndef is_prime(n):\n    if n <= 1:\n        return False\n    for i in range(2, int(n**0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n\nprimes = []\nnum = 2\nwhile len(primes) < 10:\n    if is_prime(num):\n        primes.append(num)\n    num += 1\n\nprint(primes)\n'},
+# 'id': 'a1e99add-2b5d-4b6f-8c45-c9906a0e5ab8',
+# 'type': 'tool_call'}]
+```  
+
+이를 `ToolNode` 와 함께 연결해 사용하면 아래와 같다.  
+
+```python
+# 도구 노드를 통한 메시지 처리 및 llm 모델의 도구 기반 응답 생성
+tool_node.invoke(
+    {
+        "messages" : [
+            llm_with_tools.invoke("가장 작은 소수 10개를 출력하는 python code 작성해줘")
+        ]
+    }
+)
+# {'messages': [ToolMessage(content='[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]\n', name='python_code_interpreter', tool_call_id='b9d1c94e-6caa-4191-ac4e-83cd98fdc7f1')]}
+```  
