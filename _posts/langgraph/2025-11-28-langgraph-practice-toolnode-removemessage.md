@@ -135,3 +135,51 @@ tool_node.invoke(
 )
 # {'messages': [ToolMessage(content='[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]\n', name='python_code_interpreter', tool_call_id='b9d1c94e-6caa-4191-ac4e-83cd98fdc7f1')]}
 ```  
+
+### ToolNode with LangGraph(Agent)
+`LangGraph` 에서 `ToolNode` 는 그래프구 구조에 툴 노드를 적절하게 구성해 사용할 수 있다. 
+`Agent` 는 사용자 쿼리를 입력을 받아, 쿼리 해결에 필요한 충분한 정보를 얻을 떄까지 반복적으로 도구를 호출하도록 할 수 있다.  
+
+```python
+from IPython.display import Image, display
+from langgraph.graph import StateGraph, MessagesState, START, END
+
+# llm 모델을 사용해 메시지 처리 및 응답 생성, 도구 호출이 포함된 응답 반환
+def call_model(state: MessagesState):
+  messages = state["messages"]
+  response = llm_with_tools.invoke(messages)
+
+  return {"messages" : [response]}
+
+
+# 그래프 초기화
+graph_builder = StateGraph(MessagesState)
+
+# 에이전트 와 도구 노드 정의
+graph_builder.add_node("agent", call_model)
+graph_builder.add_node("tools", tool_node)
+
+# 에이전트 시작점에 에이전트 노드 연결
+graph_builder.add_edge(START, "agent")
+
+# 에이전트 노드의 조건부 분기 설정, 도구 또는 종료 지점 연결
+graph_builder.add_conditional_edges("agent", tools_condition)
+
+# 도구 노드에서 에이전트 노드로 순환 연결
+graph_builder.add_edge("tools", "agent")
+
+# 에이전트 노드에서 종료 지점으로 연결
+graph_builder.add_edge("agent", END)
+
+# 그래프를 컴파일해 에이전트 앱 생성
+agent = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/toolnode-removemessage-1.png)
+
