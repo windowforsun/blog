@@ -183,3 +183,130 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/toolnode-removemessage-1.png)
 
+
+먼저 `LangGraph` 로 구현된 `Agent` 에 파이썬 코드에 대한 질의를 수행하면 아래와 같다.  
+
+```python
+# 파이썬 코드 질문
+for chunk in agent.stream(
+    {"messages" : ["human", "가장 작은 소수 10개를 출력하는 python code 작성해줘"]},
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 가장 작은 소수 10개를 출력하는 python code 작성해줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# python_code_interpreter (dddaf6e1-d8fc-4a73-9895-2c6ed403e914)
+# Call ID: dddaf6e1-d8fc-4a73-9895-2c6ed403e914
+# Args:
+# code:
+# def is_prime(n):
+#     if n <= 1:
+#         return False
+#     for i in range(2, int(n**0.5) + 1):
+#         if n % i == 0:
+#             return False
+#     return True
+# 
+# primes = []
+# num = 2
+# while len(primes) < 10:
+#     if is_prime(num):
+#         primes.append(num)
+#     num += 1
+# 
+# print(primes)
+# ================================= Tool Message =================================
+# Name: python_code_interpreter
+# 
+# [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+# 
+# ================================== Ai Message ==================================
+# 
+# 가장 작은 소수 10개는 [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]입니다.
+```  
+
+웹 검색관련 질의를 하면 다음과 같다.  
+
+```python
+# 검색 질문
+
+for chunk in agent.stream(
+    {"messages" : ["human", "langgraph 의 최신 정보를 바탕으로 기본개념에 대해 설명해줘"]},
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# langgraph 의 최신 정보를 바탕으로 기본개념에 대해 설명해줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# search_web (1c2699b4-5f11-42fd-896f-455f78c2ef99)
+# Call ID: 1c2699b4-5f11-42fd-896f-455f78c2ef99
+# Args:
+# query: langgraph basic concepts
+# ================================= Tool Message =================================
+# Name: search_web
+# 
+# {"searchParameters": {"q": "langgraph basic concepts", "gl": "us", "hl": "en", "type": "search", "num": 10, "engine": "google"}, "organic": [{"title": "Concepts - LangGraph - GitHub Pages", "link": "https://langchain-ai.github.io/langgraph/concepts/", "snippet": "This guide provides explanations of the key concepts behind the LangGraph framework and AI applications more broadly.", "sitelinks": [{"title": "Overview", "link": "https://langchain-ai.github.io/langgraph/concepts/why-langgraph/"}, {"title": "Graph API", "link": "https://langchain-ai.github.io/langgraph/concepts/low_level/"}, {"title": "Why LangGraph?", "link": "https://langchain-ai.github.io/langgraph/concepts/high_level/"}, {"title": "Persistence", "link": "https://langchain-ai.github.io/langgraph/concepts/persistence/"}], "position": 1}, {"title": "Conceptual Guide - LangGraph", "link": "https://langchain-ai.github.io/langgraphjs/concepts/", "snippet": "This guide provides explanations of the key concepts behind the LangGraph framework and AI applications more broadly.", "position": 2}, {"title": "LangGraph - LangChain", "link": "https://www.langchain.com/langgraph", "snippet": "LangGraph is a stateful, orchestration framework that brings added control to agent workflows. LangGraph Platform is a service for deploying and scaling ...", "sitelinks": [{"title": "LangGraph Academy Course", "link": "https://academy.langchain.com/courses/intro-to-langgraph"}, {"title": "Built with LangGraph", "link": "https://www.langchain.com/built-with-langgraph"}, {"title": "LangGraph Platform", "link": "https://www.langchain.com/langgraph-platform"}, {"title": "Experts", "link": "https://www.langchain.com/experts"}], "position": 3}, {"title": "LangGraph Tutorial: What Is LangGraph and How to Use It?", "link": "https://www.datacamp.com/tutorial/langgraph-tutorial", "snippet": "The core concepts of LangGraph include: graph structure, state management, and coordination.", "date": "Jun 26, 2024", "position": 4}, {"title": "Introduction to LangGraph - LangChain Academy", "link": "https://academy.langchain.com/courses/intro-to-langgraph", "snippet": "LangGraph Platform is a platform for deploying AI agents that can scale with production volume. It offers easy-to-use APIs for managing agent state, memory, and ...", "position": 5}, {"title": "LangGraph for Beginners, Part 1: Create a simple Graph. | AI Agents", "link": "https://medium.com/ai-agents/langgraph-for-beginners-basics-f8efe7c8acce", "snippet": "In this series, we will cover the basic concepts of LangGraph that is easy to understand even for beginners and in this article we will ...", "date": "Oct 19, 2024", "position": 6}, {"title": "From Basics to Advanced: Exploring LangGraph", "link": "https://towardsdatascience.com/from-basics-to-advanced-exploring-langgraph-e8c1cf4db787/", "snippet": "Another important concept is the state of the graph. The state serves as a foundational element for collaboration among the graph's components. ...", "date": "Aug 15, 2024", "position": 7}, {"title": "LangGraph Tutorial: A Comprehensive Guide for Beginners", "link": "https://blog.futuresmart.ai/langgraph-tutorial-for-beginners", "snippet": "At the heart of LangGraph's design lies a graph-based representation of the application's workflow. This graph comprises two primary elements:.", "date": "Oct 1, 2024", "sitelinks": [{"title": "Key Concepts", "link": "https://blog.futuresmart.ai/langgraph-tutorial-for-beginners#heading-key-concepts"}, {"title": "Getting Started with LangGraph", "link": "https://blog.futuresmart.ai/langgraph-tutorial-for-beginners#heading-getting-started-with-langgraph"}, {"title": "Advanced LangGraph...", "link": "https://blog.futuresmart.ai/langgraph-tutorial-for-beginners#heading-advanced-langgraph-techniques"}], "position": 8}, {"title": "Introduction to LangGraph: A Beginner's Guide - Medium", "link": "https://medium.com/@cplog/introduction-to-langgraph-a-beginners-guide-14f9be027141", "snippet": "In this article, we'll introduce LangGraph, walk you through its basic concepts, and share some insights and common points of confusion for ...", "date": "Feb 14, 2024", "sitelinks": [{"title": "Key Concepts", "link": "https://medium.com/@cplog/introduction-to-langgraph-a-beginners-guide-14f9be027141#:~:text=Key%20Concepts"}, {"title": "Common Confusions", "link": "https://medium.com/@cplog/introduction-to-langgraph-a-beginners-guide-14f9be027141#:~:text=Common%20Confusions"}, {"title": "Conclusion", "link": "https://medium.com/@cplog/introduction-to-langgraph-a-beginners-guide-14f9be027141#:~:text=Conclusion"}], "position": 9}, {"title": "Introduction to LangGraph: A Quick Dive into Core Concepts", "link": "https://www.youtube.com/watch?v=J5d1l6xgQBc", "snippet": "In this video, we'll explore LangGraph, a powerful tool that enables agentic workflows with language learning models (LLMs) through cycles, ...", "date": "May 27, 2024", "position": 10}], "peopleAlsoAsk": [{"question": "What is the basics of LangGraph?", "snippet": "LangGraph Platform is a platform for deploying AI agents that can scale with production volume. It offers easy-to-use APIs for managing agent state, memory, and user interactions— which makes building dynamic experiences more accessible.", "title": "Introduction to LangGraph - LangChain Academy", "link": "https://academy.langchain.com/courses/intro-to-langgraph"}, {"question": "What are the basic concepts of graph?", "snippet": "A graph is determined as a mathematical structure that represents a particular function by connecting a set of points. It is used to create a pairwise relationship between objects. The graph is made up of vertices (nodes) that are connected by the edges (lines).", "title": "Graph Theory - BYJU'S", "link": "https://byjus.com/maths/graph-theory/"}, {"question": "What is the function of LangGraph?", "snippet": "The Functional API in LangGraph provides a flexible approach to building AI workflows, with powerful features like human-in-the-loop interactions, state management, persistence, and streaming. These capabilities enable developers to create sophisticated applications that effectively combine automation with human input.", "title": "Introducing the LangGraph Functional API - LangChain Blog", "link": "https://blog.langchain.com/introducing-the-langgraph-functional-api/"}, {"question": "Is LangGraph easy to use?", "snippet": "LangGraph is more complex. It takes more time to learn, and the code can be harder to write and maintain. But this complexity is a trade-off for the additional power and flexibility it provides. If you're building a complex workflow, the extra effort might be worth it.", "title": "LangChain vs. LangGraph: Choosing the Right Framework | by Tahir", "link": "https://medium.com/@tahirbalarabe2/langchain-vs-langgraph-choosing-the-right-framework-0e393513da3d"}], "relatedSearches": [{"query": "Langgraph basic concepts pdf"}, {"query": "Langgraph basic concepts cheat sheet"}, {"query": "Langgraph basic concepts examples"}, {"query": "Langgraph basic concepts github"}, {"query": "LangGraph Studio"}, {"query": "LangGraph documentation"}, {"query": "Langgraph github"}, {"query": "LangGraph examples"}], "credits": 1}
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 AI 에이전트 워크플로우를 오케스트레이션하기 위한 프레임워크입니다. 주요 개념은 다음과 같습니다:
+# 
+# *   **그래프 구조:** LangGraph는 애플리케이션의 워크플로우를 그래프로 표현합니다. 이 그래프는 노드와 엣지로 구성됩니다. 노드는 워크플로우의 단계를 나타내고, 엣지는 단계 간의 전환을 나타냅니다.
+# *   **상태 관리:** LangGraph는 그래프의 상태를 관리합니다. 상태는 그래프의 컴포넌트 간의 협업을 위한 기본 요소 역할을 합니다.
+# *   **노드:** 그래프의 노드는 상태를 변경하는 행위자입니다. 노드는 LLM 체인, 함수 호출 또는 라우터일 수 있습니다.
+# *   **엣지:** 그래프의 엣지는 노드 간의 연결을 정의합니다. 엣지는 조건부일 수 있으며, 이는 상태에 따라 다른 노드로 라우팅될 수 있음을 의미합니다.
+# *   **에이전트 워크플로우:** LangGraph는 에이전트 워크플로우를 오케스트레이션하는 데 사용됩니다. 에이전트 워크플로우는 여러 단계를 거쳐 작업을 완료하는 에이전트의 시퀀스입니다.
+# *   **상태 저장:** LangGraph는 상태 저장 프레임워크입니다. 즉, 그래프의 상태가 유지됩니다. 이를 통해 에이전트가 이전 단계의 결과를 기반으로 결정을 내릴 수 있습니다.
+# *   **병렬 처리:** LangGraph는 병렬 처리를 지원합니다. 이를 통해 여러 단계를 동시에 실행하여 워크플로우의 성능을 향상시킬 수 있습니다.
+# 
+# LangGraph는 복잡한 에이전트 워크플로우를 구축하고 관리하는 데 유용한 도구입니다. LangChain과 비교했을 때 더 복잡하지만, 더 강력하고 유연합니다.
+```  
+
+도구 호출이 불필요한 질문은 다음과 같다.  
+
+```python
+# 도구가 필요없는 질문
+
+for chunk in agent.stream(
+    {"messages" : ["human", "langgraph 의 기본개념에 대해 설명해줘"]},
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# langgraph 의 기본개념에 대해 설명해줘
+# ================================== Ai Message ==================================
+# 
+# LangGraph는 LangChain을 기반으로 하는 라이브러리로, LLM(Large Language Model)을 사용하여 복잡한 multi-agent 워크플로우를 구축하는 데 특화되어 있습니다. 기존의 순차적인 체인 방식과는 달리, 그래프 구조를 사용하여 에이전트 간의 상호작용과 흐름을 정의하고 관리합니다.
+# 
+# **LangGraph의 핵심 개념:**
+# 
+# 1.  **Nodes (노드):** 그래프의 기본적인 구성 요소이며, 에이전트, 도구(tools), LLM 호출 또는 사용자 정의 함수와 같은 실행 가능한 단위를 나타냅니다. 각 노드는 특정 작업을 수행하고 결과를 다음 노드로 전달합니다.
+# 
+# 2.  **Edges (엣지):** 노드 간의 연결을 나타내며, 워크플로우의 흐름을 정의합니다. 엣지는 조건부 분기, 루프, 병렬 실행 등 다양한 흐름 제어를 지원합니다.
+# 
+# 3.  **State (상태):** 그래프 전체에서 공유되는 데이터 컨테이너입니다. 노드는 상태를 읽고 수정하여 정보를 공유하고 워크플로우의 진행 상황을 추적할 수 있습니다. 상태는 에이전트 간의 협업과 의사 결정을 가능하게 합니다.
+# 
+# 4.  **Graph (그래프):** 노드와 엣지의 집합으로, 전체 워크플로우를 나타냅니다. 그래프는 시작 노드에서 시작하여 엣지를 따라 다른 노드로 이동하면서 작업을 수행하고, 최종적으로 종료 노드에서 완료됩니다.
+# 
+# **LangGraph의 장점:**
+# 
+# *   **복잡한 워크플로우 관리:** 그래프 구조를 통해 복잡한 multi-agent 상호작용을 시각적으로 표현하고 관리할 수 있습니다.
+# *   **유연성:** 다양한 유형의 노드와 엣지를 사용하여 워크플로우를 사용자 정의할 수 있습니다.
+# *   **확장성:** 필요에 따라 노드와 엣지를 추가하거나 수정하여 워크플로우를 확장할 수 있습니다.
+# *   **재사용성:** 그래프를 모듈화하여 재사용 가능한 워크플로우를 구축할 수 있습니다.
+# *   **관찰 가능성:** 워크플로우의 실행 과정을 추적하고 디버깅할 수 있습니다.
+# 
+# **LangGraph의 활용 예시:**
+# 
+# *   **자동화된 고객 지원:** 여러 에이전트가 협력하여 고객 문의를 처리하고 해결하는 워크플로우
+# *   **연구 및 개발:** 여러 연구원이 협력하여 데이터를 분석하고 가설을 검증하는 워크플로우
+# *   **콘텐츠 생성:** 여러 에이전트가 협력하여 글쓰기, 편집, 디자인 등의 작업을 수행하는 워크플로우
+# *   **코드 생성:** 여러 에이전트가 협력하여 코드를 작성, 테스트, 디버깅하는 워크플로우
+# 
+# LangGraph는 복잡한 multi-agent 시스템을 구축하고 관리하는 데 매우 유용한 도구입니다. 기존의 체인 방식의 한계를 극복하고 더욱 강력하고 유연한 워크플로우를 구축할 수 있도록 지원합니다.
+```  
