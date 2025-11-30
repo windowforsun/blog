@@ -310,3 +310,54 @@ for chunk in agent.stream(
 # 
 # LangGraph는 복잡한 multi-agent 시스템을 구축하고 관리하는 데 매우 유용한 도구입니다. 기존의 체인 방식의 한계를 극복하고 더욱 강력하고 유연한 워크플로우를 구축할 수 있도록 지원합니다.
 ```  
+
+여러 도구가 필요한 질의는 아래와 같다.  
+
+```python
+# 여러 도구를 사용하는 질문
+
+for chunk in agent.stream(
+    {"messages" : ["human", "Microsoft 의 최근 7일 주가의 이동평균선을 python 코드로 구해 알려줘"]},
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# Microsoft 의 최근 7일 주가의 이동평균선을 python 코드로 구해 알려줘
+# ================================== Ai Message ==================================
+# Tool Calls:
+# search_web (ec21ed95-6640-489f-b5d3-831f17ee4ca8)
+# Call ID: ec21ed95-6640-489f-b5d3-831f17ee4ca8
+# Args:
+# query: Microsoft stock price past 7 days moving average
+# ================================= Tool Message =================================
+# Name: search_web
+# 
+# {"searchParameters": {"q": "Microsoft stock price past 7 days moving average", "gl": "us", "hl": "en", "type": "search", "num": 10, "engine": "google"}, "organic": [{"title": "MSFT Technical Analysis for Microsoft Corp Stock - Barchart.com", "link": "https://www.barchart.com/stocks/quotes/MSFT/technical-analysis", "snippet": "Period, Moving Average, Price Change, Percent Change, Average Volume. 5-Day, 495.07, +1.39, +0.28%, 22,631,561. 20-Day, 483.21, +34.97, +7.54%, 20,248,770.", "position": 1}, {"title": "Microsoft Corporation (MSFT) Stock Historical Prices & Data - Yahoo ...", "link": "https://finance.yahoo.com/quote/MSFT/history/", "snippet": "Discover historical prices for MSFT stock on Yahoo Finance. View daily, weekly or monthly format back to when Microsoft Corporation stock was issued.", "attributes": {"Missing": "moving | Show results with:moving"}, "position": 2}, {"title": "Microsoft Corp. Advanced Charts - MSFT - MarketWatch", "link": "https://www.marketwatch.com/investing/stock/msft/charts", "snippet": "Microsoft Corp. advanced stock charts by MarketWatch. View MSFT historial stock data and compare to other stocks and exchanges.", "attributes": {"Missing": "7 | Show results with:7"}, "position": 3}, {"title": "MSFT Stock Price Chart Technical Analysis - Financhill", "link": "https://financhill.com/stock-price-chart/msft-technical-analysis", "snippet": "Microsoft share price is 498.84 while MSFT 8-day exponential moving average is 492.70, which is a Buy signal. · The stock price of MSFT is 498.84 while Microsoft ...", "position": 4}, {"title": "Microsoft Stock Price History - Investing.com", "link": "https://www.investing.com/equities/microsoft-corp-historical-data", "snippet": "Access Microsoft stock price history with daily data, historical prices, all-time highs, and stock chart history. Download and analyze trends easily.", "position": 5}, {"title": "MSFT Stock Chart and Price — Microsoft (NASDAQ) - TradingView", "link": "https://www.tradingview.com/symbols/NASDAQ-MSFT/", "snippet": "MSFT stock has risen by 1.19% compared to the previous week, the month change is a 8.10% rise, over the last year Microsoft Corp. has showed a 8.87% increase.", "attributes": {"Missing": "average | Show results with:average"}, "sitelinks": [{"title": "MSFT technical analysis", "link": "https://www.tradingview.com/symbols/NASDAQ-MSFT/technicals/"}, {"title": "Price to earnings Ratio (TTM)", "link": "https://www.tradingview.com/symbols/NASDAQ-MSFT/financials-statistics-and-ratios/price-earnings/"}, {"title": "Forecast", "link": "https://www.tradingview.com/symbols/NASDAQ-MSFT/forecast/"}, {"title": "Financials", "link": "https://www.tradingview.com/symbols/NASDAQ-MSFT/financials-overview/"}], "position": 6}, {"title": "Microsoft (MSFT) Technical Analysis - TipRanks.com", "link": "https://www.tipranks.com/stocks/msft/technical-analysis", "snippet": "Microsoft's (MSFT) 20-Day exponential moving average is 481.36, while Microsoft's (MSFT) share price is $491.09, making it a Buy.", "date": "2 days ago", "attributes": {"Missing": "7 | Show results with:7"}, "position": 7}, {"title": "MSFT Price History for Microsoft Corp Stock - Barchart.com", "link": "https://www.barchart.com/stocks/quotes/MSFT/price-history/historical", "snippet": "The historical data and Price History for Microsoft Corp (MSFT) with Intraday, Daily, Weekly, Monthly, and Quarterly data available for download.", "position": 8}, {"title": "150 Day Moving Avg For Microsoft Corporation (MSFT) - Finbox", "link": "https://finbox.com/NASDAQGS:MSFT/explorer/asset_price_avg_150d/", "snippet": "Microsoft's 150 day moving avg is 420.18.. View Microsoft Corporation's 150 Day Moving Avg trends, charts, and more.", "position": 9}, {"title": "MSFT Microsoft Corporation Stock Price & Overview - Seeking Alpha", "link": "https://seekingalpha.com/symbol/MSFT/momentum/performance", "snippet": "Microsoft Corporation (MSFT) stock price is 494.84 and Microsoft Corporation (MSFT) 200-day simple moving average is 424.43. MSFT Relative Strength.", "attributes": {"Missing": "7 | Show results with:7"}, "position": 10}], "relatedSearches": [{"query": "Microsoft stock price history 1980"}, {"query": "Microsoft stock price 1994"}, {"query": "Microsoft stock price 1990"}, {"query": "MSFT 200-day Moving Average"}, {"query": "What was the closing price of msft on march 31 2025"}, {"query": "MSFT 50-day Moving Average"}, {"query": "MSFT 100 day moving average"}, {"query": "Microsoft stock price in 2000"}], "credits": 1}
+# ================================== Ai Message ==================================
+# Tool Calls:
+# python_code_interpreter (06b9981d-a400-45ec-a6ad-3337d73380b4)
+# Call ID: 06b9981d-a400-45ec-a6ad-3337d73380b4
+# Args:
+# code:
+# import yfinance as yf
+# 
+# msft = yf.Ticker("MSFT")
+# history = msft.history(period="7d")
+# 
+# prices = history["Close"].tolist()
+# 
+# if len(prices) > 0:
+#     moving_average = sum(prices) / len(prices)
+#     print(f"Microsoft의 최근 7일 주가 이동평균선: {moving_average:.2f}")
+# else:
+#     print("지난 7일 동안의 주가 데이터를 가져올 수 없습니다.")
+# ================================= Tool Message =================================
+# Name: python_code_interpreter
+# 
+# Microsoft의 최근 7일 주가 이동평균선: 495.01
+# 
+# ================================== Ai Message ==================================
+# 
+# Microsoft의 최근 7일 주가 이동평균선은 495.01입니다.
+```  
