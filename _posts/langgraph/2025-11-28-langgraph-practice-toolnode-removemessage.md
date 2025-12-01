@@ -361,3 +361,84 @@ for chunk in agent.stream(
 # 
 # Microsoft의 최근 7일 주가 이동평균선은 495.01입니다.
 ```  
+
+## RemoveMessage
+그래프 기반 워크플로우에서 상태는 종종 여러 메시지의 집합으로 구성된다. 
+보통은 새로운 메시지를 상태에 추가만 하지만, 필요에 따라 특정 메시지를 제거해야 하는 상황도 발생한다. 
+이럴 때 사용할 수 있는 도구가 `RemoveMessage` 수정자 이다. 
+`RemoveMessage` 는 `LangGraph` 에서 메시지 상태를 동적으로 관리할 수 있게 해주는 공식적인 방법이며, 
+이를 적용하려면 해당 상태가 [reducer](https://langchain-ai.github.io/langgraph/concepts/low_level/?h=messagesstate#reducers) 
+를 지원해야 한다.  
+
+`LangGraph` 에서 기본적으로 제공되는 `MessagesState` 는 `messages` 라는 키가 있다. 
+이 키는 메시지 리스트를 저장하며, 이 리스트의 `reducer` 는 `RemoveMessage` 와 같은 수정자를 지원한다. 
+그러므로 `RemoveMessage` 는 `reucer` 메커니즘을 통해 `messages` 리스트에서 특정 메시지를 찾아 삭제하는 역할을 하며, 
+이를 통해 불필요한 메시지나 더 이상 필요하지 않은 데이터를 상태에서 효과적으로 제거할 수 있다.  
+
+진행을 위해 앞선 `ToolNode` 의 전체 코드를 다시 작성해 `RemoveMessage` 예제로 사용한다.   
+
+```python
+from typing import Literal
+from langchain_core.tools import tool
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import MessagesState, StateGraph, START, END
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.messages import AIMessage
+from langchain_experimental.tools.python.tool import PythonAstREPLTool
+from typing import List, Dict
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["SERPER_API_KEY"] = "api key"
+os.environ["GOOGLE_API_KEY"] = "api key"
+
+
+# 도구 정의
+@tool
+def python_code_interpreter(code: str):
+  """ call to execute python code. """
+  return PythonAstREPLTool().invoke(code)
+
+@tool
+def search_web(query: str):
+  """ search web for given query """
+  return GoogleSerperAPIWrapper().results(query)
+
+tools = [search_web, python_code_interpreter]
+tool_node = ToolNode(tools)
+
+memory = MemorySaver()
+llm_with_tools = ChatGoogleGenerativeAI(model="gemini-2.0-flash").bind_tools(tools)
+
+# llm 모델을 사용해 메시지 처리 및 응답 생성, 도구 호출이 포함된 응답 반환
+def call_model(state: MessagesState):
+  messages = state["messages"]
+  response = llm_with_tools.invoke(messages)
+
+  return {"messages" : [response]}
+
+
+# 그래프 초기화
+graph_builder = StateGraph(MessagesState)
+
+# 에이전트 와 도구 노드 정의
+graph_builder.add_node("agent", call_model)
+graph_builder.add_node("tools", tool_node)
+
+# 에이전트 시작점에 에이전트 노드 연결
+graph_builder.add_edge(START, "agent")
+
+# 에이전트 노드의 조건부 분기 설정, 도구 또는 종료 지점 연결
+graph_builder.add_conditional_edges("agent", tools_condition)
+
+# 도구 노드에서 에이전트 노드로 순환 연결
+graph_builder.add_edge("tools", "agent")
+
+# 에이전트 노드에서 종료 지점으로 연결
+graph_builder.add_edge("agent", END)
+
+# 그래프를 컴파일해 에이전트 앱 생성
+agent = graph_builder.compile(checkpointer=memory)
+```  
