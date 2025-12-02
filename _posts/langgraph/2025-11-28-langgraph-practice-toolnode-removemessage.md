@@ -442,3 +442,19 @@ graph_builder.add_edge("agent", END)
 # 그래프를 컴파일해 에이전트 앱 생성
 agent = graph_builder.compile(checkpointer=memory)
 ```  
+
+구성된 그래프를 시각화하면 아래와 같다.  
+
+```python
+from IPython.display import Image, display
+
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/toolnode-removemessage-2.png)
+
