@@ -458,3 +458,61 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/toolnode-removemessage-2.png)
 
+
+간단한 대화를 하고 메시지 목록을 확인한다.  
+
+```python
+from langchain_core.messages import HumanMessage
+
+config = {"configurable" : {"thread_id": "1"}}
+input_message = HumanMessage(content="안녕 내 이름은 철수야")
+
+for chunk in agent.stream(
+    {"messages" : [input_message]},
+    config,
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 안녕 내 이름은 철수야
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요 철수 씨! 무엇을 도와드릴까요?
+
+
+# 후속 질문
+input_message = HumanMessage(content="내 이름이 뭐라고?")
+
+for chunk in agent.stream(
+        {"messages" : [input_message]},
+        config,
+        stream_mode="values"
+):
+    chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 내 이름이 뭐라고?
+# ================================== Ai Message ==================================
+# 
+# 당신의 이름은 철수입니다.
+
+
+# 모든 메시지 확인
+messages = agent.get_state(config).values["messages"]
+
+for message in messages:
+    message.pretty_print()
+# ================================ Human Message =================================
+# 
+# 안녕 내 이름은 철수야
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요 철수 씨! 무엇을 도와드릴까요?
+# ================================ Human Message =================================
+# 
+# 내 이름이 뭐라고?
+# ================================== Ai Message ==================================
+# 
+# 당신의 이름은 철수입니다.
+```  
