@@ -516,3 +516,30 @@ for message in messages:
 # 
 # 당신의 이름은 철수입니다.
 ```  
+
+`RemoveMessage` 는 상태 업데이트에서 사용한 `update_state` 를 사용하는데, 
+메시지에 삭제할 메시지 `id` 를 전달하면 된다.  
+
+```python
+# RemoveMessage 를 사용해 메시지 삭제
+from langchain_core.messages import RemoveMessage
+
+# 가장 첫번째 메시지 삭제
+agent.update_state(config, {"messages": RemoveMessage(id=messages[0].id)})
+
+
+# 삭제 후 모든 메시지 확인
+messages = agent.get_state(config).values["messages"]
+
+for message in messages:
+    message.pretty_print()
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요 철수 씨! 무엇을 도와드릴까요?
+# ================================ Human Message =================================
+# 
+# 내 이름이 뭐라고?
+# ================================== Ai Message ==================================
+# 
+# 당신의 이름은 철수입니다.
+```  
