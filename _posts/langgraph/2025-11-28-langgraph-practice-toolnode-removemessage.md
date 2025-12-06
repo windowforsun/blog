@@ -543,3 +543,97 @@ for message in messages:
 # 
 # 당신의 이름은 철수입니다.
 ```  
+
+추가 예제로 에이전트에서 최근 3개의 메시지만 상태에 관리하도록 동적 삭제를 구현할 수 있다.  
+
+```python
+# 에이전트에서 메시지를 동적으로 삭제하도록 구성
+
+from typing import Literal
+from langchain_core.tools import tool
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import MessagesState, StateGraph, START, END
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.messages import AIMessage
+from langchain_experimental.tools.python.tool import PythonAstREPLTool
+from typing import List, Dict
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["SERPER_API_KEY"] = "api key"
+os.environ["GOOGLE_API_KEY"] = "api key"
+
+# 도구 정의
+@tool
+def python_code_interpreter(code: str):
+  """ call to execute python code. """
+  return PythonAstREPLTool().invoke(code)
+
+@tool
+def search_web(query: str):
+  """ search web for given query """
+  return GoogleSerperAPIWrapper().results(query)
+
+tools = [search_web, python_code_interpreter]
+tool_node = ToolNode(tools)
+
+memory = MemorySaver()
+llm_with_tools = ChatGoogleGenerativeAI(model="gemini-2.0-flash").bind_tools(tools)
+
+# 메시지의 수가 3개 이상인 경우 오래된 메시지 삭제
+def delete_messages(state):
+  messages = state["messages"]
+
+  if len(messages) > 3:
+    return {"messages" : [RemoveMessage(id=m.id) for m in messages[:-3]]}
+
+# 메시지 상태에 따른 다음 실행 노드 결정
+def should_continue(state: MessagesState) -> Literal["tools", "delete_messages"]:
+  """Return the next node to execute. """
+  last_message = state["messages"][-1]
+  
+  # 함수 호출이 없는 경우 메시지 삭제 함수 실행
+  if not last_message.tool_calls:
+    return "delete_messages"
+  
+  return "tools"
+
+# llm 모델을 사용해 메시지 처리 및 응답 생성, 도구 호출이 포함된 응답 반환
+def call_model(state: MessagesState):
+  messages = state["messages"]
+  response = llm_with_tools.invoke(messages)
+
+  return {"messages" : [response]}
+
+
+# 그래프 초기화
+graph_builder = StateGraph(MessagesState)
+
+# 에이전트 와 도구 노드 정의
+graph_builder.add_node("agent", call_model)
+graph_builder.add_node("tools", tool_node)
+
+# 삭제 노드 추가
+graph_builder.add_node(delete_messages)
+
+# 에이전트 시작점에 에이전트 노드 연결
+graph_builder.add_edge(START, "agent")
+
+# 에이전트 노드의 조건부 분기 설정, 도구 또는 종료 지점 연결
+# graph_builder.add_conditional_edges("agent", tools_condition)
+graph_builder.add_conditional_edges(
+    "agent",
+    should_continue
+)
+
+# 도구 노드에서 에이전트 노드로 순환 연결
+graph_builder.add_edge("tools", "agent")
+
+# 에이전트 노드에서 종료 지점으로 연결
+graph_builder.add_edge("agent", END)
+
+# 그래프를 컴파일해 에이전트 앱 생성
+agent = graph_builder.compile(checkpointer=memory)
+```  
