@@ -653,3 +653,175 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/toolnode-removemessage-3.png)
 
+
+대화를 진행하고 이후 상태에서 관리되는 메시지를 확인하면 최근 3개의 메시지만 남은 것을 확인할 수 있다.  
+
+```python
+from langchain_core.messages import HumanMessage
+
+config = {"configurable" : {"thread_id": "1"}}
+input_message = HumanMessage(content="안녕 내 이름은 철수야 langgraph 에 대해 최신 정보로 설명해줘")
+
+for chunk in agent.stream(
+    {"messages" : [input_message]},
+    config,
+    stream_mode="values"
+):
+  chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 안녕 내 이름은 철수야 langgraph 에 대해 최신 정보로 설명해줘
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요, 철수님. LangGraph에 대한 최신 정보를 웹 검색을 통해 찾아보겠습니다. 잠시만 기다려 주세요.
+# Tool Calls:
+# search_web (4fd3d96c-e71d-41fe-82ec-972abfcccd7c)
+# Call ID: 4fd3d96c-e71d-41fe-82ec-972abfcccd7c
+# Args:
+# query: LangGraph latest information
+# ================================= Tool Message =================================
+# Name: search_web
+# 
+# {"searchParameters": {"q": "LangGraph latest information", "gl": "us", "hl": "en", "type": "search", "num": 10, "engine": "google"}, "organic": [{"title": "LangGraph - LangChain", "link": "https://www.langchain.com/langgraph", "snippet": "LangGraph sets the foundation for how we can build and scale AI workloads — from conversational agents, complex task automation, to custom LLM-backed ...", "sitelinks": [{"title": "Built with LangGraph", "link": "https://www.langchain.com/built-with-langgraph"}, {"title": "LangGraph Platform", "link": "https://www.langchain.com/langgraph-platform"}, {"title": "LangGraph Academy Course", "link": "https://academy.langchain.com/courses/intro-to-langgraph"}, {"title": "Experts", "link": "https://www.langchain.com/experts"}], "position": 1}, {"title": "Releases · langchain-ai/langgraph - GitHub", "link": "https://github.com/langchain-ai/langgraph/releases", "snippet": "Changes since 0.5.0. langgraph: release v0.5.1 (#5323); langgraph[fix]: remove deprecated pydantic logic + fix schema gen behavior for typed dicts (#5296) ...", "position": 2}, {"title": "LangGraph", "link": "https://langchain-ai.github.io/langgraph/", "snippet": "LangGraph is a low-level orchestration framework for building, managing, and deploying long-running, stateful agents.", "sitelinks": [{"title": "Use time travel", "link": "https://langchain-ai.github.io/langgraph/how-tos/human_in_the_loop/time-travel/"}, {"title": "Template applications", "link": "https://langchain-ai.github.io/langgraph/concepts/template_applications/"}, {"title": "Run a local server", "link": "https://langchain-ai.github.io/langgraph/tutorials/langgraph-platform/local-server/"}, {"title": "LangGraph Studio", "link": "https://langchain-ai.github.io/langgraph/concepts/langgraph_studio/"}], "position": 3}, {"title": "LangGraph Release Week Recap - LangChain Blog", "link": "https://blog.langchain.com/langgraph-release-week-recap/", "snippet": "These new features make it easier to build workflows with faster development cycles, more efficient runs, and greater control at every level of your graph.", "date": "Jun 9, 2025", "position": 4}, {"title": "LangGraph Assistants: Building Configurable AI Agents - YouTube", "link": "https://www.youtube.com/watch?v=fMsQX6pwXkE", "snippet": "Learn how to build scalable AI agent systems with LangGraph Assistants, a powerful approach that separates your agent's core architecture ...", "date": "3 days ago", "attributes": {"Missing": "latest | Show results with:latest"}, "position": 5}, {"title": "LangChain - Changelog", "link": "https://changelog.langchain.com/", "snippet": "June 18, 2025 · LangGraph. LangGraph Workflow Updates (Python & JS). We've rolled out a batch of new features across both LangGraph.js and LangGraph for Python ...", "position": 6}, {"title": "What is LangGraph? - IBM", "link": "https://www.ibm.com/think/topics/langgraph", "snippet": "LangGraph, created by LangChain, is an open source AI agent framework designed to build, deploy and manage complex generative AI agent workflows.", "position": 7}, {"title": "LangGraph Over Time - GitHub Pages", "link": "https://langchain-ai.github.io/langgraphjs/versions/", "snippet": "This page serves as a guide to the version history of LangGraph.js, documenting significant changes and providing assistance for upgrading between versions.", "position": 8}, {"title": "LangChain vs LangGraph vs LangSmith - YouTube", "link": "https://www.youtube.com/watch?v=vJOGC8QJZJQ", "snippet": "LangChain vs LangGraph vs LangSmith. 13K views · 3 days ago #️⃣ ...more ... Robert Reich New 49K views · 14:35 · Go to channel. 1-Bit LLM: ...", "date": "3 days ago", "position": 9}, {"title": "LangChain Blog", "link": "https://blog.langchain.com/", "snippet": "Context Engineering · LangGraph Platform is now Generally Available: Deploy & manage long-running, stateful Agents · How Klarna's AI assistant redefined customer ...", "sitelinks": [{"title": "LangGraph 0.3 Release", "link": "https://blog.langchain.com/langgraph-0-3-release-prebuilt-agents/"}, {"title": "Top 5 LangGraph Agents in...", "link": "https://blog.langchain.com/top-5-langgraph-agents-in-production-2024/"}, {"title": "Is LangGraph Used In...", "link": "https://blog.langchain.com/is-langgraph-used-in-production/"}], "position": 10}], "peopleAlsoAsk": [{"question": "Is LangGraph better than LangChain?", "snippet": "Workflow Structure LangChain can handle simple branching, but it doesn't natively support loops or iterations. If your workflow is straightforward and doesn't require complex decision-making, LangChain is a solid choice. LangGraph, on the other hand, is designed for graph-style workflows.", "title": "LangChain vs. LangGraph: Choosing the Right Framework | by Tahir", "link": "https://medium.com/@tahirbalarabe2/langchain-vs-langgraph-choosing-the-right-framework-0e393513da3d"}, {"question": "What is the basics of LangGraph?", "snippet": "LangGraph Platform is a platform for deploying AI agents that can scale with production volume. It offers easy-to-use APIs for managing agent state, memory, and user interactions— which makes building dynamic experiences more accessible.", "title": "Introduction to LangGraph - LangChain Academy", "link": "https://academy.langchain.com/courses/intro-to-langgraph"}], "relatedSearches": [{"query": "Langgraph latest information pdf"}, {"query": "Langgraph latest information github"}, {"query": "LangGraph example"}, {"query": "LangGraph release date"}, {"query": "Langgraph github"}, {"query": "LangGraph documentation"}, {"query": "LangGraph tools"}, {"query": "LangGraph version"}], "credits": 1}
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요 철수님! LangGraph에 대한 최신 정보를 알려드리겠습니다.
+# 
+# LangGraph는 LangChain에서 만든 오픈 소스 AI 에이전트 프레임워크로, 복잡한 생성 AI 에이전트 워크플로우를 구축, 배포 및 관리하도록 설계되었습니다. 주요 특징은 다음과 같습니다.
+# 
+# *   **워크플로우 오케스트레이션:** 장기 실행 스테이트풀 에이전트를 구축, 관리 및 배포하기 위한 로우 레벨 오케스트레이션 프레임워크입니다.
+# *   **AI 에이전트 시스템:** 확장 가능한 AI 에이전트 시스템을 구축하기 위한 강력한 접근 방식을 제공합니다.
+# *   **유연성:** 복잡한 의사 결정을 지원하는 그래프 스타일 워크플로우를 위해 설계되었습니다. 간단한 분기 이상의 고급 기능을 제공합니다.
+# *   **LangGraph 플랫폼:** 프로덕션 볼륨으로 확장할 수 있는 AI 에이전트를 배포하기 위한 플랫폼입니다. 에이전트 상태, 메모리 및 사용자 상호 작용을 관리하기 위한 사용하기 쉬운 API를 제공합니다.
+# *   **최신 업데이트:** LangGraph는 지속적으로 업데이트되고 있으며, 최근에는 워크플로우 업데이트, 새로운 기능 등이 릴리스되었습니다.
+# 
+# LangGraph에 대한 자세한 내용은 다음 리소스를 참조하십시오.
+# 
+# *   **LangChain 웹사이트:** [https://www.langchain.com/langgraph](https://www.langchain.com/langgraph)
+# *   **GitHub:** [https://github.com/langchain-ai/langgraph](https://github.com/langchain-ai/langgraph)
+# *   **LangChain 블로그:** [https://blog.langchain.com/](https://blog.langchain.com/)
+# *   **IBM:** [https://www.ibm.com/think/topics/langgraph](https://www.ibm.com/think/topics/langgraph)
+# 
+# 이 정보가 도움이 되었기를 바랍니다! 혹시 더 궁금한 점이 있으시면 언제든지 물어보세요.
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요 철수님! LangGraph에 대한 최신 정보를 알려드리겠습니다.
+# 
+# LangGraph는 LangChain에서 만든 오픈 소스 AI 에이전트 프레임워크로, 복잡한 생성 AI 에이전트 워크플로우를 구축, 배포 및 관리하도록 설계되었습니다. 주요 특징은 다음과 같습니다.
+# 
+# *   **워크플로우 오케스트레이션:** 장기 실행 스테이트풀 에이전트를 구축, 관리 및 배포하기 위한 로우 레벨 오케스트레이션 프레임워크입니다.
+# *   **AI 에이전트 시스템:** 확장 가능한 AI 에이전트 시스템을 구축하기 위한 강력한 접근 방식을 제공합니다.
+# *   **유연성:** 복잡한 의사 결정을 지원하는 그래프 스타일 워크플로우를 위해 설계되었습니다. 간단한 분기 이상의 고급 기능을 제공합니다.
+# *   **LangGraph 플랫폼:** 프로덕션 볼륨으로 확장할 수 있는 AI 에이전트를 배포하기 위한 플랫폼입니다. 에이전트 상태, 메모리 및 사용자 상호 작용을 관리하기 위한 사용하기 쉬운 API를 제공합니다.
+# *   **최신 업데이트:** LangGraph는 지속적으로 업데이트되고 있으며, 최근에는 워크플로우 업데이트, 새로운 기능 등이 릴리스되었습니다.
+
+
+input_message = HumanMessage(content="내 이름이 뭐라고 했지 ? 그리고 가장 작은 소수 3개를 출력하는 python 코드 작성해줘")
+
+for chunk in agent.stream(
+        {"messages" : [input_message]},
+        config,
+        stream_mode="values"
+):
+    chunk["messages"][-1].pretty_print()
+# ================================ Human Message =================================
+# 
+# 내 이름이 뭐라고 했지 ? 그리고 가장 작은 소수 3개를 출력하는 python 코드 작성해줘
+# ================================== Ai Message ==================================
+# 
+# 제 이름은 철수입니다.
+# 
+# 가장 작은 소수 3개를 출력하는 Python 코드는 다음과 같습니다.
+# Tool Calls:
+# python_code_interpreter (ee1c8a6a-b5b3-4553-98ae-68dee9fc95ab)
+# Call ID: ee1c8a6a-b5b3-4553-98ae-68dee9fc95ab
+# Args:
+# code:
+# def is_prime(n):
+#     if n <= 1:
+#         return False
+#     for i in range(2, int(n**0.5) + 1):
+#         if n % i == 0:
+#             return False
+#     return True
+# 
+# primes = []
+# num = 2
+# while len(primes) < 3:
+#     if is_prime(num):
+#         primes.append(num)
+#     num += 1
+# 
+# print(primes)
+# ================================= Tool Message =================================
+# Name: python_code_interpreter
+# 
+# [2, 3, 5]
+# 
+# ================================== Ai Message ==================================
+# 
+# 내 이름은 철수입니다.
+# 
+# 가장 작은 소수 3개는 2, 3, 5입니다.
+# ================================== Ai Message ==================================
+# 
+# 내 이름은 철수입니다.
+# 
+# 가장 작은 소수 3개는 2, 3, 5입니다.
+
+
+
+# 2개 질문 수행후 메시지 목록 확인 -> 최근 3개의 메시지만 남음
+messages = agent.get_state(config).values["messages"]
+
+for message in messages:
+    message.pretty_print()
+# ================================== Ai Message ==================================
+# 
+# 제 이름은 철수입니다.
+# 
+# 가장 작은 소수 3개를 출력하는 Python 코드는 다음과 같습니다.
+# Tool Calls:
+# python_code_interpreter (ee1c8a6a-b5b3-4553-98ae-68dee9fc95ab)
+# Call ID: ee1c8a6a-b5b3-4553-98ae-68dee9fc95ab
+# Args:
+# code:
+# def is_prime(n):
+#     if n <= 1:
+#         return False
+#     for i in range(2, int(n**0.5) + 1):
+#         if n % i == 0:
+#             return False
+#     return True
+# 
+# primes = []
+# num = 2
+# while len(primes) < 3:
+#     if is_prime(num):
+#         primes.append(num)
+#     num += 1
+# 
+# print(primes)
+# ================================= Tool Message =================================
+# Name: python_code_interpreter
+# 
+# [2, 3, 5]
+# 
+# ================================== Ai Message ==================================
+# 
+# 내 이름은 철수입니다.
+# 
+# 가장 작은 소수 3개는 2, 3, 5입니다.
+```  
+
+
+---  
+## Reference
+[LangChain Tools](https://python.langchain.com/docs/integrations/tools/)  
+[Custom Tools](https://python.langchain.com/docs/how_to/custom_tools/)  
+[LangGraph ToolNode Class](https://langchain-ai.github.io/langgraph/reference/agents/#langgraph.prebuilt.tool_node.ToolNode)  
+[ToolNode Demo 1](https://github.com/langchain-ai/langgraph/blob/main/docs/docs/how-tos/many-tools.ipynb)  
+[ToolNode Demo 2](https://github.com/langchain-ai/langgraph/blob/main/docs/docs/how-tos/tool-calling.md)  
+[RemoveMessage](https://python.langchain.com/api_reference/core/messages/langchain_core.messages.modifier.RemoveMessage.html)  
+[Reducer](https://langchain-ai.github.io/langgraph/concepts/low_level/?h=messagesstate#reducers)  
+
