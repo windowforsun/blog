@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph Agent Memory and Stream"
+title: "[LangGraph] LangGraph ToolNode and RemoveMessage"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
-excerpt: ''
+  overlay_image: /img/langgraph-img-2.jpeg
+excerpt: 'LangGraph 의 ToolNode 와 RemoveMessage 노드 사용법에 대해 알아봅니다.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,11 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - ToolNode
+    - RemoveMessage
+    - Agent
+    - LLM
+    - Python
 toc: true
 use_math: true
 ---  
