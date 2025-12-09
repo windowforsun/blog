@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangGraph] LangGraph Human in the Loop"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
+  overlay_image: /img/langgraph-img-2.jpeg
 excerpt: 'LangGraph 에이전트에서 Human-in-the-Loop(HITL) 구현과 상태 수동 업데이트 방법을 알아보자'
 author: "window_for_sun"
 header-style: text
