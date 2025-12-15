@@ -181,3 +181,62 @@ plt.tight_layout()
 즉 자기상관계수가 이 영역 밖에 있으면 통계적으로 유의미한 자기상관관계가 있다고 판단할 수 있고, 
 이 영역 안에 있으면 통계적으로 유의미한 자기상관관계가 없다고 판단할 수 있다. 
 
+
+### Transform
+앞서 시뮬레이션한 확률 보행 시계열은 `ADF` 검정에서 바정상적임을 확인했다. 
+그로므로 정상적이 되도록 변환을 적용해 본다. 
+변환은 앞서 설명한 것과 같이 차분(`diff)` 를 적용한다.  
+
+차분은 `numpy` 라이브러리의 `diff` 메서드를 사용해 간단하게 적용할 수 있다. 
+이때 `n` 파라미터로 몇 차 차분을 적용할지 지정할 수 있다.  
+
+```python
+diff_random_walk = np.diff(random_walk, n=1)
+```  
+
+차분한 값을 도식화하면 아래와 같이 비교적 추세는 사라지고 안정적인 형태로 평균이 `0` 근처에서 왔다갔다 하는 것을 볼 수 있다.  
+
+```python
+plt.plot(diff_random_walk)
+plt.title('Differenced Random Walk')
+plt.xlabel('Timesteps')
+plt.ylabel('Value')
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-3.png)
+
+
+이제 다시 정상성 테스트(`ADF` 검정)를 수행해 본다.  
+
+```python
+ADF_result = adfuller(diff_random_walk)
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -31.789310857560594
+print(f'p-value: {ADF_result[1]}')
+# p-value: 0.0
+```  
+
+결과적으로 `ADF` 통계값이 큰 음수 이면서 `p-value` 가 `0.05` 보다 작으므로 귀무가설을 기각하고, 시계열이 정상적이라고 판단할 수 있다. 
+
+이제 변환된 정상적 시계열로 다시 `ACF` 도식을 그려본다.  
+
+```python
+plot_acf(diff_random_walk, lags=20);
+
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-4.png)
+
+`ACF` 도식을 보면 지연 0이후에는 유의한 자기상관계수가 없음을 볼 수 있다. 
+이로 정상적 프로세스가 완전히 무작위라는 의미로, 이는 `백색소음`을 의미한다. 
+즉 각 값은 이전 값과 무작위로 차이를 보이는 다는 것으로 값들 간의 아무런 관계가 없다는 것을 시사한다.  
+
+결론적으로 최초에 시뮬레이션한 확률 보행 시계열은 비정상적이었지만,
+차분을 적용해 정상적 시계열로 변환할 수 있었고,
+정상적 시계열은 완전히 무작위적인 프로세스라는 것을 확인하며 확률 보행임의 정의와 일치함을 확인할 수 있었다.  
+
