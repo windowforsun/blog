@@ -240,3 +240,84 @@ plt.tight_layout()
 차분을 적용해 정상적 시계열로 변환할 수 있었고,
 정상적 시계열은 완전히 무작위적인 프로세스라는 것을 확인하며 확률 보행임의 정의와 일치함을 확인할 수 있었다.  
 
+
+### Stock Price as Random Walk
+이번에는 실제 금융 데이터를 바탕으로 확률 보행인지 확인해 본다. 
+예제로는 구글(`GOOGL`)의 주가 데이터를 사용한다. 
+데이터는 `yfinance` 패키지를 사용해 `2020-04-27` ~ `2021-04-27` 까지 종가를 사용한다.  
+
+```python
+
+import yfinance as yf
+import pandas as pd
+import numpy as np
+
+df = yf.download('GOOGL', start='2020-04-27', end='2021-04-27')
+
+fig, ax = plt.subplots()
+
+ax.plot(df['Date'], df['Close'])
+ax.set_xlabel('Date')
+ax.set_ylabel('Closing price (USD)')
+
+plt.xticks(
+    [4, 24, 46, 68, 89, 110, 132, 152, 174, 193, 212, 235],
+    ['May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan 2021', 'Feb', 'Mar', 'April'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-5.png)
+
+`GOOGL` 주가 데이터는 전반적으로 상승하는 추세를 보인다.
+이제 `ADF` 검정을 수행해 본다.  
+
+```python
+GOOGL_ADF_result = adfuller(df['Close'])
+
+print(f'ADF Statistic: {GOOGL_ADF_result[0]}')
+# ADF Statistic: 0.16025048664771271
+print(f'p-value: {GOOGL_ADF_result[1]}')
+# p-value: 0.9699419435913057
+```  
+
+결과적으로 `ADF` 통계값이 큰 음수가 아니고 `p-value` 가 `0.05` 보다 크므로 귀무가설을 채택하고, 시계열이 비정상적이라는 것을 확인할 수 있다. 
+그러므로 변환(차분)을 수행한뒤 다시 `ADF` 검정을 수행해 본다.  
+
+```python
+diff_close = np.diff(df['Close'], n=1)
+
+GOOGL_diff_ADF_result = adfuller(diff_close)
+
+print(f'ADF Statistic: {GOOGL_diff_ADF_result[0]}')
+# ADF Statistic: -5.303439704295232
+print(f'p-value: {GOOGL_diff_ADF_result[1]}')
+# p-value: 5.3865309614546085e-06
+```  
+
+결과적으로 `ADF` 통계값이 큰 음수 이면서 `p-value` 가 `0.05` 보다 작으므로 귀무가설을 기각하고, 시계열이 정상적이라고 판단할 수 있다. 
+이제 `ACF` 함수를 도식화해 자기상관관계가 있는지 확인한다.  
+
+```python
+plot_acf(diff_close, lags=20);
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-6.png)
+
+`ACF` 도식을 보면 지연 0이후에는 큰 자기상관관계는 볼 수 없지만, 
+지연 5와 18이 신뢰 구간 밖으로 조금 벗어난 것을 볼 수 있다. 
+지속적으로 발생하는 현상이 아니기 때문에 이는 우연에 따른 것으로 볼 수 있다. 
+그러므로 차분한 시계열은 자기상관관계가 없다고 볼 수 있다.  
+
+
+### Forecasting Random Walk
+앞서 확률 보행은 무작위로 진행되는 시게열 값이라는 것을 확인했다. 
+이러한 확률 보행 특성을 가진 시계열의 미래 값을 예측하는 것은 매우 어렵다. 
+
+무작위로 변화하는 값을 예측하는 것은 본질적으로는 불가능하다. 
+이는 이상적이지 않기 때문에 사용할 수 있는 방법은 `Baseline Model` 밖에 없다. 
+값에 무작위성이 있기 때문에 이후에 다룰 통계적 모델(`ARIMA`, `SARIMA` 등)도 적용할 수 없다. 
+즉 과거의 값 혹은 평균값, 마지막 값을 미래의 값으로 사용하는 방법 밖에 없다.  
