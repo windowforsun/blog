@@ -321,3 +321,138 @@ plot_acf(diff_close, lags=20);
 이는 이상적이지 않기 때문에 사용할 수 있는 방법은 `Baseline Model` 밖에 없다. 
 값에 무작위성이 있기 때문에 이후에 다룰 통계적 모델(`ARIMA`, `SARIMA` 등)도 적용할 수 없다. 
 즉 과거의 값 혹은 평균값, 마지막 값을 미래의 값으로 사용하는 방법 밖에 없다.  
+
+### Forecasting Long Term
+확률 보행은 앞서 언급한 것과 같이 예측이 어렵지만 소개한 `Baseline Model` 을 사용해 예측해 본다. 
+예제로는 앞서 시뮬레이션한 확률 보행 시계열을 사용하고 전체 1000개 데이터에서 800개를 훈련 세트로 사용하고, 
+나머지 200개를 테스트 세트로 사용해서 향후 200개 값을 예측해 본다.  
+
+우리가 훈련 세트로 사용할 값과 테스트 세트로 사용할 값을 도식화하면 아래와 같다.
+
+```python
+df = pd.DataFrame({'value': random_walk})
+
+train = df[:800]
+test = df[800:]
+
+fig, ax = plt.subplots()
+
+ax.plot(random_walk)
+ax.set_xlabel('Timesteps')
+ax.set_ylabel('Value')
+ax.axvspan(800, 1000, color='#808080', alpha=0.2)
+
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-7.png)
+
+총 3개지의 단순한 방식으로 항후 200개에 대한 예측을 수행해 볼텐데 그 종류는 아래와 같다.  
+
+- 평균 : 훈련 세트의 평균값으로 200개 시간 예측
+- 마지막 값 : 훈련 세트의 마지막 값으로 200개 시간 예측
+- 포류 기법 : 훈련 세트의 첫값과 마지막값의 기울기를 구하고 그 변화량에 따라 200개 시간 예측
+
+먼저 평균으로 예측한 코드는 아래와 같다.  
+
+```python
+mean = np.mean(train.value)
+
+test.loc[:, 'pred_mean'] = mean
+
+test.head()
+#           value	pred_mean
+# 800	-5.876664	-3.677206
+# 801	-6.392708	-3.677206
+# 802	-6.296588	-3.677206
+# 803	-6.758863	-3.677206
+# 804	-7.193359	-3.677206
+```  
+
+마지막 값으로 예측한 코드는 아래와 같다.  
+
+```python
+last_value = train.iloc[-1].value
+
+test.loc[:, 'pred_last'] = last_value
+
+test.head()
+#           value	pred_mean	pred_last
+# 800	-5.876664	-3.677206	-6.814947
+# 801	-6.392708	-3.677206	-6.814947
+# 802	-6.296588	-3.677206	-6.814947
+# 803	-6.758863	-3.677206	-6.814947
+# 804	-7.193359	-3.677206	-6.814947
+
+```  
+
+포류 기법으로 예측한 코드는 아래와 같다.  
+
+```python
+deltaX = 800 - 1
+deltaY = last_value - 0
+
+drift = deltaY / deltaX
+
+x_vals = np.arange(801, 1001, 1)
+
+pred_drift = drift * x_vals
+
+test.loc[:, 'pred_drift'] = pred_drift
+
+test.head()
+#           value	pred_mean	pred_last	pred_drift
+# 800	-5.876664	-3.677206	-6.814947	-6.832006
+# 801	-6.392708	-3.677206	-6.814947	-6.840536
+# 802	-6.296588	-3.677206	-6.814947	-6.849065
+# 803	-6.758863	-3.677206	-6.814947	-6.857594
+# 804	-7.193359	-3.677206	-6.814947	-6.866124
+
+```  
+
+이제 예측된 모든 결과를 테스트 세트에 있는 값과 함께 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(train.value, 'b-')
+ax.plot(test['value'], 'b-')
+ax.plot(test['pred_mean'], 'r-.', label='Mean')
+ax.plot(test['pred_last'], 'g--', label='Last value')
+ax.plot(test['pred_drift'], 'k:', label='Drift')
+
+ax.axvspan(800, 1000, color='#808080', alpha=0.2)
+ax.legend(loc=2)
+
+ax.set_xlabel('Timesteps')
+ax.set_ylabel('Value')
+
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-8.png)
+
+결과를 보면 실제 테스트 세트의 값과의 차가 크다는 것을 알 수 있다. 
+실제로는 갑작스러운 증가를 보이지만 예측 값들은 그 추세를 따라가지 못하는데, 
+이는 확률 보행 시계열의 경우 변화가 완전한 무작위성을 가지고 있기 때문에 예측할 수 없기 때문이다.  
+
+예측의 오차를 수치로 알 수 있도록 평균제곱오차(`MSE`)를 계산하면 아래와 같다. 
+
+```python
+from sklearn.metrics import mean_squared_error
+
+mse_mean = mean_squared_error(test['value'], test['pred_mean'])
+mse_last = mean_squared_error(test['value'], test['pred_last'])
+mse_drift = mean_squared_error(test['value'], test['pred_drift'])
+
+print(mse_mean, mse_last, mse_drift)
+# 326.50277395297474 425.1726033055617 466.2172769077409
+```  
+
+평균제곱오차는 과거 평균으로 예측한 방법이 가장 좋은 것으로 결과를 볼 수 있지만, 
+확률 보행의 최대 값과 비교햇을 떄 300을 넘는 평균제곱오차 값은 아주 큰 오차임을 알 수 있다.  
+
+이러한 확률 보행 시뮬레이션과 실제 예측을 통해 긴 기간의 확률보행을 예측하는 것은 거의 불가능하고 유의하지 않다는 것을 확인 할 수 있다.  
+
