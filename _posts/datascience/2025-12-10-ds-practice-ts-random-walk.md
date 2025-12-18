@@ -456,3 +456,67 @@ print(mse_mean, mse_last, mse_drift)
 
 이러한 확률 보행 시뮬레이션과 실제 예측을 통해 긴 기간의 확률보행을 예측하는 것은 거의 불가능하고 유의하지 않다는 것을 확인 할 수 있다.  
 
+
+### Short Term Forecasting
+이번에는 확률보행을 짧은 기간에 대해서 에측을 수행해 본다. 
+짧은 기간의 예측도 확률보행이기 때문에 단순한 방법으로 밖에 예측할 수 없다. 
+사용할 방법은 바로 다음 시간 단계를 예측하는데, 바로 직전 시간의 값을 사용하는 것이다.  
+이러한 예측 방법은 확률보행의 미래의 값을 항상 과거의 값에 백색소음을 더한 값으로 예측하기 때문에 예측은 백색소음 만큼 벗어나게 될 것이다.  
+
+예측의 구현은 `pandas` 라이브러리의 `shift` 메서드를 사용한다.  
+
+```python
+df_shift = df.shift(periods=1)
+
+df_shift.head()
+#   value
+# 0	NaN
+# 1	0.000000
+# 2	-0.138264
+# 3	0.509424
+# 4	2.032454
+
+```  
+
+이제 이를 실제 값과 함께 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df, 'b-', label='actual')
+ax.plot(df_shift, 'r-.', label='forecast')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Timesteps')
+ax.set_ylabel('Value')
+
+plt.tight_layout()
+```  
+
+
+![그림 1]({{site.baseurl}}/img/datascience/random-walk-9.png)
+
+그래프만 보면 예측결과가 실제 값과 비슷해 보여 완벽한 예측을 한 것으로 볼 수 있다. 
+이제 평균제곱오차(`MSE`)를 계산해 본다. 
+
+```python
+mse_one_step = mean_squared_error(test['value'], df_shift[800:])
+# 0.9256876651440581
+```  
+
+평균제곱오차도 0에 가까운 수로 수치만 보면 매우 성능이 좋은 예측 모델로 볼 수 있다. 
+하지만 이는 이전 시간 단계에서 확인된 실제 값을 다음 시간의 예측값으로 사용만 했을 뿐이다. 
+이로써 확률보행 프로세스를 예측을 해야한다면 장기적인 예측을 수행하는 것보다는 단기적인 에측을 여러번 하는 것이 오히려 더 나은 방법이라는 것을 알 수 있다. 
+예측의 기간이 늘어날 수록 난수의 특성을 가지는 백색소음이 점차 누적되기 때문에 오차가 점점 커지게 되고 예측의 품질이 급격하게 떨어지게 된다.  
+
+결론적으로 확률보행과 같은 무작위 프로세스는 통계적 모델, 딥러닝 모델을 적용하더라도 큰 성능 향상을 기대하긴 어렵다. 
+에측할 수 있는 방법이라고는 우리가 살펴본 단순한 예측 방법에 의존해야 한다.
+
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
