@@ -29,3 +29,61 @@ use_math: true
 만약 `q` 가 크다면 더 오랜 과거의 오차까지 현재 값에 영향을 미친다고 할 수 있고, 
 `q` 가 작다면 최근 오차 항만을 고려한다고 할 수 있다.  
 
+
+### Order of MA Process
+이렇듯 이동평균 과정에서는 `MA(q)` 에서 `q` 를 걸정하는 것이 매우 중요하다.
+`q` 를 적절하게 선택하는 이동평균과정의 차수 식별의 과정은 아래와 같다.
+
+```mermaid
+flowchart TD
+    data_agg[데이터 수집] --> station[정상적-ADF ?]
+    station -->|NO| trans[변환-차분 수행]
+    trans --> station
+    station -->|YES| acf[ACF 도식]
+    acf --> autorelation[자기상관관계 유무 확인]
+    autorelation -->|NO| random(확률 보행 프로세스)
+    autorelation -->|YES| q_value[ACF에서 자기상관관계가 유의하지 않는 지연 q 확인]
+    q_value -->|YES| ma[이동평균 과정]
+    q_value -->|NO| not_ma[이동평균 과정 아님]
+```  
+
+이동평균 과정은 이전 `확률보행`에서 언급했던 것 과 같이 `정상적 시계열` 임을 가정한다.
+그러므로 정상적이 아니라면 차분을 통해 정상적 시계열로 변환해야 한다.
+그리고 나서 `ACF` 를 도식해 유의한 자기상관계수를 찾는다.
+만약 `확률보행` 이라면 지연 0이후 유의한 자기상관계수가 없을 것이다.
+하지만 유의한 계수를 찾았다면, 지연 `q` 이후 갑자기 계수가 유의하지 않게 되는 지연 `q` 를 찾는다.
+이렇게 하면 우리는 `MA(q)` 모델에서 `q` 를 식별할 수 있다.  
+
+이동평균 과정에서 사용할 데이터는 특정 기업의 위젯 판매량 데이터이다.  
+
+```python
+import pandas as pd
+df = pd.read_csv('../data/widget_sales.csv')
+
+df.head()
+#   widget_sales
+# 0	50.496714
+# 1	50.805493
+# 2	51.477758
+# 3	53.542228
+# 4	54.873108
+```  
+
+로드한 데이터를 시계열로 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df['widget_sales'])
+ax.set_xlabel('Time')
+ax.set_ylabel('Widget sales (k$)')
+
+plt.xticks(
+    [0, 30, 57, 87, 116, 145, 175, 204, 234, 264, 293, 323, 352, 382, 409, 439, 468, 498], 
+    ['Jan 2019', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan 2020', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-1.png)
