@@ -87,3 +87,38 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-1.png)
+
+
+그래프를 보았을 때 장기적으로 증가하는 추세를 확인할 수 있다. 
+`MA(q)` 를 식별하기 위한 첫 번째 과정은 `ADF` 테스트로 장상성을 확인해 보는 것이다. 
+
+```python
+ADF_result = adfuller(df['widget_sales'])
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -1.512166206935902
+print(f'p-value: {ADF_result[1]}')
+# p-value: 0.5274845352272619
+```  
+
+`ADF` 통계값이 큰 음수가 아니고, `p-value` 가 0.05 보다 크므로 귀무가설을 기각할 수 없어 정상적이 아닌 시계열임을 확인할 수 있다. 
+정상적 시계열로 만들기 위해 변환을 적용하는데 이번에도 차분을 적용한다.  
+
+```python
+widget_sales_diff = np.diff(df['widget_sales'], n=1)
+
+fig, ax = plt.subplots()
+
+ax.plot(widget_sales_diff)
+ax.set_xlabel('Time')
+ax.set_ylabel('Widget sales - diff (k$)')
+
+plt.xticks(
+    [0, 30, 57, 87, 116, 145, 175, 204, 234, 264, 293, 323, 352, 382, 409, 439, 468, 498],
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', '2020', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-2.png)
