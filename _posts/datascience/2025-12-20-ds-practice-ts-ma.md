@@ -122,3 +122,27 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-2.png)
+
+
+그래프만 보면 정상적 시계열로 보이지만, 차분한 데이터에 대해서 `ADF` 테스트를 통해 다시 확인해 본다. 
+
+```python
+ADF_result = adfuller(widget_sales_diff)
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -10.576657780341957
+print(f'p-value: {ADF_result[1]}')
+# p-value: 7.076922818587346e-19
+```  
+
+`ADF` 통계값이 매우 큰 음수이고, `p-value` 가 0.05 보다 훨씬 작으므로 귀무가설을 기각할 수 있어 정상적 시계열임을 확인할 수 있다. 
+이제 `ACF` 를 도식해 유의한 자기상관계수를 찾아본다.
+
+```python
+plot_acf(widget_sales_diff, lags=30);
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-3.png)
+
