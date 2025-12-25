@@ -146,3 +146,53 @@ plt.tight_layout()
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-3.png)
 
+
+`ACF` 도식을 보면 지연 2까지 유의한 자기상관관계가 있다가 지연 3부터 유의하지 않게 되는 것을 확인할 수 있다. 
+물론 지연 20에서 약간의 유의함이 보이지만 이는 우연으로 볼 수 있다. 
+이는 차수(`q`) 2의 정상적 이동평균 과정임을 의미하기 때문에 이동평균 모델은 `MA(2)` 임을 알 수 있다.  
+
+### Forecasting MA Process
+차수(`q`) 식별 과정을 통해 차수를 2로 식별했으므로 `MA(2)` 모델을 구축할 수 있다. 
+이제 `MA(2)` 모델을 구축하고 예측을 수행한다. 
+이동평균 모델의 성능을 평가하기 위해 베이스라인 모델도 함께 구축한다.  
+
+항상 모델 구축의 첫 단계는 전체 데이터 세트에 대해서 
+훈련 세트와 테스트 세트로 분리하는 것이다. 
+차분한 데이터에 대해서 90% 정도를 훈련 세트로 사용하고 나머지 10% 는 테스트 세트로 사용한다.  
+
+```python
+df_diff = pd.DataFrame({'widget_sales_diff': widget_sales_diff})
+
+train = df_diff[:int(0.9*len(df_diff))]
+test = df_diff[int(0.9*len(df_diff)):]
+
+print(len(train))
+# 449
+print(len(test))
+# 50
+```  
+
+훈련 세트와 테스트 세트로 분리한 데이터에 대해서 원본 데이터와 함께 도식화하면 아래와 같다.  
+
+```python
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True)
+
+ax1.plot(df['widget_sales'])
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Widget sales (k$)')
+ax1.axvspan(450, 500, color='#808080', alpha=0.2)
+
+ax2.plot(df_diff['widget_sales_diff'])
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Widget sales - diff (k$)')
+ax2.axvspan(449, 498, color='#808080', alpha=0.2)
+
+plt.xticks(
+    [0, 30, 57, 87, 116, 145, 175, 204, 234, 264, 293, 323, 352, 382, 409, 439, 468, 498], 
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', '2020', 'Feb', 'Mar', 'Apr', 'May', 'Jun'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-4.png)
