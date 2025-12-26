@@ -196,3 +196,55 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-4.png)
+
+
+구축할 이동평균 모델은 `MA(2)` 이기때문에 한번에 테스트 세트의 수인 50개를 모두 예측할 수는 없다. 
+`MA(2)` 모델은 이전 2개의 오차 항에 대해서 선형적으로 의존하는 만큼 향후에 대해서도 최대 2개씩 예측할 수 있다.  
+
+그러므로 50개의 예측을 위해 `rolling forecast` 방식을 사용한다. 
+`rolling forecast` 방식은 한번에 1개 혹은 2개씩 예측하고, 
+다시 2번째 예측을 위해 훈련 세트의 범위를 예측 개수만큼 늘려가며 향후 예측을 점진적으로 하는 방식이다.  
+
+이동평균 모델의 구축과 예측은 `statsmodels` 패키지의 `SARIMAX` 클래스를 사용한다. 
+`SARIMAX` 는 계절성과 자기화귀과정, 비정상적 시게열, 이동평균과정, 외부 변수들에 대한 모델 구축과 예측으 모두 지원한다. 
+여기서 이동평균에 대한 파라미터만 사용하면 `MA(q)` 모델을 구축하고 예측을 수행할 수 있다.  
+
+아래는 베이스라인으로 사용할 평균, 마지막 값과 이동평균 모델의 예측을 수행하는 `rolling_forecast` 함수의 구현이다.  
+
+```python
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+def rolling_forecast(df: pd.DataFrame, train_len: int, horizon: int, window: int, method: str) -> list:
+    
+    total_len = train_len + horizon
+    
+    if method == 'mean':
+        pred_mean = []
+        
+        for i in range(train_len, total_len, window):
+            mean = np.mean(df[:i].values)
+            pred_mean.extend(mean for _ in range(window))
+
+        return pred_mean
+
+    elif method == 'last':
+        pred_last_value = []
+        
+        for i in range(train_len, total_len, window):
+            last_value = df[:i].iloc[-1].values[0]
+            pred_last_value.extend(last_value for _ in range(window))
+            
+        return pred_last_value
+    
+    elif method == 'MA':
+        pred_MA = []
+        
+        for i in range(train_len, total_len, window):
+            model = SARIMAX(df[:i], order=(0,0,2))
+            res = model.fit(disp=False)
+            predictions = res.get_prediction(0, i + window - 1)
+            oos_pred = predictions.predicted_mean.iloc[-window:]
+            pred_MA.extend(oos_pred)
+            
+        return pred_MA
+```  
