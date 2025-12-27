@@ -248,3 +248,60 @@ def rolling_forecast(df: pd.DataFrame, train_len: int, horizon: int, window: int
             
         return pred_MA
 ```  
+
+위 함수를 사용해서 베이스라인 모델에 대한 예측과 이동평균 모델에 대한 예측을 모두 수행하고, 
+그 결과를 `pred_df` 데이터프레임에 저장한다.  
+
+```python
+pred_df = test.copy()
+
+TRAIN_LEN = len(train)
+HORIZON = len(test)
+WINDOW = 2
+
+pred_mean = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'mean')
+pred_last_value = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'last')
+pred_MA = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'MA')
+
+pred_df['pred_mean'] = pred_mean
+pred_df['pred_last_value'] = pred_last_value
+pred_df['pred_MA'] = pred_MA
+
+pred_df.head()
+#       widget_     sales_diff	pred_mean	pred_last_value	pred_MA
+# 449	-1.170131	0.034319	-1.803658	-1.078833
+# 450	0.580967	0.034319	-1.803658	-0.273309
+# 451	-0.144902	0.032861	0.580967	0.781223
+# 452	-0.096564	0.032861	0.580967	0.234969
+# 453	-0.372334	0.032183	-0.096564	0.168994
+```  
+
+실제 값과 예측한 각 값들을 함께 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df_diff['widget_sales_diff'])
+ax.plot(pred_df['widget_sales_diff'], 'b-', label='actual')
+ax.plot(pred_df['pred_mean'], 'g:', label='mean')
+ax.plot(pred_df['pred_last_value'], 'r-.', label='last')
+ax.plot(pred_df['pred_MA'], 'k--', label='MA(2)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Widget sales - diff (k$)')
+
+ax.axvspan(449, 498, color='#808080', alpha=0.2)
+
+ax.set_xlim(430, 500)
+
+plt.xticks(
+    [439, 468, 498], 
+    ['Apr', 'May', 'Jun'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-5.png)
