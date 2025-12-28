@@ -305,3 +305,30 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-5.png)
+
+
+좀 더 정확한 성능 비교를 위해 각 예측에 대해서 평균제곱오차(`MSE`)를 측정해 본다.  
+
+```python
+from sklearn.metrics import mean_squared_error
+
+mse_mean = mean_squared_error(pred_df['widget_sales_diff'], pred_df['pred_mean'])
+mse_last = mean_squared_error(pred_df['widget_sales_diff'], pred_df['pred_last_value'])
+mse_MA = mean_squared_error(pred_df['widget_sales_diff'], pred_df['pred_MA'])
+fig, ax = plt.subplots()
+
+x = ['mean', 'last_value', 'MA(2)']
+y = [mse_mean, mse_last, mse_MA]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Methods')
+ax.set_ylabel('MSE')
+ax.set_ylim(0, 5)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value+0.25, s=str(round(value, 2)), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-6.png)
