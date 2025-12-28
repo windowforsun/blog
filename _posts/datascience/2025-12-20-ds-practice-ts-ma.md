@@ -332,3 +332,40 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-6.png)
+
+
+`MSE` 평가 결과로 보았을 때 이동평균 모델이 확실히 베이스라인 모델과 비교했을 때 성능적으로 우수함을 알 수 있다.  
+
+지금까지 우리가 사용한 값은 기존 원본 데이터를 차분을 통해 변환한 데이터이다. 
+실제 예측 결과를 사용하기 위해서는 에측 결과를 역변환해 기존 데이터 집합의 규모로 되돌려야 한다. 
+차분한 데이터이기 때문에 역변환은 `cumsum` 을 사용해 누적합을 구하고,
+마지막 훈련 세트의 마지막 값에 더해주면 된다.  
+
+```python
+df['pred_widget_sales'] = pd.Series()
+df['pred_widget_sales'][450:] = df['widget_sales'].iloc[450] + pred_df['pred_MA'].cumsum()
+
+fig, ax = plt.subplots()
+
+ax.plot(df['widget_sales'], 'b-', label='actual')
+ax.plot(df['pred_widget_sales'], 'k--', label='MA(2)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Widget sales (K$)')
+
+ax.axvspan(450, 500, color='#808080', alpha=0.2)
+
+ax.set_xlim(400, 500)
+
+plt.xticks(
+    [409, 439, 468, 498],
+    ['Mar', 'Apr', 'May', 'Jun'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ma-7.png)
+
