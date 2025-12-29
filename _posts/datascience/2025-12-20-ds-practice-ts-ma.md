@@ -369,3 +369,27 @@ plt.tight_layout()
 
 ![그림 1]({{site.baseurl}}/img/datascience/ma-7.png)
 
+
+원본 데이터의 규모로 되돌리고 예측값과 실측값을 비교했을 때 전체적인 추세는 따르는 경향은 보이지만, 
+최저점과 최고점에 대한 오차가 큰것을 확인할 수 있다. 
+예측과 실제 값의 절대 차이를 확인하기 위해 평균절대오차(`MAE`) 를 측정해 본다.  
+
+```python
+from sklearn.metrics import mean_absolute_error
+
+mae_MA_undiff = mean_absolute_error(df['widget_sales'].iloc[450:], df['pred_widget_sales'].iloc[450:])
+
+print(mae_MA_undiff)
+# 2.324470924412907
+```  
+
+원본 데이터의 단위가 1천 달러이기 때문에 평균적으로 2천달러 정도의 오차가 발생한 것으로 볼 수 있다.  
+
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
+
