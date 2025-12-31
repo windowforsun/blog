@@ -8,7 +8,7 @@ excerpt: '이동평균(MA, Moving Average) 프로세스 모델링과 예측에 �
 author: "window_for_sun"
 header-style: text
 categories :
-  - AI/ML
+  - Data Science
 tags:
     - Practice
     - Data Science
