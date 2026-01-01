@@ -49,3 +49,67 @@ use_math: true
 
 - `fan-out` : `begin` 노드에서 `parallel-1`, `parallel-2` 노드로 분기
 - `fan-in` : `parallel-1`, `parallel-2` 노드에서 `agg` 노드로 결합
+
+```python
+from typing import Annotated, Any
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from IPython.display import Image, display
+
+class State(TypedDict):
+  aggregate: Annotated[list, add_messages]
+
+class SimpleNode:
+  def __init__(self, node_secret: str):
+    self._value = node_secret
+
+  # 호출시 상태 업데이트
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']}")
+    return {"aggregate": [self._value]}
+
+
+graph_builder = StateGraph(State)
+
+# 노드 begin 부터 parallel_1, parallel_2, agg 노드 생성 및 할당
+graph_builder.add_node("begin", SimpleNode("I am the begin node"))
+graph_builder.add_node("parallel_1", SimpleNode("I am the parallel_1 node"))
+graph_builder.add_node("parallel_2", SimpleNode("I am the parallel_2 node"))
+graph_builder.add_node("agg", SimpleNode("I am the agg node"))
+
+# 노드 연결
+graph_builder.add_edge(START, "begin")
+graph_builder.add_edge("begin", "parallel_1")
+graph_builder.add_edge("begin", "parallel_2")
+graph_builder.add_edge("parallel_1", "agg")
+graph_builder.add_edge("parallel_2", "agg")
+graph_builder.add_edge("agg", END)
+
+# 그래프 컴파일
+agent = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/parallel-node-1.png)
+
+
+그래프를 실행하면 `reducer` 를 통해 각 노드에 추가된 값들이 차례대로 누적되는 것을 확인할 수 있다.  
+
+```python
+# 그래프 실행
+agent.invoke({"aggregate": []}, {"configurable" : {"thread_id": "1"}})
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='abc8b55f-0682-46b8-af9f-19fdefe326bf')]
+# Adding I am the parallel_2 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='abc8b55f-0682-46b8-af9f-19fdefe326bf')]
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='abc8b55f-0682-46b8-af9f-19fdefe326bf'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a118a146-2d64-405c-aa15-ace135c13f3d'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='9020c811-e1e2-4cf5-a4ff-c0f6187846f7')]
+# {'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='abc8b55f-0682-46b8-af9f-19fdefe326bf'),
+#                HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a118a146-2d64-405c-aa15-ace135c13f3d'),
+#                HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='9020c811-e1e2-4cf5-a4ff-c0f6187846f7'),
+#                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='5ad5f7eb-ee1e-4f2d-8179-102747fe27bf')]}
+```  
