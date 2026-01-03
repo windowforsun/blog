@@ -113,3 +113,23 @@ agent.invoke({"aggregate": []}, {"configurable" : {"thread_id": "1"}})
 #                HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='9020c811-e1e2-4cf5-a4ff-c0f6187846f7'),
 #                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='5ad5f7eb-ee1e-4f2d-8179-102747fe27bf')]}
 ```  
+
+### Error when parallel
+`LangGraph` 는 여러 노드가 동시에 실행되는 `super-step` 구조를 사용한다. 
+`super-step` 이란 병렬로 분기된 여러 노드가 한 번에 처리되는 하나의 프로세스 단계를 의미한다. 
+이는 `LangGraph` 의 실행 모델에서 사용되는 용어로, 그래프 내 여러 노드가 동시에 병렬로 실행되는 하나의 논리적 치리 단계를 의미한다. 
+한 번에 여러 노드가 병렬로 실행될 수 있는데, 이들 병렬 실행의 `한 묶음`이 바로 하나의 `super-step` 인 것이다. 
+트랜잭션적 처리로 `super-step` 내에서 실행되는 모든 노드의 작업이 모두 성공해야 해당 단계의 상태 업데이트가 이뤄진다. 
+병렬 분기 중 하나라도 오류가 발생하면 전체 `super-step` 이 롤백 되어, 이전 상태로 유지된다.  
+
+`API` 호출이나 `LLM`, 데이터베이스 등 외부 리소스와의 상호작용이 포함된 노드에서 오류가 발생할 수 있다. 
+`LangGrpah` 는 이런 오류를 처리하기 위해 아래 2가지 방식으로 예외 처리를 지원한다. 
+
+1. 노드 내부에서 직접 예외 처리(`Python` 코드 사용)
+  - 각 노드 함수 내에서 `try-except` 블록을 사용해 예외를 처리할 수 있다. 
+  - 필요하다면 오류 메시지나 기본값을 반환하여 워크플로우가 계속 진행되도록 할 수 있다. 
+2. [retry_policy](https://langchain-ai.github.io/langgraph/reference/types/#langgraph.types.RetryPolicy) 사용
+  - 노드 추가 시, `retry_policy` 를 지정해 특정 예외 발생 시 해당 노드만 자동으로 재시도할 수 있다. 
+  - 이때 실패한 분기만 재실행되머, 이미 성공한 다른 분기는 불필요하게 다시 실행되지 않는다.  
+
+예제에서는 위 2가지 방법 중 `retry_policy` 를 사용해 예외를 처리하는 방법에 대해 알아본다.  
