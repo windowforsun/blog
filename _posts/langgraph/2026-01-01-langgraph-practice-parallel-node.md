@@ -205,3 +205,61 @@ agent.invoke({"aggregate": []}, {"configurable" : {"thread_id": "1"}})
 #                HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44'),
 #                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='19884d28-b3e4-4157-994f-aa7b624ae896')]}
 ```  
+
+### Parallel Fan-out/Fan-in with Intermediate Steps
+`fan-out`, `fan-in` 구조를 사용해 병렬 처리를 구현할 때, 
+각 중간에 여러 단계가 있는 경우 구조와 구현에 예시에 대해 알아본다.  
+
+```python
+# 추가 단계가 있는 병렬 노드의 fan-out 과 fan-in
+
+from typing import Annotated, Any
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.types import RetryPolicy
+import random
+from IPython.display import Image, display
+
+thread_id = random.randrange(1, 99999999999)
+class State(TypedDict):
+  aggregate: Annotated[list, add_messages]
+
+class SimpleNode:
+  def __init__(self, node_secret: str):
+    self._value = node_secret
+
+  # 호출시 상태 업데이트
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']}")
+
+    return {"aggregate": [self._value]}
+
+
+graph_builder = StateGraph(State)
+
+# 노드 begin 부터 parallel_1, parallel_2, agg 노드 생성 및 할당
+graph_builder.add_node("begin", SimpleNode("I am the begin node"))
+graph_builder.add_node("parallel_1", SimpleNode("I am the parallel_1 node"))
+graph_builder.add_node("parallel_1_a", SimpleNode("I am the parallel_1_a node"))
+graph_builder.add_node("parallel_2", SimpleNode("I am the parallel_2 node"))
+graph_builder.add_node("agg", SimpleNode("I am the agg node"))
+
+# 노드 연결
+graph_builder.add_edge(START, "begin")
+graph_builder.add_edge("begin", "parallel_1")
+graph_builder.add_edge("begin", "parallel_2")
+graph_builder.add_edge("parallel_1", "parallel_1_a")
+# 2개 노드를 묶어서 엣지 추가
+graph_builder.add_edge(["parallel_1_a", "parallel_2"], "agg")
+graph_builder.add_edge("agg", END)
+
+# 그래프 컴파일
+agent = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
