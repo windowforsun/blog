@@ -133,3 +133,75 @@ agent.invoke({"aggregate": []}, {"configurable" : {"thread_id": "1"}})
   - 이때 실패한 분기만 재실행되머, 이미 성공한 다른 분기는 불필요하게 다시 실행되지 않는다.  
 
 예제에서는 위 2가지 방법 중 `retry_policy` 를 사용해 예외를 처리하는 방법에 대해 알아본다.  
+
+```python
+# 병렬처리 중 예외 발생시 대응
+
+from typing import Annotated, Any
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.types import RetryPolicy
+import random
+
+thread_id = random.randrange(1, 99999999999)
+class State(TypedDict):
+  aggregate: Annotated[list, add_messages]
+
+class SimpleNode:
+  def __init__(self, node_secret: str):
+    self._value = node_secret
+
+  # 호출시 상태 업데이트
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']}")
+
+    if random.randrange(1, 10) % 2 == 0:
+      print(f"Error {self._value}")
+      raise Exception("예외 발생")
+
+    return {"aggregate": [self._value]}
+
+
+graph_builder = StateGraph(State)
+
+# 노드 begin 부터 parallel_1, parallel_2, agg 노드 생성 및 할당
+graph_builder.add_node("begin", SimpleNode("I am the begin node"))
+graph_builder.add_node("parallel_1", SimpleNode("I am the parallel_1 node"), retry_policy=RetryPolicy(max_attempts=5))
+graph_builder.add_node("parallel_2", SimpleNode("I am the parallel_2 node"), retry_policy=RetryPolicy(max_attempts=5))
+graph_builder.add_node("agg", SimpleNode("I am the agg node"), retry_policy=RetryPolicy(max_attempts=5))
+
+# 노드 연결
+graph_builder.add_edge(START, "begin")
+graph_builder.add_edge("begin", "parallel_1")
+graph_builder.add_edge("begin", "parallel_2")
+graph_builder.add_edge("parallel_1", "agg")
+graph_builder.add_edge("parallel_2", "agg")
+graph_builder.add_edge("agg", END)
+
+# 그래프 컴파일
+agent = graph_builder.compile()
+```  
+
+특정 확률로 예외가 발생하도록 하고 그래프를 실행하면 예외가 발생한 노드에서만 재시도가 이뤄지는 것을 확인할 수 있다.  
+
+```python
+# 예외 처리 그래프 실행
+agent.invoke({"aggregate": []}, {"configurable" : {"thread_id": "1"}})
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068')]
+# Adding I am the parallel_2 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068')]
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44')]
+# Error I am the agg node
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44')]
+# Error I am the agg node
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44')]
+# Error I am the agg node
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44')]
+# Error I am the agg node
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44')]
+# {'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='cc44fa8a-fb8e-4211-a2b9-76310d814068'),
+#                HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a781af5a-d01f-438a-9d67-20053ee2efd1'),
+#                HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='bcc5ed9d-6364-419d-b822-a1ec327fed44'),
+#                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='19884d28-b3e4-4157-994f-aa7b624ae896')]}
+```  
