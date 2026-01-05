@@ -263,3 +263,22 @@ try:
 except Exception:
     pass
 ```
+
+![그림 1]({{site.baseurl}}/img/langgraph/parallel-node-2.png)
+
+
+구현된 그래프를 실행하면 아래와 같이 순차적으로 실행된 결과가 나온다. 
+
+
+```python
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='a7aba457-4042-4c36-9cfa-94ccc56c4dfa')]
+# Adding I am the parallel_2 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='a7aba457-4042-4c36-9cfa-94ccc56c4dfa')]
+# Adding I am the parallel_1_a node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='a7aba457-4042-4c36-9cfa-94ccc56c4dfa'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='574623bf-55da-4e66-880f-06dbc8b68f04'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='f6b0aec9-9426-4ca1-858e-651272704500')]
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='a7aba457-4042-4c36-9cfa-94ccc56c4dfa'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='574623bf-55da-4e66-880f-06dbc8b68f04'), HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='f6b0aec9-9426-4ca1-858e-651272704500'), HumanMessage(content='I am the parallel_1_a node', additional_kwargs={}, response_metadata={}, id='c3747f8a-e0e8-448f-b7f3-d8a3b315927f')]
+# {'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='a7aba457-4042-4c36-9cfa-94ccc56c4dfa'),
+#   HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='574623bf-55da-4e66-880f-06dbc8b68f04'),
+#   HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='f6b0aec9-9426-4ca1-858e-651272704500'),
+#   HumanMessage(content='I am the parallel_1_a node', additional_kwargs={}, response_metadata={}, id='c3747f8a-e0e8-448f-b7f3-d8a3b315927f'),
+#   HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='6ca503e9-f7b5-46a2-966d-df74d574d4f6')]}
+```  
