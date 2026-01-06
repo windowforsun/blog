@@ -282,3 +282,72 @@ except Exception:
 #   HumanMessage(content='I am the parallel_1_a node', additional_kwargs={}, response_metadata={}, id='c3747f8a-e0e8-448f-b7f3-d8a3b315927f'),
 #   HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='6ca503e9-f7b5-46a2-966d-df74d574d4f6')]}
 ```  
+
+### Parallel with Conditional Branching
+병렬로 여러 노드를 실행할 때, 
+매번 모든 노드를 병렬로 실행하는 것이 아니라 조건에 따라 노드 조합을 병렬로 실행하도록 구성할 수 있다.  
+
+이는 `add_conditional_edges` 를 사용해 분기 로직 등 자세한 내용을 직접 구현해 추가하는 방식이다. 
+예제에서는 상태에 `which` 라는 필드를 추가하고 그래프 실행시 `which` 에 `parallel_1,parallel_2` 와 같이 `,` 로 구분하여 병렬로 실행할 노드 이름을 전달한다.  
+
+```python
+# 조건부 분기(conditional branching)
+
+from typing import Annotated, Any, Sequence
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from IPython.display import Image, display
+
+class State(TypedDict):
+  which: str
+  aggregate: Annotated[list, add_messages]
+
+class SimpleNode:
+  def __init__(self, node_secret: str):
+    self._value = node_secret
+
+  # 호출시 상태 업데이트
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']}")
+    return {"aggregate": [self._value]}
+
+
+graph_builder = StateGraph(State)
+
+# 노드 begin 부터 parallel_1, parallel_2, agg 노드 생성 및 할당
+graph_builder.add_node("begin", SimpleNode("I am the begin node"))
+graph_builder.add_node("parallel_1", SimpleNode("I am the parallel_1 node"))
+graph_builder.add_node("parallel_2", SimpleNode("I am the parallel_2 node"))
+graph_builder.add_node("parallel_3", SimpleNode("I am the parallel_3 node"))
+graph_builder.add_node("agg", SimpleNode("I am the agg node"))
+
+# 상태의 which` 값에 따른 조건부 라우팅 경로 결정 함수
+def route(state: State) -> Sequence[str]:
+  return [item.strip() for item in state["which"].split(',')]
+
+
+# 노드 연결
+graph_builder.add_edge(START, "begin")
+parallel_nodes = ["parallel_1", "parallel_2", "parallel_3"]
+
+graph_builder.add_conditional_edges(
+    "begin",
+    route,
+    parallel_nodes
+)
+
+for node in parallel_nodes:
+  graph_builder.add_edge(node, "agg")
+
+graph_builder.add_edge("agg", END)
+
+# 그래프 컴파일
+agent = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
