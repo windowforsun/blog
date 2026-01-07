@@ -351,3 +351,22 @@ try:
 except Exception:
     pass
 ```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/parallel-node-3.png)
+
+
+구성된 그래프를 실행하면 3개의 병렬 노드 중 `which` 에 전달한 노드들만 병렬로 수행되는 것을 확인할 수 있다.  
+
+```python
+# 그래프 실행
+agent.invoke({"aggregate": [], "which" : "parallel_1,parallel_3"}, {"configurable" : {"thread_id": "1"}})
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='f8e56bd4-75b2-4c8e-a899-6e26b5e6b7cf')]
+# Adding I am the parallel_3 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='f8e56bd4-75b2-4c8e-a899-6e26b5e6b7cf')]
+# Adding I am the agg node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='f8e56bd4-75b2-4c8e-a899-6e26b5e6b7cf'), HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a24a58b7-da2c-44dd-a846-f3674a29f0c3'), HumanMessage(content='I am the parallel_3 node', additional_kwargs={}, response_metadata={}, id='b8139be4-e875-4c76-b218-d125942b2e0f')]
+# {'which': 'parallel_1,parallel_3',
+#  'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='f8e56bd4-75b2-4c8e-a899-6e26b5e6b7cf'),
+#                HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='a24a58b7-da2c-44dd-a846-f3674a29f0c3'),
+#                HumanMessage(content='I am the parallel_3 node', additional_kwargs={}, response_metadata={}, id='b8139be4-e875-4c76-b218-d125942b2e0f'),
+#                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='8d179217-790e-4ed5-99cc-eb85471f6528')]}
+```  
