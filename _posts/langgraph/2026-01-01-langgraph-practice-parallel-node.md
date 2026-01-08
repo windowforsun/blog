@@ -370,3 +370,120 @@ agent.invoke({"aggregate": [], "which" : "parallel_1,parallel_3"}, {"configurabl
 #                HumanMessage(content='I am the parallel_3 node', additional_kwargs={}, response_metadata={}, id='b8139be4-e875-4c76-b218-d125942b2e0f'),
 #                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='8d179217-790e-4ed5-99cc-eb85471f6528')]}
 ```  
+
+### Confidence-based Fan-out Ranking
+앞서 설명한 것과 같이, 병롤 노드들은 하나의 `super-step` 으로 실행하고, 완료된 다음에 순차적으로 상태에 적용된다.
+만약 병렬 `super-step` 에서 특정 기준으로 업데이트 순서가 필요한 경우, 
+별도의 집계 로직을 만들어 `edge` 로 등록해 사용할 수 있다.  
+
+아래 예제는 `reliability` 라는 필드를 우선순위 값으로 사용해 병렬 노드의 결과를 병합하는 예시이다.  
+
+```python
+# fan-out 값의 신뢰도에 따른 정렬
+
+from typing import Annotated, Sequence
+from typing_extensions import TypedDict
+from langgraph.graph import StateGraph
+from langgraph.graph.message import add_messages
+from IPython.display import Image, display
+
+# 팬아웃 값들의 병합 로직 구현, 빈 리스트 처리 및 리스트 연결 수행
+def reduce_fanouts(left, right):
+  if left is None:
+    left = []
+
+  if not right:
+    return []
+
+  return left + right
+
+# 상태 관리를 위한 타입 정의, 집계 및 팬아웃 값 저장 구조 설정
+class State(TypedDict):
+  aggregate: Annotated[list, add_messages]
+  fanout_values: Annotated[list, reduce_fanouts]
+  which: str
+
+
+# 상태의 which` 값에 따른 조건부 라우팅 경로 결정 함수
+def route(state: State) -> Sequence[str]:
+  return [item.strip() for item in state["which"].split(',')]
+
+
+class SimpleNode:
+  def __init__(self, node_secret: str):
+    self._value = node_secret
+
+  # 호출시 상태 업데이트
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']}")
+    return {"aggregate": [self._value]}
+
+# reliability 값을 가진 병렬 노드 클래스 정의
+class ParallelNode:
+  def __init__(
+      self,
+      node_secret: str,
+      reliability: float
+  ):
+    self._value = node_secret
+    self._reliability = reliability
+
+  def __call__(self, state: State) -> Any:
+    print(f"Adding {self._value} to {state['aggregate']} in parallel.")
+
+    return {
+        "fanout_values": [
+            {
+                "value" : [self._value],
+                "reliability" : self._reliability
+            }
+        ]
+    }
+
+
+# 팬아웃 값들을 신뢰도 기준으로 정렬 및 집계
+def agg_fanout_values(state: State) -> Any:
+  ranked_values = sorted(
+      state["fanout_values"], key=lambda x: x["reliability"], reverse=True
+  )
+
+  print(f"Ranked values: {ranked_values}")
+
+  return {
+      "aggregate" : [x["value"][0] for x in ranked_values] + ["I am the agg node"],
+      "fanout_values": []
+  }
+
+graph_builder = StateGraph(State)
+graph_builder.add_node("begin", SimpleNode("I am the begin node"))
+graph_builder.add_node("parallel_1", ParallelNode("I am the parallel_1 node", reliability=0.5))
+graph_builder.add_node("parallel_2", ParallelNode("I am the parallel_2 node", reliability=0.9))
+graph_builder.add_node("parallel_3", ParallelNode("I am the parallel_3 node", reliability=0.7))
+
+# 집계 노드 추가
+graph_builder.add_node("agg", agg_fanout_values)
+
+# 병렬 노드 조건부 분기 추가
+parallel_nodes = ["parallel_1", "parallel_2", "parallel_3"]
+graph_builder.add_conditional_edges(
+    "begin",
+    route,
+    parallel_nodes
+)
+
+
+# 엣지 추가
+graph_builder.add_edge(START, "begin")
+for node in parallel_nodes:
+  graph_builder.add_edge(node, "agg")
+graph_builder.add_edge("agg", END)
+
+# 그래프 컴파일
+agent = graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(agent.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
