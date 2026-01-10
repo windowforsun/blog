@@ -487,3 +487,58 @@ try:
 except Exception:
     pass
 ```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/parallel-node-4.png)
+
+
+각 병렬 노드의 `reliability` 우선순위는 아래와 같다.  
+
+- `parallel_1` : 0.5
+- `parallel_2` : 0.9
+- `parallel_3` : 0.7
+
+`parallel_1` 과 `parallel_3` 를 실행하면 아래와 같이 우선순위가 높은 `parallel_3` 의 결과가 먼저 위치한다.  
+
+```python
+# 그래프 실행
+agent.invoke({"aggregate": [], "which" : "parallel_1,parallel_3", "fanout_values": []}, {"configurable" : {"thread_id": "1"}})
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='5fbfcee3-0547-4dd5-8bea-fef2481938e8')] in parallel.
+# Adding I am the parallel_3 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='5fbfcee3-0547-4dd5-8bea-fef2481938e8')] in parallel.
+# Ranked values: [{'value': ['I am the parallel_3 node'], 'reliability': 0.7}, {'value': ['I am the parallel_1 node'], 'reliability': 0.5}]
+# {'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='5fbfcee3-0547-4dd5-8bea-fef2481938e8'),
+#                HumanMessage(content='I am the parallel_3 node', additional_kwargs={}, response_metadata={}, id='a79781c6-fc2d-4d33-b9ac-1012953644d4'),
+#                HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='495161a2-04a0-4f83-af37-a6c913bd7aed'),
+#                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='8ff22a7e-993c-4892-af73-2d204be1ff65')],
+#  'fanout_values': [],
+#  'which': 'parallel_1,parallel_3'}
+```  
+
+모든 병렬 노드를 수행하면 `parallel_2`, `parallel_3`, `parallel_1` 순으로 최종 결과가 집계된 것을 확인할 수 있다.  
+
+```python
+# 그래프 실행
+agent.invoke({"aggregate": [], "which" : "parallel_3,parallel_2,parallel_1", "fanout_values": []}, {"configurable" : {"thread_id": "2"}})
+# Adding I am the begin node to []
+# Adding I am the parallel_1 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='28f5555c-a789-497d-9d58-bbc7d0e32e3c')] in parallel.
+# Adding I am the parallel_2 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='28f5555c-a789-497d-9d58-bbc7d0e32e3c')] in parallel.
+# Adding I am the parallel_3 node to [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='5fbfcee3-0547-4dd5-8bea-fef2481938e8')] in parallel.
+# Ranked values: [{'value': ['I am the parallel_2 node'], 'reliability': 0.9}, {'value': ['I am the parallel_3 node'], 'reliability': 0.7}, {'value': ['I am the parallel_1 node'], 'reliability': 0.5}]
+# {'aggregate': [HumanMessage(content='I am the begin node', additional_kwargs={}, response_metadata={}, id='28f5555c-a789-497d-9d58-bbc7d0e32e3c'),
+#                HumanMessage(content='I am the parallel_2 node', additional_kwargs={}, response_metadata={}, id='1a00a136-336b-4976-8caa-f32283800599'),
+#                HumanMessage(content='I am the parallel_3 node', additional_kwargs={}, response_metadata={}, id='a79781c6-fc2d-4d33-b9ac-1012953644d4'),
+#                HumanMessage(content='I am the parallel_1 node', additional_kwargs={}, response_metadata={}, id='49c4b278-6821-4be4-b7b8-aac2a822d9a5'),
+#                HumanMessage(content='I am the agg node', additional_kwargs={}, response_metadata={}, id='599692d6-03e0-4526-912f-f6c8313a56d8')],
+#  'fanout_values': [],
+#  'which': 'parallel_3,parallel_2,parallel_1'}
+```  
+
+
+
+---  
+## Reference
+[How to create branches for parallel node execution](https://langchain-ai.github.io/langgraphjs/how-tos/branching/)  
+[super-step](https://langchain-ai.github.io/langgraphjs/concepts/low_level/#graphs)  
+[Add retry policies](https://langchain-ai.github.io/langgraph/how-tos/graph-api/?h=retry_policy#add-runtime-configuration)  
+[Parallel Node](https://wikidocs.net/265766)  
+
