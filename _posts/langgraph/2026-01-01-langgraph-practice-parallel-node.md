@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph Agent Memory and Stream"
+title: "[LangGraph] LangGraph Parallel Node"
 header:
   overlay_image: /img/langchain-bg-2.jpg
-excerpt: ''
+excerpt: 'LangGraph 에서 노드를 동시에 실행할 수 있는 Parallel Node 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,9 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - Parallel Node
+    - LLM
+    - Python
 toc: true
 use_math: true
 ---  
