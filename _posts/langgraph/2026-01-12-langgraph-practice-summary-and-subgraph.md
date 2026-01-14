@@ -315,3 +315,65 @@ execute_graph_and_print(config, "내 이름과 직업을 뭐라고 알려줬지 
   - 위 함수는 두 그래프 간의 상태 변환 역할을 반당한다. 
   - 이 패턴은 레거시 시스템과 통합, 서로 다른 도메인 간 통합, 서브그래프 전 후 검증/정규화, 보안상 이유로 필터링 등에 유용하다. 
 
+
+### Shared Schema Pattern
+상위 그래프와 하위 그래프간 공통된 상태 키를 활용하여 데이터를 주고받는 것은 `LangGraph` 에서 가장 일반적이면서 호율적인 통신 패턴이다. 
+`Multi-Agent Architecture` 시스템을 구축할 때 이 패턴이 특히 유용한데, 
+여러 `AI` 에이전트들이 대화 흐름을 유지하면서 협력하기 위해 주로 공유된 `messages` 키를 통해 상호작용한다. 
+이러한 공유 메시징 채널을 통해 각 에이전트는 이전 대화 맥락을 이해하고 적절한 응답을 생성할 수 있다.  
+
+하위 그래프가 상위 그래프와 동일한 상태 스키마 구조를 사용하는 경우, 다음과 같은 간소화 통합 프로세스를 따를 수 있다.  
+
+- 서브그래프 정의 및 컴파일
+  - 독립적인 워크플로우로 서브그래프를 설계한다. 
+  - 서브그래프의 노드와 엣지를 정의한 후 컴파일하여 실행 가능한 형태로 변환한다. 
+- 상위 그래프와 통합
+  - 상위 그래프의 워크플로우를 구성할 때 `.add_node()` 메서드를 사용한다. 
+  - 컴파일된 서브그래프 객체를 노드의 실행 함수로 직접 전달한다.  
+
+이헌 공유 스키마를 사용하는 경우 아래와 같은 장점들이 있다. 
+
+- 간단한 구현 : 복잡한 상태 변환 로직이 불필요하다. 
+- 높은 성능 : 직접 통합으로 인한 최소한의 오버헤드
+- 타입 안전성 : 공유 스키마로 인한 컴파일 타임 검증
+- 디버깅 용이성 : 단일 상태 구조로 인한 명확한 데이터 흐름
+
+먼저 아래와 같이 서브그래프를 먼저 정의하고 컴파일한다.  
+
+```python
+# Case 1: 스키마 키를 공유하는 경우
+
+from langgraph.graph import START, END, StateGraph
+from typing import TypedDict
+from IPython.display import Image, display
+
+# 서브그래프 상태 정의 name 만 부모 그래프와 공유
+class ChildState(TypedDict):
+  share_key: str
+  child_key: str
+
+# 서브그래프 전용 child_key 의 초기값만 설정
+def subgraph_node_1(state: ChildState):
+  return {"child_key" : "child"}
+
+# 서브그래프 전용 child_key 과 공유 share_key 을 결합해 새로운 상태 생성
+def subgraph_node_2(state: ChildState):
+  return {"share_key": f'{state["share_key"]}-{state["child_key"]}'}
+
+# 서브그래프 정의
+subgraph_builder = StateGraph(ChildState)
+subgraph_builder.add_node(subgraph_node_1)
+subgraph_builder.add_node(subgraph_node_2)
+subgraph_builder.add_edge(START, "subgraph_node_1")
+subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+subgraph = subgraph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(subgraph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-2.png)
+
