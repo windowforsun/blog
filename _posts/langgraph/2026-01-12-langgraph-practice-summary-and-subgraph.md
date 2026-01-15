@@ -377,3 +377,36 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-2.png)
 
+
+그리고 부모 그래프를 정의하며 미리 컴파일된 서브그래프의 객체르 부모 그래프의 노드로 추가한다.  
+
+```python
+# 부모 그래프 정의
+
+# 부모 그래프 상태 정의 name 키 공유
+class ParentState(TypedDict):
+  share_key: str
+  parent_key: str
+
+# 상태의 name 값을 사용해 새로운 값 생성
+def node_1(state: ParentState):
+  return {"share_key": f'{state["share_key"]}-{state["parent_key"]}'}
+
+parent_graph_builder = StateGraph(ParentState)
+parent_graph_builder.add_node("node_1", node_1)
+# 컴파일된 서브그래프를 노드로 추가
+parent_graph_builder.add_node("node_sub", subgraph)
+parent_graph_builder.add_edge(START, "node_1")
+parent_graph_builder.add_edge("node_1", "node_sub")
+parent_graph_builder.add_edge("node_sub", END)
+parent_graph = parent_graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-3.png)
+
