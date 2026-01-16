@@ -410,3 +410,30 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-3.png)
 
+
+부모 그래프에 각 부모 상태값을 넣어 호출하면 아래와 같이 서브그래프의 호출 결과까지 포함된 것을 확인할 수 있다.  
+
+```python
+# 부모 그래프 실행
+
+for chunk in parent_graph.stream({"share_key": "share", "parent_key": "parent"}):
+  print(chunk)
+
+# {'node_1': {'share_key': 'share-parent'}}
+# {'node_sub': {'share_key': 'share-parent-child'}}
+```  
+
+호출에서 서브그래프의 출력까지 모두 확인하려면 `subgraphs=True` 로 지정하면 된다.  
+
+```python
+# 서브그래프의 출력까지 모두 확인하기
+
+for chunk in parent_graph.stream({"share_key": "share", "parent_key": "parent"}, subgraphs=True):
+  print(chunk)
+
+# ((), {'node_1': {'share_key': 'share-parent'}})
+# (('node_sub:7bbd2ea0-a28f-1eec-6d1c-078bda76afc9',), {'subgraph_node_1': {'child_key': 'child'}})
+# (('node_sub:7bbd2ea0-a28f-1eec-6d1c-078bda76afc9',), {'subgraph_node_2': {'share_key': 'share-parent-child'}})
+# ((), {'node_sub': {'share_key': 'share-parent-child'}})
+```  
+
