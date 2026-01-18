@@ -517,3 +517,98 @@ except Exception:
 ```  
 
 ![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-4.png)
+
+
+부모 그래프를 실행하면 하위 그래프의 결과까지 모두 포함된 것을 확인할 수 있다.  
+
+```python
+# 서브그래프의 출력까지 모두 확인하기
+
+for chunk in parent_graph.stream({"parent_key": "parent"}, subgraphs=True):
+  print(chunk)
+# ((), {'node_1': {'parent_key': 'node_1-parent'}})
+# (('node_sub:e367f7fa-3f18-1d4a-6a01-83e23741178f',), {'subgraph_node_1': {'child_key': 'sub_node_1-node_1-parent'}})
+# (('node_sub:e367f7fa-3f18-1d4a-6a01-83e23741178f',), {'subgraph_node_2': {'child_key': 'sub_node_2-sub_node_1-node_1-parent'}})
+# ((), {'node_sub': {'result': 'sub_node_2-sub_node_1-node_1-parent'}})
+```  
+
+### Appendix: GrandChild Graph
+추가 예제로 더 깊은 하위 그래프가 있는 경우를 살펴본다. 
+각 그래프간 공유되는 키는 없고 모든 통신에서 변환 함수를 사용한다. 
+이를 위해 아래와 같은 구성으로 진행한다.  
+
+- `Parent Graph` : 실제 사용자가 대화하는 가장 상위 그래프
+- `Sub Graph` : `Parent Graph` 가 호출하는 하위 그래프
+- `Sub Sub Graph` : `Sub Graph` 가 호출하는 하위 그래프
+
+아래는 `Sub Sub Graph` 의 구현이다.  
+
+```python
+# subsubgrpah 정의
+
+from typing_extensions import TypedDict
+from langgraph.graph.state import StateGraph, START, END
+from IPython.display import Image, display
+
+class SubSubState(TypedDict):
+  subsub_key: str
+
+def subsub_node(state: SubSubState) -> SubSubState:
+  return {"subsub_key": f"subsub_{state['subsub_key']}"}
+
+subsubgraph_builder = StateGraph(SubSubState)
+subsubgraph_builder.add_node(subsub_node)
+subsubgraph_builder.add_edge(START, "subsub_node")
+subsubgraph_builder.add_edge("subsub_node", END)
+subsubgraph = subsubgraph_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(subsubgraph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-5.png)
+
+
+```python
+# susubgraph 호출 테스트
+
+for chunk in subsubgraph.stream({"subsub_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# ((), {'subsub_node': {'subsub_key': 'subsub_Hi'}})
+```  
+
+다음은 `Sub Graph` 의 구현이다.  
+
+```python
+# subgraph 정의
+
+class SubState(TypedDict):
+  sub_key: str
+
+# 손자 그래프 호출 및 상태 변환 함수, 자식 상태를 입력받아 변환된 자식 상태 반환
+def call_subsub_graph(state: SubState) -> SubState:
+  # 현재 그래프 기준 부모, 자식의 상태 키는 접근 불가
+  subsub_graph_input = {"subsub_key": state["sub_key"]}
+  subsub_graph_output = subsubgraph.invoke(subsub_graph_input)
+
+  return {"sub_key" : f"sub_{subsub_graph_output['subsub_key']}"}
+
+
+subgrpah_builder = StateGraph(SubState)
+subgrpah_builder.add_node("sub_node", call_subsub_graph)
+subgrpah_builder.add_edge(START, "sub_node")
+subgrpah_builder.add_edge("sub_node", END)
+sub_graph = subgrpah_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(sub_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-6.png)
