@@ -437,3 +437,83 @@ for chunk in parent_graph.stream({"share_key": "share", "parent_key": "parent"},
 # ((), {'node_sub': {'share_key': 'share-parent-child'}})
 ```  
 
+
+### Heterogeneous Schema Pattern
+대규모 엔터프라이즈 시스템이나 복합적인 `AI` 워크플로우에서는 상위 그래프와 하위 그래프가 완전히 다른 데이터 스키마 구조를 가져야하는 상황은 빈번하다. 
+이는 레거시 시스템과의 통합, 서로 다른 도메인 통합 등 다양한 이유로 발생할 수 있다. 
+이러한 비공유 상태 키 환경에서는 직접적인 그래프 통합이 불가능하다.  
+
+이러한 복잡한 시나리오에서는 중간 계층 역할을 하는 전용 노드 함수를 구현해야 한다. 
+이 함수는 두 그래프 `State Transformation Bridge` 역할을 수행하며, 다음과 같은 햑심 기능을 담당한다.  
+
+- parent-to-child(상향 변환)
+  - 하위 그래프 호출 이전 단계에서 실행된다. 
+  - 상위 그래프의 상태 구조를 하위 그래프가 이해할 수 있는 형태로 변환한다. 
+  - 데이터 타입 매핑, 필드명 변경, 구조 재정렬 등 수행한다. 
+- child-to-parent(하향 변환)
+  - 하위 그래프 실행 완료 후에 실행된다. 
+  - 하위 그래프의 실행 결과를 상위 그래프의 상태 형식으로 역변환한다. 
+  - 노드가 상태 업데이트를 반환하기 전에 최종 형태로 가공한다. 
+
+한가지 유의할 점은 동일한 노드에서 2개 이상의 서브그래프는 호출할 수 없다.  
+
+아래는 공유하는 스키마가 없는 경우의 상위 그래프와 하위 그래프의 통합 예제이다.  
+
+```python
+# Case 2: 스키마 키를 공유하지 않는 경우
+# 공유되는 상태 키가 없는 경우
+
+# 부모와 키를 공유하지 않는 서브그래프 상태
+class ChildState(TypedDict):
+  child_key: str
+
+# 서브그래프 상태에 초기값 생성
+def subgraph_node_1(state: ChildState):
+    return {"child_key": f"sub_node_1-{state['child_key']}"}
+
+# 상태값 그대로 반환
+def subgraph_node_2(state: ChildState):
+    return {"child_key": f"sub_node_2-{state['child_key']}"}
+
+
+# 서브그래프 구성
+subgraph_builder = StateGraph(ChildState)
+subgraph_builder.add_node(subgraph_node_1)
+subgraph_builder.add_node(subgraph_node_2)
+subgraph_builder.add_edge(START, "subgraph_node_1")
+subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+subgraph = subgraph_builder.compile()
+
+
+# 서브그래프와 키를 공유하지 않는 부모 상태 정의
+class ParentState(TypedDict):
+    parent_key: str
+    result: str
+
+# parent_key 값 그대로 반환
+def node_1(state: ParentState):
+  return {"parent_key": f"node_1-{state['parent_key']}"}
+
+# 서브그래프와 상태 변환 및 결과 처리
+def node_2(state: ParentState):
+  response = subgraph.invoke({"child_key": state["parent_key"]})
+  return {"result": response["child_key"]}
+
+# 부모 그래프 정의
+parent_graph_builder = StateGraph(ParentState)
+parent_graph_builder.add_node("node_1", node_1)
+# 서브그래프 호출은 서브그래프 호출로 정의한 노드를 사용
+parent_graph_builder.add_node("node_sub", node_2)
+parent_graph_builder.add_edge(START, "node_1")
+parent_graph_builder.add_edge("node_1", "node_sub")
+parent_graph_builder.add_edge("node_sub", END)
+parent_graph = parent_graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-4.png)
