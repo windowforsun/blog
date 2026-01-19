@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph Agent Memory and Stream"
+title: "[LangGraph] LangGraph Summary and Subgraph"
 header:
-  overlay_image: /img/langchain-bg-2.jpg
-excerpt: ''
+  overlay_image: /img/langchain-img-2.jpeg
+excerpt: 'LangGraph 에서 맥락 유지를 위한 요약과 구조 효율화를 위한 Subgraph 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,10 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - Summary
+    - Subgraph
+    - LLM
+    - Python
 toc: true
 use_math: true
 ---  
@@ -612,3 +616,93 @@ except Exception:
 ```  
 
 ![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-6.png)
+
+
+```python
+# subgraph 호출 테스트
+
+for chunk in sub_graph.stream({"sub_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# (('sub_node:b005b9e1-d397-6c31-7faf-f610043af2b0',), {'subsub_node': {'subsub_key': 'subsub_Hi'}})
+# ((), {'sub_node': {'sub_key': 'sub_subsub_Hi'}})
+```  
+
+마지막으로 `Parent Graph` 의 구현이다.  
+
+```python
+# parent 정의
+
+class ParentState(TypedDict):
+  parent_key: str
+
+def parent_1(state: ParentState) -> ParentState:
+    # 자식 또는 손자 키는 여기서 접근 불가
+    return {"parent_key": f'parent_1_{state["parent_key"]}'}
+
+def parent_2(state: ParentState) -> ParentState:
+    # 자식 또는 손자 키는 여기서 접근 불가
+    return {"parent_key": f'parent_2_{state["parent_key"]}'}
+
+# 부모 상태와 자식 상태 간의 데이터 변환 및 자식 그래프 호출 처리
+def call_sub_graph(state: ParentState) -> ParentState:
+    # 부모 상태 채널(my_parent_key)에서 자식 상태 채널(my_child_key)로 상태 변환
+    sub_graph_input = {"sub_key": state["parent_key"]}
+    # 자식 상태 채널(my_child_key)에서 부모 상태 채널(my_parent_key)로 상태 변환
+    sub_graph_output = sub_graph.invoke(sub_graph_input)
+    return {"parent_key": sub_graph_output["sub_key"]}
+
+
+# 부모 상태 그래프 초기화 및 노드 구성
+parent_grpah_builder = StateGraph(ParentState)
+parent_grpah_builder.add_node("parent_1", parent_1)
+
+# 참고: 컴파일된 그래프가 아닌 함수를 전달
+parent_grpah_builder.add_node("sub", call_sub_graph)
+parent_grpah_builder.add_node("parent_2", parent_2)
+
+# 상태 그래프의 실행 흐름을 정의하는 엣지 구성
+parent_grpah_builder.add_edge(START, "parent_1")
+parent_grpah_builder.add_edge("parent_1", "sub")
+parent_grpah_builder.add_edge("sub", "parent_2")
+parent_grpah_builder.add_edge("parent_2", END)
+
+# 구성된 부모 상태 그래프의 컴파일 및 실행 가능한 그래프 생성
+parent_graph = parent_grpah_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-7.png)
+
+
+```python
+# parent_grpah 호출 테스트
+
+for chunk in parent_graph.stream({"parent_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# ((), {'parent_1': {'parent_key': 'parent_1_Hi'}})
+# (('sub:a1fc9421-166f-19a0-4096-7b99bd14317a', 'sub_node:01fe24c7-d62c-2b7d-a65a-a920a3d7d791'), {'subsub_node': {'subsub_key': 'subsub_parent_1_Hi'}})
+# (('sub:a1fc9421-166f-19a0-4096-7b99bd14317a',), {'sub_node': {'sub_key': 'sub_subsub_parent_1_Hi'}})
+# ((), {'sub': {'parent_key': 'sub_subsub_parent_1_Hi'}})
+# ((), {'parent_2': {'parent_key': 'parent_2_sub_subsub_parent_1_Hi'}})
+```  
+
+위와 같이 `LangGraph` 를 사용하면 각 목적에 맞게 구현된 여러 그래프를 조합해 하나의 큰 그래프를 구현할 수 있다. 
+그래고 각 그래프간 통신에서 공유 가능한 상태 키가 있다면 손쉽게 조합할 수 있자만, 그렇지 않더라도 각 그래프간 상태 변환을 통해 통신할 수 있다. 
+여기서 상태 변환은 상위 그래프가 하위 그래프를 호출 할때 하위 그래프의 상태에 맞게 변환해 호출하고, 
+그 결과를 다시 상위 그래프의 상태에 맞게 변환해 반환하는 방식으로 진행된다.  
+
+
+---  
+## Reference
+[Use subgraphs](https://langchain-ai.github.io/langgraph/how-tos/subgraph/)  
+[Subgraphs](https://langchain-ai.github.io/langgraph/concepts/subgraphs/)  
+[대화 기록 요약을 추가하는 방법](https://wikidocs.net/265767)  
+[서브그래프 추가 및 사용 방법](https://wikidocs.net/265768)  
+
+
