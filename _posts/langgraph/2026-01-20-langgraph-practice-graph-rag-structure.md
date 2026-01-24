@@ -35,3 +35,68 @@ use_math: true
 
 본 포스팅에서는 실제 세부 구현은 다루지 않는다. 
 `LangGraph` 사용해 `RAG` 를 구축할 때 어떠한 구조와 흐름으로 구성할 수 있는지에 대해 알아보고자 한다.  
+
+
+### Normal RAG
+가장 먼저 기본적인 `RAG` 시스템을 구축해 본다. 
+`Retrieval` 을 통해 문서를 검색하고 이를 `llm` 에 던져 결과를 만들어 낸다. 
+그리고 관련성 검증을 한 뒤 관련성이 낮은 경우 재검색을 수행하는 흐름의 그래프이다.  
+
+먼저 그래프에서 사용할 상태와 노드로 사용할 각 함수를 정의한다.  
+
+```python
+# 상태와 함수 노드 정의
+
+from typing import TypedDict, Annotated, List
+from langchain_core.documents import Document
+import operator
+
+class GraphState(TypedDict):
+  context: Annotated[List[Document], operator.add]
+  answer: Annotated[List[Document], operator.add]
+  question: Annotated[str, operator.add]
+  binary_score: Annotated[str, operator.add]
+
+def retrieve(state: GraphState) -> GraphState:
+  # retrieve 검색
+  documents = [Document(page_content="retrieve 검색 결과")]
+  return GraphState(context=documents)
+
+def rewrite_question(state: GraphState) -> GraphState:
+  # 재검색을 위해 쿼리 재작성
+  documents = [Document(page_content="질문 재작성")]
+  return GraphState(context=documents)
+
+def llm_llama_execute(state: GraphState) -> GraphState:
+  # llama llm 실행
+  answer = [Document(page_content="llama 답변")]
+  return GraphState(answer=answer)
+
+def llm_gemini_execute(state: GraphState) -> GraphState:
+  # gemini llm 실행
+  answer = [Document(page_content="gemini 답변")]
+  return GraphState(answer=answer)
+
+def relevance_check(state: GraphState) -> GraphState:
+  # 관련성 확인
+  binary_score = "관련성 점수"
+  return GraphState(binary_score=binary_score)
+
+def sum_up(state: GraphState) -> GraphState:
+  # 결과 종합
+  answer = [Document(page_content="종합 답변")]
+  return GraphState(answer=answer)
+
+def handle_error(state: GraphState) -> GraphState:
+  # 에러 처리
+  return GraphState(context=[], answer=[], question="", binary_score="")
+
+
+def decision(state: GraphState) -> str:
+  # 결과 종합 및 판단
+  if random.randint(1, 3) % 3 == 0:
+    decision = "ok"
+  else:
+    decision = "research"
+  return decision
+```  
