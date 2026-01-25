@@ -100,3 +100,60 @@ def decision(state: GraphState) -> str:
     decision = "research"
   return decision
 ```  
+
+그리고 정의된 내용들을 바탕으로 그래프를 정의하고 컴파일해 구조를 살펴본다.  
+
+```python
+# 일반 rag 그래프 정의
+# 사용자 질의 -> conventional rag -> 멀티 LLM -> 관련성 확인 -> 종합 -> 재검색 or 종료 
+
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+# 노드 추가
+graph_builder.add_node("retrieve rag", retrieve)
+graph_builder.add_node("rewrite question", rewrite_question)
+graph_builder.add_node("llama", llm_llama_execute)
+graph_builder.add_node("gemini", llm_gemini_execute)
+graph_builder.add_node("llama relevance check", relevance_check)
+graph_builder.add_node("gemini relevance check", relevance_check)
+graph_builder.add_node("result aggregation", sum_up)
+
+# 노드 연결
+# graph_builder.add_edge(START, "문서 검색")
+graph_builder.add_edge("retrieve rag", "llama")
+graph_builder.add_edge("retrieve rag", "gemini")
+graph_builder.add_edge("llama", "llama relevance check")
+graph_builder.add_edge("gemini", "gemini relevance check")
+graph_builder.add_edge("llama relevance check", "result aggregation")
+graph_builder.add_edge("gemini relevance check", "result aggregation")
+graph_builder.add_edge("rewrite question", "retrieve rag")
+
+# 재검색에 대한 조건부 엣지 추가
+graph_builder.add_conditional_edges(
+    source="result aggregation",
+    path=decision,
+    path_map={
+        "research": "rewrite question",
+        "ok": END
+    }
+)
+
+# 시작점 설정 및 컴파일
+graph_builder.set_entry_point("retrieve rag")
+memory = MemorySaver()
+graph = graph_builder.compile(checkpointer=memory)
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/graph-rag-intro-1.png)
+
