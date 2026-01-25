@@ -157,3 +157,8 @@ except Exception:
 
 ![그림 1]({{site.baseurl}}/img/langgraph/graph-rag-intro-1.png)
 
+
+
+### RAG with SQL
+이번에는 `Retrieval` 의 검색과 데이터베이스에서 `SQL` 을 통해 검색하는 흐름을 추가해 본다.  
+`SQL` 에서 사용할 추가 상태와 함수 노드를 정의한다.  
