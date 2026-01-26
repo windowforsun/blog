@@ -162,3 +162,61 @@ except Exception:
 ### RAG with SQL
 이번에는 `Retrieval` 의 검색과 데이터베이스에서 `SQL` 을 통해 검색하는 흐름을 추가해 본다.  
 `SQL` 에서 사용할 추가 상태와 함수 노드를 정의한다.  
+
+```python
+# sql 함수 노드 추가 정의
+
+class GraphState(TypedDict):
+  context: Annotated[List[Document], operator.add]
+  answer: Annotated[List[Document], operator.add]
+  question: Annotated[str, operator.add]
+  sql_query: Annotated[str, operator.add]
+  binary_score: Annotated[str, operator.add]
+
+def get_table_info(state: GraphState) -> GraphState:
+  table_info = [Document(page_content="테이블 정보")]
+  return GraphState(context=table_info)
+
+def generate_sql_query(state: GraphState) -> GraphState:
+  sql_query = "SQL 쿼리"
+  return GraphState(sql_query=sql_query)
+
+def execute_sql_query(state: GraphState) -> GraphState:
+  sql_result = [Document(page_content="SQL 결과")]
+  return GraphState(context=sql_result)
+
+def validate_sql_query(state: GraphState) -> GraphState:
+  binary_score = "SQL 결과 검증"
+  return GraphState(binary_score=binary_score)
+
+def rewrite_query(state: GraphState) -> GraphState:
+  # 재검색을 위해 쿼리 재작성
+  documents = [Document(page_content="Query 재작성")]
+  return GraphState(context=documents)
+
+def search_on_web(state: GraphState) -> GraphState:
+  # search web
+  documents = state.get('context', [])
+  searched_documents = [Document(page_content="웹 검색 문서")]
+  documents.extend(searched_documents)
+  return GraphState(context=documents)
+
+def middle_node(state: GraphState) -> GraphState:
+  return state;
+
+def agg_search_result(state: GraphState) -> GraphState:
+  # 각 검색 결과 종합
+  return state;
+
+def decision_sql(state: GraphState) -> str:
+  # sql 결과 검증 결과
+  rand = random.randint(1, 9) 
+  if rand % 3 == 1:
+    decision = "query error"
+  elif rand % 3 == 2:
+    decision = "context error"
+  else:
+    decision = "ok"
+  return decision
+
+```  
