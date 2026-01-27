@@ -220,3 +220,65 @@ def decision_sql(state: GraphState) -> str:
   return decision
 
 ```  
+
+그리고 위에서 정의한 상태와 함수 노드를 바탕으로 그래프를 정의하고 컴파일한다.  
+
+```python
+# sql rag 그래프 정의
+
+graph_builder = StateGraph(GraphState)
+
+
+# sql 노드 추가
+graph_builder.add_node("retrieve rag", retrieve)
+graph_builder.add_node("rewrite query", rewrite_query)
+graph_builder.add_node("rewrite question", rewrite_question)
+graph_builder.add_node("table info", get_table_info)
+graph_builder.add_node("generate sql", generate_sql_query)
+graph_builder.add_node("execute sql", execute_sql_query)
+graph_builder.add_node("validate sql", validate_sql_query)
+graph_builder.add_node("llama", llm_llama_execute)
+graph_builder.add_node("gemini", llm_gemini_execute)
+graph_builder.add_node("llama relevance check", relevance_check)
+graph_builder.add_node("gemini relevance check", relevance_check)
+graph_builder.add_node("result aggregation", sum_up)
+graph_builder.add_node("middle node", middle_node)
+
+# sql 노드 연결
+graph_builder.add_edge("retrieve rag", "table info")
+graph_builder.add_edge("table info", "generate sql")
+graph_builder.add_edge("generate sql", "execute sql")
+graph_builder.add_edge("execute sql", "validate sql")
+# 재검색에 대한 조건부 엣지 추가
+graph_builder.add_conditional_edges(
+    "validate sql",
+    decision_sql,
+    {
+        "query error": "rewrite query",
+        "context error": "rewrite question",
+        "ok": "middle node"
+    }
+)
+graph_builder.add_edge('rewrite query', 'execute sql')
+graph_builder.add_edge('rewrite question', 'rewrite query')
+graph_builder.add_edge('middle node', 'gemini')
+graph_builder.add_edge('middle node', 'llama')
+graph_builder.add_edge('gemini', 'gemini relevance check')
+graph_builder.add_edge('llama', 'llama relevance check')
+graph_builder.add_edge('gemini relevance check', 'result aggregation')
+graph_builder.add_edge('llama relevance check', 'result aggregation')
+graph_builder.add_edge('result aggregation', END)
+
+
+# 시작점 설정 및 컴파일
+graph_builder.set_entry_point("retrieve rag")
+memory = MemorySaver()
+graph = graph_builder.compile(checkpointer=memory)
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```   
