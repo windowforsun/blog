@@ -282,3 +282,14 @@ try:
 except Exception:
     pass
 ```   
+
+![그림 1]({{site.baseurl}}/img/langgraph/graph-rag-intro-2.png)
+
+
+
+
+---  
+## Reference
+[LangGraph-Building-Graphs](https://langchain-opentutorial.gitbook.io/langchain-opentutorial/17-langgraph/02-structures/01-langgraph-building-graphs)  
+
+
