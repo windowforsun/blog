@@ -4,7 +4,7 @@ classes: wide
 title: "[LangGraph] LangGraph RAG Structure"
 header:
   overlay_image: /img/langgraph-img-2.jpeg
-excerpt: ''
+excerpt: 'LangGraph 에서 RAG 시스템을 구축하는 구조에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,9 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - RAG
+    - VectorStore
+    - Retrieval
 toc: true
 use_math: true
 ---  
