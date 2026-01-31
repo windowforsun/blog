@@ -294,5 +294,6 @@ except Exception:
 ---  
 ## Reference
 [LangGraph-Building-Graphs](https://langchain-opentutorial.gitbook.io/langchain-opentutorial/17-langgraph/02-structures/01-langgraph-building-graphs)  
+[LangGraph RAG](https://wikidocs.net/267808)  
 
 
