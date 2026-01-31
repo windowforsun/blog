@@ -1,0 +1,708 @@
+--- 
+layout: single
+classes: wide
+title: "[LangGraph] LangGraph Summary and Subgraph"
+header:
+  overlay_image: /img/langchain-img-2.jpeg
+excerpt: 'LangGraph 에서 맥락 유지를 위한 요약과 구조 효율화를 위한 Subgraph 에 대해 알아보자'
+author: "window_for_sun"
+header-style: text
+categories :
+  - LangGraph
+tags:
+    - Practice
+    - LangChain
+    - LangGraph
+    - Summary
+    - Subgraph
+    - LLM
+    - Python
+toc: true
+use_math: true
+---  
+
+## Summary of LangGraph
+`LangGraph` 에서 대화 기록을 지속적으로 관리하는 것은 `AI` 애플리케이션에서 가장 널리 사용되는 지속성 패턴중 하나이다. 
+이 접근법은 사용자와 `AI` 간의 연속적인 상호작용을 가능하게 하여 맥락을 유지하면서 자연스러운 대화 흐름을 제공한다.  
+
+그러나 대화 세션이 연장되고 메시지가 계속 출적될수록, 
+전체 대화 히스토리가 언어 모델의 `context window` 에서 차지하는 비중이 급격히 증가한다. 
+이러한 현상은 열 가지 부정적인 결과를 초래할 수 있다. 
+
+- 비용 증가 : 더 많은 토큰을 처리해야 하므로 `LLM API` 호출 비용 상승
+- 응답 지연 : 긴 컨텍스트 처리로 인한 응답 시간 증가
+- 성능 저하 : 컨텍스트가 너무 길어지면 모델의 추론 품질이 떨어질 수 있음
+- 메모리 제한 : 컨텍스트 윈도우 한계에 도달할 위험성
+
+이러한 문제를 효과적으로 해결하기 위한 전략 중 하나는 대화 요약 및 압축 기법을 활용하는 것이다. 
+이 방법은 누적된 대화 내용을 간결한 요약문으로 변환하고, 이를 최근의 핵심 메시지들과 결합하여 컨텍스트를 최적화하는 접근법이다. 
+이를 위해 아래와 같은 단계를 가진다. 
+
+- 임계점 감지 : 대화 길이가 미리 정의된 기준(메시지 개수, 총 토큰 수, 문자 수)을 초과했는지 모니터링
+- 지능형 요약 생성 : 대화의 핵심 정보와 맥락을 보존하면서 간결한 요약문을 생성하기 위한 전용 프롬프트 엔지니어링
+- 선택적 메시지 정리 : 요약된 내용을 제회하고 가장 최근의 `N`개 메시지만 유지하도록 이전 메시지들을 체계적으로 제거 
+
+이 과저에서 주요한 내용은 `RemoveMessage` 기능을 적절히 활용해 메모리에서 불필요한 대화 기록을 효율적으로 제거하는 것이다. 
+이를 통해 시스템 리소스를 최적화하고 대화의 품질을 지속적으로 유지할 수 있다.  
+
+`ask_llm` 은 `messages` 를 사용해 `LLM` 에 요청을 보내는 함수이다. 
+다른 점은 대화 요약본이 존재한다면 이를 시스템 메시지로 추가해 대화에 포함시킨다.  
+
+```python
+from typing import Literal, Annotated
+from langchain_core.messages import SystemMessage, RemoveMessage, HumanMessage
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import MessagesState, StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+
+# 상태 메모리 저장소
+memory = MemorySaver()
+
+class SummaryState(MessagesState):
+    messages: Annotated[list, add_messages]
+    summary: str
+
+
+# 모델 초기화
+os.environ["GOOGLE_API_KEY"] = "AIzaSyBBWl6ZPwjUUxuYallZnZ1cEPqnQGqsVzs"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+# ask_llm 노드 동작 정의
+# 이전 요약본이 존재하면 추가해서 사용하고, 없으면 이전 메시지를 사용한다.
+
+def ask_llm(state: SummaryState):
+  # 요약 내용
+  summary = state.get("summary", "")
+
+  if summary:
+    system_message = f"Summary of conversation earlier: {summary}"
+    messages = [SystemMessage(content=system_message)] + state["messages"]
+  else:
+    messages = state["messages"]
+
+  response = llm.invoke(messages)
+
+
+  return {"messages" : [response]}
+```  
+
+그리고 `should_continue` 함수는 임계점을 감지하고, 
+초과했다면 요약이 수행될 수 있도록 한다. 
+넘지 않았다면 종료한다. 
+예제에서 사용하는 임계점의 기준은 메시지의 수가 6개를 초과하는 것이다.  
+
+```python
+# 요약 결정 노드 동작 정의
+# 요약이 불필요하다면 END 노드로 이동
+
+def should_continue(state: SummaryState) -> Literal["summarize_conversation", END]:
+  # 지금까지 메시지
+  messages = state["messages"]
+
+  if len(messages) > 6:
+    return "summarize_conversation"
+  else:
+    return END
+```  
+
+`summarize_conversation` 함수는 노드의 대화를 요약하고, 
+오래된 메시지는 삭제한다.  
+
+```python
+# 요약 생성 및 메시지 삭제 노드 동작 정의
+def summarize_conversation(state: SummaryState):
+  # 이전 요약 내용
+  summary = state.get("summary", "")
+
+  if summary:
+    summary_message = (
+        f"Here is a summary of the conversation so far: {summary}\n\n"
+        "Please update and expand this summary in Korean, taking into account the new messages above:"
+    )
+  else:
+    summary_message = "Based on the messages above, write a summary in Korean."
+
+  # 요약 프롬프트와 메시지 결합
+  messages = state["messages"] + [HumanMessage(content=summary_message)]
+  # 요약 생성
+  response = llm.invoke(messages)
+  # 이전 메시지 삭제
+  delete_messages = [RemoveMessage(id=m.id) for m in state["messages"][:-2]]
+
+  return {"summary" : response.content, "messages": delete_messages}
+```  
+
+이제 정의한 함수를 노드로 등록해 그래프를 구성한다.  
+
+```python
+# 그래프 정의
+from IPython.display import Image, display
+
+graph_builder = StateGraph(SummaryState)
+
+graph_builder.add_node("conversation", ask_llm)
+graph_builder.add_node(summarize_conversation)
+
+graph_builder.add_edge(START, "conversation")
+
+graph_builder.add_conditional_edges(
+    "conversation",
+    should_continue,
+)
+
+graph_builder.add_edge("summarize_conversation", END)
+
+graph = graph_builder.compile(checkpointer=memory)
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-1.png)
+
+
+구현된 그래프에 대화를 진행해 결과를 확인하면 아래와 같다.  
+
+```python
+# 그래프 실행
+
+def execute_graph_and_print(config, query):
+  input_message = HumanMessage(content=query)
+  input_message.pretty_print()
+
+  for event in graph.stream({"messages": [input_message]}, config, stream_mode="updates"):
+    # 업데이트 딕셔너리 순회
+    for k, v in event.items():
+        # 메시지 목록 출력
+        for m in v["messages"]:
+            m.pretty_print()
+        # 요약 정보 존재 시 출력
+        if "summary" in v:
+            print(v["summary"])
+
+config = {"configurable": {"thread_id": "1"}}
+execute_graph_and_print(config, "안녕? 내 이름은 철수야")
+# ================================ Human Message =================================
+# 
+# 안녕? 내 이름은 철수야
+# ================================== Ai Message ==================================
+# 
+# 안녕하세요, 철수 씨! 만나서 반갑습니다. 저는 인공지능 어시스턴트입니다. 무엇을 도와드릴까요?
+
+execute_graph_and_print(config, "내 이름이 뭐라고 알려줬지 ?")
+# ================================ Human Message =================================
+# 
+# 내 이름이 뭐라고 알려줬지 ?
+# ================================== Ai Message ==================================
+# 
+# 철수 씨라고 알려드렸습니다. :)
+
+execute_graph_and_print(config, "내 직업은 개발자야")
+# ================================ Human Message =================================
+# 
+# 내 직업은 개발자야
+# ================================== Ai Message ==================================
+# 
+# 알겠습니다, 철수 씨. 개발자시군요! 어떤 종류의 개발을 하시는지 여쭤봐도 될까요? (물론, 편하게 말씀해주세요!) 혹시 개발 관련해서 제가 도와드릴 수 있는 부분이 있을까요?
+```  
+
+지금까지 대화한 시점에서 저장된 메시지를 확인하면 모든 메시지가 존재한다. 
+이는 아직 메시지의 수가 6개를 초과하지 않았기 때문이다.  
+
+```python
+# 상태 구성 값 검색
+values = graph.get_state(config).values
+print(len(values["messages"]))
+# 6
+
+print(values)
+# {'messages': [HumanMessage(content='안녕? 내 이름은 철수야', additional_kwargs={}, response_metadata={}, id='e21137b3-ea6d-46c2-8675-8f8cfd840e45'),
+#               AIMessage(content='안녕하세요, 철수 씨! 만나서 반갑습니다. 저는 인공지능 어시스턴트입니다. 무엇을 도와드릴까요?', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--eec101a1-ec90-432e-8626-b4000478e7ae-0', usage_metadata={'input_tokens': 9, 'output_tokens': 40, 'total_tokens': 49, 'input_token_details': {'cache_read': 0}}),
+#               HumanMessage(content='내 이름이 뭐라고 알려줬지 ?', additional_kwargs={}, response_metadata={}, id='e9d048d1-eb5e-4201-a3c3-5508e5663b64'),
+#               AIMessage(content='철수 씨라고 알려드렸습니다. :)', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--2d28ff1d-8416-456d-b42a-1484aee20fed-0', usage_metadata={'input_tokens': 59, 'output_tokens': 13, 'total_tokens': 72, 'input_token_details': {'cache_read': 0}}),
+#               HumanMessage(content='내 직업은 개발자야', additional_kwargs={}, response_metadata={}, id='944c5f6b-8dc1-47b5-b2e9-8cc399efc8e6'),
+#               AIMessage(content='알겠습니다, 철수 씨. 개발자시군요! 어떤 종류의 개발을 하시는지 여쭤봐도 될까요? (물론, 편하게 말씀해주세요!) 혹시 개발 관련해서 제가 도와드릴 수 있는 부분이 있을까요?', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--6d96aad0-cd34-4fb5-acc8-3642a33f7161-0', usage_metadata={'input_tokens': 78, 'output_tokens': 71, 'total_tokens': 149, 'input_token_details': {'cache_read': 0}})]}
+```  
+
+한번의 대화를 추가로 진행하면 대화가 요약되고 `RemoveMessage` 가 수행되는 것을 확인할 수 있다.  
+
+```python
+execute_graph_and_print(config, "나는 요즘 LLM에 대해 공부하고 있어")
+# ================================ Human Message =================================
+# 
+# 나는 요즘 LLM에 대해 공부하고 있어
+# ================================== Ai Message ==================================
+# 
+# 아, LLM(Large Language Model)에 대해 공부하시는군요! 정말 흥미로운 분야죠. LLM은 다양한 가능성을 가지고 있어서 개발자로서 큰 기회가 될 수 있을 거라고 생각합니다.
+# 
+# 혹시 LLM에 대해 구체적으로 어떤 부분을 공부하고 계신가요? 예를 들어:
+# 
+# *   **LLM의 종류**: GPT, BERT, LaMDA 등 다양한 모델이 있는데, 특정 모델에 집중하고 계신가요?
+# *   **LLM의 활용 분야**: 챗봇, 텍스트 생성, 번역, 요약 등 어떤 분야에 LLM을 적용하는 데 관심이 있으신가요?
+# *   **LLM 관련 기술**: Fine-tuning, Prompt Engineering, LangChain 등 어떤 기술을 배우고 계신가요?
+# 
+# 어떤 부분을 공부하고 계신지 알려주시면, 제가 더 적절한 정보나 자료를 찾아드리거나, 제 경험을 바탕으로 조언을 드릴 수도 있을 것 같습니다. LLM 공부에 도움이 될 만한 질문이 있으시면 언제든지 편하게 물어보세요!
+# ================================ Remove Message ================================
+# 
+# 
+# ================================ Remove Message ================================
+# 
+# 
+# ================================ Remove Message ================================
+# 
+# 
+# ================================ Remove Message ================================
+# 
+# 
+# ================================ Remove Message ================================
+# 
+# 
+# ================================ Remove Message ================================
+# 
+# 
+# 철수라는 이름을 가진 개발자가 LLM(Large Language Model)에 대해 공부하고 있다고 합니다. 인공지능 어시스턴트는 철수 씨에게 LLM의 종류, 활용 분야, 관련 기술 등 구체적으로 어떤 부분을 공부하고 있는지 질문하며, 필요한 정보나 조언을 제공할 수 있다고 제안했습니다.
+```  
+
+다시 상태에서 관리되고 있는 메시지를 확인하면 마지막 2개 메시지만 있고, 
+나머지는 요약된 내용으로 존재하는 것을 확인할 수 있다.  
+
+```python
+# 상태 구성 값 검색
+values = graph.get_state(config).values
+print(len(values["messages"]))
+# 2
+
+print(values)
+# {'messages': [HumanMessage(content='나는 요즘 LLM에 대해 공부하고 있어', additional_kwargs={}, response_metadata={}, id='e03ceb93-d909-4de7-baa2-39e153a9a8dc'),
+#               AIMessage(content='아, LLM(Large Language Model)에 대해 공부하시는군요! 정말 흥미로운 분야죠. LLM은 다양한 가능성을 가지고 있어서 개발자로서 큰 기회가 될 수 있을 거라고 생각합니다.\n\n혹시 LLM에 대해 구체적으로 어떤 부분을 공부하고 계신가요? 예를 들어:\n\n*   **LLM의 종류**: GPT, BERT, LaMDA 등 다양한 모델이 있는데, 특정 모델에 집중하고 계신가요?\n*   **LLM의 활용 분야**: 챗봇, 텍스트 생성, 번역, 요약 등 어떤 분야에 LLM을 적용하는 데 관심이 있으신가요?\n*   **LLM 관련 기술**: Fine-tuning, Prompt Engineering, LangChain 등 어떤 기술을 배우고 계신가요?\n\n어떤 부분을 공부하고 계신지 알려주시면, 제가 더 적절한 정보나 자료를 찾아드리거나, 제 경험을 바탕으로 조언을 드릴 수도 있을 것 같습니다. LLM 공부에 도움이 될 만한 질문이 있으시면 언제든지 편하게 물어보세요!', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--f269a18d-a462-4c50-903e-f1e80b750866-0', usage_metadata={'input_tokens': 159, 'output_tokens': 284, 'total_tokens': 443, 'input_token_details': {'cache_read': 0}})],
+#  'summary': '철수라는 이름을 가진 개발자가 LLM(Large Language Model)에 대해 공부하고 있다고 합니다. 인공지능 어시스턴트는 철수 씨에게 LLM의 종류, 활용 분야, 관련 기술 등 구체적으로 어떤 부분을 공부하고 있는지 질문하며, 필요한 정보나 조언을 제공할 수 있다고 제안했습니다.'}
+```  
+
+이후 삭제된 메시지에 대한 질문을 하더라도 요약된 내용에 관련 `context` 가 존재해 대화를 이어갈 수 있다.  
+
+```python
+execute_graph_and_print(config, "내 이름과 직업을 뭐라고 알려줬지 ?")
+# ================================ Human Message =================================
+# 
+# 내 이름과 직업을 뭐라고 알려줬지 ?
+# ================================== Ai Message ==================================
+# 
+# 당신은 저에게 당신의 이름이 철수이고, 직업은 개발자라고 알려주셨습니다. 그리고 LLM에 대해 공부하고 있다고 말씀하셨죠. 😊
+```  
+
+
+## Subgraph of LangGraph
+`Subgraph` 기능을 활용하면 대규모이고 복잡한 `AI` 워크플로우 시스템을 모듈화된 구조로 설계할 수 있다. 
+이 접근법에서 각각의 구성 요소들은 독립적인 그래프로 구현되어 전체 시스템의 확장성과 유지보수성을 크게 향상시킨다. 
+`Subgraph` 의 가장 대표적인 호라용 사례는 `Multi-Agent Architecture` 를 구축하는 것으로,
+여러 `AI` 에이전트가 각자의 전문 영역에서 협력하여 복합적인 작업을 수행할 수 있게 한다.  
+
+`Subgraph` 를 시스템에 통합할 때 핵심적이고 고려해야 할 설계 요소는 상위 그래프와 하위 그래프 간의 데이터 통신 메커니즘이다. 
+특히 그래프 실행 과정에서 상태 정보가 어떤 방식으로 계층 간에 전달되고 동기화되는지가 전체 시스템의 성능과 안정성을 결정하는 중요한 요인이다.  
+
+이러한 상태 관리의 통신 패턴에 따라 다음과 같은 두 가지 주요 구현 시나리오로 분류할 수 있다.  
+
+- `Shared Schema Pattern`(공유 스키마)
+  - 상위 그래프와 하위 그래프가 동일한 상태 스키마 구조를 사용하는 경우이다. 
+  - 이 상황에서는 데이터 구조의 호환성이 보장되므로, 컴파일된 서브 그래프를 직접 노드로 추가하는 직접적인 통합 방식을 사용할 수 있다. 
+  - 이 접근법은 구현이 간단하고 성능상 오버헤드가 적다는 장점을 가진다. 
+- `Heterogeneous Schema Pattern`(이종 스키마)
+  - 상위 그래프와 서브 그래프가 서로 다른 상태 스키마를 가지는 경우이다. 
+  - 이러한 상황에서는 서브그래프를 호출하는 전용 노드 함수를 구현해야 한다. 
+  - 위 함수는 두 그래프 간의 상태 변환 역할을 반당한다. 
+  - 이 패턴은 레거시 시스템과 통합, 서로 다른 도메인 간 통합, 서브그래프 전 후 검증/정규화, 보안상 이유로 필터링 등에 유용하다. 
+
+
+### Shared Schema Pattern
+상위 그래프와 하위 그래프간 공통된 상태 키를 활용하여 데이터를 주고받는 것은 `LangGraph` 에서 가장 일반적이면서 호율적인 통신 패턴이다. 
+`Multi-Agent Architecture` 시스템을 구축할 때 이 패턴이 특히 유용한데, 
+여러 `AI` 에이전트들이 대화 흐름을 유지하면서 협력하기 위해 주로 공유된 `messages` 키를 통해 상호작용한다. 
+이러한 공유 메시징 채널을 통해 각 에이전트는 이전 대화 맥락을 이해하고 적절한 응답을 생성할 수 있다.  
+
+하위 그래프가 상위 그래프와 동일한 상태 스키마 구조를 사용하는 경우, 다음과 같은 간소화 통합 프로세스를 따를 수 있다.  
+
+- 서브그래프 정의 및 컴파일
+  - 독립적인 워크플로우로 서브그래프를 설계한다. 
+  - 서브그래프의 노드와 엣지를 정의한 후 컴파일하여 실행 가능한 형태로 변환한다. 
+- 상위 그래프와 통합
+  - 상위 그래프의 워크플로우를 구성할 때 `.add_node()` 메서드를 사용한다. 
+  - 컴파일된 서브그래프 객체를 노드의 실행 함수로 직접 전달한다.  
+
+이헌 공유 스키마를 사용하는 경우 아래와 같은 장점들이 있다. 
+
+- 간단한 구현 : 복잡한 상태 변환 로직이 불필요하다. 
+- 높은 성능 : 직접 통합으로 인한 최소한의 오버헤드
+- 타입 안전성 : 공유 스키마로 인한 컴파일 타임 검증
+- 디버깅 용이성 : 단일 상태 구조로 인한 명확한 데이터 흐름
+
+먼저 아래와 같이 서브그래프를 먼저 정의하고 컴파일한다.  
+
+```python
+# Case 1: 스키마 키를 공유하는 경우
+
+from langgraph.graph import START, END, StateGraph
+from typing import TypedDict
+from IPython.display import Image, display
+
+# 서브그래프 상태 정의 name 만 부모 그래프와 공유
+class ChildState(TypedDict):
+  share_key: str
+  child_key: str
+
+# 서브그래프 전용 child_key 의 초기값만 설정
+def subgraph_node_1(state: ChildState):
+  return {"child_key" : "child"}
+
+# 서브그래프 전용 child_key 과 공유 share_key 을 결합해 새로운 상태 생성
+def subgraph_node_2(state: ChildState):
+  return {"share_key": f'{state["share_key"]}-{state["child_key"]}'}
+
+# 서브그래프 정의
+subgraph_builder = StateGraph(ChildState)
+subgraph_builder.add_node(subgraph_node_1)
+subgraph_builder.add_node(subgraph_node_2)
+subgraph_builder.add_edge(START, "subgraph_node_1")
+subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+subgraph = subgraph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(subgraph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-2.png)
+
+
+그리고 부모 그래프를 정의하며 미리 컴파일된 서브그래프의 객체르 부모 그래프의 노드로 추가한다.  
+
+```python
+# 부모 그래프 정의
+
+# 부모 그래프 상태 정의 name 키 공유
+class ParentState(TypedDict):
+  share_key: str
+  parent_key: str
+
+# 상태의 name 값을 사용해 새로운 값 생성
+def node_1(state: ParentState):
+  return {"share_key": f'{state["share_key"]}-{state["parent_key"]}'}
+
+parent_graph_builder = StateGraph(ParentState)
+parent_graph_builder.add_node("node_1", node_1)
+# 컴파일된 서브그래프를 노드로 추가
+parent_graph_builder.add_node("node_sub", subgraph)
+parent_graph_builder.add_edge(START, "node_1")
+parent_graph_builder.add_edge("node_1", "node_sub")
+parent_graph_builder.add_edge("node_sub", END)
+parent_graph = parent_graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-3.png)
+
+
+부모 그래프에 각 부모 상태값을 넣어 호출하면 아래와 같이 서브그래프의 호출 결과까지 포함된 것을 확인할 수 있다.  
+
+```python
+# 부모 그래프 실행
+
+for chunk in parent_graph.stream({"share_key": "share", "parent_key": "parent"}):
+  print(chunk)
+
+# {'node_1': {'share_key': 'share-parent'}}
+# {'node_sub': {'share_key': 'share-parent-child'}}
+```  
+
+호출에서 서브그래프의 출력까지 모두 확인하려면 `subgraphs=True` 로 지정하면 된다.  
+
+```python
+# 서브그래프의 출력까지 모두 확인하기
+
+for chunk in parent_graph.stream({"share_key": "share", "parent_key": "parent"}, subgraphs=True):
+  print(chunk)
+
+# ((), {'node_1': {'share_key': 'share-parent'}})
+# (('node_sub:7bbd2ea0-a28f-1eec-6d1c-078bda76afc9',), {'subgraph_node_1': {'child_key': 'child'}})
+# (('node_sub:7bbd2ea0-a28f-1eec-6d1c-078bda76afc9',), {'subgraph_node_2': {'share_key': 'share-parent-child'}})
+# ((), {'node_sub': {'share_key': 'share-parent-child'}})
+```  
+
+
+### Heterogeneous Schema Pattern
+대규모 엔터프라이즈 시스템이나 복합적인 `AI` 워크플로우에서는 상위 그래프와 하위 그래프가 완전히 다른 데이터 스키마 구조를 가져야하는 상황은 빈번하다. 
+이는 레거시 시스템과의 통합, 서로 다른 도메인 통합 등 다양한 이유로 발생할 수 있다. 
+이러한 비공유 상태 키 환경에서는 직접적인 그래프 통합이 불가능하다.  
+
+이러한 복잡한 시나리오에서는 중간 계층 역할을 하는 전용 노드 함수를 구현해야 한다. 
+이 함수는 두 그래프 `State Transformation Bridge` 역할을 수행하며, 다음과 같은 햑심 기능을 담당한다.  
+
+- parent-to-child(상향 변환)
+  - 하위 그래프 호출 이전 단계에서 실행된다. 
+  - 상위 그래프의 상태 구조를 하위 그래프가 이해할 수 있는 형태로 변환한다. 
+  - 데이터 타입 매핑, 필드명 변경, 구조 재정렬 등 수행한다. 
+- child-to-parent(하향 변환)
+  - 하위 그래프 실행 완료 후에 실행된다. 
+  - 하위 그래프의 실행 결과를 상위 그래프의 상태 형식으로 역변환한다. 
+  - 노드가 상태 업데이트를 반환하기 전에 최종 형태로 가공한다. 
+
+한가지 유의할 점은 동일한 노드에서 2개 이상의 서브그래프는 호출할 수 없다.  
+
+아래는 공유하는 스키마가 없는 경우의 상위 그래프와 하위 그래프의 통합 예제이다.  
+
+```python
+# Case 2: 스키마 키를 공유하지 않는 경우
+# 공유되는 상태 키가 없는 경우
+
+# 부모와 키를 공유하지 않는 서브그래프 상태
+class ChildState(TypedDict):
+  child_key: str
+
+# 서브그래프 상태에 초기값 생성
+def subgraph_node_1(state: ChildState):
+    return {"child_key": f"sub_node_1-{state['child_key']}"}
+
+# 상태값 그대로 반환
+def subgraph_node_2(state: ChildState):
+    return {"child_key": f"sub_node_2-{state['child_key']}"}
+
+
+# 서브그래프 구성
+subgraph_builder = StateGraph(ChildState)
+subgraph_builder.add_node(subgraph_node_1)
+subgraph_builder.add_node(subgraph_node_2)
+subgraph_builder.add_edge(START, "subgraph_node_1")
+subgraph_builder.add_edge("subgraph_node_1", "subgraph_node_2")
+subgraph = subgraph_builder.compile()
+
+
+# 서브그래프와 키를 공유하지 않는 부모 상태 정의
+class ParentState(TypedDict):
+    parent_key: str
+    result: str
+
+# parent_key 값 그대로 반환
+def node_1(state: ParentState):
+  return {"parent_key": f"node_1-{state['parent_key']}"}
+
+# 서브그래프와 상태 변환 및 결과 처리
+def node_2(state: ParentState):
+  response = subgraph.invoke({"child_key": state["parent_key"]})
+  return {"result": response["child_key"]}
+
+# 부모 그래프 정의
+parent_graph_builder = StateGraph(ParentState)
+parent_graph_builder.add_node("node_1", node_1)
+# 서브그래프 호출은 서브그래프 호출로 정의한 노드를 사용
+parent_graph_builder.add_node("node_sub", node_2)
+parent_graph_builder.add_edge(START, "node_1")
+parent_graph_builder.add_edge("node_1", "node_sub")
+parent_graph_builder.add_edge("node_sub", END)
+parent_graph = parent_graph_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-4.png)
+
+
+부모 그래프를 실행하면 하위 그래프의 결과까지 모두 포함된 것을 확인할 수 있다.  
+
+```python
+# 서브그래프의 출력까지 모두 확인하기
+
+for chunk in parent_graph.stream({"parent_key": "parent"}, subgraphs=True):
+  print(chunk)
+# ((), {'node_1': {'parent_key': 'node_1-parent'}})
+# (('node_sub:e367f7fa-3f18-1d4a-6a01-83e23741178f',), {'subgraph_node_1': {'child_key': 'sub_node_1-node_1-parent'}})
+# (('node_sub:e367f7fa-3f18-1d4a-6a01-83e23741178f',), {'subgraph_node_2': {'child_key': 'sub_node_2-sub_node_1-node_1-parent'}})
+# ((), {'node_sub': {'result': 'sub_node_2-sub_node_1-node_1-parent'}})
+```  
+
+### Appendix: GrandChild Graph
+추가 예제로 더 깊은 하위 그래프가 있는 경우를 살펴본다. 
+각 그래프간 공유되는 키는 없고 모든 통신에서 변환 함수를 사용한다. 
+이를 위해 아래와 같은 구성으로 진행한다.  
+
+- `Parent Graph` : 실제 사용자가 대화하는 가장 상위 그래프
+- `Sub Graph` : `Parent Graph` 가 호출하는 하위 그래프
+- `Sub Sub Graph` : `Sub Graph` 가 호출하는 하위 그래프
+
+아래는 `Sub Sub Graph` 의 구현이다.  
+
+```python
+# subsubgrpah 정의
+
+from typing_extensions import TypedDict
+from langgraph.graph.state import StateGraph, START, END
+from IPython.display import Image, display
+
+class SubSubState(TypedDict):
+  subsub_key: str
+
+def subsub_node(state: SubSubState) -> SubSubState:
+  return {"subsub_key": f"subsub_{state['subsub_key']}"}
+
+subsubgraph_builder = StateGraph(SubSubState)
+subsubgraph_builder.add_node(subsub_node)
+subsubgraph_builder.add_edge(START, "subsub_node")
+subsubgraph_builder.add_edge("subsub_node", END)
+subsubgraph = subsubgraph_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(subsubgraph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-5.png)
+
+
+```python
+# susubgraph 호출 테스트
+
+for chunk in subsubgraph.stream({"subsub_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# ((), {'subsub_node': {'subsub_key': 'subsub_Hi'}})
+```  
+
+다음은 `Sub Graph` 의 구현이다.  
+
+```python
+# subgraph 정의
+
+class SubState(TypedDict):
+  sub_key: str
+
+# 손자 그래프 호출 및 상태 변환 함수, 자식 상태를 입력받아 변환된 자식 상태 반환
+def call_subsub_graph(state: SubState) -> SubState:
+  # 현재 그래프 기준 부모, 자식의 상태 키는 접근 불가
+  subsub_graph_input = {"subsub_key": state["sub_key"]}
+  subsub_graph_output = subsubgraph.invoke(subsub_graph_input)
+
+  return {"sub_key" : f"sub_{subsub_graph_output['subsub_key']}"}
+
+
+subgrpah_builder = StateGraph(SubState)
+subgrpah_builder.add_node("sub_node", call_subsub_graph)
+subgrpah_builder.add_edge(START, "sub_node")
+subgrpah_builder.add_edge("sub_node", END)
+sub_graph = subgrpah_builder.compile()
+
+# 그래프 시각화
+try:
+    display(Image(sub_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-6.png)
+
+
+```python
+# subgraph 호출 테스트
+
+for chunk in sub_graph.stream({"sub_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# (('sub_node:b005b9e1-d397-6c31-7faf-f610043af2b0',), {'subsub_node': {'subsub_key': 'subsub_Hi'}})
+# ((), {'sub_node': {'sub_key': 'sub_subsub_Hi'}})
+```  
+
+마지막으로 `Parent Graph` 의 구현이다.  
+
+```python
+# parent 정의
+
+class ParentState(TypedDict):
+  parent_key: str
+
+def parent_1(state: ParentState) -> ParentState:
+    # 자식 또는 손자 키는 여기서 접근 불가
+    return {"parent_key": f'parent_1_{state["parent_key"]}'}
+
+def parent_2(state: ParentState) -> ParentState:
+    # 자식 또는 손자 키는 여기서 접근 불가
+    return {"parent_key": f'parent_2_{state["parent_key"]}'}
+
+# 부모 상태와 자식 상태 간의 데이터 변환 및 자식 그래프 호출 처리
+def call_sub_graph(state: ParentState) -> ParentState:
+    # 부모 상태 채널(my_parent_key)에서 자식 상태 채널(my_child_key)로 상태 변환
+    sub_graph_input = {"sub_key": state["parent_key"]}
+    # 자식 상태 채널(my_child_key)에서 부모 상태 채널(my_parent_key)로 상태 변환
+    sub_graph_output = sub_graph.invoke(sub_graph_input)
+    return {"parent_key": sub_graph_output["sub_key"]}
+
+
+# 부모 상태 그래프 초기화 및 노드 구성
+parent_grpah_builder = StateGraph(ParentState)
+parent_grpah_builder.add_node("parent_1", parent_1)
+
+# 참고: 컴파일된 그래프가 아닌 함수를 전달
+parent_grpah_builder.add_node("sub", call_sub_graph)
+parent_grpah_builder.add_node("parent_2", parent_2)
+
+# 상태 그래프의 실행 흐름을 정의하는 엣지 구성
+parent_grpah_builder.add_edge(START, "parent_1")
+parent_grpah_builder.add_edge("parent_1", "sub")
+parent_grpah_builder.add_edge("sub", "parent_2")
+parent_grpah_builder.add_edge("parent_2", END)
+
+# 구성된 부모 상태 그래프의 컴파일 및 실행 가능한 그래프 생성
+parent_graph = parent_grpah_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(parent_graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/summary-subgraph-7.png)
+
+
+```python
+# parent_grpah 호출 테스트
+
+for chunk in parent_graph.stream({"parent_key": "Hi"}, subgraphs=True):
+    print(chunk)
+# ((), {'parent_1': {'parent_key': 'parent_1_Hi'}})
+# (('sub:a1fc9421-166f-19a0-4096-7b99bd14317a', 'sub_node:01fe24c7-d62c-2b7d-a65a-a920a3d7d791'), {'subsub_node': {'subsub_key': 'subsub_parent_1_Hi'}})
+# (('sub:a1fc9421-166f-19a0-4096-7b99bd14317a',), {'sub_node': {'sub_key': 'sub_subsub_parent_1_Hi'}})
+# ((), {'sub': {'parent_key': 'sub_subsub_parent_1_Hi'}})
+# ((), {'parent_2': {'parent_key': 'parent_2_sub_subsub_parent_1_Hi'}})
+```  
+
+위와 같이 `LangGraph` 를 사용하면 각 목적에 맞게 구현된 여러 그래프를 조합해 하나의 큰 그래프를 구현할 수 있다. 
+그래고 각 그래프간 통신에서 공유 가능한 상태 키가 있다면 손쉽게 조합할 수 있자만, 그렇지 않더라도 각 그래프간 상태 변환을 통해 통신할 수 있다. 
+여기서 상태 변환은 상위 그래프가 하위 그래프를 호출 할때 하위 그래프의 상태에 맞게 변환해 호출하고, 
+그 결과를 다시 상위 그래프의 상태에 맞게 변환해 반환하는 방식으로 진행된다.  
+
+
+---  
+## Reference
+[Use subgraphs](https://langchain-ai.github.io/langgraph/how-tos/subgraph/)  
+[Subgraphs](https://langchain-ai.github.io/langgraph/concepts/subgraphs/)  
+[대화 기록 요약을 추가하는 방법](https://wikidocs.net/265767)  
+[서브그래프 추가 및 사용 방법](https://wikidocs.net/265768)  
+
+
