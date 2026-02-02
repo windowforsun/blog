@@ -186,3 +186,52 @@ class DemoRetrievalChain:
 
     return self
 ```  
+
+구현한 `DemoRetrievalChain` 클래스의 구현 결과를 확인해 본다. 
+문서는 기상청에 있는 날씨 기후에 대한 보고서를 사용한다.  
+
+```python
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api key"
+model_name = "BM-K/KoSimCSE-roberta"
+
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+
+# 디렉토리 경로
+directory_path = "/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs"
+
+file_list = [
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf'
+]
+
+# Ensure the persist directory exists
+collection_name='weather-docs-6'
+persist_directory = f"/content/drive/MyDrive/Colab Notebooks/data/vectorstore/{collection_name}"
+
+pdf = DemoRetrievalChain(
+    source_uri=file_list,
+    embeddings=hf_embeddings,
+    llm=llm,
+    collection_name=collection_name,
+    persist_directory=persist_directory
+).create_chain()
+```  
