@@ -235,3 +235,64 @@ pdf = DemoRetrievalChain(
     persist_directory=persist_directory
 ).create_chain()
 ```  
+
+간단한 질문을 던졌을 때 출처까지 포함해 문서 내용을 바탕으로 최종 답변이 생성되는 것을 확인할 수 있다.  
+
+```python
+question = '6월 평균 기온에 대해 알려줘'
+chain_result = pdf_chain.invoke(
+    {
+        'question' : question,
+        'context' : pdf_retriever.invoke(question),
+        'chat_history' : []
+    }
+)
+# 2025년 6월 평균 기온은 22.9℃이고 평년 값은 21.4℃이며, 평년 편차는 +1.5℃입니다.
+# 
+# **출처**:
+# * /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf
+
+question = '5월 평균 기온에 대해 알려줘'
+chain_result = pdf_chain.invoke(
+    {
+        'question' : question,
+        'context' : pdf_retriever.invoke(question),
+        'chat_history' : []
+    }
+)
+# 2025년 5월 평균 기온은 16.8℃이고, 평균 최고 기온은 22.4℃이며, 평균 최저 기온은 11.5℃입니다.
+# 
+# **출처:**
+# * /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf
+
+question = '5월 과 6월 강수량 특징에 대해 설명 및 비교해줘'
+chain_result = pdf_chain.invoke(
+    {
+        'question' : question,
+        'context' : pdf_retriever.invoke(question),
+        'chat_history' : []
+    }
+)
+# 5월 전국 평균 강수량은 116.6mm이고, 강수일수는 10.6일이며, 6월 전국 평균 강수량은 작년보다 56.9mm 많았습니다.
+# 
+# **출처:**
+# * /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf
+# * /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf
+
+question = '대한민국의 지금까지 기후에 대해 특징 설명해줘'
+chain_result = pdf_chain.invoke(
+    {
+        'question' : question,
+        'context' : pdf_retriever.invoke(question),
+        'chat_history' : []
+    }
+)
+# 2025년 3월에는 중국 내륙의 따뜻하고 건조한 공기가 강한 서풍을 타고 유입되고 햇볕이 더해지면서 일 최고기온 최고 5순위 이내를 기록한 지역이 많았으며, 하순에는 고온이 지속되었습니다. 2025년 4월에는 찬 대륙고기압의 강도가 평년 대비 약하고 우리나라 주변 기압계 흐름이 원활하여 추위와 더위가 연이어 발생하는 급격한 기온 변동을 보였습니다. 2025년 6월에는 북태평양고기압 가장자리를 따라 덥고 습한 공기가 유입되고 햇볕이 더해지면서 폭염과 열대야가 발생했습니다.
+# 
+# **출처:**
+# - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf(페이지 6)
+# - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf(페이지 0)
+# - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(페이지 0)
+# - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf(페이지 1)
+```
+
