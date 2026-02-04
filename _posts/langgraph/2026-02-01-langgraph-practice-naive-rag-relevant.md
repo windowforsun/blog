@@ -296,3 +296,102 @@ chain_result = pdf_chain.invoke(
 # - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf(페이지 1)
 ```
 
+
+
+### Build Graph
+이제 위 클래스를 사용해서 `RAG` 구조를 그래프로 정의한다.  
+
+```python
+from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+
+# 상태 정의
+class GraphState(TypedDict):
+  question: Annotated[str, "Question"]
+  context: Annotated[str, 'Context']
+  answer: Annotated[str, 'Answer']
+  messages: Annotated[list, add_messages]
+  
+  
+# 노드 정의
+def retrieve_document(state: GraphState) -> GraphState:
+    latest_question = state['question']
+    retrieved_docs = pdf_retriever.invoke(latest_question)
+    retrieved_docs = format_docs(retrieved_docs)
+    return GraphState(context=retrieved_docs)
+
+def llm_anwser(state: GraphState) -> GraphState:
+    latest_question = state['question']
+    context = state['context']
+    response = pdf_chain.invoke(
+        {
+            'question' : latest_question,
+            'context' : context,
+            'chat_history' : messages_to_history(state['messages'])
+        }
+    )
+
+    return GraphState(
+        answer=response,
+        messages=[('user', latest_question), ('assistant', response)]
+    )
+
+  
+# 유틸 함수
+def get_role_from_messages(msg):
+    if isinstance(msg, HumanMessage):
+        return "user"
+    elif isinstance(msg, AIMessage):
+        return "assistant"
+    else:
+        return "assistant"
+
+def messages_to_history(messages):
+    return "\n".join(
+        [f"{get_role_from_messages(msg)}: {msg.content}" for msg in messages]
+    )
+
+def format_docs(docs):
+    return "\n".join(
+        [
+            f"<document><content>{doc.page_content}</content><source>{doc.metadata['source']}</source><page>{int(doc.metadata['page'])+1}</page></document>"
+            for doc in docs
+        ]
+    )
+
+def format_searched_docs(docs):
+    return "\n".join(
+        [
+            f"<document><content>{doc['content']}</content><source>{doc['url']}</source></document>"
+            for doc in docs
+        ]
+    )
+
+def execute_graph(graph, config, inputs):
+
+    for event in graph.stream(inputs, config, stream_mode="updates"):
+        # 업데이트 딕셔너리 순회
+        for k, v in event.items():
+            # 메시지 목록 출력
+            print(k)
+            print(v)
+
+
+def format_task(tasks):
+    # 결과를 저장할 빈 리스트 생성
+    task_time_pairs = []
+
+    # 리스트를 순회하면서 각 항목을 처리
+    for item in tasks:
+        # 콜론(:) 기준으로 문자열을 분리
+        task, time_str = item.rsplit(":", 1)
+        # '시간' 문자열을 제거하고 정수로 변환
+        time = int(time_str.replace("시간", "").strip())
+        # 할 일과 시간을 튜플로 만들어 리스트에 추가
+        task_time_pairs.append((task, time))
+
+    # 결과 출력
+    return task_time_pairs
+
+```  
