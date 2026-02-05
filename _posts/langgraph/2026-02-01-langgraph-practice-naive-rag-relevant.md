@@ -395,3 +395,35 @@ def format_task(tasks):
     return task_time_pairs
 
 ```  
+
+이제 구현된 모든 내용들을 사용해서 `RAG` 구조를 그래프로 정의한다.  
+
+```python
+# 그래프 정의
+
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+graph_builder.add_node('retrieve', retrieve_document)
+graph_builder.add_node('llm_answer', llm_anwser)
+
+graph_builder.add_edge('retrieve', 'llm_answer')
+graph_builder.add_edge('llm_answer', END)
+
+graph_builder.set_entry_point('retrieve')
+
+memory = MemorySaver()
+
+graph = graph_builder.compile(memory)
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```
+
