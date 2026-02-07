@@ -3,7 +3,7 @@ layout: single
 classes: wide
 title: "[LangGraph] LangGraph Summary and Subgraph"
 header:
-  overlay_image: /img/langchain-img-2.jpeg
+  overlay_image: /img/langgraph-img-2.jpeg
 excerpt: 'LangGraph 에서 맥락 유지를 위한 요약과 구조 효율화를 위한 Subgraph 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
