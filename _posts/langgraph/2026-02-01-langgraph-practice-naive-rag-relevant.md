@@ -449,3 +449,123 @@ execute_graph(graph, config, inputs)
 # llm_answer
 # {'answer': '주어진 문맥에서 2025년 3월, 4월, 5월, 6월의 평균 기온에 대한 정보가 제공됩니다.\n\n*   **2025년 3월:** 정보가 없습니다.\n*   **2025년 4월:** 평균 기온은 13.1℃ 입니다.\n*   **2025년 5월:** 평균 기온은 16.8℃ 입니다.\n*   **2025년 6월:** 평균 기온은 22.9℃ 입니다.\n\n**출처:**\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf (페이지 1)\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf (페이지 1)\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf (페이지 1)', 'messages': [('user', '지금까지 각 월의 평균 기온에 대해 정리해줘'), ('assistant', '주어진 문맥에서 2025년 3월, 4월, 5월, 6월의 평균 기온에 대한 정보가 제공됩니다.\n\n*   **2025년 3월:** 정보가 없습니다.\n*   **2025년 4월:** 평균 기온은 13.1℃ 입니다.\n*   **2025년 5월:** 평균 기온은 16.8℃ 입니다.\n*   **2025년 6월:** 평균 기온은 22.9℃ 입니다.\n\n**출처:**\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf (페이지 1)\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf (페이지 1)\n*   /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf (페이지 1)')]}
 ```  
+
+## Relevant Checker
+`Relevant Checker` 는 `RAG` 파이프라인에서 검색된 문서가 살제로 입력 질의와 얼마나 고나련성이 높은지 판별하는 컴포넌트이다. 
+검색 단계에서 단순 벡터 유사도만으로 질의와 비슷하지만 의미적으로 무관한 문서가 섞여 들어올 수 있기 때문에, 추가적으로 관련성 판별 과정을 두어 검색 품질을 높인다.  
+
+예제에서는 앞서 구현한 `Naive RAG` 에 `Relevant Checker` 를 추가하여 검색된 문서가 입력 질의와 얼마나 관련성이 높은지 판별하는 과정을 추가한다.  
+
+### Define Relevant Checker Class
+관련성 체크를 위한 클래스를 정의한다. 이 클래스는 검색된 문서와 입력 질의를 받아 관련성 점수를 계산하고, 이를 기반으로 문서를 필터링할 수 있다.  
+
+```python
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.prompts import PromptTemplate
+from enum import Enum
+
+
+class QuestionScore(BaseModel):
+  """
+  Binary scroes for relevance checks
+  """
+
+  score: str = Field(
+      description="relevant or not relevant, Answer 'yes' if the anwser is relevant to the question else answer 'no'"
+  )
+
+class AnswerRetrievalScore(BaseModel):
+  """
+  Binary scores for relevance checks
+  """
+
+  score: str = Field(
+      description="relevant or not relevant, Answer 'yes', if the answer is relevant to the retrieved document else answer 'no'"
+  )
+
+class QuestionRetrievalScore(BaseModel):
+  """
+  Binary socres for relevance checks
+  """
+
+  score: str = Field(
+      description="relevant or not relevant, Answer 'yes' if the question is relevant to the retrieved document else answer 'no'"
+  )
+
+class EnumOutputStructured(Enum):
+  # RETRIEVAL_QUESTION()
+  RETRIEVAL_ANSWER = (AnswerRetrievalScore, PromptTemplate(
+      template="""
+      You are a grader assessing relevance of a retrieved document to a user question.
+
+      Here is the retrieved document:
+      {context}
+
+      Here is the answer:
+      {answer}
+
+      IF the document contains keyword(s) or semantic meaning related to the user answer, grade it as relevant.
+
+      Give a binary score 'yes' or 'no' score to indicate whether the retrieved document is relevant to the answer.
+      """,
+      input_variables=["context", "answer"]
+  ))
+  QUESTION_ANSWER = (QuestionScore, PromptTemplate(
+      template="""
+      You are a grader assessing whether an answer appropriately addresses the given question.
+
+      Here is the question:
+      {question}
+
+      Here is the answer:
+      {answer}
+
+      If the answer directly addresses the question and provides relevant information, grade it as relevant.
+      Consider both semantic meaning and factual accuracy in your assessment.
+
+      Give a binary score 'yes' or 'no' score to indicate whether the answer is relevant to the question.
+      """,
+      input_variables=["question", "answer"]
+  ))
+  QUESTION_RETRIEVAL = (QuestionRetrievalScore, PromptTemplate(
+      template="""
+      You are a grader assessing whether a retrieved document is relevant th the given question.
+
+      Here is the question:
+      {question}
+
+      Here is retrieved document:
+      {context}
+
+
+      If the document contains information that could help answer the question, grade it as relevant.
+      Consider both semantic meaning and potential usefulness for answering the question.
+
+      Give a binary score 'yes' or 'no' score to indicate whether the retrieved document is relevant to the question.
+      """,
+      input_variables=['question', 'context']
+  ))
+
+  def __init__(self, output_class, prompt):
+    self.output_class = output_class
+    self.prompt = prompt
+
+
+class RelevanceGrader:
+  def __init__(self, llm, target_enum : EnumOutputStructured):
+    self.llm = llm
+    self.target_enum = target_enum
+
+  def create(self):
+    llm = self.llm.with_structured_output(self.target_enum.output_class)
+
+
+    prompt = self.target_enum.prompt
+    chain = prompt | llm
+
+    return chain
+```  
+
+
