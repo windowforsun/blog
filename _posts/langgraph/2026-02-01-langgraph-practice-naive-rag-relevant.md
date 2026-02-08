@@ -569,3 +569,82 @@ class RelevanceGrader:
 ```  
 
 
+
+
+### Build Graph
+구현한 `Relevant Checker` 클래스를 사용해서 `RAG` 구조를 그래프로 정의한다.  
+
+먼저 그래프 정의에 필요한 상태와 노드를 정의한다.  
+
+```python
+from typing import Annotated, TypedDict
+from langgraph.graph.message import add_messages
+
+# 상태 정의
+class GraphState(TypedDict):
+  question: Annotated[str, 'Question']
+  context: Annotated[str, 'Context']
+  answer: Annotated[str, 'Answer']
+  messages: Annotated[list, add_messages]
+  relevance: Annotated[str, 'Relevance']
+
+# 관련성 체크 노드
+def relevance_check(state: GraphState) -> GraphState:
+    question_answer_relevant = RelevanceGrader(llm, EnumOutputStructured.QUESTION_RETRIEVAL).create()
+
+    response = question_answer_relevant.invoke(
+        {
+            'question' : state['question'],
+            'context' : state['context']
+        }
+    )
+
+    print('===== relevant check =====')
+    print(response.score)
+
+    return GraphState(relevance=response.score)
+
+
+def is_relevant(state: GraphState) -> GraphState:
+    return state['relevance']
+```  
+
+이제 최종적으로 `Relevant Checker` 가 추가된 `RAG` 구조를 그래프로 정의한다.  
+
+```python
+# 그래프 구성
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+graph_builder.add_node('retrieve', retrieve_document)
+graph_builder.add_node('relevance_check', relevance_check)
+graph_builder.add_node('llm_answer', llm_anwser)
+
+graph_builder.add_edge('retrieve', 'relevance_check')
+graph_builder.add_conditional_edges(
+    'relevance_check',
+    is_relevant,
+    {
+        'yes': 'llm_answer',
+        'no' : 'retrieve'
+    }
+)
+
+graph_builder.set_entry_point('retrieve')
+
+memory = MemorySaver()
+
+graph = graph_builder.compile(memory)
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/naive-rag-relevant-2.png)
+
