@@ -25,3 +25,21 @@ use_math: true
 
 웹 검색으로는 `GoogleSerperAPIWrapper` 를 사용한다. 
 웹 검색 노드 함수를 구현하면 아래와 같다.  
+
+```python
+# 웹 검색 노드 추가
+from langchain_community.utilities import GoogleSerperAPIWrapper
+import json
+
+os.environ["SERPER_API_KEY"] = "api key"
+
+def web_search(state: GraphState) -> GraphState:
+  web_search_tool = GoogleSerperAPIWrapper()
+
+  search_query = state['question']
+
+  search_result = web_search_tool.results(search_query)['organic']
+  print(search_result)
+
+  return GraphState(context="\n".join(json.dumps(search_result)))
+```  
