@@ -43,3 +43,46 @@ def web_search(state: GraphState) -> GraphState:
 
   return GraphState(context="\n".join(json.dumps(search_result)))
 ```  
+
+이제 이전에 정의했던 내용들에 웹 검색 노드를 추가하여 전체 그래프를 구성한다. 
+
+```python
+# 그래프 구성
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+graph_builder.add_node('retrieve', retrieve_document)
+graph_builder.add_node('relevance_check', relevance_check)
+graph_builder.add_node('llm_answer', llm_anwser)
+graph_builder.add_node('web_search', web_search)
+
+graph_builder.add_edge('retrieve', 'relevance_check')
+graph_builder.add_conditional_edges(
+    'relevance_check',
+    is_relevant,
+    {
+        'yes': 'llm_answer',
+        'no' : 'web_search'
+    }
+)
+
+graph_builder.add_edge('web_search', 'llm_answer')
+graph_builder.set_entry_point('retrieve')
+
+memory = MemorySaver()
+
+graph = graph_builder.compile(memory)
+
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/web-search-query-rewrite-1.png)
