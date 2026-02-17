@@ -201,3 +201,27 @@ class QueryRewrite:
     chain = prompt | self.llm | StrOutputParser()
     return chain.invoke(params)
 ```  
+
+구현한 `QueryRewrite` 클래스가 어떤 결과를 보이는지 테스트해 보면아래와 같다.  
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+rewrite = QueryRewrite(llm)
+rewrite({'question': '사람이 배가고프면 어떻게돼?' })
+# 배고픔이 사람에게 미치는 영향은 무엇인가?
+```  
+
+이제 구현된 클래스를 사용해 `query_rewrite` 노드 함수를 정의한다.  
+
+```python
+# Query Rewrite 함수 노드 정의
+def query_rewrite(state: GraphState) -> GraphState:
+  latest_question = state['question']
+  question_rewritten = QueryRewrite(llm)({'question': latest_question })
+  return GraphState(question=question_rewritten)
+```  
