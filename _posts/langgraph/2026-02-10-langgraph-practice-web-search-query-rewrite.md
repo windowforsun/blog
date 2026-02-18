@@ -287,3 +287,70 @@ execute_graph(graph, config, inputs)
 # llm_answer
 # {'answer': '비트코인(Bitcoin, BTC)의 현재 가격은 US$47,512.190입니다.\n\n**출처:**\n* https://www.coingecko.com/ko/%EC%BD%94%EC%9D%B8/%EB%B9%84%ED%8A%B8%EC%BD%94%EC%9D%B8', 'messages': [('user', '비트코인 현재 가격'), ('assistant', '비트코인(Bitcoin, BTC)의 현재 가격은 US$47,512.190입니다.\n\n**출처:**\n* https://www.coingecko.com/ko/%EC%BD%94%EC%9D%B8/%EB%B9%84%ED%8A%B8%EC%BD%94%EC%9D%B8')]}
 ```  
+
+
+## Query Rewriter
+[이전 포스팅]({{site.baseurl}}{% link _posts/langgraph/2026-01-20-langgraph-practice-graph-rag-structure.md %})
+과 앞서 구현한 `web_search` 에 추가적으로 `query rewriter` 를 추가하여,
+`retrieval` 를 수행하기 전에 `query` 를 재작성하는 구조를 구현해 본다.
+이를 통해 사용자의 질의가 `retrieval` 에 적합한 형태로 변환되어,
+더 나은 검색 결과를 얻을 수 있도록 한다.
+
+물론 `query rewriter` 는 단순히 `retrieval` 에 적합한 형태로 변환하는 것 뿐만 아니라,
+사용자의 의도를 파악하고, 검색 결과의 품질을 향상시키는 데에도 중요한 역할을 한다.
+또한 최초 수행 시점에도 사용할 수 있지만, 관련성 검증이 실패한 경우에도 좀 더 관련성이 높은 결과가 나올 수 있도록 쿼리를 수정한다는 등
+다양한 측면에서 활용될 수 있다.
+
+쿼리 재작성에 대한 내용을 `QueryRewrite` 클래스로 구현하면 알애ㅘ 같다.
+
+```python
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+class QueryRewrite:
+  def __init__(self, llm):
+    self.llm = llm
+
+  def __call__(self, params: dict):
+    prompt = PromptTemplate(
+        template="""
+        Reformulate the given question to enhance ist effectiveness for vectorstore retrieval.
+
+        - Analyze the initial question to identity areas for improvment such as specificity, clarity, and relevance.
+        - Consider the context and potential keywords that would optimize retrieval.
+        - Maintain the intent of the original question while enhancing its structure and vocabulary.
+
+        # Steps
+        1. **Understand the Original Question**: Identify the core intent and any keyword.
+        2. **Enhance Clarity**: Simplify language and ensure the question is direct and to the point.
+        3. **Optimize of Retrieval**: Add or rearrange keywords for better alignment with vectorstore indexing.
+        4. **Review**: Ensure the improved question accurately reflects the original intent and is free of ambiguity
+
+        # Output Format
+        - Provide a single, improved question.
+        - Do not include any introductory for explanatory text; only the reformulate question.
+
+        # Examples
+        **Input**:
+        "What are the benefits of using renewable energy sources over fossil fuels?"
+        *Output**:
+        "How do renewable energy sources compare to fossil fuels in terms of benefits?"
+        **Input**:
+        "How does climate change impact polar bear populations?"
+        **Output**:
+        "What effects does climate change have on polar bear populations?"
+
+        # Notes
+        - Ensure the improved question is concise and contextually relevant.
+        - Avoid altering the fundamental intent or meaning of the original question.
+
+        [REMEMBER] Re-written question should be in the same langugage as the original question.
+
+        # Ehere is the original question that needs to be rewritten:
+        {question}
+        """,
+        input_variables=["question"]
+    )
+    chain = prompt | self.llm | StrOutputParser()
+    return chain.invoke(params)
+```  
