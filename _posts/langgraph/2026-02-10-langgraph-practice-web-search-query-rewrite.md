@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph RAG Structure"
+title: "[LangGraph] LangGraph Web Search and Query Rewrite"
 header:
   overlay_image: /img/langgraph-img-2.jpeg
-excerpt: ''
+excerpt: 'LangGraph 를 기반으로 Web Search 와 Query Rewrite 를 통해 보다 적절한 답변을 제공하는 RAG 구성에 대해 알아보자.'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,12 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - RAG
+    - VectorStore
+    - Naive RAG
+    - Retrieval
+    - Web Search
+    - Query Rewrite
 toc: true
 use_math: true
 ---  
@@ -354,3 +360,165 @@ class QueryRewrite:
     chain = prompt | self.llm | StrOutputParser()
     return chain.invoke(params)
 ```  
+
+구현한 `QueryRewrite` 클래스가 어떤 결과를 보이는지 테스트해 보면아래와 같다.
+
+```python
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+rewrite = QueryRewrite(llm)
+rewrite({'question': '사람이 배가고프면 어떻게돼?' })
+# 배고픔이 사람에게 미치는 영향은 무엇인가?
+```  
+
+이제 구현된 클래스를 사용해 `query_rewrite` 노드 함수를 정의한다.
+
+```python
+# Query Rewrite 함수 노드 정의
+def query_rewrite(state: GraphState) -> GraphState:
+  latest_question = state['question']
+  question_rewritten = QueryRewrite(llm)({'question': latest_question })
+  return GraphState(question=question_rewritten)
+```  
+
+앞선 내용에 `query_rewrite` 노드를 추가해 전체 그래프를 구성하면 아래와 같다.
+
+```python
+
+# 그래프 구성
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+graph_builder.add_node('retrieve', retrieve_document)
+graph_builder.add_node('relevance_check', relevance_check)
+graph_builder.add_node('llm_answer', llm_anwser)
+graph_builder.add_node('web_search', web_search)
+
+graph_builder.add_node('query_rewrite', query_rewrite)
+
+graph_builder.add_edge('query_rewrite', 'retrieve')
+graph_builder.add_edge('retrieve', 'relevance_check')
+graph_builder.add_conditional_edges(
+    'relevance_check',
+    is_relevant,
+    {
+        'yes': 'llm_answer',
+        'no' : 'web_search'
+    }
+)
+
+graph_builder.add_edge('web_search', 'llm_answer')
+graph_builder.set_entry_point('query_rewrite')
+
+memory = MemorySaver()
+
+graph = graph_builder.compile(memory)
+
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/web-search-query-rewrite-2.png)
+
+
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+config = RunnableConfig(recursion_limit=20, configurable={'thread_id' : '4'})
+
+inputs = GraphState(question='6월 날씨에 대해 알려줘')
+
+execute_graph(graph, config, inputs)
+# query_rewrite
+# {'question': '6월 날씨 정보를 알려주세요.'}
+# retrieve
+# {'context': '<document><content>주\x017일,\x01의성\x017일,\x01임실\x017일,\x01광주\x017일,\x01대전\x017일\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n*평균방법:\x01각\x01지점별\x01이상기온\x01발생일수\x01산출\x01후\x0162개\x01지점\x01평균\n기상가뭄\n▶\x01기상가뭄:\x01최근\x016개월\x01누적강수량이\x01평년\x01강수량보다\x01적은\x01현상\n▶\x01기상가뭄\x01판단\x01기준:\x01최근\x016개월\x01강수량(표준강수지수*)에\x01따라\x01약한-보통-심한-극심한\x01가뭄인\x014단계로\x01구분</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>3</page></document>\n<document><content>2025년\n2025.\x017.\x014.\x01발간\n6월호\n6월\x01기후\x01동향\n기온\n6월\x01기온\x01시계열\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01막대:\x012025년\x016월\x01전국\x0166개\x01지점의\x01일별\x01(빨강)최고기온\x01범위,\x01(파랑)최저기온\x01범위\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01실선:\x012025년\x016월\x01전국\x0166개\x01지점\x01평균\x01일별\x01(초록)평균기온,\x01(빨강)최고기온,\x01(파랑)최저기온\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01점:\x011973~2025년\x016월\x01전국\x0166개\x01지점\x01기준\x01일별\x01(빨강)최고기온\x01극값,\x01(파랑)최저기온\x01극값</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>1</page></document>\n<document><content>\x01\x01\x01\x01\x01\x01\x01((1973~1989년)\x0156개\x01지점,\x01(1990~2025년)\x0162개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x016월\x01~\x012025년\x015월)\n2024년 2025년\n년/월 기준\n6월 7월 8월 9월 10월 11월 12월 1월 2월 3월 4월 5월\n월평균(℃) 22.7 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1 16.8</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>5</page></document>\n<document><content>순위(상위) 1 1 1 2 2 2 2 1 3 1 2 2 1880\x01~\x012025년\n※\x01본\x01자료는\x01NOAA(http://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series)에서\x01제공하는\x01자료이며,\x01익월\x0120일\x01경에\x01값이\x01산출되므로\x01\x01\x01\x01\x01\n\x01\x01\x01\x01\x015월\x01자료까지만\x01제공하였음(6월\x01값은\x012025년\x017월\x0120일\x01경\x01발표)</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>11</page></document>\n<document><content>※\x011973년\x01이후\x01연속적으로\x01관측한\x01전국\x0162개\x01지점과\x01제주\x014개\x01지점을\x01포함한\x0166개\x01지점의\x01관측자료를\x01활용\n\x01\x01\x01\x01\x01\x01\x01((1973~1989년)\x0156개\x01지점,\x01(1990~2025년)\x0162개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x017월\x01~\x012025년\x016월)\n2024년 2025년\n년/월 기준\n7월 8월 9월 10월 11월 12월 1월 2월 3월 4월 5월 6월\n월평균(℃) 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1 16.8 22.9</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>5</page></document>\n<document><content>2024년\x014월\x01황사일수(일) 2025년\x014월\x01황사일수(일)\n※\x01강수일수:\x01전국\x0166개\x01지점의\x01일강수량이\x010.1㎜\x01이상인\x01날의\x01일수\n※\x01황사일수:\x01전국\x0113개\x01목측\x01관측지점\x01중\x01황사가\x01관측된\x01지점의\x01일수\n6</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>6</page></document>\n<document><content>-----\x01\x01\x01\x01\x01기기기기기후후후후후분분분분분석석석석석정정정정정보보보보보\x01\x01\x01\x01\x0122222000002222255555년년년년년66666월월월월월호호호호호\x01\x01\x01\x01\x01-----\n주요\x01기후요소\x01비교\x01-\x01기온·강수량\n작년\x01비교\n6월\x01전국\x01평균기온은\x01작년보다\x010.2℃\x01높았고,\x01강수량은\x01작년보다\x0156.9mm\x01많았습니다.</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>4</page></document>\n<document><content>※\x011973년\x01이후\x01연속적으로\x01관측한\x01전국\x0162개\x01지점과\x01제주\x014개\x01지점을\x01포함한\x0166개\x01지점의\x01관측자료를\x01활용\n\x01\x01\x01\x01\x01\x01\x01((1973~1989년)56개\x01지점,\x01(1990~2025년)62개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x015월\x01~\x012025년\x014월)\n2024년 2025년\n년/월 기준\n5월 6월 7월 8월 9월 10월 11월 12월 1월 2월 3월 4월\n월평균(℃) 17.7 22.7 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>5</page></document>\n<document><content>2024년\x015월\x01강수일수(일) 2025년\x015월\x01강수일수(일)\n2024년\x015월\x01황사일수(일) 2025년\x015월\x01황사일수(일)\n※\x01강수일수:\x01전국\x0166개\x01지점의\x01일강수량이\x010.1㎜\x01이상인\x01날의\x01일수\n※\x01황사일수:\x01전국\x0113개\x01목측\x01관측지점\x01중\x01황사가\x01관측된\x01지점의\x01일수\n6</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>6</page></document>\n<document><content>2025년\n2025.\x016.\x015.\x01발간\n5월호\n5월\x01기후\x01동향\n기온\n5월\x01기온\x01시계열\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01막대:\x012025년\x015월\x01전국\x0166개\x01지점의\x01일별\x01(빨강)최고기온\x01범위,\x01(파랑)최저기온\x01범위\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01실선:\x012025년\x015월\x01전국\x0166개\x01지점\x01평균\x01일별\x01(초록)평균기온,\x01(빨강)최고기온,\x01(파랑)최저기온\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01점:\x011973~2025년\x015월\x01전국\x0166개\x01지점\x01기준\x01일별\x01(빨강)최고기온\x01극값,\x01(파랑)최저기온\x01극값</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>1</page></document>'}
+# ===== relevant check =====
+# yes
+# relevance_check
+# {'relevance': 'yes'}
+# llm_answer
+# {'answer': '2025년 6월 전국 66개 지점의 일별 최고기온 범위(빨강)와 최저기온 범위(파랑)를 나타내는 막대그래프가 있습니다. 2025년 6월 전국 66개 지점 평균 일별 평균기온(초록), 최고기온(빨강), 최저기온(파랑)을 나타내는 실선이 있습니다. 1973~2025년 6월 전국 66개 지점 기준 일별 최고기온 극값(빨강)과 최저기온 극값(파랑)을 나타내는 점이 있습니다. 6월 전국 평균기온은 작년보다 0.2℃ 높았고, 강수량은 작년보다 56.9mm 많았습니다.\n\n**출처**\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(1)\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(4)', 'messages': [('user', '6월 날씨 정보를 알려주세요.'), ('assistant', '2025년 6월 전국 66개 지점의 일별 최고기온 범위(빨강)와 최저기온 범위(파랑)를 나타내는 막대그래프가 있습니다. 2025년 6월 전국 66개 지점 평균 일별 평균기온(초록), 최고기온(빨강), 최저기온(파랑)을 나타내는 실선이 있습니다. 1973~2025년 6월 전국 66개 지점 기준 일별 최고기온 극값(빨강)과 최저기온 극값(파랑)을 나타내는 점이 있습니다. 6월 전국 평균기온은 작년보다 0.2℃ 높았고, 강수량은 작년보다 56.9mm 많았습니다.\n\n**출처**\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(1)\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(4)')]}
+```
+
+
+---  
+## Reference
+[Web Search](https://wikidocs.net/267811)  
+[Query Rewrite](https://wikidocs.net/267812)
+
+_answer', llm_anwser)
+graph_builder.add_node('web_search', web_search)
+
+graph_builder.add_node('query_rewrite', query_rewrite)
+
+graph_builder.add_edge('query_rewrite', 'retrieve')
+graph_builder.add_edge('retrieve', 'relevance_check')
+graph_builder.add_conditional_edges(
+    'relevance_check',
+    is_relevant,
+    {
+        'yes': 'llm_answer',
+        'no' : 'web_search'
+    }
+)
+
+graph_builder.add_edge('web_search', 'llm_answer')
+graph_builder.set_entry_point('query_rewrite')
+
+memory = MemorySaver()
+
+graph = graph_builder.compile(memory)
+
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
+![그림 1]({{site.baseurl}}/img/langgraph/web-search-query-rewrite-2.png)
+
+
+
+```python
+from langchain_core.runnables import RunnableConfig
+
+config = RunnableConfig(recursion_limit=20, configurable={'thread_id' : '4'})
+
+inputs = GraphState(question='6월 날씨에 대해 알려줘')
+
+execute_graph(graph, config, inputs)
+# query_rewrite
+# {'question': '6월 날씨 정보를 알려주세요.'}
+# retrieve
+# {'context': '<document><content>주\x017일,\x01의성\x017일,\x01임실\x017일,\x01광주\x017일,\x01대전\x017일\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n*평균방법:\x01각\x01지점별\x01이상기온\x01발생일수\x01산출\x01후\x0162개\x01지점\x01평균\n기상가뭄\n▶\x01기상가뭄:\x01최근\x016개월\x01누적강수량이\x01평년\x01강수량보다\x01적은\x01현상\n▶\x01기상가뭄\x01판단\x01기준:\x01최근\x016개월\x01강수량(표준강수지수*)에\x01따라\x01약한-보통-심한-극심한\x01가뭄인\x014단계로\x01구분</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>3</page></document>\n<document><content>2025년\n2025.\x017.\x014.\x01발간\n6월호\n6월\x01기후\x01동향\n기온\n6월\x01기온\x01시계열\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01막대:\x012025년\x016월\x01전국\x0166개\x01지점의\x01일별\x01(빨강)최고기온\x01범위,\x01(파랑)최저기온\x01범위\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01실선:\x012025년\x016월\x01전국\x0166개\x01지점\x01평균\x01일별\x01(초록)평균기온,\x01(빨강)최고기온,\x01(파랑)최저기온\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01점:\x011973~2025년\x016월\x01전국\x0166개\x01지점\x01기준\x01일별\x01(빨강)최고기온\x01극값,\x01(파랑)최저기온\x01극값</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>1</page></document>\n<document><content>\x01\x01\x01\x01\x01\x01\x01((1973~1989년)\x0156개\x01지점,\x01(1990~2025년)\x0162개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x016월\x01~\x012025년\x015월)\n2024년 2025년\n년/월 기준\n6월 7월 8월 9월 10월 11월 12월 1월 2월 3월 4월 5월\n월평균(℃) 22.7 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1 16.8</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>5</page></document>\n<document><content>순위(상위) 1 1 1 2 2 2 2 1 3 1 2 2 1880\x01~\x012025년\n※\x01본\x01자료는\x01NOAA(http://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/global/time-series)에서\x01제공하는\x01자료이며,\x01익월\x0120일\x01경에\x01값이\x01산출되므로\x01\x01\x01\x01\x01\n\x01\x01\x01\x01\x015월\x01자료까지만\x01제공하였음(6월\x01값은\x012025년\x017월\x0120일\x01경\x01발표)</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>11</page></document>\n<document><content>※\x011973년\x01이후\x01연속적으로\x01관측한\x01전국\x0162개\x01지점과\x01제주\x014개\x01지점을\x01포함한\x0166개\x01지점의\x01관측자료를\x01활용\n\x01\x01\x01\x01\x01\x01\x01((1973~1989년)\x0156개\x01지점,\x01(1990~2025년)\x0162개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x017월\x01~\x012025년\x016월)\n2024년 2025년\n년/월 기준\n7월 8월 9월 10월 11월 12월 1월 2월 3월 4월 5월 6월\n월평균(℃) 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1 16.8 22.9</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>5</page></document>\n<document><content>2024년\x014월\x01황사일수(일) 2025년\x014월\x01황사일수(일)\n※\x01강수일수:\x01전국\x0166개\x01지점의\x01일강수량이\x010.1㎜\x01이상인\x01날의\x01일수\n※\x01황사일수:\x01전국\x0113개\x01목측\x01관측지점\x01중\x01황사가\x01관측된\x01지점의\x01일수\n6</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>6</page></document>\n<document><content>-----\x01\x01\x01\x01\x01기기기기기후후후후후분분분분분석석석석석정정정정정보보보보보\x01\x01\x01\x01\x0122222000002222255555년년년년년66666월월월월월호호호호호\x01\x01\x01\x01\x01-----\n주요\x01기후요소\x01비교\x01-\x01기온·강수량\n작년\x01비교\n6월\x01전국\x01평균기온은\x01작년보다\x010.2℃\x01높았고,\x01강수량은\x01작년보다\x0156.9mm\x01많았습니다.</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>4</page></document>\n<document><content>※\x011973년\x01이후\x01연속적으로\x01관측한\x01전국\x0162개\x01지점과\x01제주\x014개\x01지점을\x01포함한\x0166개\x01지점의\x01관측자료를\x01활용\n\x01\x01\x01\x01\x01\x01\x01((1973~1989년)56개\x01지점,\x01(1990~2025년)62개\x01지점)\n우리나라\x01월별\x01평균기온\x01평년편차와\x01순위\x01(2024년\x015월\x01~\x012025년\x014월)\n2024년 2025년\n년/월 기준\n5월 6월 7월 8월 9월 10월 11월 12월 1월 2월 3월 4월\n월평균(℃) 17.7 22.7 26.2 27.9 24.7 16.1 9.7 1.8 -0.2 -0.5 7.6 13.1</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>5</page></document>\n<document><content>2024년\x015월\x01강수일수(일) 2025년\x015월\x01강수일수(일)\n2024년\x015월\x01황사일수(일) 2025년\x015월\x01황사일수(일)\n※\x01강수일수:\x01전국\x0166개\x01지점의\x01일강수량이\x010.1㎜\x01이상인\x01날의\x01일수\n※\x01황사일수:\x01전국\x0113개\x01목측\x01관측지점\x01중\x01황사가\x01관측된\x01지점의\x01일수\n6</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>6</page></document>\n<document><content>2025년\n2025.\x016.\x015.\x01발간\n5월호\n5월\x01기후\x01동향\n기온\n5월\x01기온\x01시계열\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01막대:\x012025년\x015월\x01전국\x0166개\x01지점의\x01일별\x01(빨강)최고기온\x01범위,\x01(파랑)최저기온\x01범위\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01실선:\x012025년\x015월\x01전국\x0166개\x01지점\x01평균\x01일별\x01(초록)평균기온,\x01(빨강)최고기온,\x01(파랑)최저기온\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01▶\x01점:\x011973~2025년\x015월\x01전국\x0166개\x01지점\x01기준\x01일별\x01(빨강)최고기온\x01극값,\x01(파랑)최저기온\x01극값</content><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>1</page></document>'}
+# ===== relevant check =====
+# yes
+# relevance_check
+# {'relevance': 'yes'}
+# llm_answer
+# {'answer': '2025년 6월 전국 66개 지점의 일별 최고기온 범위(빨강)와 최저기온 범위(파랑)를 나타내는 막대그래프가 있습니다. 2025년 6월 전국 66개 지점 평균 일별 평균기온(초록), 최고기온(빨강), 최저기온(파랑)을 나타내는 실선이 있습니다. 1973~2025년 6월 전국 66개 지점 기준 일별 최고기온 극값(빨강)과 최저기온 극값(파랑)을 나타내는 점이 있습니다. 6월 전국 평균기온은 작년보다 0.2℃ 높았고, 강수량은 작년보다 56.9mm 많았습니다.\n\n**출처**\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(1)\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(4)', 'messages': [('user', '6월 날씨 정보를 알려주세요.'), ('assistant', '2025년 6월 전국 66개 지점의 일별 최고기온 범위(빨강)와 최저기온 범위(파랑)를 나타내는 막대그래프가 있습니다. 2025년 6월 전국 66개 지점 평균 일별 평균기온(초록), 최고기온(빨강), 최저기온(파랑)을 나타내는 실선이 있습니다. 1973~2025년 6월 전국 66개 지점 기준 일별 최고기온 극값(빨강)과 최저기온 극값(파랑)을 나타내는 점이 있습니다. 6월 전국 평균기온은 작년보다 0.2℃ 높았고, 강수량은 작년보다 56.9mm 많았습니다.\n\n**출처**\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(1)\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf(4)')]}
+```
+
+
+---  
+## Reference
+[Web Search](https://wikidocs.net/267811)  
+[Query Rewrite](https://wikidocs.net/267812)  
+
