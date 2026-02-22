@@ -36,3 +36,64 @@ use_math: true
 
 본 포스팅에서 진행할 예제는 [이전 예제]({{site.baseurl}}{% link _posts/2026-02-01-langgraph-practice-naive-rag-relevant.md %})
 의 내용을 포함하고 하고 있으므로 이전 내용의 숙지가 필요하다.  
+
+
+### create_retriever_tool
+`create_retriever_tool` 는 `LangChain` 함수로 기존의 `retriever` 를 도구(`Tool`)로 래핑하여, 
+에이전트가 쉽게 사용할 수 있게 해주는 유틸리티이다. 
+기존 검색기를 `Tool` 객체로 변환하여, 
+`LangChain` 의 `Agent` 가 여러 도구 중 하나로 선택/활용 하게 만든다. 
+`Tool` 로 래핑된 검색기는, `Agent` 의 계획(`Planning`)과 행동(`Action`) 과정에서 자연스럽게 호출된다. 
+
+`create_retriever_tool` 를 사용한 경우와 그렇지 않은 경우를 비교해 정리하면 아래와 같다.  
+
+| 구분             | `create_retriever_tool` 사용 | 미사용(직접 호출)    |
+|------------------|-----------------------------|---------------------|
+| 통합성           | Agent 워크플로우에 통합      | 개별 기능 호출       |
+| 선택적 사용      | Agent가 필요할 때만 사용     | 항상 직접 호출 필요  |
+| 복합 도구 조합   | 여러 도구와 조합 가능        | 단일 기능 중심       |
+| 계획 및 판단     | Agent가 자연어 설명 기반 선택| 수동 코드 제어       |
+
+
+이전 예제에서 구현했던 `DemoRetrievalChain` 를 사용해 일반 `retriever` 를 
+`create_retriever_tool` 를 사용해 툴로 변환한다.  
+
+```python
+from langchain_core.tools.retriever import create_retriever_tool
+from langchain_core.prompts import PromptTemplate
+
+# retriever 생성
+file_list = [
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf'
+]
+
+collection_name='weather-docs-6'
+persist_directory = f"/content/drive/MyDrive/Colab Notebooks/data/vectorstore/{collection_name}"
+
+pdf = DemoRetrievalChain(
+    source_uri=file_list,
+    embeddings=hf_embeddings,
+    llm=llm,
+    collection_name=collection_name,
+    persist_directory=persist_directory
+).create_chain()
+
+pdf_retriever = pdf.retriever
+pdf_chain = pdf.chain
+
+
+# retriever를 Tool로 래핑
+retriever_tool = create_retriever_tool(
+    pdf_retriever,
+    "pdf_retriever",
+    """
+    It contains useful information on 2025 03-06 Korea Climate Analysis and Weather Information
+    """,
+    document_prompt=PromptTemplate.from_template(
+        "<document><context>{page_content}</context><metadata><source>{source}</source><page>{page}</page></metadata></document>"
+    )
+)
+```  
