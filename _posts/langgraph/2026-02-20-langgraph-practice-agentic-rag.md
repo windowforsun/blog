@@ -97,3 +97,54 @@ retriever_tool = create_retriever_tool(
     )
 )
 ```  
+
+### Tools
+`Agentic RAG` 에서는 다양한 도구(`Tool`)를 사용하여, 
+사용자의 질문에 대한 답변을 생성한다. 
+예제에서 사용할 도구는 문서 검색을 위한 `retriever_tool` 와 
+일반적인 `llm` 에서 답변할 수 있는 `llm_tool` 그리고 최신 정보 검색을 위한 `search_tool` 이다.  
+
+```python
+from langchain_core.tools import tool
+from langchain_community.utilities import GoogleSerperAPIWrapper
+import json
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["SERPER_API_KEY"] = "api_key"
+os.environ["GOOGLE_API_KEY"] = "api key"
+
+
+@tool
+def llm_tool(question: str):
+    """
+    normal question
+    """
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+    return llm.invoke(question).content
+
+
+
+@tool
+def search_tool(question: str):
+    """
+    if need realtime information
+    """
+    web_search_tool = GoogleSerperAPIWrapper()
+
+    search_query = question
+
+    search_result = web_search_tool.results(search_query)['organic']
+
+    return search_result
+```  
+
+정의된 모든 `tool` 을 사용해 `ToolNode` 를 생성한다.  
+
+```python
+tools = [retriever_tool, search_tool, llm_tool]
+tool_node = ToolNode(
+    tools=tools,
+)
+```  
