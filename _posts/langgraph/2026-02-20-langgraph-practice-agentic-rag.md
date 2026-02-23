@@ -148,3 +148,21 @@ tool_node = ToolNode(
     tools=tools,
 )
 ```  
+
+### Node And GraphState
+그래프에서 사용할 상태와 노드 함수를 정의한다. 
+먼저 예제 그래프에서 사용할 상태 객체는 아래와 같다.  
+
+```python
+from typing import Annotated, Sequence, TypedDict
+from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+
+class AgenticRagState(TypedDict):
+  messages: Annotated[Sequence[BaseMessage], add_messages]
+```  
+
+이제 위 상태를 사용하는 각 노드를 정의한다. 
+노드는 기본적으로 필요한 노드를 포함해서, 
+질문의 검색 결과와 질문에 대한 관령성 펑가 노드와 
+질문을 보다 검색기에서 검색하기 좋은 형태로 변환하는 노드로 구성된다.   
