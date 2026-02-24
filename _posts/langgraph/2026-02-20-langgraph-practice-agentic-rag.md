@@ -166,3 +166,116 @@ class AgenticRagState(TypedDict):
 노드는 기본적으로 필요한 노드를 포함해서, 
 질문의 검색 결과와 질문에 대한 관령성 펑가 노드와 
 질문을 보다 검색기에서 검색하기 좋은 형태로 변환하는 노드로 구성된다.   
+
+```python
+from typing import Literal
+from langchain import hub
+from langchain_core.messages import HumanMessage
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import PromptTemplate
+from pydantic import BaseModel, Field
+from langchain.chat_models import init_chat_model
+import os
+
+def agent(state):
+  messages = state['messages']
+  llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+  llm = llm.bind_tools(tools)
+
+  response = llm.invoke(messages)
+
+  return {'messages' : [response]}
+
+
+class grade(BaseModel):
+  """
+  A binary score for relevance checks
+  """
+
+  binary_score: str = Field(
+      description="Response 'yes' if the document is relevant to the question or 'no' if it is not."
+  )
+
+def grade_documents(state) -> Literal["generate", "rewrite"]:
+  llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+  llm_with_tool = llm.with_structured_output(grade)
+
+  prompt = PromptTemplate(
+      template="""
+      You are grader assessing relevance of retrieved document to a user question.
+
+      Here is the retrieved document:
+      {context}
+
+      Here is the user question:
+      {question}
+
+      If the document contains keyword(s) or semantic meaning related to the user question, grade it as relevant.
+      Give a binary score 'yes' or 'no' socre to indicate whether the document is relevant to the question.
+      """,
+      input_variables=["context", "question"]
+  )
+
+  chain = prompt | llm_with_tool
+
+  messages = state["messages"]
+
+  last_messages = messages[-1]
+
+  question = messages[0].content
+
+  retrieved_docs = last_messages.content
+
+  scored_result = chain.invoke({
+      'question' : question,
+      'context' : retrieved_docs
+  })
+
+  score = scored_result.binary_score
+
+  if score == 'yes':
+    print('===== docs relevant =====')
+    return 'generate'
+  else:
+    print('===== docs not relevant =====')
+    return 'rewrite'
+
+def rewrite(state):
+  messages = state['messages']
+  question = messages[0].content
+
+  prompt = PromptTemplate.from_template(
+      template="""
+      Look at the input and try to reason about the underlying semantic intent and meaning
+
+      Here is the initial question:
+      {question}
+
+      Formulate an improved question:
+      """
+  )
+
+  llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+  chain = prompt | llm
+  response = chain.invoke({'question' : question})
+
+  return {"messages": [response]}
+
+def generate(state):
+  messages = state['messages']
+  question = messages[0].content
+
+  docs = messages[-1].content
+  response = pdf_chain.invoke(
+      {
+          'question' : question,
+          'context' : docs,
+          'chat_history' : []
+      }
+  )
+
+  return {"messages": [response]}
+```  
