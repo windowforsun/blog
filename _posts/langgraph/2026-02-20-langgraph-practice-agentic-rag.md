@@ -279,3 +279,50 @@ def generate(state):
 
   return {"messages": [response]}
 ```  
+
+### Build Graph
+이제 정의된 툴, 상태, 노드들을 모두 사용해 그래프를 구성한다.  
+
+```python
+from langgraph.graph import END, StateGraph, START
+from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import tools_condition
+from IPython.display import Image, display
+
+graph_builder = StateGraph(AgenticRagState)
+graph_builder.add_node('agent', agent)
+graph_builder.add_node('retrieve', tool_node)
+graph_builder.add_node('rewrite', rewrite)
+graph_builder.add_node('generate', generate)
+
+graph_builder.add_edge(START, 'agent')
+
+graph_builder.add_conditional_edges(
+    "agent",
+    tools_condition,
+    {
+        'tools' : 'retrieve',
+        END : END
+    }
+)
+
+
+graph_builder.add_conditional_edges(
+    'retrieve',
+    grade_documents,
+)
+
+graph_builder.add_edge('generate', END)
+graph_builder.add_edge('rewrite', 'agent')
+
+graph = graph_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+
+
+```  
