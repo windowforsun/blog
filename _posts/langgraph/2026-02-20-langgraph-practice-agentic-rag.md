@@ -362,3 +362,52 @@ agent
 # generate
 # {'messages': ['2025년 6월 전국 평균기온은 22.9℃로, 평년값 21.4℃보다 +1.5℃ 높아 1위를 기록했습니다. 6월에는 우리나라 남동쪽에 고기압이 발달하면서 남서풍이 주로 불어 기온이 평년보다 높은 날이 많았고, 특히 27~30일에는 북태평양고기압 가장자리를 따라 덥고 습한 공기가 유입되고 낮 동안 햇볕이 더해지면서 폭염과 열대야가 발생했습니다. 6월 전국 평균기온은 작년보다 0.2℃ 높았고, 강수량은 작년보다 56.9mm 많았습니다.\n\n**출처**\n- /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf']}
 ```  
+
+이번에는 실시간 검색이 필요한 질문을 입력해 본다. 
+아래 결과를보면 `search_llm` 도구를 사용해 최종 답변이 출력되는 것을 확인할 수 있다.
+
+
+```python
+config = RunnableConfig(recursion_limit=20, configurable={'thread_id' : '4'})
+question = '현재 미국 수도의 날씨를 알려줘'
+
+inputs = inputs = {
+    "messages": [
+        ("user", question),
+    ]
+}
+
+execute_graph(graph, config, inputs)
+agent
+# {'messages': [AIMessage(content='', additional_kwargs={'function_call': {'name': 'search_llm', 'arguments': '{"question": "\\ud604\\uc7ac \\ubbf8\\uad6d \\uc218\\ub3c4\\uc758 \\ub0a0\\uc528"}'}}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--b12d24bc-bb8c-4207-80c4-80d203937859-0', tool_calls=[{'name': 'search_weather', 'args': {'question': '현재 미국 수도의 날씨'}, 'id': '7d2d35db-5997-442d-b038-357efd2bee59', 'type': 'tool_call'}], usage_metadata={'input_tokens': 73, 'output_tokens': 12, 'total_tokens': 85, 'input_token_details': {'cache_read': 0}})]}
+# [{'title': '워싱턴, DC, 미국 일기예보 및 날씨 | Weather.com', 'link': 'https://weather.com/ko-KR/weather/today/l/Washington+DC+United+States?canonicalCityId=5449cc9af33d6584872016be78d0340d', 'snippet': '워싱턴, DC, 미국. 01:26 EDT 기준. 23°. 대체로 흐림. 최고 32° • 최저 22°. 오늘 워싱턴, DC, 미국의 날씨 예보. 체감온도23°. 05:55. 20:32. 최고/최저. --/22°.', 'position': 1}, {'title': '워싱턴, DC 현재 날씨 - AccuWeather', 'link': 'https://www.accuweather.com/ko/us/washington/20006/current-weather/327659', 'snippet': '현재 기상 ; RealFeel®. 82° ; 바람. 북북동 1mi/h ; 돌풍. 1mi/h ; 습도. 96% ; 이슬점. 72° F.', 'position': 2}, {'title': '전국 현재 날씨 - AccuWeather', 'link': 'https://www.accuweather.com/ko/us/united-states-weather', 'snippet': '뉴욕 76° 댈러스 78° 덴버 77° 로스앤젤레스 64° 맨해튼 76° 보스턴 79° 브롱크스 75° 브루클린 79° 산호세 58° 샌디에이고 66° 샌안토니오 81° 시카고 80° 애틀랜타 ...', 'attributes': {'Missing': '수도 | Show results with:수도'}, 'position': 3}, {'title': '댈러스, TX, 미국 일기예보 및 날씨 | Weather.com', 'link': 'https://weather.com/ko-KR/weather/today/l/Dallas+TX+United+States?canonicalCityId=3bef7f8bb00708145ceebe387a6de1b2098d40101d65836dd79c94d1dfe0c20b', 'snippet': '오늘 댈러스, TX, 미국의 날씨 예보 ; 최고/최저. 29°/20° ; 바람. 10 km/h ; 습도. 72% ; 이슬점. 18° ; 기압. 1017.3 mb.', 'position': 4}, {'title': '워싱턴 일기 예보', 'link': 'https://ko.meteotrend.com/forecast/us/washington/', 'snippet': '새벽00:01~06:00, 부분적으로 흐린 날씨 +23...+26 °C 공기의 온도가 내려갑니다 부분적으로 흐린 날씨. 서양의. 바람: 남실바람, 서양의, 속도 2-3 초당 미터', 'position': 5}, {'title': '미국, 워싱턴, 시애틀 일기예보 | MSN 날씨', 'link': 'https://www.msn.com/ko-kr/weather/forecast/in-Seattle,WA', 'snippet': '최소 2 시간 동안 비나 눈이 내리지 않습니다. 지도 열기. 상태 및 활동. 야외. 매우 좋지 않음. 옷. 가벼운 자켓. 냉풍. 안전. 우산. 필요 없음. 자외선 지수. 낮음 ...', 'position': 6}, {'title': '일주일 동안 워싱턴의 날씨 - 일기 예보 및 기상 조건', 'link': 'https://ko.meteocast.net/week-forecast/us/washington_8/', 'snippet': '워싱턴의 현재 시간: ; 새벽00:01~06:00, 흐린 · + · 34 °C ; 아침06:01~12:00, 맑은 하늘 · + · 35 °C ; 오후12:01~18:00, 맑은 하늘 · + · +40 °C ...', 'position': 7}, {'title': '워싱턴 DC 14일 날씨 예측', 'link': 'https://meteodays.com/ko/weather/14days/washington', 'snippet': '상세한 14일간의 예보: 매일의 날씨, 기온, 강수 확률, 풍속, 습도 등의 상세 정보. ; 최신 날씨 데이터: 실시간으로 업데이트되는 정확한 날씨 정보. ; 전국적인 범위: 주요 ...', 'position': 8}, {'title': '워싱턴 주의 달별 기후, 평균 온도 (미국) - Weather Spark', 'link': 'https://ko.weatherspark.com/countries/US/WA', 'snippet': '워싱턴 주의 연중 기후 및 평균 날씨 미국 ; 높은 · 9°C · 10°C · 13°C · 16°C ; 낮은 · 3°C · 4°C · 5°C · 7°C ; 맑은 하늘 · 29%, 31%, 33%, 39% ...', 'position': 9}, {'title': '미국, 워싱턴, 시애틀 일기예보 | MSN 날씨', 'link': 'https://www.msn.com/ko-kr/weather/forecast/in-%EC%8B%9C%EC%95%A0%ED%8B%80,%EC%9B%8C%EC%8B%B1%ED%84%B4', 'snippet': 'MSN 날씨과(와) 함께 미국, 워싱턴, 시애틀의 오늘, 오늘 밤, 내일에 대한 ... 현재 날씨. 5:00 PM. 맑음 19°C. 체감 18°. 화창. 대기질. 37 · 바람. 4 km/h · 습도. 73 ...', 'position': 10}]
+# ===== docs relevant =====
+# retrieve
+# {'messages': [ToolMessage(content='[{"title": "워싱턴, DC, 미국 일기예보 및 날씨 | Weather.com", "link": "https://weather.com/ko-KR/weather/today/l/Washington+DC+United+States?canonicalCityId=5449cc9af33d6584872016be78d0340d", "snippet": "워싱턴, DC, 미국. 01:26 EDT 기준. 23°. 대체로 흐림. 최고 32° • 최저 22°. 오늘 워싱턴, DC, 미국의 날씨 예보. 체감온도23°. 05:55. 20:32. 최고/최저. --/22°.", "position": 1}, {"title": "워싱턴, DC 현재 날씨 - AccuWeather", "link": "https://www.accuweather.com/ko/us/washington/20006/current-weather/327659", "snippet": "현재 기상 ; RealFeel®. 82° ; 바람. 북북동 1mi/h ; 돌풍. 1mi/h ; 습도. 96% ; 이슬점. 72° F.", "position": 2}, {"title": "전국 현재 날씨 - AccuWeather", "link": "https://www.accuweather.com/ko/us/united-states-weather", "snippet": "뉴욕 76° 댈러스 78° 덴버 77° 로스앤젤레스 64° 맨해튼 76° 보스턴 79° 브롱크스 75° 브루클린 79° 산호세 58° 샌디에이고 66° 샌안토니오 81° 시카고 80° 애틀랜타 ...", "attributes": {"Missing": "수도 | Show results with:수도"}, "position": 3}, {"title": "댈러스, TX, 미국 일기예보 및 날씨 | Weather.com", "link": "https://weather.com/ko-KR/weather/today/l/Dallas+TX+United+States?canonicalCityId=3bef7f8bb00708145ceebe387a6de1b2098d40101d65836dd79c94d1dfe0c20b", "snippet": "오늘 댈러스, TX, 미국의 날씨 예보 ; 최고/최저. 29°/20° ; 바람. 10 km/h ; 습도. 72% ; 이슬점. 18° ; 기압. 1017.3 mb.", "position": 4}, {"title": "워싱턴 일기 예보", "link": "https://ko.meteotrend.com/forecast/us/washington/", "snippet": "새벽00:01~06:00, 부분적으로 흐린 날씨 +23...+26 °C 공기의 온도가 내려갑니다 부분적으로 흐린 날씨. 서양의. 바람: 남실바람, 서양의, 속도 2-3 초당 미터", "position": 5}, {"title": "미국, 워싱턴, 시애틀 일기예보 | MSN 날씨", "link": "https://www.msn.com/ko-kr/weather/forecast/in-Seattle,WA", "snippet": "최소 2 시간 동안 비나 눈이 내리지 않습니다. 지도 열기. 상태 및 활동. 야외. 매우 좋지 않음. 옷. 가벼운 자켓. 냉풍. 안전. 우산. 필요 없음. 자외선 지수. 낮음 ...", "position": 6}, {"title": "일주일 동안 워싱턴의 날씨 - 일기 예보 및 기상 조건", "link": "https://ko.meteocast.net/week-forecast/us/washington_8/", "snippet": "워싱턴의 현재 시간: ; 새벽00:01~06:00, 흐린 · + · 34 °C ; 아침06:01~12:00, 맑은 하늘 · + · 35 °C ; 오후12:01~18:00, 맑은 하늘 · + · +40 °C ...", "position": 7}, {"title": "워싱턴 DC 14일 날씨 예측", "link": "https://meteodays.com/ko/weather/14days/washington", "snippet": "상세한 14일간의 예보: 매일의 날씨, 기온, 강수 확률, 풍속, 습도 등의 상세 정보. ; 최신 날씨 데이터: 실시간으로 업데이트되는 정확한 날씨 정보. ; 전국적인 범위: 주요 ...", "position": 8}, {"title": "워싱턴 주의 달별 기후, 평균 온도 (미국) - Weather Spark", "link": "https://ko.weatherspark.com/countries/US/WA", "snippet": "워싱턴 주의 연중 기후 및 평균 날씨 미국 ; 높은 · 9°C · 10°C · 13°C · 16°C ; 낮은 · 3°C · 4°C · 5°C · 7°C ; 맑은 하늘 · 29%, 31%, 33%, 39% ...", "position": 9}, {"title": "미국, 워싱턴, 시애틀 일기예보 | MSN 날씨", "link": "https://www.msn.com/ko-kr/weather/forecast/in-%EC%8B%9C%EC%95%A0%ED%8B%80,%EC%9B%8C%EC%8B%B1%ED%84%B4", "snippet": "MSN 날씨과(와) 함께 미국, 워싱턴, 시애틀의 오늘, 오늘 밤, 내일에 대한 ... 현재 날씨. 5:00 PM. 맑음 19°C. 체감 18°. 화창. 대기질. 37 · 바람. 4 km/h · 습도. 73 ...", "position": 10}]', name='search_weather', id='670e37c3-f7ed-4d43-9cab-32f01c3611ab', tool_call_id='7d2d35db-5997-442d-b038-357efd2bee59')]}
+# generate
+# {'messages': ['현재 워싱턴 DC의 날씨는 23°이며 대체로 흐립니다. 최고 기온은 32°, 최저 기온은 22°입니다. 체감온도는 23°입니다.\n        \n        **출처:**\n        * weather.com']}
+```  
+
+`llm` 모델에서 답변할 수 있는 일반적인 질문을 입력해 본다.  
+아래 결과를보면 `llm_tool` 도구를 사용해 최종 답변이 출력되는 것을 확인할 수 있다.
+
+```python
+
+config = RunnableConfig(recursion_limit=20, configurable={'thread_id' : '4'})
+question = '미국 수도가 어딘지 알려줘'
+
+inputs = inputs = {
+    "messages": [
+        ("user", question),
+    ]
+}
+
+execute_graph(graph, config, inputs)
+# agent
+# {'messages': [AIMessage(content='', additional_kwargs={'function_call': {'name': 'llm_tool', 'arguments': '{"question": "What is the capital of the US?"}'}}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--c84502c0-74b8-4925-8fbf-8f2081572737-0', tool_calls=[{'name': 'llm_tool', 'args': {'question': 'What is the capital of the US?'}, 'id': 'ba9360fc-ef67-45a9-96d2-70aaa4417728', 'type': 'tool_call'}], usage_metadata={'input_tokens': 72, 'output_tokens': 13, 'total_tokens': 85, 'input_token_details': {'cache_read': 0}})]}
+# ===== docs relevant =====
+# retrieve
+# {'messages': [ToolMessage(content='The capital of the US is Washington, D.C.', name='llm_tool', id='f120f04e-b0d5-4d9d-9332-fa2ac9a18b64', tool_call_id='ba9360fc-ef67-45a9-96d2-70aaa4417728')]}
+# generate
+# {'messages': ['워싱턴 D.C.는 미국의 수도입니다.\n\n**출처**\n- 해당 맥락에서 제공됨']}
+```  
