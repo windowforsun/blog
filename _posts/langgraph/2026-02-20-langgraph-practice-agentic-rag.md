@@ -411,3 +411,42 @@ execute_graph(graph, config, inputs)
 # generate
 # {'messages': ['워싱턴 D.C.는 미국의 수도입니다.\n\n**출처**\n- 해당 맥락에서 제공됨']}
 ```  
+
+마지막으로 관련성 평가에서 관련 없음으로 나와 `rewrite` 가 실행될 수 있는 질문을 입력해 본다. 
+아래 결과를 보면 `pdf_retriever` 도구를 사용할 수 있는 질문이지만, 
+해당 검색기에는 날씨에 대한 내용만 있고 지진에 대한 내용은 없기 때문에 `rewite` 가 실행되는 것을 확인할 수 있다.
+
+```python
+config = RunnableConfig(recursion_limit=20, configurable={'thread_id' : '4'})
+question = '한국의 6월 날씨 분석 정보 중 지진에 대한 내용을 정리해줘'
+
+inputs = inputs = {
+    "messages": [
+        ("user", question),
+    ]
+}
+
+execute_graph(graph, config, inputs)
+# agent
+# {'messages': [AIMessage(content='', additional_kwargs={'function_call': {'name': 'pdf_retriever', 'arguments': '{"query": "6\\uc6d4 \\ub0a0\\uc528 \\ubd84\\uc11d \\uc815\\ubcf4 \\uc911 \\uc9c0\\uc9c4"}'}}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--c55d9453-bccf-4688-9a33-0af4e4d7452f-0', tool_calls=[{'name': 'pdf_retriever', 'args': {'query': '6월 날씨 분석 정보 중 지진'}, 'id': '85c674d4-3b81-49da-90d5-2571777b872a', 'type': 'tool_call'}], usage_metadata={'input_tokens': 81, 'output_tokens': 14, 'total_tokens': 95, 'input_token_details': {'cache_read': 0}})]}
+# ===== docs not relevant =====
+# retrieve
+# {'messages': [ToolMessage(content='<document><context>78.6%\x01수준으로\x01적었으며,\x01강수일수는\x017.6일로\x01평\n년(8.4일)과\x01비슷한\x01수준이었습니다.\x01\n원인과\x01특성\n북서풍의\x01영향을\x01주로\x01받아\x01강수량은\x01적었으나,\x0122\n일에는\x01저기압의\x01영향으로\x01남해안과\x01제주도를\x01중심\n으로\x01많은\x01비가\x01내렸습니다.\n(12~14일)\x01절리저기압의\x01영향으로\x01강한\x01바람과\x01천\n※\x01전국\x0162개\x01지점과\x01제주\x014개\x01지점을\x01포함한\x0166개\x01지점의\x01관측자료를\x01활용\n둥·번개를\x01동반한\x01비\x01또는\x01눈이\x01내린\x01가운데,\x01서울에\n서는\x011907년\x01관측\x01이래\x01가장\x01늦은\x014월\x0113일에\x01적설\n2025년\x014월\x01전국\x01강수량\x01시계열(㎜)</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>1</page></metadata></document>\n\n<document><context>저히\x01많았습니다.\x01강수량은\x01작년\x01대비\x01-287.6~+197.2mm\x01분포를\x01보였습니다.\n2024년\x016월\x01평균기온(℃) 2025년\x016월\x01평균기온(℃)\n2024년\x016월\x01강수량(㎜) 2025년\x016월\x01강수량(㎜)\n※\x01전국\x0166개\x01지점의\x01관측자료를\x01활용(제주\x01평균은\x01제주시와\x01서귀포시의\x014개\x01지점의\x01관측자료를\x01활용)\n4</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>3</page></metadata></document>\n\n<document><context>2025년\x014월\x01전국\x01강수량\x01시계열(㎜)\n(0.6cm)을\x01기록하였습니다.\x01\n(22일)\x01남쪽에\x01고기압이\x01위치한\x01가운데,\x01서해상에서\n다가오는\x01다량의\x01수증기를\x01포함한\x01저기압의\x01영향으\n로\x01남해안과\x01제주도를\x01중심으로\x0150~100mm\x01이상\n의\x01많은\x01비가\x01내렸습니다.\x01\n※\x01전국\x0162개\x01지점의\x01관측자료를\x01활용\n2025년\x014월\x01강수량/강수일수\x01(1973년\x01이후\x01전국평균)\n퍼센타일(강수량)\n구분 값 순위(최저)\n평년편차(강수일수)\n강수량 67.3㎜ 30.5%ile 19위\n강수일수 7.6일 -0.8 21위</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>1</page></metadata></document>\n\n<document><context>[재분석자료]\x01우리나라\x01근해\x01대부분\x01해역에서\x01평년\x01대비\x01낮은\x01해수면온도\x01분포를\x01보였으며\x01특히\x01남해\x01앞바다에서\x01평년\x01대비\x01최대\n3℃\x01이상\x01낮은\x01분포를\x01보였습니다.\n관측자료\n3월\x01해수면온도\x01시계열(℃)\n3월\x01전\x01해상\x01일별\x01평균해수면\x01온도\x01(파랑)\x01최근\x0110년\x01(2015~2024년),\x01(빨강)\x012025년\n2015년\x01이후부터\x01연속적으로\x01관측한\x01해양기상부이\x0111개\x01지점의\x01관측자료를\x01활용\n2025년\x013월\x01평균\x01해수면온도\x01분포 최근\x0110년\x013월\x01평균\x01해수면온도\x01분포\n재분석자료(OISST)</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf</source><page>7</page></metadata></document>\n\n<document><context>-----\x01\x01\x01\x01\x01기기기기기후후후후후분분분분분석석석석석정정정정정보보보보보\x01\x01\x01\x01\x0122222000002222255555년년년년년66666월월월월월호호호호호\x01\x01\x01\x01\x01-----\n주요\x01기후요소\x01비교\x01-\x01기온·강수량\n작년\x01비교\n6월\x01전국\x01평균기온은\x01작년보다\x010.2℃\x01높았고,\x01강수량은\x01작년보다\x0156.9mm\x01많았습니다.</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf</source><page>3</page></metadata></document>\n\n<document><context>-----\x01\x01\x01\x01\x01기기기기기후후후후후분분분분분석석석석석정정정정정보보보보보\x01\x01\x01\x01\x0122222000002222255555년년년년년55555월월월월월호호호호호\x01\x01\x01\x01\x01-----\n주요\x01기후요소\x01비교\x01-\x01기온·강수량\n작년\x01비교\n5월\x01전국\x01평균기온은\x01작년보다\x010.9℃\x01낮았고,\x01강수량은\x01작년과\x01비슷하였습니다.</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf</source><page>3</page></metadata></document>\n\n<document><context>기압의\x01영향으로\x01중부지방과\x01전라도\x01지역에\x01많은\x01눈\n이\x01내렸습니다.\x01\n※\x01전국\x0162개\x01지점의\x01관측자료를\x01활용\n2025년\x013월\x01강수량/강수일수\x01(1973년\x01이후\x01전국평균)\n퍼센타일(강수량)\n구분 값 순위(상위)\n평년편차(강수일수)\n강수량 48.3㎜ 40.4%ile 35위\n강수일수 8.7일 +0.8 21위\n※\x01전국평균:\x011973년\x01이후부터\x01연속적으로\x01관측한\x01전국\x0162개\x01지점의\x01관측자료를\x01활용((1973~1989년)\x0156개\x01지점,\x01(1990~2025년)\x0162개\x01지점)\n※\x01평년값:\x011991~2020년\x01적용\n2</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf</source><page>1</page></metadata></document>\n\n<document><context>습니다.\x01강수량은\x01작년\x01대비\x01-79.3~+49.9mm\x01분포를\x01보였습니다.\n2024년\x014월\x01평균기온(℃) 2025년\x014월\x01평균기온(℃)\n2024년\x014월\x01강수량(㎜) 2025년\x014월\x01강수량(㎜)\n※\x01전국\x0166개\x01지점의\x01관측자료를\x01활용(제주\x01평균은\x01제주시와\x01서귀포시의\x014개\x01지점의\x01관측자료를\x01활용)\n4</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>3</page></metadata></document>\n\n<document><context>-----\x01\x01\x01\x01\x01기기기기기후후후후후분분분분분석석석석석정정정정정보보보보보\x01\x01\x01\x01\x0122222000002222255555년년년년년44444월월월월월호호호호호\x01\x01\x01\x01\x01-----\n주요\x01기후요소\x01비교\x01-\x01기온·강수량\n작년\x01비교\n4월\x01전국\x01평균기온은\x01작년보다\x011.8℃\x01낮았고,\x01강수량은\x01작년보다\x0113.1mm\x01적었습니다.</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>3</page></metadata></document>\n\n<document><context>주\x017일,\x01의성\x017일,\x01임실\x017일,\x01광주\x017일,\x01대전\x017일\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\n*평균방법:\x01각\x01지점별\x01이상기온\x01발생일수\x01산출\x01후\x0162개\x01지점\x01평균\n기상가뭄\n▶\x01기상가뭄:\x01최근\x016개월\x01누적강수량이\x01평년\x01강수량보다\x01적은\x01현상\n▶\x01기상가뭄\x01판단\x01기준:\x01최근\x016개월\x01강수량(표준강수지수*)에\x01따라\x01약한-보통-심한-극심한\x01가뭄인\x014단계로\x01구분</context><metadata><source>/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf</source><page>2</page></metadata></document>', name='pdf_retriever', id='0988feee-5d88-406d-9ced-4f7087b89b4b', tool_call_id='85c674d4-3b81-49da-90d5-2571777b872a')]}
+# content='한국 6월 날씨 분석 정보에서 지진 관련 내용을 찾아 요약해 줘.' additional_kwargs={} response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []} id='run--61af0b48-2157-42b2-853c-5a1d2e338890-0' usage_metadata={'input_tokens': 57, 'output_tokens': 23, 'total_tokens': 80, 'input_token_details': {'cache_read': 0}}
+# rewrite
+# {'messages': [AIMessage(content='한국 6월 날씨 분석 정보에서 지진 관련 내용을 찾아 요약해 줘.', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--61af0b48-2157-42b2-853c-5a1d2e338890-0', usage_metadata={'input_tokens': 57, 'output_tokens': 23, 'total_tokens': 80, 'input_token_details': {'cache_read': 0}})]}
+# agent
+# {'messages': [AIMessage(content=' 검색 결과에서 지진에 대한 직접적인 언급은 없지만, 절리저기압으로 인해 강한 바람과 천둥·번개를 동반한 비 또는 눈이 내렸다는 내용은 있습니다.', additional_kwargs={}, response_metadata={'prompt_feedback': {'block_reason': 0, 'safety_ratings': []}, 'finish_reason': 'STOP', 'model_name': 'gemini-2.0-flash', 'safety_ratings': []}, id='run--1c903cbc-10f4-4226-a1ee-473c0dc2698b-0', usage_metadata={'input_tokens': 2837, 'output_tokens': 50, 'total_tokens': 2887, 'input_token_details': {'cache_read': 0}})]}
+```  
+
+
+
+
+
+
+
+---  
+## Reference
+[LangGraph-Building-Graphs](https://langchain-opentutorial.gitbook.io/langchain-opentutorial/17-langgraph/02-structures/01-langgraph-building-graphs)  
+
+
