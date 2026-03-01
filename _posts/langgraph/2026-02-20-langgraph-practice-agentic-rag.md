@@ -1,10 +1,10 @@
 --- 
 layout: single
 classes: wide
-title: "[LangGraph] LangGraph RAG Structure"
+title: "[LangGraph] LangGraph Agentic RAG"
 header:
   overlay_image: /img/langgraph-img-2.jpeg
-excerpt: ''
+excerpt: 'LangGraph 기반으로 Naive RAG 에서 더 깊이 있는 답변을 제공하는 Agentic RAG 에 대해 알아보자'
 author: "window_for_sun"
 header-style: text
 categories :
@@ -13,6 +13,12 @@ tags:
     - Practice
     - LangChain
     - LangGraph
+    - RAG
+    - VectorStore
+    - Agentic RAG
+    - Retrieval
+    - Web Search
+    - Query Rewrite
 toc: true
 use_math: true
 ---  
@@ -447,6 +453,6 @@ execute_graph(graph, config, inputs)
 
 ---  
 ## Reference
-[LangGraph-Building-Graphs](https://langchain-opentutorial.gitbook.io/langchain-opentutorial/17-langgraph/02-structures/01-langgraph-building-graphs)  
+[LangGraph Agentic RAG](https://wikidocs.net/267813)  
 
 
