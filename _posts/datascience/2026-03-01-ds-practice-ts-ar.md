@@ -83,3 +83,35 @@ plt.xticks(np.arange(0, 1000, 104), np.arange(2000, 2020, 2))
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-1.png)
+
+
+데이터를 로드했기 때문에 바로 정상성 테스트 `ADF` 검정을 수행한다.  
+
+```python
+ADF_result = adfuller(df['foot_traffic'])
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -1.1758885999240771
+print(f'p-value: {ADF_result[1]}')
+# p-value: 0.683880891789618
+```  
+
+`ADF` 통계값이 큰 음수가 아니고, p-value 가 0.05 보다 크므로 귀무가설을 기각하지 못해 현재 원본 데이터는 정상적 시계열이 아님을 확인할 수 있다.  
+그러므로 변환(차분)을 적용한다.  
+
+```python
+foot_traffic_diff = np.diff(df['foot_traffic'], n=1)
+
+fig, ax = plt.subplots()
+
+ax.plot(foot_traffic_diff)
+ax.set_xlabel('Time')
+ax.set_ylabel('Average weekly foot traffic (differenced)')
+
+plt.xticks(np.arange(0, 1000, 104), np.arange(2000, 2020, 2))
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
