@@ -115,3 +115,27 @@ plt.xticks(np.arange(0, 1000, 104), np.arange(2000, 2020, 2))
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-2.png)
+
+
+차분한 데이터를 도식화 했을 때 이전보다 추세가 제거되고 백색소음처럼 보인다. 
+정확한 판단을 위해 다시 차분한 데이터에 대해서 `ADF` 검정을 수행한다.  
+
+```python
+ADF_result = adfuller(foot_traffic_diff)
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -5.268231347422048
+print(f'p-value: {ADF_result[1]}')
+# p-value: 6.369317654781179e-06
+```  
+
+`ADF` 통계값이 충분히 큰 음수이고, p-value 가 0.05 보다 작으므로 귀무가설을 기각해 현재 차분된 데이터는 정상적 시계열임을 확인할 수 있다. 
+이제 차분한 데이터를 바탕으로 `ACF` 도식을 그려 특정 지연 후 유의하지 않는 계수가 있는지 확인한다.  
+
+```python
+plot_acf(foot_traffic_diff, lags=20);
+
+plt.tight_layout()
+```  
