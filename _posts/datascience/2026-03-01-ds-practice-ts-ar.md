@@ -139,3 +139,25 @@ plot_acf(foot_traffic_diff, lags=20);
 
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-3.png)
+
+
+`ACF` 도식을 보면 자기상관 계수는 지연이 증가함에 따라 점차 감소하는 것을 볼 수 있다. 
+하지만 특정 지연 후 계수가 갑작스럽게 유의하지 않게되는 특징은 보이지 않는다. 
+이는 이동평균 과정이라고는 할 수 없고 데이터에 자기회귀과정이 있을 가능성을 시사한다. 
+
+이때 `AR` 자기회귀 과정의 차수 `p` 를 식별하기 위해 사용하는 방법은 `PACF`(편자기상관함수) 이다. 
+
+> 편자기상관함수(Partial Autocorrelation Function, PACF)는 시계열 데이터에서 특정 시점의 값과 그 이전 시점의 값들 간의 상관관계를 측정하는 통계적 도구이다. 
+> 시계열 내에서 상관관계가 있는 지연된 값들 사이의 영향도를 제거할 떄 해당 값들 간의 상관 관계를 측정한다. 
+> 그러므로 편자기상관함수를 도식하면 정상화된 `AR(p)` 프로세스의 차수를 결정할 수 있다. 
+> `p` 는 특정 지연 `p` 이후 계수가 유의하지 않는 값이다. 
+
+`PACF` 도식은 `statsmodels` 의 `ArmaProcess` 함수를 통해 그릴 수 있다.  
+
+```python
+plot_pacf(foot_traffic_diff, lags=20);
+
+plt.tight_layout()
+```  
