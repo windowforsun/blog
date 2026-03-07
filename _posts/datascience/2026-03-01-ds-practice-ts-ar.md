@@ -161,3 +161,47 @@ plot_pacf(foot_traffic_diff, lags=20);
 
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-4.png)
+
+
+`PACF` 도식을 보면 지연 3 이후 유의한 계수가 보이지 않는 것을 확인 할 수 있다. 
+그러므로 `p` 는 3이 되고, 모델링할 자기회귀과정은 `AR(3)` 이 된다.  
+
+
+### Forecasting AR Process
+이제 자기회귀과정의 차수 `p` 까지 식별해 `AR(3)` 모델을 구축할 수 있다. 
+이전 이동평균과정과 동일하게 먼저 훈련 데이터와 테스트 데이터를 분리한다.  
+
+```python
+df_diff = pd.DataFrame({'foot_traffic_diff': foot_traffic_diff})
+
+train = df_diff[:-52]
+test = df_diff[-52:]
+
+print(len(train))
+# 947
+print(len(test))
+# 52
+``` 
+
+훈련 세트와 테스트 세트에 대해서 원본 시계열과 차분한 시계열을 구분해 도식화하면 아래와 같다.  
+
+```python
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 8))
+
+ax1.plot(df['foot_traffic'])
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Avg. weekly foot traffic')
+ax1.axvspan(948, 1000, color='#808080', alpha=0.2)
+
+ax2.plot(df_diff['foot_traffic_diff'])
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Diff. avg. weekly foot traffic')
+ax2.axvspan(947, 999, color='#808080', alpha=0.2)
+
+plt.xticks(np.arange(0, 1000, 104), np.arange(2000, 2020, 2))
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
