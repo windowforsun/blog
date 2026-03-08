@@ -300,3 +300,32 @@ plt.xticks([936, 988],[2018, 2019])
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-6.png)
+
+
+`AR(3)` 모델이 베이스라인 모델보다 잘 예측한 것을 보이는데, 
+더 정확한 성능 검증을 위해 `MSE` 로 각 예측을 평가한다.  
+
+```python
+from sklearn.metrics import mean_squared_error
+
+mse_mean = mean_squared_error(test['foot_traffic_diff'], test['pred_mean'])
+mse_last = mean_squared_error(test['foot_traffic_diff'], test['pred_last_value'])
+mse_AR = mean_squared_error(test['foot_traffic_diff'], test['pred_AR'])
+
+fig, ax = plt.subplots()
+
+x = ['mean', 'last_value', 'AR(3)']
+y = [mse_mean, mse_last, mse_AR]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Methods')
+ax.set_ylabel('MSE')
+ax.set_ylim(0, 5)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value+0.25, s=str(round(value, 2)), ha='center')
+
+plt.tight_layout()
+```  
