@@ -205,3 +205,98 @@ plt.xticks(np.arange(0, 1000, 104), np.arange(2000, 2020, 2))
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-5.png)
+
+
+이번에도 이동평균의 예측과 동일하게 `rolling forecast` 방식을 사용한다. 
+`AR(p)` 모델도 `MA(q)` 모델과 마찬가지로 계수 `p` 만큼의 수를 최대로 예측할 수 있다. 
+이번에도 베이스라인 모델로는 평균과 마지막 값을 사용하고 이를 모두 구현한 `rolling_forecast` 함수는 아래와 같다.  
+
+```python
+def rolling_forecast(df: pd.DataFrame, train_len: int, horizon: int, window: int, method: str) -> list:
+    
+    total_len = train_len + horizon
+    end_idx = train_len
+    
+    if method == 'mean':
+        pred_mean = []
+        
+        for i in range(train_len, total_len, window):
+            mean = np.mean(df[:i].values)
+            pred_mean.extend(mean for _ in range(window))
+            
+        return pred_mean
+
+    elif method == 'last':
+        pred_last_value = []
+        
+        for i in range(train_len, total_len, window):
+            last_value = df[:i].iloc[-1].values[0]
+            pred_last_value.extend(last_value for _ in range(window))
+            
+        return pred_last_value
+    
+    elif method == 'AR':
+        pred_AR = []
+        
+        for i in range(train_len, total_len, window):
+            model = SARIMAX(df[:i], order=(3,0,0))
+            res = model.fit(disp=False)
+            predictions = res.get_prediction(0, i + window - 1)
+            oos_pred = predictions.predicted_mean.iloc[-window:]
+            pred_AR.extend(oos_pred)
+            
+        return pred_AR
+```  
+
+이제 베이스라인 모델과 `AR(3)` 모델을 사용해 예측을 수행한다. 
+그리고 그결과는 모두 테스트 세트에 추가한다.  
+
+```python
+TRAIN_LEN = len(train)
+HORIZON = len(test)
+WINDOW = 1
+
+pred_mean = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'mean')
+pred_last_value = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'last')
+pred_AR = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'AR')
+
+test['pred_mean'] = pred_mean
+test['pred_last_value'] = pred_last_value
+test['pred_AR'] = pred_AR
+
+test.head()
+#       foot_traffic_diff	pred_mean	pred_last_value	    pred_AR
+# 947	-0.776601	        0.213270	-1.021893	        -0.719714
+# 948	-0.574631	        0.212226	-0.776601	        -0.814547
+# 949	-0.890697	        0.211397	-0.574631	        -0.664738
+# 950	-0.283552	        0.210237	-0.890697	        -0.641469
+# 951	-1.830685	        0.209717	-0.283552	        -0.579279
+```  
+
+실제 값과 각 예측값을 모두 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df_diff['foot_traffic_diff'])
+ax.plot(test['foot_traffic_diff'], 'b-', label='actual')
+ax.plot(test['pred_mean'], 'g:', label='mean')
+ax.plot(test['pred_last_value'], 'r-.', label='last')
+ax.plot(test['pred_AR'], 'k--', label='AR(3)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Diff. avg. weekly foot traffic')
+
+ax.axvspan(947, 998, color='#808080', alpha=0.2)
+
+ax.set_xlim(920, 999)
+
+plt.xticks([936, 988],[2018, 2019])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
