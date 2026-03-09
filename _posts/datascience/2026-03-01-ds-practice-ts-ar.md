@@ -329,3 +329,63 @@ for index, value in enumerate(y):
 
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-7.png)
+
+
+`MSE` 결과를 보면 `AR(3)` 모델이 베이스라인 모델보다 성능적으로 가장 우수한 것을 확인했다. 
+지금까지 다룬 값은 차분된 값이기 때문에 이를 원본 데이터 규모로 역변환을 수행한다. 
+차분을 적용했기 때문에 역변환은 `cumsum` 누적합을 사용한다.  
+
+```python
+df['pred_foot_traffic'] = pd.Series()
+df['pred_foot_traffic'][948:] = df['foot_traffic'].iloc[948] + test['pred_AR'].cumsum()
+
+fig, ax = plt.subplots()
+
+ax.plot(df['foot_traffic'])
+ax.plot(df['foot_traffic'], 'b-', label='actual')
+ax.plot(df['pred_foot_traffic'], 'k--', label='AR(3)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Average weekly foot traffic')
+
+ax.axvspan(948, 1000, color='#808080', alpha=0.2)
+
+ax.set_xlim(920, 1000)
+ax.set_ylim(650, 770)
+
+plt.xticks([936, 988],[2018, 2019])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/ar-8.png)
+
+
+`AR(3)` 모델이 예측한 원본 데이터를 보면 실제 데이터의 추세를 잘 따르는 것을 볼 수 있다. 
+평균절대오차(`MAE`) 를 측정해 얼만큼의 절대 오차가 있는지 확인한다.  
+
+```python
+from sklearn.metrics import mean_absolute_error
+
+mae_AR_undiff = mean_absolute_error(df['foot_traffic'][948:], df['pred_foot_traffic'][948:])
+
+print(mae_AR_undiff)
+# 3.4780335607419093
+```  
+
+평균절대오차 값으로 보면 평균적으로 예측과 실제 값이 3.4명 정도 주간 유동인구 차이가 발생한 것을 확인할 수 있다.  
+
+
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
+
