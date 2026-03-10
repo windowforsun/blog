@@ -1,0 +1,72 @@
+--- 
+layout: single
+classes: wide
+title: "[Time] ARMA"
+header:
+  overlay_image: /img/data-science-bg.jpg
+excerpt: '자기회귀와 이동평균 두 가지 구성요소를 결합한 모델인 ARMA 에 대해 알아보자'
+author: "window_for_sun"
+header-style: text
+categories :
+  - AI/ML
+tags:
+    - Practice
+    - Data Science
+    - Time Series
+    - AR
+    - MA
+    - ARMA
+toc: true
+use_math: true
+---  
+
+## Autoregressive Moving Average (ARMA) Model
+`ARMA`(Autoregressive Moving Average, 자기회귀 이동평균) 모델은 시계열 데이터 예측 및 분석에 널리 사용되는 통계적 모델 중 하나로, 
+자기회귀(`AR`)와 이동평균(`MA`) 두 가지 구성 요소를 결합한 모델이다. 
+시계열의 현재 값이 과거의 값들과 과거의 오차항의 선형 결합으로 표현된다는 점에서,
+`ARMA` 모델은 시간에 따라 상호 관련성이 존재하는 데이터를 효과적으로 설명할 수 있다. 
+
+`ARMA` 모델은 `ACF` 도식이나 `PACF` 도식에서 차수를 추정할 수 없는 경우에 사용할 수 있다. 
+두 도식 모두 천천히 감쇄하는 패턴이나 사인 곡선 패턴을 나타내는 경우이다. 
+
+`MA`, `AR`m `ARMA` 모델을 비교하면 아래와 같다.  
+
+| 구분    | AR (자기회귀) | MA (이동평균) | ARMA (자기회귀 이동평균) |
+|---------|---------------|--------------|--------------------------|
+| 모델 구조 | 과거의 값에 의존 | 과거 오차에 의존 | 과거 값 + 과거 오차에 모두 의존 |
+| 파라미터 | AR 계수(p개) | MA 계수(q개) | AR 계수(p개) + MA 계수(q개) |
+| 데이터 패턴 | 자기상관이 강한 데이터 | 오차의 자기상관이 강한 데이터 | 두 패턴이 모두 존재할 때 적합 |
+| 예측력 | 단순 패턴에 적합 | 단순 패턴에 적합 | 복합 패턴에 적합, 예측력 우수 |
+
+`ARMA` 모델링을 위해서는 `AIC`(Akaike Information Criterion, 아카이케 정보 기준) 을 사용한다. 
+이를 통해 시게열에 대한 최적으 `p`, `q` 값을 결정하고, 
+모델 잔차의 상관관계도 `Q-Q` 도식과 밀도 도식을 사용하는 `잔자 분석` 을 통해 잔차가 백섹소음과 유사한지 평가한다. 
+`잔자 분석`을 통해 유효한 것으로 판정되면 `ARMA` 모델을 통해 시게열 예측을 수행해 볼 수 있다.  
+
+
+`ARMA` 모델을 사용해서 데이터 세넡의 대역폭 사용량을 예측해 본다.
+먼저 2019년 1월 부터 특정된 시간당 대역폭 데이터를 사용한다.
+대역폭은 초당 메가비트(Mbps) 단위로 측정되었다.
+원본 데이터를 도식화하면 아래와 같다.
+
+```python
+import matplotlib.pyplot as plt
+import pandas as pd
+
+df = pd.read_csv('../data/bandwidth.csv')
+
+df.head()
+
+fig, ax = plt.subplots()
+
+ax.plot(df['hourly_bandwidth'])
+ax.set_xlabel('Time')
+ax.set_ylabel('Hourly bandwith usage (MBps)')
+
+plt.xticks(
+    np.arange(0, 10000, 730), 
+    ['Jan 2019', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan 2020', 'Feb'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```   
