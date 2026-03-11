@@ -70,3 +70,10 @@ plt.xticks(
 fig.autofmt_xdate()
 plt.tight_layout()
 ```   
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-1.png)
+
+
+데이터를 보면 장기적인 추세가 있으므로 정상적은 아닌 것으로 보인다. 
+그리고 주기적인 형태는 없어 계절성은 존재하지 않는 것으로 보인다. 
+이후 `ARMA` 모델의 모델링 절차를 살펴보고 이게 맞춰 진행해 본다.  
