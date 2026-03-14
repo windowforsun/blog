@@ -85,3 +85,63 @@ plt.tight_layout()
 모델들을 정량적으로 비교할 수 있다. 
 `AIC` 값이 낮을 수록 손실된 정보가 적다는 의미이므로 더 우수한 모델로 판단할 수 있다.  
 
+
+### Order of ARMA Process
+`ARMA` 모델에서도 `ARMA(p, q)` 에서 `p`, `q` 를 식별하는 과정이 매우 중요하다. 
+`p` 는 `AR` 자기회귀 차수를 나타내고, `q` 는 `MA` 이동평균 차수를 나타낸다. 
+`ARMA` 모델에서 `p`, `q` 를 식별하는 모델링 과정은 다음과 같다.  
+
+```mermaid
+flowchart TD
+    data_agg[데이터 수집] --> station[정상적-ADF ?]
+    station -->|NO| trans[변환-차분 수행]
+    trans --> station
+    station -->|YES| p-q[p, q 목록 생성]
+    p-q --> ARMA-fit[ARMA에 모든 p, q 조합 피팅]
+    ARMA-fit --> AIC[AIC 가 가장 낮은 최적 p, q 선택]
+    AIC --> residual[잔차 분석]
+    residual --> Q-Q[Q-Q 도식이 직선?]
+    residual --> ljungbox[융박스-잔차가 백색잡음?]
+    Q-Q -->|YES| predict[시계열 예측]
+    ljungbox -->|NO| p-q
+    Q-Q -->|NO| p-q
+    ljungbox -->|YES| predict
+```  
+
+`ADF` 를 사용해 현재 시계열 데이터가 정상적인지 확인한다.  
+
+```python
+ADF_result = adfuller(df['hourly_bandwidth'])
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -0.8714653199452314
+print(f'p-value: {ADF_result[1]}')
+# p-value: 0.7972240255014685
+```  
+
+`ADF` 통계값이 큰 음수가 아니고, `p-value` 가 `0.05` 보다 크므로 시계열은 정상적이지 않다.
+데이터를 정상적으로 만들기 위해 변환(차분)을 수행해 다시 `ADF` 검정을 수행한다.  
+
+```python
+bandwidth_diff = np.diff(df.hourly_bandwidth, n=1)
+
+fig, ax = plt.subplots()
+
+ax.plot(bandwidth_diff)
+ax.set_xlabel('Time')
+ax.set_ylabel('Hourly bandwith usage - diff (MBps)')
+
+plt.xticks(
+    np.arange(0, 10000, 730),
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', '2020', 'Feb'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+
+ADF_result = adfuller(bandwidth_diff)
+
+print(f'ADF Statistic: {ADF_result[0]}')
+# ADF Statistic: -20.69485386378902
+print(f'p-value: {ADF_result[1]}')
+# p-value: 0.0
+```  
