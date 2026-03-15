@@ -145,3 +145,20 @@ print(f'ADF Statistic: {ADF_result[0]}')
 print(f'p-value: {ADF_result[1]}')
 # p-value: 0.0
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-2.png)
+
+
+차준 데이터의 도식화된 모습과 `ADF` 통계값 그리고 `p-value` 를 보면 정상적인 시계열임을 알 수 있다. 
+정상적 시계열을 확보했으면 이제 `ARMA(p,q)` 모델을 사용해 정상적 프로세스를 모델링할 준비가 된 것이다.  
+
+
+> 추가로 해당 시계열에 `MA` 혹은 `AR` 모델을 적용할 수 있을지 확인하기 위해 `ACF` 와 `PACF` 도식을 그려본다.  
+> 
+> ```python
+> plot_acf(bandwidth_diff, lags=20);
+> 
+> plt.tight_layout()
+> ```  
+> 
+> 
