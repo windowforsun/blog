@@ -162,3 +162,13 @@ print(f'p-value: {ADF_result[1]}')
 > ```  
 > 
 > 
+![그림 1]({{site.baseurl}}/img/datascience/arma-3.png)
+> 
+> 
+> ```python
+> plot_pacf(bandwidth_diff, lags=20);
+> 
+> plt.tight_layout()
+> ```  
+> 
+> 
