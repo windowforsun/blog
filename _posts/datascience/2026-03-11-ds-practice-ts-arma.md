@@ -172,3 +172,51 @@ print(f'p-value: {ADF_result[1]}')
 > ```  
 > 
 > 
+![그림 1]({{site.baseurl}}/img/datascience/arma-4.png)
+> 
+> 
+> `ACF` 도식을 보면 자기상관 계수는 지연이 증가함에 따라 점차 감소하는 것을 볼 수 있다. 
+> 하지만 특정 지연 후 계수가 갑작스럽게 유의하지 않게되는 특징은 보이지 않는다. 
+> 이는 이동평균 과정이라고는 할 수 없고 데이터에 자기회귀과정이 있을 가능성을 시사한다. 
+> `PACF` 도식을 보면 지연 1이후에 계수가 크게 줄어 든 것을 볼 수 있지만, 이를 `AR(1)` 모델로 단정짓기에는 부족하다.
+> 마치 이후에도 지속적으로 유의한 계수가 사인 곡선을 그리는 것과 같이 보이기 때문이다. 
+> 그러므로 해당 데이터는 자기회귀 과정과 이동평균 과정이 모두 존재하는 `ARMA` 모델을 적용해 보는 것이 타당하다.  
+
+
+가장 먼저 수행해야 할 것은 훈련 집합과 테스트 집합으로 분할하는 것이다. 
+테스트 집합은 최근 7일간의 데이터를 사용하고 그 외 데이터는 모두 훈련 집합으로 사용한다.  
+
+```python
+df_diff = pd.DataFrame({'bandwidth_diff': bandwidth_diff})
+
+train = df_diff[:-168]
+test = df_diff[-168:]
+
+print(len(train))
+# 9831
+print(len(test))
+# 168
+```  
+
+테스트 세트와 훈련 세트로 나누어진 집합에 대해서 원본과 차분 데이터를 함께 도식하면 아래와 같다.  
+
+```python
+fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, sharex=True, figsize=(10, 8))
+
+ax1.plot(df['hourly_bandwidth'])
+ax1.set_xlabel('Time')
+ax1.set_ylabel('Hourly bandwidth usage (MBps)')
+ax1.axvspan(9831, 10000, color='#808080', alpha=0.2)
+
+ax2.plot(df_diff['bandwidth_diff'])
+ax2.set_xlabel('Time')
+ax2.set_ylabel('Hourly bandwidth - diff (MBps)')
+ax2.axvspan(9830, 9999, color='#808080', alpha=0.2)
+
+plt.xticks(
+    np.arange(0, 10000, 730), 
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', '2020', 'Feb'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
