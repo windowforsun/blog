@@ -220,3 +220,79 @@ plt.xticks(
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-5.png)
+
+
+
+다음 단계는 `p`, `q` 의 후보 목록을 생성하고 이를 모든 조합에 대해 `ARMA` 모델을 피팅하는 것이다. 
+이 떄 `ARMA` 모델을 피팅하는 `optimize_ARMA` 함수를 아래와 같이 정의한다.  
+
+```python
+from typing import Union
+from tqdm.notebook import tqdm_notebook
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+def optimize_ARMA(endog: Union[pd.Series, list], order_list: list) -> pd.DataFrame:
+    
+    results = []
+    
+    for order in tqdm_notebook(order_list):
+        try: 
+            model = SARIMAX(endog, order=(order[0], 0, order[1]), simple_differencing=False).fit(disp=False)
+        except:
+            continue
+            
+        aic = model.aic
+        results.append([order, aic])
+        
+    result_df = pd.DataFrame(results)
+    result_df.columns = ['(p,q)', 'AIC']
+    
+    #Sort in ascending order, lower AIC is better
+    result_df = result_df.sort_values(by='AIC', ascending=True).reset_index(drop=True)
+    
+    return result_df
+```  
+
+`optimize_ARMA` 함수는 `endog` 매개변수로 시계열 데이터를 받고,
+`order_list` 매개변수로 `p`, `q` 의 후보 목록을 받는다. 
+그리고 `p`, `q` 의 모든 조합에 대해 `SARIMAX` 클래스를 사용해 `ARMA` 모델을 피팅하고, 
+각 조합에 대한 `AIC` 값을 계산해 데이터 프레임으로 반환한다.  
+
+`p`, `q` 의 후보 목록은 `0` 부터 `4` 까지의 정수로 생성한다. 
+이는 어떠한 기준에 의해서 결정된 것이 아니라 단순히 예시를 위한 것이다.  
+
+```python
+ps = range(0, 4, 1)
+qs = range(0, 4, 1)
+
+order_list = list(product(ps, qs))
+```  
+
+이제 조합된 `p`, `q` 목록을 사용해 `optimize_ARMA` 함수를 호출한다.  
+
+```python
+result_df = optimize_ARMA(train['bandwidth_diff'], order_list)
+
+#       (p,q)	AIC
+# 0	    (3, 2)	27991.063879
+# 1	    (2, 3)	27991.287509
+# 2	    (2, 2)	27991.603598
+# 3	    (3, 3)	27993.416924
+# 4	    (1, 3)	28003.349550
+# 5	    (1, 2)	28051.351401
+# 6	    (3, 1)	28071.155496
+# 7	    (3, 0)	28095.618186
+# 8	    (2, 1)	28097.250766
+# 9	    (2, 0)	28098.407664
+# 10	(1, 1)	28172.510044
+# 11	(1, 0)	28941.056983
+# 12	(0, 3)	31355.802141
+# 13	(0, 2)	33531.179284
+# 14	(0, 1)	39402.269523
+# 15	(0, 0)	49035.184224
+```  
+
+`AIC` 값이 낮은 순으로 결과를 보았을 때 `(3, 2)` 또는 `(2, 3)` 조합이 가장 낮지만, 
+그 다음 `(2, 2)` 조합과 차이가 없다 그러므로 추정에 필요한 매개변수가 좀 더 적은 `(2, 2)` 조합을 선택한다.  
