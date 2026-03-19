@@ -357,3 +357,212 @@ print(model_fit.summary())
 model_fit.plot_diagnostics(figsize=(10, 8))
 
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-6.png)
+
+
+4개의 그래프 중 왼쪽 상단 도식이 잔차의 시계열 도식인데 어떠한 추세도 확인할 수 없으므로 정상적인 것으로 보인다. 
+오른쪽 상단의 도식은 정규분포와 유사한 모양일 확인할 수 있어 잔차가 정규분포를 따르는 것으로 보인다. 
+왼쪽 하단의 `Q-Q` 도식은 `y = x` 직선과 거의 유사한 굵은 직선을 보여줌을 확인할 수 있다. 
+그리고 오른쪽 하단의 `ACF` 도식은 지연 0이후 자기상관관계가 없음을 볼 수 있다. 
+결과적으로 잔차가 정규분포이면서 상관관계도 없으므로 백색소음과 유사하다고 판단할 수 있다.  
+
+이제 `Ljung-Box` 검정을 수행해 본다. 
+
+```python
+residuals = model_fit.resid
+
+lbvalue, pvalue = acorr_ljungbox(residuals, np.arange(1, 11, 1))
+
+print(pvalue)
+# [0.83725731 0.81124741 0.91441596 0.93154489 0.97367787 0.98101905 0.95260713 0.91906661 0.95361504 0.96401518]
+```  
+
+융-박스 테스트로 반환된 `p-value` 값이 모두 `0.05` 보다 크므로 잔차가 독립적으로 분포한다는 귀무가설을 기각할 수 없다. 
+
+모든 잔차 분석을 마쳤으므로 이제 `ARMA(2, 2)` 모델을 사용해 시계열 예측을 수행할 수 있다.  
+
+### Forecasting ARMA
+`ARMA(p, q)` 모델링 절차에 따라 `p`, `q` 를 식별하고, 
+잔차 분석을 통해 모델의 적합도를 평가했다.
+이제 `ARMA(2, 2)` 모델을 사용해 시계열 예측을 수행해 본다.  
+
+`ARMA(2, 2)` 모델인 만큼 `2` 시점 이전의 데이터와 `2` 시점 이전의 오차항을 사용해 현재 시점을 예측한다. 
+테스트 세트의 전체 기간을 예측하기 위해서 `rolling_forcast` 함수를 정의한다. 
+`rolling_forcast` 함수에는 모델의 성능 비교를 위하 `mean`, `last`, `ARMA` 세 가지 방법을 구현한다.  
+
+```python
+def rolling_forecast(df: pd.DataFrame, train_len: int, horizon: int, window: int, method: str) -> list:
+    
+    total_len = train_len + horizon
+    end_idx = train_len
+    
+    if method == 'mean':
+        pred_mean = []
+        
+        for i in range(train_len, total_len, window):
+            mean = np.mean(df[:i].values)
+            pred_mean.extend(mean for _ in range(window))
+            
+        return pred_mean
+
+    elif method == 'last':
+        pred_last_value = []
+        
+        for i in range(train_len, total_len, window):
+            last_value = df[:i].iloc[-1].values[0]
+            pred_last_value.extend(last_value for _ in range(window))
+            
+        return pred_last_value
+    
+    elif method == 'ARMA':
+        pred_ARMA = []
+        
+        for i in range(train_len, total_len, window):
+            # SARIMAX 에서 ARMA 모델에 필요한 차수만 지정해 ARMA 모델을 구현
+            model = SARIMAX(df[:i], order=(2,0,2))
+            res = model.fit(disp=False)
+            predictions = res.get_prediction(0, i + window - 1)
+            oos_pred = predictions.predicted_mean.iloc[-window:]
+            pred_ARMA.extend(oos_pred)
+            
+        return pred_ARMA
+```  
+
+이제 `rolling_forcast` 함수를 사용해 `mean`, `last`, `ARMA` 세 가지 방법으로 예측을 수행한다.  
+
+```python
+TRAIN_LEN = len(train)
+HORIZON = len(test)
+WINDOW = 2
+
+pred_mean = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'mean')
+pred_last_value = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'last')
+pred_ARMA = rolling_forecast(df_diff, TRAIN_LEN, HORIZON, WINDOW, 'ARMA')
+
+test.loc[:, 'pred_mean'] = pred_mean
+test.loc[:, 'pred_last_value'] = pred_last_value
+test.loc[:, 'pred_ARMA'] = pred_ARMA
+
+test.head()
+#       bandwidth_diff	pred_mean	pred_last_value	pred_ARMA
+# 9831	-5.943995	    -0.028214	-5.791207	    -5.460661
+# 9832	-5.865194	    -0.028214	-5.791207	    -4.890626
+# 9833	-3.197066	    -0.029410	-5.865194	    -5.335905
+# 9834	-1.090197	    -0.029410	-5.865194	    -4.751731
+# 9835	0.665291	    -0.029840	-1.090197	    -0.375596
+
+```  
+
+예측된 모든 결과를 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df_diff['bandwidth_diff'])
+ax.plot(test['bandwidth_diff'], 'b-', label='actual')
+ax.plot(test['pred_mean'], 'g:', label='mean')
+ax.plot(test['pred_last_value'], 'r-.', label='last')
+ax.plot(test['pred_ARMA'], 'k--', label='ARMA(2,2)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Hourly bandwidth - diff (MBps)')
+
+ax.axvspan(9830, 9999, color='#808080', alpha=0.2)
+
+ax.set_xlim(9800, 9999)
+
+plt.xticks(
+    [9802, 9850, 9898, 9946, 9994],
+    ['2020-02-13', '2020-02-15', '2020-02-17', '2020-02-19', '2020-02-21'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-7.png)
+
+
+`ARMA(2, 2)` 모델이 베이스라인 모델인 `mean`, `last` 모델보다 더 잘 예측한 것을 보이는데, 
+더 정확한 성능 검증을 위해 `MSE` 로 각 예측을 평가한다. (`MSE` 가 낮을수록 좋은 모델)  
+
+```python
+mse_mean = mean_squared_error(test['bandwidth_diff'], test['pred_mean'])
+mse_last = mean_squared_error(test['bandwidth_diff'], test['pred_last_value'])
+mse_ARMA = mean_squared_error(test['bandwidth_diff'], test['pred_ARMA'])
+
+fig, ax = plt.subplots()
+
+x = ['mean', 'last_value', 'ARMA(2,2)']
+y = [mse_mean, mse_last, mse_ARMA]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Methods')
+ax.set_ylabel('MSE')
+ax.set_ylim(0, 7)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value+0.25, s=str(round(value, 2)), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-8.png)
+
+
+`MSE` 평가 결과를 보면 `ARMA(2, 2)` 모델이 `mean`, `last` 모델보다 훨씬 낮은 것을 볼 수 있다.  
+
+마지막으로 현재까지 사용한 값들은 차분된 값들이므로, 
+이를 원본 데이터 규모로 복원하고 도식화 및 `MAE` 평가를 수행해 예측값이 실제값과 얼마나 차이가 나는지 평가한다.  
+
+```python
+df['pred_bandwidth'] = pd.Series()
+df['pred_bandwidth'][9832:] = df['hourly_bandwidth'].iloc[9832] + test['pred_ARMA'].cumsum()
+
+fig, ax = plt.subplots()
+
+ax.plot(df['hourly_bandwidth'])
+ax.plot(df['hourly_bandwidth'], 'b-', label='actual')
+ax.plot(df['pred_bandwidth'], 'k--', label='ARMA(2,2)')
+
+ax.legend(loc=2)
+
+ax.set_xlabel('Time')
+ax.set_ylabel('Hourly bandwith usage (MBps)')
+
+ax.axvspan(9831, 10000, color='#808080', alpha=0.2)
+
+ax.set_xlim(9800, 9999)
+
+plt.xticks(
+    [9802, 9850, 9898, 9946, 9994],
+    ['2020-02-13', '2020-02-15', '2020-02-17', '2020-02-19', '2020-02-21'])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+
+
+mae_ARMA_undiff = mean_absolute_error(df['hourly_bandwidth'][9832:], df['pred_bandwidth'][9832:])
+
+print(mae_ARMA_undiff)
+# 14.000362777732592
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arma-9.png)
+
+
+실제 데이터의 단위는 `Mbps` 이므로 `MAE` 값이 `14.0` 이라는 것은, 
+예측값이 실제값과 평균적으로 `14.0 Mbps` 만큼 차이가 난다는 의미이다. 
+
+
+
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
+
