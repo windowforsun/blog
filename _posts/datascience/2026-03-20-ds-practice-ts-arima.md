@@ -44,3 +44,53 @@ use_math: true
 | 예측력 | 보통 | 보통 | 높음 | 매우 높음 |
 | 특징 | 자기상관이 강한 데이터에 적합 | 오차의 자기상관이 강할 때 적합 | 두 패턴 혼재시 적합 | 정상화 과정 포함, 유연성 최고 |
 
+
+### Order of ARIMA Model
+`ARIMA` 모델에서도 `ARIMA(p,d,q)` 에서 `p`, `d`, `q` 를 식별하는 과정이 매우 중요하다.
+`p` 는 `AR` 자기회귀 차수를 나타내고, `q` 는 `MA` 이동평균 차수, `d` 는 차분 횟수를 나타낸다. 
+`ARIMA` 모델에서 `p`, `d`, `q` 를 식별하는 모델링 과정은 다음과 같다.  
+
+```mermaid
+flowchart TD
+    data_agg[데이터 수집] --> station[정상적-ADF ?]
+    station -->|NO| trans[변환-차분 수행]
+    trans --> station
+    station -->|YES| diff[차분 횟수로 d 결정]
+    diff --> p-q[p, q 목록 생성]
+    p-q --> ARIMA-fit[ARIMA에 모든 p, q 조합 피팅]
+    ARIMA-fit --> AIC[AIC 가 가장 낮은 최적 p, q 선택]
+    AIC --> residual[잔차 분석]
+    residual --> Q-Q[Q-Q 도식이 직선?]
+    residual --> ljungbox[융박스-잔차가 백색잡음?]
+    Q-Q -->|YES| predict[시계열 예측]
+    ljungbox -->|NO| p-q
+    Q-Q -->|NO| p-q
+    ljungbox -->|YES| predict
+```  
+
+`ARIMA` 모델에서는 `1960~1980` 년 사이의 존슨앤드존스의 분기별 주당순이익 데이터를 사용한다. 
+데이터를 로드하고 도식화하면 아래와 같다.  
+
+```python
+df = pd.read_csv('../data/jj.csv')
+df.head()
+#   date	    data
+# 0	1960-01-01	0.71
+# 1	1960-04-01	0.63
+# 2	1960-07-02	0.85
+# 3	1960-10-01	0.44
+# 4	1961-01-01	0.61
+
+
+fig, ax = plt.subplots()
+
+ax.plot(df.date, df.data)
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share (USD)')
+ax.axvspan(80, 83, color='#808080', alpha=0.2)
+
+plt.xticks(np.arange(0, 81, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
