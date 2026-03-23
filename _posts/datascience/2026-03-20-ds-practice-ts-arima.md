@@ -94,3 +94,83 @@ plt.xticks(np.arange(0, 81, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974,
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arima-1.png)
+
+
+우리는 해당 시계열에서 음영영역에 해당하는 4개의 분기를 예측할 것이다. 
+원본 데이터를 보면 장기적인 상승 추세가 있는 것을 볼 수 있다.  
+
+수치적으로 확인하기 위해 `ADF` 검정을 수행하면 아래와 같다.  
+
+```python
+ad_fuller_result = adfuller(df['data'])
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: 2.742016573457468
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 1.0
+``` 
+
+`ADF` 통계 값이 양수이고, `p-value` 가 `0.05` 보다 훨씬 크므로 귀무가설을 기각할 수 없어, 시계열이 비정상적임을 확인했다. 
+이제 필요한 것은 해당 시계열을 몇번 차분했을 때 정상적이 되는지를 찾는 것이다. 
+차분을 한 번 적용하고 `ADF` 검정을 수행하면 아래와 같다.  
+
+```python
+eps_diff = np.diff(df['data'], n=1)
+
+ad_fuller_result = adfuller(eps_diff)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -0.407409763638043
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.9088542416911309
+```  
+
+`ADF` 통계 값이 큰 음수가 아니고, `p-value` 가 `0.05` 보다 크므로 귀무가설을 기각하지 못해 현재 1차 차분 데이터는 정상적 시계열이 아님을 확인할 수 있다. 
+그러므로 변환(차분)을 한 번 더 적용한다.  
+
+```python
+eps_diff2 = np.diff(eps_diff, n=1)
+
+ad_fuller_result = adfuller(eps_diff2)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -3.5851628747931654
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.0060510998696034725
+```  
+
+`ADF` 통계 값이 충분히 큰 음수이고, `p-value` 가 `0.05` 보다 작으므로 귀무가설을 기각해 현재 2차 차분 데이터는 정상적 시계열임을 확인할 수 있다. 
+따라서 `ARIMA` 모델에서 `d=2` 로 결정한다.  
+
+다음 단계는 `p`, `q` 의 후보 목록을 생성하고 이를 모든 조합에 대해 `ARIMA` 모델을 피팅하는 것이다.
+이 떄 `ARIMA` 모델을 피팅하는 `optimize_ARIMA` 함수를 아래와 같이 정의한다.  
+
+```python
+from typing import Union
+from tqdm.notebook import tqdm_notebook
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+def optimize_ARIMA(endog: Union[pd.Series, list], order_list: list, d: int) -> pd.DataFrame:
+    
+    results = []
+    
+    for order in tqdm_notebook(order_list):
+        try: 
+            model = SARIMAX(endog, order=(order[0], d, order[1]), simple_differencing=False).fit(disp=False)
+        except:
+            continue
+            
+        aic = model.aic
+        results.append([order, aic])
+        
+    result_df = pd.DataFrame(results)
+    result_df.columns = ['(p,q)', 'AIC']
+    
+    #Sort in ascending order, lower AIC is better
+    result_df = result_df.sort_values(by='AIC', ascending=True).reset_index(drop=True)
+    
+    return result_df
+```  
+
