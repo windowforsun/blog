@@ -268,3 +268,14 @@ model_fit.plot_diagnostics(figsize=(10,8));
 그 외 지연에서는 계수가 유의하지 않은 것으로 보이므로 우연한 것으로 추정한다. 
 
 이제 정량적인 관점에서 잔차 분석을 하기위해 `Ljung-Box` 검정을 수행한다.  
+
+```python
+residuals = model_fit.resid
+
+lbvalue, pvalue = acorr_ljungbox(residuals, np.arange(1, 11, 1))
+
+print(pvalue)
+# [0.19357148 0.42944178 0.06459117 0.05552157 0.07945699 0.1212012 0.17055168 0.2402976  0.2967141  0.34562951]
+```  
+
+모든 `p-value` 가 `0.05` 보다 크므로 귀무가설을 기각하지 못해 잔차가 백색잡음임을 확인할 수 있다.  
