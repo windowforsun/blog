@@ -308,3 +308,28 @@ test['ARIMA_pred'] = ARIMA_pred
 # 83	1980-10-01	11.61	9.99	        11.715681
 
 ```  
+
+각 예측 결과를 시각적으로 확인하기 위해 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df['date'], df['data'])
+ax.plot(test['data'], 'b-', label='actual')
+ax.plot(test['naive_seasonal'], 'r:', label='naive seasonal')
+ax.plot(test['ARIMA_pred'], 'k--', label='ARIMA(3,2,3)')
+
+ax.set_xlabel('Date')
+ax.set_ylabel('Earnings per share (USD)')
+ax.axvspan(80, 83, color='#808080', alpha=0.2)
+
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 81, 8), [1960, 1962, 1964, 1966, 1968, 1970, 1972, 1974, 1976, 1978, 1980])
+ax.set_xlim(60, 83)
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arima-3.png)
