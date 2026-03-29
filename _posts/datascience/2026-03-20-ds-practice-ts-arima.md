@@ -333,3 +333,33 @@ plt.tight_layout()
 ```  
 
 ![그림 1]({{site.baseurl}}/img/datascience/arima-3.png)
+
+
+`ARIMA(3,2,3)` 모델이 베이스라인 모델보다 실제 데이터의 추세를 더 잘 따르는 것을 확인할 수 있는데, 
+정량적으로 평가하기 위해 `MAPE` 를 측정해 보면 아래와 같다.  
+
+```python
+def mape(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+mape_naive_seasonal = mape(test['data'], test['naive_seasonal'])
+mape_ARIMA = mape(test['data'], test['ARIMA_pred'])
+
+fig, ax = plt.subplots()
+
+x = ['naive seasonal', 'ARIMA(3,2,3)']
+y = [mape_naive_seasonal, mape_ARIMA]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Models')
+ax.set_ylabel('MAPE (%)')
+ax.set_ylim(0, 15)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value + 1, s=str(round(value,2)), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/arima-4.png)
+
