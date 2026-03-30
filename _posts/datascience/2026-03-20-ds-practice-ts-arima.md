@@ -363,3 +363,13 @@ plt.tight_layout()
 
 ![그림 1]({{site.baseurl}}/img/datascience/arima-4.png)
 
+
+단순 계절 예측과 비교해서 `ARIMA(3,2,3)` 모델이 `MAPE` 가 5배 정도 성능적으로 우수한 것을 확인할 수 있다. 
+즉 예측값이 실젯값에서 평균적으로 `1.73%` 정도 벗어난다는 의미이다. 
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
