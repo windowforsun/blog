@@ -45,3 +45,32 @@ use_math: true
 | 적용 데이터 | 단순 정상 시계열 | 단순 정상 시계열 | 복합 정상 시계열 | 복합 비정상 및 정상 시계열 | 계절적·비계절적 복합 시계열 |
 | 예측력 | 보통 | 보통 | 높음 | 매우 높음 | 계절성 데이터에 최고 |
 | 특징 | 자기상관이 강한 데이터에 적합 | 오차의 자기상관이 강할 때 적합 | 두 패턴 혼재시 적합 | 정상화 과정 포함, 유연성 최고 | 계절성·비정상성 모두 처리, 복잡한 패턴 분석 가능 |
+
+
+`SARIMA` 모델에서는 `1949~1960` 년까지 항공사의 월별 총 항공 승객 수 데이터를 사용해
+시계열 분석하고 최종적으로 `SARIMA` 모델을 구축하는 과정을 단계별로 설명한다. 
+해딩 데이터를 로드하고 도식화하면 아래와 같다.  
+
+```python
+df = pd.read_csv('../data/air-passengers.csv')
+df.head()
+# Month	Passengers
+# 0	    1949-01	112
+# 1	    1949-02	118
+# 2	    1949-03	132
+# 3	    1949-04	129
+# 4	    1949-05	121
+
+fig, ax = plt.subplots()
+
+ax.plot(df['Month'], df['Passengers'])
+ax.set_xlabel('Date')
+ax.set_ylabel('Number of air passengers')
+
+plt.xticks(np.arange(0, 145, 12), np.arange(1949, 1962, 1))
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarima-1.png)
