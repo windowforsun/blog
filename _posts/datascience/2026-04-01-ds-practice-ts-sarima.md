@@ -134,3 +134,40 @@ plt.tight_layout()
 따라서, `m` 값은 데이터의 특성과 도메인 지식을 고려하여 신중하게 선택해야 한다.  
 
 최종적으로 사용하는 데이터는 월별 데이터이므로 `m=12` 로 설정한다.  
+
+
+### Identifying Seasonality
+`SARIMA` 모델을 구축하기 전에 데이터의 계절성을 식별하는 것이 중요하다. 
+일반적으로 시계열 데이터는 도식화하는 것만으로 주기적인 패턴을 관찰해 계절성을 어느정도는 파악할 수 있다. 
+하지만 좀 더 정확한 방법을 사용하고 싶다면 `시계열 분해` 를 사용할 수 있다. 
+`시계열 분해는` 는 시계열을 추세 구성요서, 계절적 구성요소, 잔차와 같은 3가지 주요 구성요소로 분리하는 통계 작업이다.  
+
+추세 구성요소는 시계열의 장기적인 변화를 의미하기 때문에 시간이 지남에 따라 증가하거나 감소하는 시계열을 파악할 수 있다. 
+계절적 구성요소는 일정한 주기로 반복되는 패턴을 나타내며,
+예를 들어, 월별 데이터에서 특정 월에 판매량이 증가하는 패턴을 식별할 수 있다. 
+잔차는 시계열의 나머지 부분으로, 노이즈로 추세 또는 계절적 구성요소로 설명할 수 없는 불규칙성을 의미한다.  
+
+`시계열 분히` sms `statsmodels` 의 `STL` 함수를 사용해 수행할 수 있다.  
+
+```python
+decomposition = STL(df['Passengers'], period=12).fit()
+
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(nrows=4, ncols=1, sharex=True, figsize=(10,8))
+
+ax1.plot(decomposition.observed)
+ax1.set_ylabel('Observed')
+
+ax2.plot(decomposition.trend)
+ax2.set_ylabel('Trend')
+
+ax3.plot(decomposition.seasonal)
+ax3.set_ylabel('Seasonal')
+
+ax4.plot(decomposition.resid)
+ax4.set_ylabel('Residuals')
+
+plt.xticks(np.arange(0, 145, 12), np.arange(1949, 1962, 1))
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
