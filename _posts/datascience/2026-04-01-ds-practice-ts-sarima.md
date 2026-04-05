@@ -183,3 +183,171 @@ plt.tight_layout()
 만약 계절적 패턴이 없다면 세 번째 도식이 0에서 평평한 수평선을 보이게 된다. 
 
 결론적으로 시계열에서 계절성을 수치적으로 평가하는 통계적 테스트는 없기 때문에 이러한 `시계열 분해`를 통해 판단해야 한다.  
+
+### Forecasting ARIMA
+`SARIMA` 모델을 구축하기 전에 `ARIMA` 모델을 먼저 구축해 본다. 
+그래서 이후 `SARIMA` 모델과 비교할 수 있도록 한다. 
+`ARIMA(p,d,q)` 모델을 구축하기 위해 적절한 `p`, `d`, `q` 값을 찾아야 한다.  
+
+참고로 훈련 세트는 `1960`년 이전의 데이터를 사용하고 테스트 세트는 `1960`년 데이터를 사용할 것이다.
+
+먼저 정상성 검정을 위해 `ADF` 검정을 수행한다.  
+
+```python
+ad_fuller_result = adfuller(df['Passengers'])
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: 0.8153688792060569
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.9918802434376411
+```  
+
+`ADF` 통계값이 큰 음수가 아니고, `p-value` 가 `0.05` 보다 크므로 귀무가설을 기각할 수 없으므로 정상적인 시계열이 아니다. 
+변환을 위해 차분을 적용하고 다시 `ADF` 검정을 수행한다.  
+
+```python
+df_diff = np.diff(df['Passengers'], n=1)
+
+ad_fuller_result = adfuller(df_diff)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -2.8292668241699928
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.05421329028382636
+```  
+
+1번 차분한 시계열도 정상적으로 볼 수 없다. 
+그러므로 다시 한번 더 차분을 진행하고 `ADF` 검정을 수행한다.  
+
+```python
+df_diff2 = np.diff(df_diff, n=1)
+
+ad_fuller_result = adfuller(df_diff2)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -16.384231542468516
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 2.7328918500141235e-29
+```  
+
+`ADF` 통계값이 매우 큰 음수이고, `p-value` 가 `0.05` 보다 작으므로 귀무가설을 기각할 수 있으므로 정상적인 시계열이다. 
+따라서 `d=2` 로 결정한다.  
+
+이제 매개변수 `p` 와 `q` 를 결정하기 위해 테스트할 수 있는 값의 범위를 정한다. 
+계절적인 부분까지 함께 보기위해 범위는 `0~12` 한다.
+`optimize_SARIMA` 함수를 정의하는데 `ARIMA` 에서는 `P`, `D`, `Q` 을 사용하지 않으므로 `0` 으로 지정한다.
+하지만 `m` 값은 `SARIMA` 에서와 동일하게 `12` 로 지정한다.
+
+
+```python
+ps = range(0, 13, 1)
+qs = range(0, 13, 1)
+Ps = [0]
+Qs = [0]
+
+d = 2
+D = 0
+s = 12
+
+ARIMA_order_list = list(product(ps, qs, Ps, Qs))
+```  
+
+계절적 요소인 `P`, `D`, `Q`, `m` 을 추가한 `optimize_SARIMA` 함수는 다음과 같다.  
+
+```python
+def optimize_SARIMA(endog: Union[pd.Series, list], order_list: list, d: int, D: int, s: int) -> pd.DataFrame:
+    
+    results = []
+    
+    for order in tqdm_notebook(order_list):
+        try: 
+            model = SARIMAX(
+                endog, 
+                order=(order[0], d, order[1]),
+                seasonal_order=(order[2], D, order[3], s),
+                simple_differencing=False).fit(disp=False)
+        except:
+            continue
+            
+        aic = model.aic
+        results.append([order, aic])
+        
+    result_df = pd.DataFrame(results)
+    result_df.columns = ['(p,q,P,Q)', 'AIC']
+    
+    #Sort in ascending order, lower AIC is better
+    result_df = result_df.sort_values(by='AIC', ascending=True).reset_index(drop=True)
+    
+    return result_df
+```  
+
+위 함수를 사용해 `ARIMA` 모델을 피팅하고 `AIC` 값을 기준으로 최적의 `p`, `q` 값을 찾는다.  
+
+
+```python
+train = df['Passengers'][:-12]
+
+ARIMA_result_df = optimize_SARIMA(train, ARIMA_order_list, d, D, s)
+ARIMA_result_df
+#       (p,q,P,Q)	    AIC
+# 0	    (11, 3, 0, 0)	1016.882539
+# 1	    (11, 4, 0, 0)	1019.013048
+# 2	    (11, 5, 0, 0)	1020.428000
+# 3	    (12, 0, 0, 0)	1020.528594
+# 4	    (11, 1, 0, 0)	1021.028226
+# ...	...	...
+# 164	(5, 0, 0, 0)	1281.732157
+# 165	(3, 0, 0, 0)	1300.282335
+# 166	(2, 0, 0, 0)	1302.913196
+# 167	(1, 0, 0, 0)	1308.152194
+# 168	(0, 0, 0, 0)	1311.919269
+```  
+
+`ARIMA` 모델 피팅 결과 가장 낮은 모델은 `SARIMA(11,2,3)(0,0,0)12`(`ARIMA(11,2,3)`) 이다. 
+이제 해당 모델을 최종으로 피팅하고 잔차 분석을 수행한다.  
+
+```python
+ARIMA_model = SARIMAX(train, order=(11,2,3), simple_differencing=False)
+ARIMA_model_fit = ARIMA_model.fit(disp=False)
+
+print(ARIMA_model_fit.summary())
+# SARIMAX Results
+# ==============================================================================
+# Dep. Variable:             Passengers   No. Observations:                  132
+# Model:              SARIMAX(11, 2, 3)   Log Likelihood                -493.441
+# Date:                Wed, 28 Jul 2021   AIC                           1016.883
+# Time:                        16:44:01   BIC                           1059.896
+# Sample:                             0   HQIC                          1034.360
+# - 132
+# Covariance Type:                  opg
+# ==============================================================================
+# coef    std err          z      P>|z|      [0.025      0.975]
+# ------------------------------------------------------------------------------
+# ar.L1         -0.8246      0.100     -8.230      0.000      -1.021      -0.628
+# ar.L2         -0.9617      0.049    -19.562      0.000      -1.058      -0.865
+# ar.L3         -0.8508      0.087     -9.727      0.000      -1.022      -0.679
+# ar.L4         -0.9519      0.047    -20.109      0.000      -1.045      -0.859
+# ar.L5         -0.8314      0.092     -9.056      0.000      -1.011      -0.651
+# ar.L6         -0.9490      0.043    -22.026      0.000      -1.033      -0.865
+# ar.L7         -0.8330      0.089     -9.349      0.000      -1.008      -0.658
+# ar.L8         -0.9619      0.049    -19.475      0.000      -1.059      -0.865
+# ar.L9         -0.8234      0.086     -9.555      0.000      -0.992      -0.654
+# ar.L10        -0.9579      0.031    -30.629      0.000      -1.019      -0.897
+# ar.L11        -0.8079      0.096     -8.456      0.000      -0.995      -0.621
+# ma.L1         -0.3307      0.136     -2.426      0.015      -0.598      -0.064
+# ma.L2          0.2200      0.159      1.381      0.167      -0.092       0.532
+# ma.L3         -0.2929      0.141     -2.072      0.038      -0.570      -0.016
+# sigma2       104.7479     17.816      5.880      0.000      69.830     139.666
+# ===================================================================================
+# Ljung-Box (L1) (Q):                   0.00   Jarque-Bera (JB):                 3.99
+# Prob(Q):                              0.95   Prob(JB):                         0.14
+# Heteroskedasticity (H):               2.23   Skew:                            -0.02
+# Prob(H) (two-sided):                  0.01   Kurtosis:                         3.86
+# ===================================================================================
+# 
+# Warnings:
+# [1] Covariance matrix calculated using the outer product of gradients 
+# (complex-step).
+
+ARIMA_model_fit.plot_diagnostics(figsize=(10,8))
+```  
