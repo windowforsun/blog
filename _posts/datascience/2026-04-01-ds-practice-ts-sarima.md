@@ -404,3 +404,136 @@ test
 
 지금까지 결과는 이후 `SARIMA` 모델과 비교하기 위해서 사용할 예정이다.  
 
+
+### Forecasting SARIMA
+`SARIMA` 모델을 통해 시계열 데이터 예측을 위해 원본 데이터가 계절성을 가진다는 것을 확인했다.
+그리고 그 계절성을 의미하는 `m` 값이 `12` 라는 것까지 식별했다.
+이제 `SARIMA(p,d,q)(P,D,Q)m` 모델을 구축하기 위해
+적절한 `p`, `d`, `q`, `P`, `D`, `Q` 값을 찾아야 한다.
+이를 위한 `SARIMA` 모델링 절차는 아래와 같다.
+
+```mermaid
+flowchart TD
+    data_agg[데이터 수집] --> station[정상적-ADF ?]
+    station -->|NO| trans[변환-차분 수행]
+    trans --> station
+    station -->|YES| diff[차분 횟수로 d 결정]
+    diff --> seasonal[계절적 차분 차수로 D 결정]
+    seasonal --> p-q[p, q, P, Q 목록 생성]
+    p-q --> ARIMA-fit[SARIMA에 모든 p, q, P, Q 조합 피팅]
+    ARIMA-fit --> AIC[AIC 가 가장 낮은 최적 p, q 선택]
+    AIC --> residual[잔차 분석]
+    residual --> Q-Q[Q-Q 도식이 직선?]
+    residual --> ljungbox[융박스-잔차가 백색잡음?]
+    Q-Q -->|YES| predict[시계열 예측]
+    ljungbox -->|NO| p-q
+    Q-Q -->|NO| p-q
+    ljungbox -->|YES| predict
+```  
+
+다시 한번 언급하면 훈련 세트는 `1960`년 이전의 데이터를 사용하고 테스트 세트는 `1960`년 데이터를 사용할 것이다.  
+
+`SARIMA` 모델도 먼저 정상성 검정을 위해 `ADF` 검정을 수행한다.  
+
+```python
+ad_fuller_result = adfuller(df['Passengers'])
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: 0.8153688792060569
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.9918802434376411
+```  
+
+앞서 `ARIAMA` 에서 보았던 것과 동일하게 정상적인 시계열이 아니다. 
+`SARIMA` 모델에서는 계절적 차분도 고려해야 하므로 `12` 개월 주기로 차분을 적용하고 다시 `ADF` 검정을 수행한다.  
+
+```python
+df_diff_seasonal_diff = np.diff(df_diff, n=12)
+
+ad_fuller_result = adfuller(df_diff_seasonal_diff)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -17.624862360279533
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 3.823046855528954e-30
+```  
+
+`ADF` 통계값이 매우 큰 음수이고, `p-value` 가 `0.05` 보다 작으므로 귀무가설을 기각할 수 있으므로 정상적인 시계열이다. 
+따라서 `d=1`, `D=1` 로 결정한다.  
+
+이제 매개변수 `p`, `q`, `P`, `Q` 를 결정하기 위해 테스트할 수 있는 값의 범위를 정한다. 
+
+```python
+ps = range(0, 4, 1)
+qs = range(0, 4, 1)
+Ps = range(0, 4, 1)
+Qs = range(0, 4, 1)
+
+SARIMA_order_list = list(product(ps, qs, Ps, Qs))
+
+train = df['Passengers'][:-12]
+
+d = 1
+D = 1
+# m = 12
+s = 12
+```  
+
+준비된 `optimize_SARIMA` 함수를 사용해 `SARIMA` 모델을 피팅하고 `AIC` 값을 기준으로 최적의 `p`, `q`, `P`, `Q` 값을 찾는다.  
+
+```python
+SARIMA_result_df = optimize_SARIMA(train, SARIMA_order_list, d, D, s)
+SARIMA_result_df
+#       (p,q,P,Q)	    AIC
+# 0	    (2, 1, 1, 2)	892.244468
+# 1	    (2, 1, 2, 1)	893.456064
+# 2	    (2, 1, 1, 3)	894.099406
+# 3	    (1, 0, 1, 2)	894.286903
+# 4	    (0, 1, 1, 2)	894.992179
+# ...	...	...
+# 250	(0, 0, 2, 0)	906.940147
+# 251	(3, 2, 0, 3)	907.181875
+# 252	(0, 0, 3, 2)	907.464271
+# 253	(0, 0, 3, 0)	908.742583
+# 254	(0,
+```  
+
+`SARIMA` 모델 피팅 결과 `AIC` 가 가장 낮은 모델은 `SARIMA(2,1,1)(1,1,2)12` 이다. 
+이제 해당 모델을 최종으로 피팅하고 잔차 분석을 수행한다.  
+
+```python
+SARIMA_model = SARIMAX(train, order=(2,1,1), seasonal_order=(1,1,2,12), simple_differencing=False)
+SARIMA_model_fit = SARIMA_model.fit(disp=False)
+
+print(SARIMA_model_fit.summary())
+# SARIMAX Results
+# ===============================================================================================
+# Dep. Variable:                              Passengers   No. Observations:                  132
+# Model:             SARIMAX(2, 1, 1)x(1, 1, [1, 2], 12)   Log Likelihood                -439.122
+# Date:                                 Wed, 28 Jul 2021   AIC                            892.244
+# Time:                                         16:44:04   BIC                            911.698
+# Sample:                                              0   HQIC                           900.144
+# - 132
+# Covariance Type:                                   opg
+# ==============================================================================
+# coef    std err          z      P>|z|      [0.025      0.975]
+# ------------------------------------------------------------------------------
+# ar.L1         -1.2666      0.085    -14.969      0.000      -1.432      -1.101
+# ar.L2         -0.3405      0.077     -4.408      0.000      -0.492      -0.189
+# ma.L1          0.9995      0.316      3.163      0.002       0.380       1.619
+# ar.S.L12       0.9986      0.111      8.997      0.000       0.781       1.216
+# ma.S.L12      -1.3289      1.454     -0.914      0.361      -4.178       1.520
+# ma.S.L24       0.3549      0.438      0.811      0.418      -0.503       1.213
+# sigma2        78.8820    103.523      0.762      0.446    -124.018     281.782
+# ===================================================================================
+# Ljung-Box (L1) (Q):                   0.06   Jarque-Bera (JB):                 0.89
+# Prob(Q):                              0.80   Prob(JB):                         0.64
+# Heteroskedasticity (H):               1.56   Skew:                            -0.08
+# Prob(H) (two-sided):                  0.16   Kurtosis:                         3.39
+# ===================================================================================
+# 
+# Warnings:
+# [1] Covariance matrix calculated using the outer product of gradients (complex-step).
+
+SARIMA_model_fit.plot_diagnostics(figsize=(10,8))
+```  
