@@ -537,3 +537,72 @@ print(SARIMA_model_fit.summary())
 
 SARIMA_model_fit.plot_diagnostics(figsize=(10,8))
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarima-4.png)
+
+
+왼쪽 상단 잔차는 추세/분산 변화를 보이지 않고 백색소음과 유사하다. 
+오른쪽 상단 잔차의 분포는 정규분포와 매우 유사하다. 
+왼쪽 하단 `Q-Q` 도식은 `y=x` 직선에 매우 가까운 모습을 볼 수 있다. 
+마지막으로 오른쪽 하단 상관관계 그래프는 지연 0 이후에 유의한 자기상관계수가 없음을 확인할 수 있다. 
+이로 잔차는 백색소음과 유사하다고 볼 수 있다.  
+
+이번에는 `ljungbox` 검정을 수행해 잔차가 백색소음인지 통계적으로 검정한다.  
+
+```python
+residuals = SARIMA_model_fit.resid
+
+lbvalue, pvalue = acorr_ljungbox(residuals, np.arange(1, 11, 1))
+
+print(pvalue)
+# [0.94469937 0.68870894 0.79583733 0.87369311 0.9202903  0.9441701 0.94081314 0.95077893 0.97389656 0.89324798]
+```  
+
+`p-value` 가 `0.05` 보다 크므로 귀무가설을 기각할 수 없으므로 잔차는 백색소음이다. 
+시각적으로 잔차를 분석했을 때도 매우 안정적인 모습이었기 때문에 `SARIMA` 모델이 데이터의 모든 정보를 포착했다고 볼 수 있다.  
+이제 `SARIMA` 모델을 사용해 예측을 수행한다.  
+
+```pyton
+SARIMA_pred = SARIMA_model_fit.get_prediction(132, 143).predicted_mean
+
+test['SARIMA_pred'] = SARIMA_pred
+test
+# 	    Month	Passengers	naive_seasonal	ARIMA_pred	SARIMA_pred
+# 132	1960-01	417	        360	            422.219410	418.516363
+# 133	1960-02	391	        342	            410.550579	399.578257
+# 134	1960-03	419	        406	            461.609056	461.313832
+# 135	1960-04	461	        396	            457.396312	451.442695
+# 136	1960-05	472	        420	            481.462237	473.748404
+# 137	1960-06	535	        472	            530.756316	538.787832
+# 138	1960-07	622	        548	            606.038649	612.466466
+# 139	1960-08	606	        559	            615.341865	624.644131
+# 140	1960-09	508	        463	            525.654874	520.180758
+# 141	1960-10	461	        407	            467.442132	462.853236
+# 142	1960-11	390	        362	            425.159739	412.727123
+# 143	1960-12	432	        405	            467.411760	454.244505
+```  
+
+이제 예측된 베이스라인 모델, `ARIMA` 모델, `SARIMA` 모델의 성능을 비교한다. 
+먼저 실측값을 포함해서 모든 값을 도식화하면 아래와 같다.  
+
+```python
+fig, ax = plt.subplots()
+
+ax.plot(df['Month'], df['Passengers'])
+ax.plot(test['Passengers'], 'b-', label='actual')
+ax.plot(test['naive_seasonal'], 'r:', label='naive seasonal')
+ax.plot(test['ARIMA_pred'], 'k--', label='ARIMA(11,2,3)')
+ax.plot(test['SARIMA_pred'], 'g-.', label='SARIMA(2,1,1)(1,1,2,12)')
+
+ax.set_xlabel('Date')
+ax.set_ylabel('Number of air passengers')
+ax.axvspan(132, 143, color='#808080', alpha=0.2)
+
+ax.legend(loc=2)
+
+plt.xticks(np.arange(0, 145, 12), np.arange(1949, 1962, 1))
+ax.set_xlim(120, 143)
+
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
