@@ -606,3 +606,46 @@ ax.set_xlim(120, 143)
 fig.autofmt_xdate()
 plt.tight_layout()
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarima-5.png)
+
+
+위 도식화된 결과를 보면 `SARIMA` 모델이 실측값과 가장 유사한 예측값을 보여주고 있음을 알 수 있다.
+이제 각 모델의 성능을 수치적으로 확인하기 위해 `MAPE` 를 측정해 확인한다.  
+
+```python
+def mape(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+mape_naive_seasonal = mape(test['Passengers'], test['naive_seasonal'])
+mape_ARIMA = mape(test['Passengers'], test['ARIMA_pred'])
+mape_SARIMA = mape(test['Passengers'], test['SARIMA_pred'])
+
+fig, ax = plt.subplots()
+
+x = ['naive seasonal', 'ARIMA(11,2,3)', 'SARIMA(2,1,1)(1,1,2,12)']
+y = [mape_naive_seasonal, mape_ARIMA, mape_SARIMA]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Models')
+ax.set_ylabel('MAPE (%)')
+ax.set_ylim(0, 15)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value + 1, s=str(round(value,2)), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarima-6.png)
+
+
+`MAPE` 는 값이 0에 가까울수록 예측이 정확하다는 것을 의미하기 때문에 `SARIMA` 모델이 가장 우수한 성능을 보이고 있음을 알 수 있다. 
+이는 데이터 집합이 계절성이 있고 이러한 계절성을 포착하는 `SARIMA` 모델이 `ARIMA` 모델보다 더 나은 예측 성능을 제공한다는 것을 보여준다.  
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
