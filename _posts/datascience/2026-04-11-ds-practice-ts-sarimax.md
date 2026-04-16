@@ -97,3 +97,23 @@ macro_econ_data
 
 테스트에서는 목표 변수 `realgdp`, `realcons`, `realinv`, `realgovt`, `realdpi`, `cpi` 5개 변수를 외생 변수를 사용해 총 6개 변수를 사용한다. 
 모든 변수들이 시간에 따라 어떠한 패턴을 보이는지 시각화해보면 아래와 같다. 
+
+```python
+fig, axes = plt.subplots(nrows=3, ncols=2, dpi=300, figsize=(11,6))
+
+for i, ax in enumerate(axes.flatten()[:6]):
+    data = macro_econ_data[macro_econ_data.columns[i+2]]
+    
+    ax.plot(data, color='black', linewidth=1)
+    ax.set_title(macro_econ_data.columns[i+2])
+    ax.xaxis.set_ticks_position('none')
+    ax.yaxis.set_ticks_position('none')
+    ax.spines['top'].set_alpha(0)
+    ax.tick_params(labelsize=6)
+
+plt.setp(axes, xticks=np.arange(0, 208, 8), xticklabels=np.arange(1959, 2010, 2))
+fig.autofmt_xdate()
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarimax-1.png)
