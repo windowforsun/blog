@@ -315,3 +315,126 @@ print(best_model_fit.summary())
 ```python
 best_model_fit.plot_diagnostics(figsize=(10,8))
 ```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarimax-2.png)
+
+
+왼쪽 상단 잔차는 백색 소음과 같이 시간에 따른 추세가 없고 일정한 분산을 보인다. 
+오른쪽 상단 잔차 분포는 정규분포에 매우 가깝다. 
+왼쪽 하단 `Q-Q` 도식은 `y=x` 직선에 매우 가깝다. 
+오른쪽 하단 상관관계도는 백색소음과 같이 0이후 유의한 계수가 없음을 확인할 수 있다. 
+해당 모델의 잔차는 백색소음과 유사함을 확인할 수 있다. 
+
+이제 전차가 상관관계가 없는지 `Ljung-Box` 검정을 수행해 본다.  
+
+```python
+residuals = best_model_fit.resid
+
+lbvalue, pvalue = acorr_ljungbox(residuals, np.arange(1, 11, 1))
+
+print(pvalue)
+# [0.77623545 0.90319605 0.97607253 0.88600353 0.94919895 0.97823588 0.98639909 0.99447738 0.99494287 0.99794752]
+```  
+
+`p-value` 값이 모두 `0.05` 보다 크므로 귀무가설을 기각할 수 없어 잔차가 독립적이고 상관관계가 없는 백색소음임을 알 수 있다. 
+
+먼저 언급한 것과 같이 `SARIMAX` 모델은 한 시간 단계 예측을 수행하므로
+`rolling_forecast` 방식을 사용한다. 
+이와 함께 모델 예측 비교를 위해 베이스라인 모델로는 마지막 측정값을 사용한다. 
+구현된 함수는 아래와 같다.  
+
+```python
+def rolling_forecast(endog: Union[pd.Series, list], exog: Union[pd.Series, list], train_len: int, horizon: int, window: int, method: str) -> list:
+    
+    total_len = train_len + horizon
+
+    if method == 'last':
+        pred_last_value = []
+        
+        for i in range(train_len, total_len, window):
+            last_value = endog[:i].iloc[-1]
+            pred_last_value.extend(last_value for _ in range(window))
+            
+        return pred_last_value
+    
+    elif method == 'SARIMAX':
+        pred_SARIMAX = []
+        
+        for i in range(train_len, total_len, window):
+            model = SARIMAX(endog[:i], exog[:i], order=(3,1,3), seasonal_order=(0,0,0,4), simple_differencing=False)
+            res = model.fit(disp=False)
+            predictions = res.get_prediction(exog=exog)
+            oos_pred = predictions.predicted_mean.iloc[-window:]
+            pred_SARIMAX.extend(oos_pred)
+            
+        return pred_SARIMAX
+```  
+
+이제 구현된 `rolling_forecast` 함수를 사용해 `2008`년 1분기부터 `2009`년 `3`분기까지 총 `7`개 집합을 예측해 본다.  
+
+```python
+target_train = target[:196]
+target_test = target[196:]
+
+pred_df = pd.DataFrame({'actual': target_test})
+
+TRAIN_LEN = len(target_train)
+HORIZON = len(target_test)
+WINDOW = 1
+
+pred_last_value = rolling_forecast(target, exog, TRAIN_LEN, HORIZON, WINDOW, 'last')
+pred_SARIMAX = rolling_forecast(target, exog, TRAIN_LEN, HORIZON, WINDOW, 'SARIMAX')
+
+pred_df['pred_last_value'] = pred_last_value
+pred_df['pred_SARIMAX'] = pred_SARIMAX
+
+pred_df
+#       actual	    pred_last_value	pred_SARIMAX
+# 196	13366.865	13391.249	    13344.064608
+# 197	13415.266	13366.865	    13373.511905
+# 198	13324.600	13415.266	    13378.794970
+# 199	13141.920	13324.600	    13327.976995
+# 200	12925.410	13141.920	    13133.870439
+# 201	12901.504	12925.410	    12886.936039
+# 202	12990.341	12901.504	    12873.792890
+
+```  
+
+수치적 예측 성능 비교를 위해 `MAPE` 를 측정하고 이를 도식화하면 아래와 같다.  
+
+```python
+def mape(y_true, y_pred):
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+mape_last = mape(pred_df.actual, pred_df.pred_last_value)
+mape_SARIMAX = mape(pred_df.actual, pred_df.pred_SARIMAX)
+
+fig, ax = plt.subplots()
+
+x = ['naive last value', 'SARIMAX']
+y = [mape_last, mape_SARIMAX]
+
+ax.bar(x, y, width=0.4)
+ax.set_xlabel('Models')
+ax.set_ylabel('MAPE (%)')
+ax.set_ylim(0, 1)
+
+for index, value in enumerate(y):
+    plt.text(x=index, y=value + 0.05, s=str(round(value,2)), ha='center')
+
+plt.tight_layout()
+```  
+
+![그림 1]({{site.baseurl}}/img/datascience/sarimax-3.png)
+
+
+모델의 예측 성능 비교를 보면 `SARIMAX` 모델이 베이스라인 모델인 마지막 측정값을 사용하는 모델보다
+`0.04%` 더 우수한 모델임을 확인할 수 있다. 
+이는 수치적으로는 작지만 실제 데이터의 규모에서는 수천 달러에 해당하므로 의미 있는 차이라고 할 수 있다.  
+
+
+---  
+## Reference
+[TimeSeriesForecastingInPython](https://github.com/marcopeix/TimeSeriesForecastingInPython)  
+
+
