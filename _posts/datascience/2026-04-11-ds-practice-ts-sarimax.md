@@ -127,3 +127,191 @@ plt.tight_layout()
 다양한 외생 변수 조합으로 여러 모델을 훈련하고 어떤 모델이 가장 좋은 예측을 보이는지 확인하는 것이다. 
 또는 모든 외생 변수를 포함해 `AIC` 를 통해 모델을 선택하는 방법도 있다.  
 
+
+### Precautions
+`SARIMAX` 모델을 사용할 때 주의할 점이 있다. 
+예측을 수행하는 시간단계에 대한 내용으로 
+`SARIMAX` 모델은 `SARIMA(p,d,q)(P,D,Q)m` 모델에 외생 변수(`X`)의 선형 조합을 사용하여 미래의 한 시간 단계를 예측한다는 것을 기억해야 한다. 
+만약 그 이상의 시간 단계를 예측이 필요하다면 `SARIMAX` 모델은 사용하는 외생 변수도 함께 예측해야 한다는 문제가 발생한다. 
+이러한 문제로 인해 많은 시간 단계를 한번에 예측을 한다면 예측 시간 단계가 길어질 수록 목표 변수의 예측 오차가 계속해서 커지게 된다. 
+결과적으로 외생 변수가 예측이 불필요하거나 정확한 예측이 가능하다면 문제가 없지만, 
+외생 변수도 예측이 필요한 경우에 여러 시간 단계의 예측은 오차가 중첩되어 예측 정확도가 빠르게 저하된다는 점을 기억해야 한다.  
+
+
+### Forecasting SARIMAX
+`SARIMAX` 모델의 개념과 외생 변수 그리고 유의사항에 대해서 알아 보았기 때문에 이제 `GDP` 예측을 수행해 본다. 
+`SARIMAX` 모델의 모델링 절차는 아래와 같이 `SARIMA` 모델링 절차와 동일하다.  
+
+```mermaid
+flowchart TD
+    data_agg[데이터 수집] --> station[정상적-ADF ?]
+    station -->|NO| trans[변환-차분 수행]
+    trans --> station
+    station -->|YES| diff[차분 횟수로 d 결정]
+    diff --> seasonal[계절적 차분 차수로 D 결정]
+    seasonal --> p-q[p, q, P, Q 목록 생성]
+    p-q --> ARIMA-fit[SARIMAX에 모든 p, q, P, Q 조합 피팅]
+    ARIMA-fit --> AIC[AIC 가 가장 낮은 최적 p, q 선택]
+    AIC --> residual[잔차 분석]
+    residual --> Q-Q[Q-Q 도식이 직선?]
+    residual --> ljungbox[융박스-잔차가 백색잡음?]
+    Q-Q -->|YES| predict[시계열 예측]
+    ljungbox -->|NO| p-q
+    Q-Q -->|NO| p-q
+    ljungbox -->|YES| predict
+```  
+
+목표 변수와 외생 변수를 분리하고 목표 변수에 대해 정상성 검정을 위해 `ADF` 검정을 수행한다.  
+
+```python
+target = macro_econ_data['realgdp']
+exog = macro_econ_data[['realcons', 'realinv', 'realgovt', 'realdpi', 'cpi']]
+
+ad_fuller_result = adfuller(target)
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: 1.7504627967647166
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 0.9982455372335032
+```  
+
+`ADF` 통계값이 큰 음수가 아니고, `p-value` 값이 0.05 보다 크므로 귀무가설을 기각할 수 없어 해당 목표 변수는 비정상 시계열임을 알 수 있다. 
+차분을 수행하고 다시 `ADF` 검정을 수행하면 아래와 같다.  
+
+```python
+target_diff = target.diff()
+
+ad_fuller_result = adfuller(target_diff[1:])
+
+print(f'ADF Statistic: {ad_fuller_result[0]}')
+# ADF Statistic: -6.305695561658104
+print(f'p-value: {ad_fuller_result[1]}')
+# p-value: 3.327882187668259e-08
+```  
+
+`ADF` 통계값이 음수이고, `p-value` 값이 0.05 보다 작으므로 귀무가설을 기각할 수 있어 해당 목표 변수는 정상 시계열임을 알 수 있다.
+따라서 `d=1` 이고, 계절적 차분은 고려하지 않아도 되기 때문에 `D=0` 으로 설정한다.  
+
+`SARIMAX` 모델에 모든 조합을 피팅하고 `AIC` 기준 오름차순으로 결과를 반환하는 `optimize_SARIMAX` 함수를 정의한다.  
+
+```python
+from typing import Union
+from tqdm import tqdm_notebook
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+def optimize_SARIMAX(endog: Union[pd.Series, list], exog: Union[pd.Series, list], order_list: list, d: int, D: int, s: int) -> pd.DataFrame:
+
+    results = []
+
+    for order in tqdm_notebook(order_list):
+        try:
+            model = SARIMAX(
+                endog,
+                exog,
+                order=(order[0], d, order[1]),
+                seasonal_order=(order[2], D, order[3], s),
+                simple_differencing=False).fit(disp=False)
+        except:
+            continue
+
+        aic = model.aic
+        results.append([order, aic])
+
+    result_df = pd.DataFrame(results)
+    result_df.columns = ['(p,q,P,Q)', 'AIC']
+
+    #Sort in ascending order, lower AIC is better
+    result_df = result_df.sort_values(by='AIC', ascending=True).reset_index(drop=True)
+
+    return result_df
+```  
+
+다음으로 `p`, `q`, `P`, `Q` 에 대해서 가능한 값의 범위를 정의해 모든 조합을 생성한다. 
+계절적 요소인 `m(s)` 는 4분기이므로 `4` 로 설정한다.  
+
+```python
+p = range(0, 4, 1)
+d = 1
+q = range(0, 4, 1)
+P = range(0, 4, 1)
+D = 0
+Q = range(0, 4, 1)
+s = 4
+
+parameters = product(p, q, P, Q)
+parameters_list = list(parameters)
+```  
+
+모델 훈련 세트는 처음 200개 집합으로 사용한다. 
+해당 훈련 세트로 `optimize_SARIMAX` 함수를 호출하여 `SARIMAX` 모델을 피팅하고 `AIC` 기준 오름차순으로 결과를 반환한다.  
+
+```python
+target_train = target[:200]
+exog_train = exog[:200]
+
+result_df = optimize_SARIMAX(target_train, exog_train, parameters_list, d, D, s)
+result_df
+#       (p,q,P,Q)	    AIC
+# 0	    (3, 3, 0, 0)	1742.862713
+# 1	    (3, 3, 1, 0)	1744.966704
+# 2	    (3, 3, 0, 1)	1744.998032
+# 3	    (2, 2, 0, 0)	1745.422233
+# 4	    (2, 2, 0, 1)	1745.902126
+# ...	...	...
+# 251	(0, 2, 0, 0)	1761.579044
+# 252	(0, 3, 0, 0)	1762.317095
+# 253	(0, 0, 0, 0)	1764.754980
+# 254	(1, 0, 0, 0)	1765.379412
+# 255	(0, 1, 0, 0)	1765.813488
+```  
+
+`AIC` 기준 가장 낮은 `SARIMAX(3,1,3)(0,0,0)4` 모델을 선택하고 훈련 세트로 다시 피팅한다.  
+
+```python
+best_model = SARIMAX(target_train, exog_train, order=(3,1,3), seasonal_order=(0,0,0,4), simple_differencing=False)
+best_model_fit = best_model.fit(disp=False)
+
+print(best_model_fit.summary())
+# SARIMAX Results
+# ==============================================================================
+# Dep. Variable:                realgdp   No. Observations:                  200
+# Model:               SARIMAX(3, 1, 3)   Log Likelihood                -859.431
+# Date:                Tue, 10 Aug 2021   AIC                           1742.863
+# Time:                        19:03:39   BIC                           1782.382
+# Sample:                             0   HQIC                          1758.857
+# - 200
+# Covariance Type:                  opg
+# ==============================================================================
+# coef    std err          z      P>|z|      [0.025      0.975]
+# ------------------------------------------------------------------------------
+# realcons       0.9652      0.044     21.693      0.000       0.878       1.052
+# realinv        1.0142      0.033     30.944      0.000       0.950       1.078
+# realgovt       0.7249      0.127      5.717      0.000       0.476       0.973
+# realdpi        0.0091      0.025      0.369      0.712      -0.039       0.058
+# cpi            5.8671      1.311      4.476      0.000       3.298       8.436
+# ar.L1          1.0648      0.399      2.671      0.008       0.283       1.846
+# ar.L2          0.4895      0.701      0.698      0.485      -0.885       1.864
+# ar.L3         -0.6718      0.337     -1.995      0.046      -1.332      -0.012
+# ma.L1         -1.1035      0.430     -2.565      0.010      -1.947      -0.260
+# ma.L2         -0.3196      0.767     -0.417      0.677      -1.823       1.184
+# ma.L3          0.6457      0.403      1.601      0.109      -0.145       1.436
+# sigma2       328.9706     30.395     10.823      0.000     269.397     388.545
+# ===================================================================================
+# Ljung-Box (L1) (Q):                   0.00   Jarque-Bera (JB):                13.55
+# Prob(Q):                              0.95   Prob(JB):                         0.00
+# Heteroskedasticity (H):               3.57   Skew:                             0.32
+# Prob(H) (two-sided):                  0.00   Kurtosis:                         4.11
+# ===================================================================================
+# 
+# Warnings:
+# [1] Covariance matrix calculated using the outer product of gradients (complex-step).
+```  
+
+피팅한 최종 모델의 요약을 보면 `realdip` 외생 변수의 `p-value` 값이 `0.0712` 로 다른 외생 변수의 `p-value` 값이 0인 것에 비해 상대적으로 크다. 
+하지만 `p-value` 값이 `0.05` 보다 크다고 해서 반드시 해당 변수를 제거해야 하는 것은 아니므로 그대로 유지한다.  
+
+이제 정성적 잔차 분석을 수행해 본다.  
+
+```python
+best_model_fit.plot_diagnostics(figsize=(10,8))
+```  
