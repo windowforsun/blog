@@ -80,3 +80,60 @@ Query -> Adaptive Retriever(동적 검색) -> Adaptive Agumented(동적 증상) 
 
 본 포스팅에서 진행할 예제는 [이전 예제]({{site.baseurl}}{% link _posts/langgraph/2025-03-08-langgraph-practice-agentic-rag.md %})
 의 내용을 포함하고 하고 있으므로 이전 내용의 숙지가 필요하다.  
+
+
+### Query Routing
+`Query Routing` 은 사용자의 질문을 분석하여, 어떤 데이터 소스로 정보를 찾으러 갈지 결정하는 과정이다. 
+`Adaptive RAG` 에서는 중요한 과정 중 하나로 이유는 다음과 같다. 
+
+- 질문의 주제나 목적에 따라 적합한 소스가 달라질 수 있다. 
+- 불필요한 정보 검색을 줄이고, 빠르고 정확한 답변을 제공할 수 있다. 
+- 최신 정보는 웹 검색, 특정 리포트/논문은 벡터스토어 등으로 구분하여 검색 품질을 높일 수 있다.  
+
+본 예제에서는 `Query Routging` 을 위해 `LLM` 기반 의가 결정을 사용한다. 
+`LLM` 이 질문의 맥락과 키워드를 파악해, 내부 벡터스토어에서 검색을 수행할지, 외부 웹 검색을 할지 자동 판단하도록 한다.  
+
+```python
+from typing import Literal
+
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from pydantic import BaseModel, Field
+
+
+class RouteQuery(BaseModel):
+  """
+  Route a use query to the most relevant datasource.
+  """
+
+  datasource: Literal["vectorstore", "web_search"] = Field(
+      ...,
+      description="Given a user question choose th route it to web search or vectorstore"
+  )
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+structured_llm_router = llm.with_structured_output(RouteQuery)
+
+route_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template(template="""
+        You are an expert at routing a user question to a vectorstore or web search.
+        The vectorstore contains documents related to Koea Weather Inforation for 2025 01-06.
+        Use the vectorstore for question on these topics. Otherwise, use web-search.
+        """),
+        HumanMessagePromptTemplate.from_template(template="""
+        {question}
+        """,)
+    ]
+)
+
+question_router = route_prompt | structured_llm_router
+
+question_router.invoke({'question':'6월 날씨 요약해줘'})
+# RouteQuery(datasource='vectorstore')
+
+question_router.invoke({'question':'미국의 수도는 어디야?'})
+# RouteQuery(datasource='web_search')
+
+question_router.invoke({'question':'서울의 현재 날씨 알려줘'})
+# RouteQuery(datasource='web_search')
+```  
