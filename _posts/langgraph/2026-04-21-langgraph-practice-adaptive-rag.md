@@ -137,3 +137,74 @@ question_router.invoke({'question':'미국의 수도는 어디야?'})
 question_router.invoke({'question':'서울의 현재 날씨 알려줘'})
 # RouteQuery(datasource='web_search')
 ```  
+
+### Retrieval Grader
+`Retrieval Grader` 는 검색된 문서들이 실제 답변에 적합한지, 품질과 관련성(`Accuracy & Relevance`)이 높은지 판단하는 과정이다. 
+`Adaptive RAG` 에서는 이 단계를 통해 아래와 같은 것들을 가능하게 한다.  
+
+- 검색된 문서가 질문과 정말 관련 있는지 자동 평가
+- 관련성/신뢰도 점수가 낮은 문서는 제외하고, 답변 품질 보장
+- 여러 문서 중 가장 좋은 것만 `LLM` 에 전달해 최종 생성 품질 극대화
+
+본 예제에서는 사용자의 질의와 검색된 문서를 `LLM` 기반 의사 결정을 사용해 판단한다. 
+`LLM` 이 질의와 검색된 개별 문서를 보고 적합한지 판단해 `yes` 또는 `no` 로 응답하도록 한다.  
+
+```python
+from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+
+class GradeDocuments(BaseModel):
+  """
+  Binary score or relevance check on retrieved documents.
+  """
+
+  binary_score: str = Field(
+      description="Documents are relevant to the question. 'yes' or 'no'"
+  )
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+structured_llm_grader = llm.with_structured_output(GradeDocuments)
+
+grade_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template(template="""
+        You are a grader assessing relevant of a retrieved document to a user question.
+        If the document contains keyword(s) or semantic meaning related to the user question,
+        grade it a relevant.
+
+        It does not need to be a stringent test.
+        The goal is to filter out erronous retrievals.
+        Given a binary score 'yes' or 'no' score to indicate whether the docuemtn is relevant to the question.
+        """),
+        HumanMessagePromptTemplate.from_template(template="""
+        Retrieved document:
+        {document}
+
+        User question:
+        {question}
+        """)
+    ]
+)
+
+
+retrieval_grader = grade_prompt | structured_llm_grader
+
+
+
+
+def merge_docs(docs):
+    return "\n\n".join(
+        [
+            f'<document><content>{doc.page_content}</content><source>{doc.metadata["source"]}</source><page>{doc.metadata["page"]+1}</page></document>'
+            for doc in docs
+        ]
+    )
+
+docs = pdf_retriever.invoke("6월 기온 정보")
+retrieval_grader.invoke({'question' : '6월 기온 정보', 'document' : merge_docs })
+# GradeDocuments(binary_score='yes')
+
+
+retrieval_grader.invoke({'question' : 'youtude 카테고리별 구독자 통계', 'document' : merge_docs })
+# GradeDocuments(binary_score='no')
+```  
