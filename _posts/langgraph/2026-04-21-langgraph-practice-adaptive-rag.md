@@ -208,3 +208,63 @@ retrieval_grader.invoke({'question' : '6월 기온 정보', 'document' : merge_d
 retrieval_grader.invoke({'question' : 'youtude 카테고리별 구독자 통계', 'document' : merge_docs })
 # GradeDocuments(binary_score='no')
 ```  
+
+### RAG Chain
+질의에 대한 `VectorStore` 검색을 위해 `이전 예제` 에서 구현한 `DemoRetrievalChain` 을 초기화해 준비한다.
+
+```python
+from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+
+os.environ["GOOGLE_API_KEY"] = "api_key"
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+os.environ["HUGGINGFACEHUB_API_TOKEN"] = "api_key"
+model_name = "BM-K/KoSimCSE-roberta"
+# model_name = "BM-K/KoMiniLM"
+hf_endpoint_embeddings = HuggingFaceEndpointEmbeddings(
+    model=model_name,
+    huggingfacehub_api_token=os.environ["HUGGINGFACEHUB_API_TOKEN"],
+)
+
+hf_embeddings = HuggingFaceEmbeddings(
+    model_name=model_name,
+    encode_kwargs={'normalize_embeddings':True},
+)
+
+# retriever 생성
+file_list = [
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_03.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_04.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_05.pdf',
+    '/content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf'
+]
+
+collection_name='weather-docs-6'
+persist_directory = f"/content/drive/MyDrive/Colab Notebooks/data/vectorstore/{collection_name}"
+
+pdf = DemoRetrievalChain(
+    source_uri=file_list,
+    embeddings=hf_embeddings,
+    llm=llm,
+    collection_name=collection_name,
+    persist_directory=persist_directory
+).create_chain()
+
+pdf_retriever = pdf.retriever
+rag_chain = pdf.chain
+```  
+
+앞서 생성한 `pdf_chain` 을 테스트하면 아래와 같은 결과를 확인 할 수 있다.  
+
+```python
+llm_result = rag_chain.invoke({'context': merge_docs(docs), 'question' : '6월 기온 정보 요약', 'chat_history' : []})
+
+print(llm_result)
+# 2025년 6월 전국 평균기온은 22.9℃로 평년(21.4℃)보다 +1.5℃ 높았습니다.
+# 
+# **출처**
+# - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf
+```  
