@@ -268,3 +268,101 @@ print(llm_result)
 # **출처**
 # - /content/drive/MyDrive/Colab Notebooks/data/rag/weather-docs/ellinonewsletter_2025_06.pdf
 ```  
+
+### Checker(Hallucination/Relevance)
+`Halluncination` 는 `LLM` 이 실제 주어진 정보나 문서에 근거하지 않는 내용을 지어내는 현상을 의미한다. 
+그러므로 `RAG` 시스템에서 답변의 신뢰성과 정확성을 높이기 위해, 생성된 답변이 검색된 문서에 근거했는지 평가하는 것이 중요하다. 
+`LLM` 은 논리적이고 그럴듯한 답변을 생성할 수 있으나, 실제로 근거 없는 정보(환각)를 말할 때가 있기 때문이다.  
+
+구현할 `Hallucination Checker` 는 `LLM` 이 생성한 답변이 검색된 문서에 근거했는지 평가하는 평가자 역할을 한다. 
+그리고 평가의 결과를 `binary_score` 답변으로 `yes/no` 로 응답한다. 
+방식은 `LLM` 에게 검색된 문서와 `LLM` 의 답변을 함께 전달해 평가도록 하는 방식이다.  
+
+```python
+from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+
+class GradeHallucinations(BaseModel):
+  """
+  Binary score for hallucination present in generation anwser.
+  """
+
+  binary_score: str = Field(
+      description="Answer is grounded in the facts, 'yes' or 'no'"
+  )
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+structured_llm_hallu_checker = llm.with_structured_output(GradeHallucinations)
+
+hallu_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template(template="""
+        You are a grader assessing whether an LLM generation is grounded in / supported by as set of retrieved facts.
+        Given a binary score 'yes' or 'no'.
+        'Yes' means that the answer is grounded in / supported by the set of facts.
+        """),
+        HumanMessagePromptTemplate.from_template(template="""
+        Set of facts:
+        {documents}
+
+        LLM generations:
+        {generation}
+        """)
+    ]
+)
+
+hallu_grader = hallu_prompt | structured_llm_hallu_checker
+
+hallu_grader.invoke({'documents': merge_docs(docs), 'generation' : llm_result})
+# GradeHallucinations(binary_score='yes')
+
+hallu_grader.invoke({'documents': merge_docs(docs), 'generation' : '날씨와 관련된 주식 종목은 아래와 같습니다. - 날씨연구소 - 기후정책기관'})
+# GradeHallucinations(binary_score='no')
+```  
+
+다음으로 `Relevance` 는 `LLM` 의 답변이 실제로 질문을 해결했는 지에 대한 평가이다. 
+이러한 평가를 통해 불충분/부적절한 판변시 추가 검색 및 재생성을 통해 질문에 대한 답변을 개선할 수 있다.  
+
+구현할 `Relevance Checker` 또한 `LLM` 이 생성한 답변이 사용자의 질문과 연관/해결했는지 평가하는 평가자 역할을 한다. 
+그리고 평가의 결과물은 `binary_score` 답변으로 `yes/no` 로 응답한다. 
+방식은 `LLM` 에게 사용자의 질문과 `LLM` 의 답변을 함께 전달해 평가하도록 하는 방식이다.  
+
+```python
+
+class GradeAnswer(BaseModel):
+  """
+  Binary scoring to evaluate the appropriateness of answer to question
+  """
+
+  binary_score: str = Field(
+      description="Indicate 'yes' or 'no' whether the answer solves the question"
+  )
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+structured_llm_answer_grader = llm.with_structured_output(GradeAnswer)
+
+answer_grader_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template(template="""
+        You are grader asesessing whether an answer address / resolves a question
+        Given a binary score 'yes' or 'no'.
+        'yes' means that answer resolves the question.
+        """),
+        HumanMessagePromptTemplate.from_template(template="""
+        User question:
+        {question}
+
+        LLM generation:
+        {generation}
+        """)
+    ]
+)
+
+answer_grader = answer_grader_prompt | structured_llm_answer_grader
+
+answer_grader.invoke({'question' : '6월 기온 요약해줘', 'generation': llm_result})
+# GradeAnswer(binary_score='yes')
+
+answer_grader.invoke({'question' : '날씨 기후와 관련된 주식 종목 추천해줘', 'generation': llm_result})
+# GradeAnswer(binary_score='no')
+```  
