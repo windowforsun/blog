@@ -366,3 +366,45 @@ answer_grader.invoke({'question' : '6월 기온 요약해줘', 'generation': llm
 answer_grader.invoke({'question' : '날씨 기후와 관련된 주식 종목 추천해줘', 'generation': llm_result})
 # GradeAnswer(binary_score='no')
 ```  
+
+### Query Rewriter
+`Query Rewriter` 는 사용자가 입력한 원래 질문을 정보 검색에 더 적합하도록 의도와 의미를 명확히 하여 개선된 형태의 질문으로 반환하는 과정이다. 
+사용자는 질문을 모호하게, 또는 불필요한 정보를 포함해서 입력할 수 있는데, 
+벡터스토어, 검색엔진 등은 질문이 명확하고 키워드가 잘 포함되어 있을 수록 관련성이 높은 결과를 반환한다. 
+그러므로 이러한 과정을 통해 질문을 더 명확하고 검색 친화적으로 바꾸어 `RAG` 의 검색 성능을 향상 시킬 수 있다.  
+
+구현할 `Query Rewriter` 는 사용자의 질문을 받아, 검색에 더 적합한 형태로 재작성하는 역할을 한다. 
+방식은 시스템 프롬프트에 역할과 개선 방향성을 제시하고 입력값으로 기존 질문을 전달해 개선된 질문을 생성하도록 한다.  
+
+```python
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+re_write_prompt = ChatPromptTemplate.from_messages(
+    [
+        SystemMessagePromptTemplate.from_template(template="""
+        You a question re-writer that converts an input question to a better version that is optimized
+        for vectorstore retrieval. Look at the input and try to reason about the underlying semantic intent/meaning
+
+        Final Output muse be contain only the re-written question.
+        """),
+        HumanMessagePromptTemplate.from_template(template="""
+        Here is teh initial question:
+        {question}
+
+        Formulate an improved question.
+        """)
+    ]
+)
+
+question_rewriter = re_write_prompt | llm | StrOutputParser()
+
+
+question_rewriter.invoke({'question' : '6월 기온 요약해줘'})
+# 6월 기온에 대한 요약 정보를 알려줘
+
+question_rewriter.invoke({'question' : '날씨 기후와 관련된 주식 종목 정리해줘'})
+# 날씨 및 기후 변화 관련 주식 종목 정보
+```  
