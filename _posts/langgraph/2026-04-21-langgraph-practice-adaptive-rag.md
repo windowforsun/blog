@@ -408,3 +408,44 @@ question_rewriter.invoke({'question' : '6월 기온 요약해줘'})
 question_rewriter.invoke({'question' : '날씨 기후와 관련된 주식 종목 정리해줘'})
 # 날씨 및 기후 변화 관련 주식 종목 정보
 ```  
+
+### Web Search Tool
+`웹 검색 도구` 는 `RAG` 시스템에서 최신/실시간 정보, 외부 동적 데이터 등 벡터스토어에 없는 정보를 검색하는 역할을 한다. 
+이를 통해 사용자가 벡터스토어에 없는 질문이나 최신 정보를 요구하는 경우나 필요한 경우 해당 도구를 활용해 질문에 적합한 답변을 제공할 수 있다.  
+
+```python
+# 웹 검색 도구
+
+from langchain_community.utilities import GoogleSerperAPIWrapper
+import json
+
+os.environ["SERPER_API_KEY"] = "api key"
+web_search_tool = GoogleSerperAPIWrapper()
+
+search_query = '날씨 기후와 관련된 주식 종목 정리'
+
+search_result = web_search_tool.results(search_query)['organic']
+
+search_result
+# [{'title': '여름(폭염) 테마주 관련주 32종목 정리 - 주달',
+#   'link': 'https://www.judal.co.kr/?view=stockList&themeIdx=135',
+#   'snippet': '여름(폭염) 테마주. 전일비: -1.03%. 3일합산: -1.06%. 52주 상승률: 33.48%. 52주 하락률: -18.91%. 기대 수익률: 23.32%. 소외지수: 53. 3년 테마지수: 58.',
+#   'position': 1},
+#  {'title': '폭염 관련주 & 테마주 23종목 총정리 [2025년 최신]   - 알파스퀘어',
+#   'link': 'https://alphasquare.co.kr/home/theme-factor?theme-id=126',
+#   'snippet': '폭염 관련주 - 풍국주정 등 폭염 테마주 23종목 완벽 정리! 실시간 대장주, 테마 사유 등 폭염 테마 투자 전 알아야 할 핵심 정보를 한 번에 확인해보세요.',
+#   'position': 2},
+#  {'title': '여름 관련주 대장주식 폭염 아이스크림 주류 수혜주 - 네이버 블로그',
+#   'link': 'https://m.blog.naver.com/funyggb/223475177960',
+#   'snippet': '상승세를 보이는 여름 관련주 대장주식 폭염 아이스크림 주류 수혜주에는 어떤 종목들이지 확인하고, 아래 그림으로 PBR, BPS, EPS, PER 등도 살펴보기 ...',
+#   'date': 'Jun 10, 2024',
+#   'position': 3},
+# 
+# ...
+#  
+#  {'title': 'ESG 경영 관련주 기후변화 관련주 투자하기 괜찮은 종목 정리',
+#   'link': 'https://idmeans.tistory.com/34',
+#   'snippet': 'ESG 경영 관련주 기후변화 관련주 투자하기 괜찮은 종목 정리 · 1)유한양행 · 2)삼성전기 · 3)LG생활건강 · 4)만도 · 5)삼성에스디에스 · 6)현대글로비스 · 7)LG ...',
+#   'date': 'May 2, 2021',
+#   'position': 10}]
+```  
