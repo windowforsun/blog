@@ -449,3 +449,97 @@ search_result
 #   'date': 'May 2, 2021',
 #   'position': 10}]
 ```  
+
+
+### Adaptive RAG Graph
+
+먼저 `Graph` 에서 사용할 상태를 정의한다.  
+
+```python
+# 그래프 구성 - 상태 정의
+
+from typing import List
+from typing_extensions import TypedDict, Annotated
+
+class GraphState(TypedDict):
+  question: Annotated[str, 'User question']
+  generation: Annotated[str, 'LLM generated answer']
+  documents: Annotated[List[str], 'List of documents']
+```  
+
+그리고 구현된 체인과 툴을 `Graph` 에서 사용할 수 있도록 노드로 정의한다.  
+
+```python
+# 그래프 구성 - 노드 정의
+
+from langchain_core.documents import Document
+
+def retrieve(state: GraphState) -> GraphState:
+  print('===== [Retrieve] =====')
+  question = state['question']
+  docs = pdf_retriever.invoke(question)
+
+  return GraphState(documents=docs, question=question)
+
+
+def generate(state: GraphState) -> GraphState:
+  print('===== [Generate] =====')
+  question = state['question']
+  documents = state['documents']
+
+  generation = pdf_chain.invoke({
+      'context' : documents,
+      'question' : question,
+      'chat_history' : []
+  })
+
+  return GraphState(generation=generation, question=question, documents=documents)
+
+def grade_documents(state: GraphState) -> GraphState:
+  print('===== [Grade Documents] =====')
+  question = state['question']
+  documents = state['documents']
+
+  filtered_docs = []
+
+  for d in documents:
+    score = retrieval_grader.invoke({'question' : question, 'document' : d})
+    if score.binary_score == 'yes':
+      print('----- Document relevant -----')
+      filtered_docs.append(d)
+
+  return GraphState(documents=filtered_docs, question=question)
+
+def transform_query(state: GraphState) -> GraphState:
+  print('===== [Transform Query] =====')
+  question = state['question']
+  documents = state['documents']
+
+  rewritten_question = question_rewriter.invoke({'question' : question})
+
+  return GraphState(question=rewritten_question, documents=documents)
+
+
+def web_search(state: GraphState) -> GraphState:
+  print('===== [Web Search] =====')
+  question = state['question']
+
+  web_search_tool = GoogleSerperAPIWrapper()
+
+  search_query = '날씨 기후와 관련된 주식 종목 정리'
+
+  search_result = web_search_tool.results(search_query)['organic']
+  doc_search_result = [
+      Document(
+          page_content=result.get('title') + ':' + result.get('snippet'),
+          metadata={
+              'source' : 'web_search',
+              'link' : result.get('link')
+          }
+      )
+      for result in search_result
+  ]
+
+  return GraphState(documents=search_result, question=question)
+
+```  
