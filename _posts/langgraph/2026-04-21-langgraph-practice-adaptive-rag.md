@@ -543,3 +543,114 @@ def web_search(state: GraphState) -> GraphState:
   return GraphState(documents=search_result, question=question)
 
 ```  
+
+다음으로 노드에서 상황에 따라 동적으로 결정될 수 있는 조건부 엣지를 정의한다.  
+
+```python
+# 그래프 구성 엣지 - 엣지 노드 정의
+
+def route_question(state: GraphState) -> GraphState:
+  print('===== [Route Question] =====')
+  question = state['question']
+
+  route_result = question_router.invoke({'question' : question})
+
+  print(f"----- Route {route_result.datasource} -----")
+  return route_result.datasource
+
+def decide_to_generate(state: GraphState) -> GraphState:
+  print('===== [Decide to Generate] =====')
+  question = state['question']
+  filtered_docs = state['documents']
+
+  if not filtered_docs:
+    print('----- empty docs -----')
+    return "transform_query"
+  else:
+    print('----- filled docs -----')
+    return "generate"
+
+def hallucination_check(state: GraphState) -> GraphState:
+  print('===== [Hallucination Check] =====')
+  question = state['question']
+  generation = state['generation']
+  docs = state['documents']
+
+  hallu_score = hallu_grader.invoke({'documents' : docs, 'generation' : generation})
+  grade = hallu_score.binary_score
+
+  if grade == 'yes':
+    print('----- Hallucination not detected -----')
+    score = answer_grader.invoke({'question' : question, 'generation' : generation})
+    if score.binary_score == 'yes':
+      print('----- Answer addressed question -----')
+      return 'relevant'
+    else:
+      print('----- Answer not addressed question -----')
+      return 'not relevant'
+  else:
+    print('----- Hallucination detected -----')
+    return 'hallucination'
+```  
+
+이제 구현된 모든 내용을 바탕으로 최종적인 `Adaptive RAG Graph` 를 정의한다.  
+
+```python
+# 그래프 구성
+
+from langgraph.graph import START, END, StateGraph
+from langgraph.checkpoint.memory import MemorySaver
+from IPython.display import Image, display
+
+graph_builder = StateGraph(GraphState)
+
+graph_builder.add_node('web_search', web_search)
+graph_builder.add_node('retrieve', retrieve)
+graph_builder.add_node('grade_documents', grade_documents)
+graph_builder.add_node('generate', generate)
+graph_builder.add_node('transform_query', transform_query)
+
+
+graph_builder.add_conditional_edges(
+    START,
+    route_question,
+    {
+        'web_search' : 'web_search',
+        'vectorstore' : 'retrieve'
+    }
+)
+graph_builder.add_edge('web_search', 'generate')
+graph_builder.add_edge('retrieve', 'grade_documents')
+graph_builder.add_conditional_edges(
+    'grade_documents',
+    decide_to_generate,
+    {
+        'transform_query' : 'transform_query',
+        'generate' : 'generate'
+    }
+)
+graph_builder.add_edge('transform_query', 'retrieve')
+graph_builder.add_conditional_edges(
+    'generate',
+    hallucination_check,
+    {
+        'hallucination' : 'generate',
+        'relevant' : END,
+        'not relevant' : 'transform_query'
+    }
+)
+
+graph = graph_builder.compile(checkpointer=MemorySaver())
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+
+```  
+
+
+![그림 1]({{site.baseurl}}/img/langgraph/adaptive-rag-1.png)
+
