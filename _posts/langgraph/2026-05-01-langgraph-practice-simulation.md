@@ -39,3 +39,17 @@ use_math: true
 
 이러한 평가 시뮬레이션을 위해 `LangGraph` 를 활용해 간단한 `AI Assistant(상담사)` 를 구현하고, 
 이를 가상 사용자를 통해 시뮬레이션하는 예제를 살펴본다.  
+
+
+### Graph State
+가장 먼저 구현할 그래프에서 사용할 상태를 정의한다.  
+
+```python
+from langgraph.graph.message import add_messages
+from typing import Annotated
+from typing_extensions import TypedDict
+
+
+class AgentState(TypedDict):
+  messages: Annotated[list, add_messages]
+```  
