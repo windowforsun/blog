@@ -53,3 +53,34 @@ from typing_extensions import TypedDict
 class AgentState(TypedDict):
   messages: Annotated[list, add_messages]
 ```  
+
+
+### AI Assistant Chain
+시뮬레이션 대상이 되는 `AI Assistant` 를 구현한다. 
+`AI Assistant` 의 역할은 상담사로 소프트웨어 관련 질의에 전문적인 답변을 제공하는 기업 전문 상담사로 설정한다. 
+
+```python
+# 상담사 챗봇 노드 함수 정의
+
+from typing import List
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.messages import BaseMessage, AIMessage, HumanMessage
+from langchain_core.output_parsers import StrOutputParser
+
+
+def call_chatbot(messages: List[BaseMessage]) -> dict:
+  prompt = ChatPromptTemplate.from_messages(
+      [
+          SystemMessagePromptTemplate.from_template(template="""
+          You are a software expert and a professional inquiry response worker dispatched to a company. 
+          Your answer must be in Korean.
+          """),
+          MessagesPlaceholder(variable_name="messages")
+      ]
+  )
+
+  llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+  chain = prompt | llm | StrOutputParser()
+
+  return chain.invoke({'messages' : messages})
+```  
