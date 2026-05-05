@@ -118,3 +118,34 @@ def create_scenario(name: str, instructions: str):
 
   return prompt
 ```  
+
+아래와 같이 지시사항을 설정해 사용할 수 있다.  
+
+```python
+# 지시사항을 추가하고 사용자 시뮬레이션 노드 생성
+
+instructions = """
+You are currently trying to introduce new technologies such as AI, LLM, LangChain, LangGraph into your new project.
+However, there are many difficulties with the new concepts and technologies.
+Start with the basics, ask more in-depth questions, and achieve breadth and depth of knowledge to a practical level.
+"""
+
+name = 'windowforsun'
+
+create_scenario(name, instructions).pretty_print()
+```  
+
+구현된 가장 사용자와 지시사항을 바탕으로 테스트 시뮬레이션을 수행해 보면 아래와 같다.  
+
+```python
+from langchain_core.messages import HumanMessage
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+simulated_user = create_scenario(name, instructions) | llm | StrOutputParser()
+
+messages = [HumanMessage(content='안녕하세요? 무엇을 도와드릴까요?')]
+
+simulated_user.invoke(messages)
+# 안녕하세요. 저는 windowforsun입니다. 최근에 새로운 프로젝트에 AI, LLM, LangChain, LangGraph 같은 기술들을 도입하려고 하는데, 개념이 너무 생소해서 어려움을 겪고 있습니다. 혹시 기본적인 내용부터 차근차근 설명해주실 수 있을까요? 어떤 부분부터 시작하는 게 좋을지 조언을 구하고 싶습니다.
+```  
