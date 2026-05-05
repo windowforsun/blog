@@ -84,3 +84,37 @@ def call_chatbot(messages: List[BaseMessage]) -> dict:
 
   return chain.invoke({'messages' : messages})
 ```  
+
+### Simulation User Chain
+가상 사용자는 지시사항에 따라 상담사에게 질문하는 대화를 시뮬레이션 한다. 
+지시사항은 외부에서 주입할 수 있도록 구성해 다양한 시나리오를 시뮬레이션 할 수 있도록 구성한다.  
+
+```python
+# 고객 역할 시뮬레이션 노드 함수 정의
+
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+
+def create_scenario(name: str, instructions: str):
+  prompt = ChatPromptTemplate.from_messages(
+      [
+          SystemMessagePromptTemplate.from_template(template="""
+          You are a developer of software Company.
+          I'm interacting with a user who is a technical support representative.
+
+          Your name is {name}.
+
+          #Instruction:
+          {instruction}
+
+          [Important]
+          - When the conversation is over, respond with one word: 'Completed'.
+          - You must use Korean for your answer.
+          """),
+          MessagesPlaceholder(variable_name="messages")
+      ]
+  )
+
+  prompt = prompt.partial(name=name, instruction=instructions)
+
+  return prompt
+```  
