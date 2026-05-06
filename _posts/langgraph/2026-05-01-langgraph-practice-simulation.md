@@ -149,3 +149,67 @@ messages = [HumanMessage(content='안녕하세요? 무엇을 도와드릴까요?
 simulated_user.invoke(messages)
 # 안녕하세요. 저는 windowforsun입니다. 최근에 새로운 프로젝트에 AI, LLM, LangChain, LangGraph 같은 기술들을 도입하려고 하는데, 개념이 너무 생소해서 어려움을 겪고 있습니다. 혹시 기본적인 내용부터 차근차근 설명해주실 수 있을까요? 어떤 부분부터 시작하는 게 좋을지 조언을 구하고 싶습니다.
 ```  
+
+### Simulation Node
+시뮬레이션에 필요한 노드를 정의한다.  
+
+가장 먼저 `AI Assistant` 노드를 정의한다. 
+앞서 구현한 `AI Assistant Chain` 에 대화를 입력으로 넣으면 최종 답변을 `AIMessage` 로 응답하는 노드이다.  
+
+```python
+from langchain_core.messages import AIMessage
+
+def ai_assistant_node(state):
+  messages = state['messages']
+  ai_response = call_chatbot(messages)
+
+  return {'messages' : [AIMessage(content=ai_response)]}
+
+
+ai_assistant_node(
+    {
+        'messages' : [('user', '안녕하세요?'),
+                      ('assistant', '안녕하세요? 무엇을 도와드릴까요?'),
+                      ('user', '신규 프로젝트에 AI, LLM 등 을 도입하려 하고 있어요.')]
+    }
+)
+# {'messages': [AIMessage(content='아, 신규 프로젝트에 AI와 LLM(Large Language Model)을 도입하시려는군요. 아주 좋은 방향입니다. AI와 LLM은 현재 다양한 분야에서 혁신을 가져오고 있으며, 프로젝트의 효율성과 성능을 크게 향상시킬 수 있습니다.\n\n도입을 고려하시는 프로젝트의 종류, 목표, 그리고 현재 가지고 계신 리소스에 대해 좀 더 자세히 알려주시면, 더 구체적인 조언을 드릴 수 있습니다. 예를 들어 다음과 같은 질문에 답해주시면 좋습니다.\n\n*   **프로젝트의 목표는 무엇인가요?** (예: 고객 서비스 자동화, 콘텐츠 생성, 데이터 분석, 의사 결정 지원 등)\n*   **어떤 종류의 데이터를 다루게 되나요?** (예: 텍스트, 이미지, 음성, 숫자 데이터 등)\n*   **현재 어떤 기술 스택을 사용하고 계신가요?** (예: Python, TensorFlow, PyTorch, AWS, Azure, GCP 등)\n*   **AI 및 LLM 관련 경험이 있는 팀원이 있나요?**\n*   **예산은 어느 정도 예상하시나요?**\n\n이러한 정보를 바탕으로, 다음과 같은 측면에서 도움을 드릴 수 있습니다.\n\n*   **적합한 AI/LLM 기술 및 모델 추천:** 프로젝트 목표와 데이터에 맞는 최적의 기술과 모델을 선택할 수 있도록 도와드립니다. (예: GPT-3, BERT, Transformer, CNN, RNN 등)\n*   **데이터 전처리 및 모델 학습 전략:** AI/LLM 모델의 성능을 극대화하기 위한 데이터 전처리 방법과 학습 전략을 제시합니다.\n*   **클라우드 환경 구축 및 관리:** AI/LLM 모델을 효율적으로 운영하기 위한 클라우드 환경 구축 및 관리 방안을 안내합니다. (AWS, Azure, GCP 등)\n*   **API 연동 및 시스템 통합:** 기존 시스템과 AI/LLM 모델을 원활하게 연동하기 위한 API 설계 및 통합 전략을 제공합니다.\n*   **보안 및 윤리적 고려 사항:** AI/LLM 모델 사용 시 발생할 수 있는 보안 문제와 윤리적 문제에 대한 해결 방안을 제시합니다. (개인 정보 보호, 데이터 편향성 등)\n*   **팀 교육 및 기술 지원:** 팀원들의 AI/LLM 관련 역량 강화를 위한 교육 프로그램을 추천하고, 기술적인 문제 발생 시 지원을 제공합니다.\n\n어떤 부분부터 시작하고 싶으신가요? 아니면 특정적으로 궁금한 점이 있으신가요? 편하게 말씀해주세요.', additional_kwargs={}, response_metadata={})]}
+```  
+
+다음으로 `Simulation User` 노드를 정의한다.
+가상 사용자 노드를 정의하기 전에 한가지 고려해야 할 점은 메시지의 형식이다. 
+`AI Assistant`, `Simulation User` 모두 `LLM` 이기 때문에 모두 `AIMessage` 형식으로 응답한다. 
+하지만 시뮬레이션에서 기대하는 것은 `HumanMessage` 와 `AIMessage` 가 번갈아 가며 오고가는 모양세일 것이다. 
+그리고 `AI Assistant` 에게는 `Simulation User` 의 응답이 `HumanMessage` 이여야 하고,
+`Simulation User` 에게는 `AI Assistant` 의 응답이 `AIMessage` 여야 한다. 
+그러므로 이러한 변환 처리를 해주어야 정상적인 시뮬레이션을 수행할 수 있다.  
+
+```python
+def _swap_roles(messages):
+  """
+  메시지의 역할을 교환하는 함수
+  시뮬레이션 사용자 단계에서 메시지 타입을 아래와 같이 교환한다.
+  AI -> Human
+  Human -> AI
+  """
+
+  new_messages = []
+  for m in messages:
+    if isinstance(m, AIMessage):
+      new_messages.append(HumanMessage(content=m.content))
+    else:
+      new_messages.append(AIMessage(content=m.content))
+
+  return new_messages
+
+
+def simulated_user_node(state: AgentState):
+  """
+  시뮬레이션 사용자 노드 함수
+  """
+  new_messages = _swap_roles(state['messages'])
+
+  response = simulated_user.invoke({'messages' : new_messages})
+
+  return {'messages' : [HumanMessage(content=response)]}
+```  
