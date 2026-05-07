@@ -213,3 +213,58 @@ def simulated_user_node(state: AgentState):
 
   return {'messages' : [HumanMessage(content=response)]}
 ```  
+
+### Simulation Graph
+그래프 정의에 앞서 그래프 순환의 종료를 판단하는 조건부 엣지를 정의한다. 
+그렇지 않으면 시뮬레이션은 무한하게 진행될 수 있기 때문에 최대 6회의 대화 혹은 `FINISHED` 메시지가 오면 종료하도록 한다.  
+
+```python
+def should_continue(state: AgentState):
+  """
+  시뮬레이션의 종료 시점 또는 조건을 설정한다. (설정하지 않으면 시뮬레이션은 무한하게 진행될 수 있다.)
+  여기서는 상태의 메시지 개수로 판단해 종료처리한다.
+  그리고 FINISHED 라고 답한 경우에도 종료한다.
+  """
+
+  if len(state['messages']) > 6:
+    return 'end'
+  elif state['messages'][-1].content == 'FINISHED':
+    return 'end'
+  else:
+    return 'continue'
+```  
+
+이제 정의된 내용들을 바탕으로 `Simulation Graph` 를 정의한다.  
+
+```python
+from langgraph.graph import START, END, StateGraph
+from IPython.display import Image, display
+
+graph_builder = StateGraph(AgentState)
+
+graph_builder.add_node('simulated_user', simulated_user_node)
+graph_builder.add_node('ai_assistant', ai_assistant_node)
+
+graph_builder.add_edge('ai_assistant', 'simulated_user')
+
+graph_builder.add_conditional_edges(
+    'simulated_user',
+    should_continue,
+    {
+        'end' : END,
+        'continue' : 'ai_assistant'
+    }
+)
+
+graph_builder.set_entry_point('ai_assistant')
+
+graph = graph_builder.compile()
+
+
+# 그래프 시각화
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    pass
+```  
+
